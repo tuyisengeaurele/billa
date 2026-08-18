@@ -21,6 +21,15 @@ second service in a different language stack (Python), downloading ML models
 backend in both dev and prod. User chose rembg — no ongoing per-image cost
 outweighs the extra operational piece for this project.
 
+## Model choice: u2net, not rembg's default
+
+`rembg`'s own default model (`bria-rmbg-2.0`) is licensed CC BY-NC 4.0 —
+non-commercial, requiring a paid agreement with BRIA AI for commercial use.
+Billa is a commercial SaaS, so the service explicitly requests `u2net`
+instead (Apache 2.0, free for commercial use) via `new_session("u2net")`
+rather than calling `remove()` with no session and silently inheriting
+rembg's default.
+
 ## Python microservice
 
 `/bg-removal-service` — a FastAPI app wrapping the `rembg` library.

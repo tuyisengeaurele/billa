@@ -16,3 +16,11 @@ server/uploads/
 server/uploads-test/
 
 client/.vite/
+
+# python
+bg-removal-service/.venv/
+bg-removal-service/__pycache__/
+*.pyc
+
+# harness state, not project config
+.claude/scheduled_tasks.lock
