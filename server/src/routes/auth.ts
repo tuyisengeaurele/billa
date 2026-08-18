@@ -5,7 +5,7 @@ import { prisma } from "../lib/prisma.js";
 import { hashPassword, verifyPassword } from "../lib/password.js";
 import { generateRefreshToken, hashRefreshToken, signAccessToken } from "../lib/tokens.js";
 import { ttlToMs } from "../lib/ttl.js";
-import { setAccessTokenCookie, setRefreshTokenCookie } from "../lib/cookies.js";
+import { clearAuthCookies, setAccessTokenCookie, setRefreshTokenCookie } from "../lib/cookies.js";
 import { validateBody } from "../middleware/validate.js";
 import { authRateLimit } from "../middleware/auth-rate-limit.js";
 import { requireAuth } from "../middleware/require-auth.js";
@@ -143,5 +143,18 @@ authRouter.post("/refresh", async (req, res) => {
 
   setAccessTokenCookie(res, accessToken);
   setRefreshTokenCookie(res, newRefreshToken, ttlMs);
+  res.json({ ok: true });
+});
+
+authRouter.post("/logout", async (req, res) => {
+  const presented = req.cookies?.refresh_token;
+  if (presented) {
+    const presentedHash = hashRefreshToken(presented);
+    await prisma.refreshToken.updateMany({
+      where: { tokenHash: presentedHash, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  }
+  clearAuthCookies(res);
   res.json({ ok: true });
 });
