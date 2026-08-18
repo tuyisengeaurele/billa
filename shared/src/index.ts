@@ -2,3 +2,5 @@ export * from "./document-types.js";
 export * from "./auth-schemas.js";
 export * from "./business-schemas.js";
 export * from "./logo-schemas.js";
+export * from "./customer-schemas.js";
+export * from "./item-schemas.js";
