@@ -8,6 +8,7 @@ import Dashboard from "./pages/Dashboard";
 import Customers from "./pages/Customers";
 import Items from "./pages/Items";
 import DocumentForm from "./pages/DocumentForm";
+import Documents from "./pages/Documents";
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/customers" element={<Customers />} />
             <Route path="/items" element={<Items />} />
+            <Route path="/documents" element={<Documents />} />
             <Route path="/documents/new" element={<DocumentForm />} />
             <Route path="/documents/:id/edit" element={<DocumentForm />} />
           </Route>

@@ -28,6 +28,7 @@ describe("AppLayout", () => {
 
     expect(await screen.findByRole("link", { name: /customers/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /items/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /invoices/i })).toBeInTheDocument();
     expect(screen.getByText("page content")).toBeInTheDocument();
   });
 
