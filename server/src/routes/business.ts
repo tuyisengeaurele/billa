@@ -1,5 +1,3 @@
-import path from "node:path";
-import { readFile } from "node:fs/promises";
 import { Router } from "express";
 import multer from "multer";
 import type { DocumentType as PrismaDocumentType } from "@prisma/client";
@@ -12,6 +10,7 @@ import { detectAllowedImageType } from "../lib/file-sniff.js";
 import { LocalDiskStorage } from "../lib/storage.js";
 import { detectBackground } from "../lib/background-detect.js";
 import { removeBackground } from "../lib/rembg-client.js";
+import { ForbiddenUploadPathError, readUploadedFile } from "../lib/uploaded-file.js";
 
 export const businessRouter = Router();
 
@@ -108,25 +107,15 @@ businessRouter.post("/logo/remove-background", validateBody(logoUrlSchema), asyn
   const { url } = req.body as { url: string };
   const businessId = req.auth!.businessId;
 
-  if (!url.startsWith("/uploads/")) {
-    res.status(403).json({ error: "forbidden" });
-    return;
-  }
-
-  const uploadsRoot = path.resolve(process.env.UPLOADS_DIR ?? "./uploads");
-  const businessDir = path.resolve(uploadsRoot, businessId);
-  const filePath = path.resolve(uploadsRoot, url.slice("/uploads/".length));
-
-  if (!filePath.startsWith(businessDir + path.sep)) {
-    res.status(403).json({ error: "forbidden" });
-    return;
-  }
-
   let buffer: Buffer;
   try {
-    buffer = await readFile(filePath);
-  } catch {
-    res.status(404).json({ error: "not_found" });
+    buffer = await readUploadedFile(url, businessId);
+  } catch (err) {
+    if (err instanceof ForbiddenUploadPathError) {
+      res.status(403).json({ error: "forbidden" });
+    } else {
+      res.status(404).json({ error: "not_found" });
+    }
     return;
   }
 
