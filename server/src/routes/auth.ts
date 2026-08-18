@@ -8,6 +8,7 @@ import { ttlToMs } from "../lib/ttl.js";
 import { setAccessTokenCookie, setRefreshTokenCookie } from "../lib/cookies.js";
 import { validateBody } from "../middleware/validate.js";
 import { authRateLimit } from "../middleware/auth-rate-limit.js";
+import { requireAuth } from "../middleware/require-auth.js";
 
 export const authRouter = Router();
 
@@ -70,4 +71,19 @@ authRouter.post("/login", authRateLimit, validateBody(loginSchema), async (req, 
 
   await issueSession(res, user.id, user.businessId);
   res.json({ user: { id: user.id, email: user.email } });
+});
+
+authRouter.get("/me", requireAuth, async (req, res) => {
+  const user = await prisma.user.findUnique({
+    where: { id: req.auth!.userId },
+    include: { business: true },
+  });
+  if (!user) {
+    res.status(401).json({ error: "unauthenticated" });
+    return;
+  }
+  res.json({
+    user: { id: user.id, email: user.email },
+    business: { id: user.business.id, name: user.business.name },
+  });
 });
