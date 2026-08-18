@@ -36,32 +36,17 @@ Fields: `tin`, `industry` (free text, not a dropdown), `phone`, `email`
 (business email, distinct from the user's login email), `address`,
 `rraEbmNumber`. All optional.
 
-**Shared schema change** (`shared/src/business-schemas.ts`): split the
-field-level rules out from the "at least one field" refine so the client can
-validate per-field without that constraint:
-
-```ts
-export const businessProfileFields = z.object({
-  name: z.string().trim().min(1).optional(),
-  tin: z.string().trim().min(1).optional(),
-  industry: z.string().trim().min(1).optional(),
-  phone: z.string().trim().min(1).optional(),
-  email: z.string().email().optional(),
-  address: z.string().trim().min(1).optional(),
-  rraEbmNumber: z.string().trim().min(1).optional(),
-});
-
-export const businessProfileSchema = businessProfileFields.refine(
-  (data) => Object.keys(data).length > 0,
-  { message: "at least one field is required" },
-);
-```
-
-The server's `PATCH /business` contract is unchanged — it still validates
-with the refined `businessProfileSchema`. The client uses
-`businessProfileFields` directly with `zodResolver`, so an all-empty form is
-valid client-side (per-field format rules like email still apply to any
-field that *is* filled in).
+No shared-schema changes needed. The client defines its own local Zod schema
+in `DetailsStep.tsx` (same pattern as Register's `confirmPassword`
+extension) rather than reusing `businessProfileSchema` directly — that
+schema's per-field `.min(1)` would reject a genuinely blank field with a raw
+Zod error the moment react-hook-form submits it as `""`, since
+`.optional()` only short-circuits on `undefined`, not on an empty string.
+The local schema skips the `min(1)` entirely (every field is just
+`z.string().trim()`, so blank is always valid) except `email`, which is a
+union of `z.literal("")` and a proper email check — format only matters
+once something's actually typed. The server's `PATCH /business` contract
+(`businessProfileSchema`) is untouched.
 
 **On Continue**: build a payload from only the fields with a non-empty
 trimmed value. If the payload is non-empty, `PATCH /business` with it; on
@@ -106,8 +91,6 @@ text under the dropzone.
 TDD throughout, following the existing pattern (mock `fetch`, React Testing
 Library, `afterEach(cleanup)` already in place):
 
-- `shared`: a test asserting `businessProfileFields` accepts `{}` while the
-  refined `businessProfileSchema` still rejects it.
 - `DetailsStep`: renders all six fields, Continue sends only filled fields,
   Skip advances without a network call, shows email-format error.
 - `LogoStep`: upload → processing → review transitions, confirm posts the
