@@ -6,6 +6,7 @@ import Register from "./pages/Register";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import Customers from "./pages/Customers";
+import Items from "./pages/Items";
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/customers" element={<Customers />} />
+            <Route path="/items" element={<Items />} />
           </Route>
           <Route path="/" element={<Navigate to="/onboarding" replace />} />
         </Routes>
