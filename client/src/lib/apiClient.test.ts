@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ApiError, apiRequest } from "./apiClient";
+import { API_BASE_URL, ApiError, apiRequest } from "./apiClient";
 
 describe("apiRequest", () => {
   afterEach(() => {
@@ -55,5 +55,24 @@ describe("apiRequest", () => {
 
     await expect(apiRequest("/auth/login", { method: "POST" })).rejects.toBeInstanceOf(ApiError);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("sends FormData bodies as-is, without a Content-Type header or JSON stringification", async () => {
+    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 200 }));
+    const formData = new FormData();
+    formData.append("logo", new Blob(["fake-bytes"], { type: "image/png" }), "logo.png");
+
+    await apiRequest("/business/logo", { method: "POST", body: formData });
+
+    const [, init] = fetchSpy.mock.calls[0];
+    expect(init?.body).toBe(formData);
+    expect(init?.headers).toBeUndefined();
+  });
+});
+
+describe("API_BASE_URL", () => {
+  it("is a non-empty string", () => {
+    expect(typeof API_BASE_URL).toBe("string");
+    expect(API_BASE_URL.length).toBeGreaterThan(0);
   });
 });

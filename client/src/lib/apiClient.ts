@@ -1,4 +1,5 @@
 const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
+export const API_BASE_URL = BASE_URL;
 
 export class ApiError extends Error {
   status: number;
@@ -17,11 +18,12 @@ interface RequestOptions {
 }
 
 async function rawRequest(path: string, options: RequestOptions = {}): Promise<Response> {
+  const { body } = options;
   return fetch(`${BASE_URL}${path}`, {
     method: options.method ?? "GET",
     credentials: "include",
-    headers: options.body !== undefined ? { "Content-Type": "application/json" } : undefined,
-    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+    headers: body !== undefined && !(body instanceof FormData) ? { "Content-Type": "application/json" } : undefined,
+    body: body === undefined ? undefined : body instanceof FormData ? body : JSON.stringify(body),
   });
 }
 
