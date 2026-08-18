@@ -1,8 +1,8 @@
 import crypto from "node:crypto";
 import { Router } from "express";
-import { registerSchema } from "@billa/shared";
+import { loginSchema, registerSchema } from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
-import { hashPassword } from "../lib/password.js";
+import { hashPassword, verifyPassword } from "../lib/password.js";
 import { generateRefreshToken, hashRefreshToken, signAccessToken } from "../lib/tokens.js";
 import { ttlToMs } from "../lib/ttl.js";
 import { setAccessTokenCookie, setRefreshTokenCookie } from "../lib/cookies.js";
@@ -57,4 +57,17 @@ authRouter.post("/register", authRateLimit, validateBody(registerSchema), async 
     user: { id: user.id, email: user.email },
     business: { id: business.id, name: business.name },
   });
+});
+
+authRouter.post("/login", authRateLimit, validateBody(loginSchema), async (req, res) => {
+  const { email, password } = req.body;
+
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user || !(await verifyPassword(password, user.passwordHash))) {
+    res.status(401).json({ error: "invalid_credentials" });
+    return;
+  }
+
+  await issueSession(res, user.id, user.businessId);
+  res.json({ user: { id: user.id, email: user.email } });
 });
