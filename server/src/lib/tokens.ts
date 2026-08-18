@@ -16,7 +16,9 @@ function accessTokenSecret(): string {
 
 export function signAccessToken(payload: AccessTokenPayload): string {
   const ttl = process.env.JWT_ACCESS_TTL ?? "15m";
-  return jwt.sign(payload, accessTokenSecret(), { expiresIn: ttl });
+  return jwt.sign(payload, accessTokenSecret(), {
+    expiresIn: ttl as jwt.SignOptions["expiresIn"],
+  });
 }
 
 export function verifyAccessToken(token: string): AccessTokenPayload | null {
