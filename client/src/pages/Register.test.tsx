@@ -59,7 +59,8 @@ describe("Register", () => {
 
     await user.type(await screen.findByLabelText(/business name/i), "Kigali Traders");
     await user.type(screen.getByLabelText(/email/i), "owner@example.com");
-    await user.type(screen.getByLabelText(/password/i), "Supersecret1!");
+    await user.type(screen.getByLabelText(/^password/i), "Supersecret1!");
+    await user.type(screen.getByLabelText(/confirm password/i), "Supersecret1!");
     await user.click(screen.getByRole("button", { name: /create account/i }));
 
     await waitFor(() => expect(screen.getByText("onboarding page")).toBeInTheDocument());
@@ -79,10 +80,23 @@ describe("Register", () => {
 
     await user.type(await screen.findByLabelText(/business name/i), "Kigali Traders");
     await user.type(screen.getByLabelText(/email/i), "owner@example.com");
-    await user.type(screen.getByLabelText(/password/i), "Supersecret1!");
+    await user.type(screen.getByLabelText(/^password/i), "Supersecret1!");
+    await user.type(screen.getByLabelText(/confirm password/i), "Supersecret1!");
     await user.click(screen.getByRole("button", { name: /create account/i }));
 
     expect(await screen.findByText(/already registered/i)).toBeInTheDocument();
+  });
+
+  it("shows an error when the confirm password field doesn't match", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 401 }));
+    const user = userEvent.setup();
+    renderRegister();
+
+    await user.type(await screen.findByLabelText(/^password/i), "Supersecret1!");
+    await user.type(screen.getByLabelText(/confirm password/i), "Different1!");
+    await user.click(screen.getByRole("button", { name: /create account/i }));
+
+    expect(await screen.findByText(/passwords don.t match/i)).toBeInTheDocument();
   });
 
   it("shows password requirements as unmet before typing", async () => {
@@ -100,7 +114,7 @@ describe("Register", () => {
     const user = userEvent.setup();
     renderRegister();
 
-    await user.type(await screen.findByLabelText(/password/i), "Supersecret1!");
+    await user.type(await screen.findByLabelText(/^password/i), "Supersecret1!");
 
     const items = screen.getAllByRole("listitem");
     for (const item of items) {

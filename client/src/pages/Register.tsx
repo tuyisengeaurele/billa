@@ -1,13 +1,22 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { PASSWORD_REQUIREMENTS, registerSchema, type RegisterInput } from "@billa/shared";
+import { PASSWORD_REQUIREMENTS, registerSchema } from "@billa/shared";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
+import { z } from "zod";
 import { AuthLayout } from "../components/AuthLayout";
 import { Button } from "../components/Button";
 import { FormField } from "../components/FormField";
 import { useAuth } from "../context/AuthContext";
 import { ApiError } from "../lib/apiClient";
+
+const registerFormSchema = registerSchema
+  .extend({ confirmPassword: z.string().min(1, "Confirm your password") })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  });
+type RegisterFormInput = z.infer<typeof registerFormSchema>;
 
 export default function Register() {
   const { register: registerBusiness } = useAuth();
@@ -18,10 +27,10 @@ export default function Register() {
     handleSubmit,
     watch,
     formState: { errors, isSubmitting },
-  } = useForm<RegisterInput>({ resolver: zodResolver(registerSchema) });
+  } = useForm<RegisterFormInput>({ resolver: zodResolver(registerFormSchema) });
   const password = watch("password") ?? "";
 
-  async function onSubmit(data: RegisterInput) {
+  async function onSubmit(data: RegisterFormInput) {
     setApiError(null);
     try {
       await registerBusiness(data.email, data.password, data.businessName);
@@ -92,6 +101,14 @@ export default function Register() {
             );
           })}
         </ul>
+        <FormField
+          id="confirmPassword"
+          label="Confirm password"
+          type="password"
+          autoComplete="new-password"
+          error={errors.confirmPassword?.message}
+          {...register("confirmPassword")}
+        />
         <Button type="submit" isLoading={isSubmitting}>
           Create account
         </Button>
