@@ -1,7 +1,7 @@
 import { Router } from "express";
 import multer from "multer";
 import type { DocumentType as PrismaDocumentType } from "@prisma/client";
-import { businessProfileSchema, logoUrlSchema, updateSequencesSchema } from "@billa/shared";
+import { businessProfileSchema, confirmLogoSchema, logoUrlSchema, updateSequencesSchema } from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/require-auth.js";
 import { validateBody } from "../middleware/validate.js";
@@ -150,4 +150,31 @@ businessRouter.post("/logo/extract-colors", validateBody(logoUrlSchema), async (
 
   const palette = await extractPalette(buffer);
   res.json(palette);
+});
+
+businessRouter.post("/logo/confirm", validateBody(confirmLogoSchema), async (req, res) => {
+  const { url, primaryColor, accentColors } = req.body as {
+    url: string;
+    primaryColor: string;
+    accentColors: string[];
+  };
+  const businessId = req.auth!.businessId;
+
+  try {
+    await readUploadedFile(url, businessId);
+  } catch (err) {
+    if (err instanceof ForbiddenUploadPathError) {
+      res.status(403).json({ error: "forbidden" });
+    } else {
+      res.status(404).json({ error: "not_found" });
+    }
+    return;
+  }
+
+  const business = await prisma.business.update({
+    where: { id: businessId },
+    data: { logoUrl: url, primaryColor, accentColors },
+  });
+
+  res.json({ business });
 });
