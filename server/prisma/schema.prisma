@@ -128,7 +128,7 @@ model Document {
   id         String           @id @default(cuid())
   businessId String
   type       DocumentType
-  number     String
+  number     String?
   status     DocumentStatus   @default(DRAFT)
   template   DocumentTemplate
   customerId String
