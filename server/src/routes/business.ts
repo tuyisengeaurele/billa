@@ -3,6 +3,7 @@ import { businessProfileSchema } from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/require-auth.js";
 import { validateBody } from "../middleware/validate.js";
+import { mergeSequences } from "../lib/document-sequences.js";
 
 export const businessRouter = Router();
 
@@ -15,6 +16,11 @@ businessRouter.get("/", async (req, res) => {
     return;
   }
   res.json({ business });
+});
+
+businessRouter.get("/sequences", async (req, res) => {
+  const saved = await prisma.documentSequence.findMany({ where: { businessId: req.auth!.businessId } });
+  res.json({ sequences: mergeSequences(saved) });
 });
 
 businessRouter.patch("/", validateBody(businessProfileSchema), async (req, res) => {
