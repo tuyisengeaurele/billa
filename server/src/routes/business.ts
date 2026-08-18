@@ -1,13 +1,17 @@
+import path from "node:path";
+import { readFile } from "node:fs/promises";
 import { Router } from "express";
 import multer from "multer";
 import type { DocumentType as PrismaDocumentType } from "@prisma/client";
-import { businessProfileSchema, updateSequencesSchema } from "@billa/shared";
+import { businessProfileSchema, logoUrlSchema, updateSequencesSchema } from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/require-auth.js";
 import { validateBody } from "../middleware/validate.js";
 import { mergeSequences } from "../lib/document-sequences.js";
 import { detectAllowedImageType } from "../lib/file-sniff.js";
 import { LocalDiskStorage } from "../lib/storage.js";
+import { detectBackground } from "../lib/background-detect.js";
+import { removeBackground } from "../lib/rembg-client.js";
 
 export const businessRouter = Router();
 
@@ -99,3 +103,41 @@ businessRouter.post(
     res.status(201).json({ url });
   },
 );
+
+businessRouter.post("/logo/remove-background", validateBody(logoUrlSchema), async (req, res) => {
+  const { url } = req.body as { url: string };
+  const businessId = req.auth!.businessId;
+
+  if (!url.startsWith("/uploads/")) {
+    res.status(403).json({ error: "forbidden" });
+    return;
+  }
+
+  const uploadsRoot = path.resolve(process.env.UPLOADS_DIR ?? "./uploads");
+  const businessDir = path.resolve(uploadsRoot, businessId);
+  const filePath = path.resolve(uploadsRoot, url.slice("/uploads/".length));
+
+  if (!filePath.startsWith(businessDir + path.sep)) {
+    res.status(403).json({ error: "forbidden" });
+    return;
+  }
+
+  let buffer: Buffer;
+  try {
+    buffer = await readFile(filePath);
+  } catch {
+    res.status(404).json({ error: "not_found" });
+    return;
+  }
+
+  const detection = await detectBackground(buffer);
+
+  if (!detection.needsRemoval) {
+    res.json({ url, backgroundRemoved: false, detection });
+    return;
+  }
+
+  const processed = await removeBackground(buffer);
+  const saved = await logoStorage.save(processed, businessId, "png");
+  res.json({ url: saved.url, backgroundRemoved: true, detection });
+});
