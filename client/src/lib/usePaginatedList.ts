@@ -12,12 +12,14 @@ interface UsePaginatedListParams<SortByT extends string> {
   resourcePath: string;
   defaultSortBy: SortByT;
   pageSize?: number;
+  extraParams?: Record<string, string>;
 }
 
 export function usePaginatedList<T, SortByT extends string>({
   resourcePath,
   defaultSortBy,
   pageSize = 20,
+  extraParams,
 }: UsePaginatedListParams<SortByT>) {
   const [results, setResults] = useState<T[]>([]);
   const [total, setTotal] = useState(0);
@@ -42,6 +44,7 @@ export function usePaginatedList<T, SortByT extends string>({
         page: String(page),
         pageSize: String(pageSize),
         includeInactive: String(includeInactive),
+        ...extraParams,
       });
       if (search.trim()) params.set("search", search.trim());
 
@@ -63,7 +66,7 @@ export function usePaginatedList<T, SortByT extends string>({
       cancelled = true;
       clearTimeout(timeout);
     };
-  }, [resourcePath, search, sortBy, sortOrder, page, pageSize, includeInactive, reloadToken]);
+  }, [resourcePath, search, sortBy, sortOrder, page, pageSize, includeInactive, reloadToken, JSON.stringify(extraParams)]);
 
   function toggleSort(column: SortByT) {
     setSortBy((current) => {

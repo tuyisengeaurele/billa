@@ -90,4 +90,22 @@ describe("usePaginatedList", () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.error).toMatch(/couldn't load/i);
   });
+
+  it("includes extraParams in the request", async () => {
+    const fetchSpy = vi
+      .spyOn(global, "fetch")
+      .mockResolvedValue(jsonResponse({ results: [], total: 0, page: 1, pageSize: 20 }));
+
+    renderHook(() =>
+      usePaginatedList<Row, "createdAt">({
+        resourcePath: "/documents",
+        defaultSortBy: "createdAt",
+        extraParams: { type: "INVOICE" },
+      }),
+    );
+
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
+    const [url] = fetchSpy.mock.calls[0];
+    expect(String(url)).toContain("type=INVOICE");
+  });
 });
