@@ -87,3 +87,61 @@ authRouter.get("/me", requireAuth, async (req, res) => {
     business: { id: user.business.id, name: user.business.name },
   });
 });
+
+authRouter.post("/refresh", async (req, res) => {
+  const presented = req.cookies?.refresh_token;
+  if (!presented) {
+    res.status(401).json({ error: "unauthenticated" });
+    return;
+  }
+
+  const presentedHash = hashRefreshToken(presented);
+  const stored = await prisma.refreshToken.findFirst({ where: { tokenHash: presentedHash } });
+
+  if (!stored) {
+    res.status(401).json({ error: "unauthenticated" });
+    return;
+  }
+
+  if (stored.revokedAt) {
+    await prisma.refreshToken.updateMany({
+      where: { family: stored.family, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+    res.status(401).json({ error: "token_reuse_detected" });
+    return;
+  }
+
+  if (stored.expiresAt < new Date()) {
+    res.status(401).json({ error: "expired" });
+    return;
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: stored.userId } });
+  if (!user) {
+    res.status(401).json({ error: "unauthenticated" });
+    return;
+  }
+
+  await prisma.refreshToken.update({
+    where: { id: stored.id },
+    data: { revokedAt: new Date() },
+  });
+
+  const accessToken = signAccessToken({ userId: user.id, businessId: user.businessId });
+  const newRefreshToken = generateRefreshToken();
+  const ttlMs = refreshTtlMs();
+
+  await prisma.refreshToken.create({
+    data: {
+      userId: user.id,
+      tokenHash: hashRefreshToken(newRefreshToken),
+      family: stored.family,
+      expiresAt: new Date(Date.now() + ttlMs),
+    },
+  });
+
+  setAccessTokenCookie(res, accessToken);
+  setRefreshTokenCookie(res, newRefreshToken, ttlMs);
+  res.json({ ok: true });
+});
