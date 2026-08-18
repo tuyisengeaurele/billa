@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* brand — exact values, do not adjust */
+  --color-primary-500: #c2185b;
+  --color-secondary: #e0f2fe;
+
+  /* tints/shades off primary */
+  --color-primary-100: #f6d7e4;
+  --color-primary-700: #8f1144;
+
+  /* secondary needs a readable-on-white variant since e0f2fe is a background tint, not a text color */
+  --color-secondary-deep: #0369a1;
+
+  --color-neutral-50: #fafafa;
+  --color-neutral-100: #f4f4f5;
+  --color-neutral-200: #e4e4e7;
+  --color-neutral-400: #a1a1aa;
+  --color-neutral-600: #52525b;
+  --color-neutral-800: #27272a;
+  --color-neutral-900: #18181b;
+
+  --color-success: #16a34a;
+  --color-success-bg: #dcfce7;
+  --color-error: #dc2626;
+  --color-error-bg: #fee2e2;
+  --color-warning: #d97706;
+  --color-warning-bg: #fef3c7;
+}

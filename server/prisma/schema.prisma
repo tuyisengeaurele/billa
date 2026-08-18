@@ -1,0 +1,172 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum DocumentType {
+  INVOICE
+  PROFORMA
+  DELIVERY_NOTE
+  QUOTE
+  RECEIPT
+}
+
+enum DocumentStatus {
+  DRAFT
+  FINALIZED
+}
+
+enum DocumentTemplate {
+  MINIMAL
+  FORMAL
+  SIDEBAR_ACCENT
+}
+
+model Business {
+  id              String           @id @default(cuid())
+  name            String
+  tin             String?
+  industry        String?
+  phone           String?
+  email           String?
+  address         String?
+  logoUrl         String?
+  primaryColor    String?
+  accentColors    Json?
+  rraEbmNumber    String?
+  defaultTemplate DocumentTemplate @default(MINIMAL)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  users     User[]
+  customers Customer[]
+  items     Item[]
+  documents Document[]
+  sequences DocumentSequence[]
+}
+
+model User {
+  id           String   @id @default(cuid())
+  businessId   String
+  email        String   @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  business      Business       @relation(fields: [businessId], references: [id])
+  refreshTokens RefreshToken[]
+
+  @@index([businessId])
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String
+  family    String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model Customer {
+  id         String   @id @default(cuid())
+  businessId String
+  name       String
+  tin        String?
+  address    String?
+  phone      String?
+  email      String?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  business  Business   @relation(fields: [businessId], references: [id])
+  documents Document[]
+
+  @@index([businessId])
+}
+
+model Item {
+  id          String   @id @default(cuid())
+  businessId  String
+  description String
+  unitPrice   Int
+  unit        String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  business Business       @relation(fields: [businessId], references: [id])
+  lines    DocumentLine[]
+
+  @@index([businessId])
+}
+
+model DocumentSequence {
+  id         String       @id @default(cuid())
+  businessId String
+  type       DocumentType
+  prefix     String
+  nextNumber Int          @default(1)
+
+  business Business @relation(fields: [businessId], references: [id])
+
+  @@unique([businessId, type])
+}
+
+model Document {
+  id         String           @id @default(cuid())
+  businessId String
+  type       DocumentType
+  number     String
+  status     DocumentStatus   @default(DRAFT)
+  template   DocumentTemplate
+  customerId String
+  issueDate  DateTime         @default(now())
+  dueDate    DateTime?
+  notes      String?
+  subtotal   Int
+  taxTotal   Int
+  total      Int
+
+  convertedFromId String?   @unique
+  convertedFrom   Document? @relation("DocumentConversion", fields: [convertedFromId], references: [id])
+  convertedTo     Document? @relation("DocumentConversion")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  business Business       @relation(fields: [businessId], references: [id])
+  customer Customer       @relation(fields: [customerId], references: [id])
+  lines    DocumentLine[]
+
+  @@unique([businessId, type, number])
+  @@index([businessId])
+}
+
+model DocumentLine {
+  id          String  @id @default(cuid())
+  documentId  String
+  itemId      String?
+  description String
+  quantity    Decimal @db.Decimal(10, 2)
+  unitPrice   Int
+  taxRate     Decimal @db.Decimal(5, 2)
+  lineTotal   Int
+  sortOrder   Int
+
+  document Document @relation(fields: [documentId], references: [id])
+  item     Item?    @relation(fields: [itemId], references: [id])
+
+  @@index([documentId])
+}
