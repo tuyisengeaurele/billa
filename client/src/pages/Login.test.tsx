@@ -62,7 +62,7 @@ describe("Login", () => {
     renderLogin();
 
     await user.type(await screen.findByLabelText(/email/i), "owner@example.com");
-    await user.type(screen.getByLabelText(/password/i), "supersecret1");
+    await user.type(screen.getByLabelText("Password"), "supersecret1");
     await user.click(screen.getByRole("button", { name: /log in/i }));
 
     await waitFor(() => expect(screen.getByText("onboarding page")).toBeInTheDocument());
@@ -81,7 +81,7 @@ describe("Login", () => {
     renderLogin();
 
     await user.type(await screen.findByLabelText(/email/i), "owner@example.com");
-    await user.type(screen.getByLabelText(/password/i), "wrongpassword");
+    await user.type(screen.getByLabelText("Password"), "wrongpassword");
     await user.click(screen.getByRole("button", { name: /log in/i }));
 
     expect(await screen.findByText(/doesn't match our records/i)).toBeInTheDocument();
