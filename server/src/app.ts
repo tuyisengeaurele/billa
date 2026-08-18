@@ -15,6 +15,7 @@ export function createApp() {
   );
   app.use(express.json());
   app.use(cookieParser());
+  app.use("/uploads", express.static(process.env.UPLOADS_DIR ?? "./uploads"));
 
   app.get("/health", (_req, res) => {
     res.json({ ok: true });
