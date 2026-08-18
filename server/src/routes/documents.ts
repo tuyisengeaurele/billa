@@ -196,3 +196,25 @@ documentsRouter.post("/:id/finalize", async (req, res) => {
 
   res.json({ document: finalized });
 });
+
+documentsRouter.delete("/:id", async (req, res) => {
+  const businessId = req.auth!.businessId;
+  const { id } = req.params;
+
+  const existing = await prisma.document.findFirst({ where: { id, businessId } });
+  if (!existing) {
+    res.status(404).json({ error: "not_found" });
+    return;
+  }
+  if (existing.status === "FINALIZED") {
+    res.status(409).json({ error: "already_finalized" });
+    return;
+  }
+
+  await prisma.$transaction([
+    prisma.documentLine.deleteMany({ where: { documentId: id } }),
+    prisma.document.delete({ where: { id } }),
+  ]);
+
+  res.status(204).send();
+});
