@@ -32,4 +32,15 @@ describe("ItemPicker", () => {
 
     expect(onSelect).toHaveBeenCalledWith({ id: "i1", description: "Printing service", unitPrice: 5000 });
   });
+
+  it("reports free-typed text so a line can be entered manually without picking a catalog item", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(new Response(JSON.stringify({ results: [], total: 0, page: 1, pageSize: 10 }), { status: 200 }));
+    const onDescriptionChange = vi.fn();
+    const user = userEvent.setup();
+    render(<ItemPicker value="" onSelect={vi.fn()} onDescriptionChange={onDescriptionChange} />);
+
+    await user.type(screen.getByLabelText("Item"), "Delivery fee");
+
+    expect(onDescriptionChange).toHaveBeenLastCalledWith("Delivery fee");
+  });
 });

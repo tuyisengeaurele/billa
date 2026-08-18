@@ -263,6 +263,10 @@ export default function DocumentForm() {
                               setValue(`lines.${index}.description`, item.description);
                               setValue(`lines.${index}.unitPrice`, item.unitPrice);
                             }}
+                            onDescriptionChange={(text) => {
+                              setValue(`lines.${index}.itemId`, undefined);
+                              setValue(`lines.${index}.description`, text);
+                            }}
                           />
                         </td>
                         <td className="py-2">

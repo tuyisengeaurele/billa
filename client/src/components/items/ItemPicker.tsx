@@ -19,9 +19,10 @@ interface ItemPickerProps {
   value: string;
   error?: string;
   onSelect: (item: ItemSelection) => void;
+  onDescriptionChange?: (text: string) => void;
 }
 
-export function ItemPicker({ value, error, onSelect }: ItemPickerProps) {
+export function ItemPicker({ value, error, onSelect, onDescriptionChange }: ItemPickerProps) {
   const [query, setQuery] = useState(value);
   const [options, setOptions] = useState<SearchDropdownOption[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -50,7 +51,10 @@ export function ItemPicker({ value, error, onSelect }: ItemPickerProps) {
       placeholder="Search items"
       error={error}
       query={query}
-      onQueryChange={setQuery}
+      onQueryChange={(text) => {
+        setQuery(text);
+        onDescriptionChange?.(text);
+      }}
       options={options}
       isLoading={isLoading}
       onSelect={(option) => {
