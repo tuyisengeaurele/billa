@@ -3,6 +3,7 @@ import cors from "cors";
 import express from "express";
 import { authRouter } from "./routes/auth.js";
 import { businessRouter } from "./routes/business.js";
+import { customersRouter } from "./routes/customers.js";
 
 export function createApp() {
   const app = express();
@@ -23,6 +24,7 @@ export function createApp() {
 
   app.use("/auth", authRouter);
   app.use("/business", businessRouter);
+  app.use("/customers", customersRouter);
 
   return app;
 }
