@@ -11,6 +11,7 @@ import { LocalDiskStorage } from "../lib/storage.js";
 import { detectBackground } from "../lib/background-detect.js";
 import { removeBackground } from "../lib/rembg-client.js";
 import { ForbiddenUploadPathError, readUploadedFile } from "../lib/uploaded-file.js";
+import { extractPalette } from "../lib/palette.js";
 
 export const businessRouter = Router();
 
@@ -129,4 +130,24 @@ businessRouter.post("/logo/remove-background", validateBody(logoUrlSchema), asyn
   const processed = await removeBackground(buffer);
   const saved = await logoStorage.save(processed, businessId, "png");
   res.json({ url: saved.url, backgroundRemoved: true, detection });
+});
+
+businessRouter.post("/logo/extract-colors", validateBody(logoUrlSchema), async (req, res) => {
+  const { url } = req.body as { url: string };
+  const businessId = req.auth!.businessId;
+
+  let buffer: Buffer;
+  try {
+    buffer = await readUploadedFile(url, businessId);
+  } catch (err) {
+    if (err instanceof ForbiddenUploadPathError) {
+      res.status(403).json({ error: "forbidden" });
+    } else {
+      res.status(404).json({ error: "not_found" });
+    }
+    return;
+  }
+
+  const palette = await extractPalette(buffer);
+  res.json(palette);
 });
