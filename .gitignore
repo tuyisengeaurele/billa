@@ -13,5 +13,6 @@ server/prisma/migrations/dev.db*
 
 # uploads (local disk adapter for dev)
 server/uploads/
+server/uploads-test/
 
 client/.vite/
