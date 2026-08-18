@@ -142,8 +142,11 @@ git commit -m "add rembg background removal microservice"
 Edit `server/package.json`, add to `"dependencies"`:
 
 ```json
-"sharp": "^0.33.5"
+"sharp": "^0.35.3"
 ```
+
+(sharp <0.35.0 has high-severity CVEs inherited from bundled libvips — use
+the patched version.)
 
 Run: `npm install --workspace=server`
 
