@@ -19,6 +19,13 @@ export function AuthLayout({ eyebrow, headline, tagline, children }: AuthLayoutP
               "radial-gradient(circle at 20% 20%, rgba(255,255,255,0.4) 0, transparent 40%), radial-gradient(circle at 80% 70%, rgba(255,255,255,0.25) 0, transparent 45%)",
           }}
         />
+        <img
+          src="/logo.png"
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none absolute left-1/2 top-40 h-64 w-64 -translate-x-1/2 opacity-[0.1]"
+          style={{ filter: "brightness(0) invert(1)" }}
+        />
         <motion.div
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}

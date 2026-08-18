@@ -36,8 +36,8 @@ export default function Login() {
   return (
     <AuthLayout
       eyebrow="Welcome back"
-      headline="Run your business on paper that means business."
-      tagline="Invoices, quotes, and receipts your customers actually trust."
+      headline="Back to business."
+      tagline="Pick up where you left off"
     >
       <h2 className="font-display text-2xl font-semibold text-neutral-900">Log in</h2>
       <p className="mt-2 font-sans text-sm text-neutral-600">

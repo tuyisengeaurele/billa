@@ -37,7 +37,7 @@ export default function Register() {
     <AuthLayout
       eyebrow="Get started"
       headline="Your first professional invoice is minutes away."
-      tagline="Set up your business once, generate documents forever."
+      tagline="Add your business details once and every business document after that takes seconds."
     >
       <h2 className="font-display text-2xl font-semibold text-neutral-900">Create your account</h2>
       <p className="mt-2 font-sans text-sm text-neutral-600">
