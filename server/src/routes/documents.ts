@@ -101,3 +101,52 @@ documentsRouter.get("/:id", async (req, res) => {
 
   res.json({ document });
 });
+
+documentsRouter.patch("/:id", validateBody(documentSchema), async (req, res) => {
+  const businessId = req.auth!.businessId;
+  const { id } = req.params;
+  const body = req.body as DocumentInput;
+
+  const existing = await prisma.document.findFirst({ where: { id, businessId } });
+  if (!existing) {
+    res.status(404).json({ error: "not_found" });
+    return;
+  }
+  if (existing.status === "FINALIZED") {
+    res.status(409).json({ error: "already_finalized" });
+    return;
+  }
+
+  const totals = calculateDocumentTotals(body.lines);
+
+  const document = await prisma.$transaction(async (tx) => {
+    await tx.documentLine.deleteMany({ where: { documentId: id } });
+    return tx.document.update({
+      where: { id },
+      data: {
+        type: body.type,
+        customerId: body.customerId,
+        issueDate: new Date(body.issueDate),
+        dueDate: body.dueDate ? new Date(body.dueDate) : null,
+        notes: body.notes,
+        subtotal: totals.subtotal,
+        taxTotal: totals.taxTotal,
+        total: totals.total,
+        lines: {
+          create: body.lines.map((line, index) => ({
+            itemId: line.itemId,
+            description: line.description,
+            quantity: line.quantity,
+            unitPrice: line.unitPrice,
+            taxRate: line.taxRate,
+            lineTotal: totals.lines[index].lineTotal,
+            sortOrder: index,
+          })),
+        },
+      },
+      include: DOCUMENT_INCLUDE,
+    });
+  });
+
+  res.json({ document });
+});
