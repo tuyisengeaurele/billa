@@ -23,9 +23,12 @@ export function AuthLayout({ eyebrow, headline, tagline, children }: AuthLayoutP
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="relative z-10 font-display text-2xl font-semibold text-white"
+          className="relative z-10 flex items-center gap-3"
         >
-          Billa
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white shadow-sm">
+            <img src="/logo.png" alt="" className="h-7 w-7" />
+          </span>
+          <span className="font-display text-2xl font-semibold text-white">Billa</span>
         </motion.div>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
