@@ -68,7 +68,7 @@ export function DetailsStep({ onComplete }: DetailsStepProps) {
     <div>
       <h2 className="font-display text-2xl font-semibold text-neutral-900">Tell us about your business</h2>
       <p className="mt-2 font-sans text-sm text-neutral-600">
-        All optional — fill in what you have, skip what you don't.
+        Everything here is optional. Fill in what you have and skip the rest.
       </p>
 
       <form onSubmit={handleSubmit(onSubmit)} className="mt-8 flex flex-col gap-5" noValidate>

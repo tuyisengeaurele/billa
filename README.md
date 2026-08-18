@@ -1,7 +1,7 @@
 # Billa
 
 Documents-only SaaS for SMEs (starting in Rwanda) to generate invoices, proforma invoices,
-delivery notes, quotes, and receipts. No bookkeeping, no payment tracking — just fast,
+delivery notes, quotes, and receipts. No bookkeeping, no payment tracking. Just fast,
 professional business documents.
 
 ## Repo structure
@@ -9,15 +9,15 @@ professional business documents.
 npm workspaces monorepo: `/client`, `/server`, `/shared`.
 
 Went with a single repo instead of splitting client/server into separate repos because
-`/shared` holds the Zod validation schemas both sides import — invoice line-item validation,
+`/shared` holds the Zod validation schemas both sides import: invoice line-item validation,
 customer/item shapes, auth payloads. Splitting repos would mean hand-syncing that logic or
-publishing an internal package, which is overkill for a solo-dev v1. No Turborepo/Nx on top —
+publishing an internal package, which is overkill for a solo-dev v1. No Turborepo/Nx on top.
 npm workspaces alone is enough at this size; can add build orchestration later if the workspace
 count grows.
 
-- `client` — React 18 + TypeScript + Vite + Tailwind + shadcn/ui
-- `server` — Node + Express + TypeScript + Prisma
-- `shared` — Zod schemas and TS types shared between client and server
+- `client`: React 18 + TypeScript + Vite + Tailwind + shadcn/ui
+- `server`: Node + Express + TypeScript + Prisma
+- `shared`: Zod schemas and TS types shared between client and server
 
 ## Getting started
 

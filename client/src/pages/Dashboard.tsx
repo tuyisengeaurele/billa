@@ -8,7 +8,7 @@ export default function Dashboard() {
       <h1 className="font-display text-3xl font-semibold text-neutral-900">
         Welcome, {business?.name ?? "there"}.
       </h1>
-      <p className="font-sans text-sm text-neutral-600">Your Billa workspace is ready.</p>
+      <p className="font-sans text-sm text-neutral-600">Your account is set up. Invoicing tools are next.</p>
     </div>
   );
 }

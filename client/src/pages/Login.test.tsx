@@ -40,7 +40,7 @@ describe("Login", () => {
   it("navigates to /onboarding after a successful login", async () => {
     // /auth/me is called twice: once by AuthProvider's bootstrap (must be
     // 401, unauthenticated), once by login() itself right after a
-    // successful /auth/login to fetch the business (must succeed) — a
+    // successful /auth/login to fetch the business (must succeed). A
     // call counter distinguishes the two.
     let authMeCalls = 0;
     vi.spyOn(global, "fetch").mockImplementation(async (input) => {

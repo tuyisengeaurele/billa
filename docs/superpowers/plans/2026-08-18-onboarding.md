@@ -6,7 +6,7 @@
 
 **Architecture:** `Onboarding.tsx` owns `step: "details" | "logo"` and renders one of two extracted step components (`DetailsStep`, `LogoStep`) inside a new `OnboardingLayout` shell. Each step calls the existing `/business` and `/business/logo/*` endpoints directly via `apiRequest` and reports completion via an `onComplete` callback; `Onboarding.tsx` decides what completion means (advance to the next step, or navigate to `/dashboard`).
 
-**Tech Stack:** React 18, react-hook-form + zod (client-local schema, not the shared one), Tailwind, framer-motion, Vitest + React Testing Library — all already in place, no new dependencies.
+**Tech Stack:** React 18, react-hook-form + zod (client-local schema, not the shared one), Tailwind, framer-motion, Vitest + React Testing Library. All already in place, no new dependencies.
 
 **Reference:** `docs/superpowers/specs/2026-08-18-onboarding-design.md`
 
@@ -14,13 +14,13 @@
 
 ## File Structure
 
-- Modify: `client/src/lib/apiClient.ts` — add FormData body support (needed for the logo upload's multipart POST) and export `API_BASE_URL` (needed to build absolute `<img src>` URLs for uploaded logos, since they're relative paths served by Express, not Vite).
-- Create: `client/src/components/onboarding/OnboardingLayout.tsx` — shared wizard shell: step label, "Skip onboarding" link, card container.
-- Create: `client/src/components/onboarding/DetailsStep.tsx` — business details form.
-- Create: `client/src/components/onboarding/LogoStep.tsx` — logo upload → background removal → color extraction → review/confirm.
-- Modify: `client/src/pages/Onboarding.tsx` — orchestrates the two steps.
-- Create: `client/src/pages/Dashboard.tsx` — minimal landing stub.
-- Modify: `client/src/App.tsx` — add the `/dashboard` route.
+- Modify: `client/src/lib/apiClient.ts`: add FormData body support (needed for the logo upload's multipart POST) and export `API_BASE_URL` (needed to build absolute `<img src>` URLs for uploaded logos, since they're relative paths served by Express, not Vite).
+- Create: `client/src/components/onboarding/OnboardingLayout.tsx`: shared wizard shell, step label, "Skip onboarding" link, card container.
+- Create: `client/src/components/onboarding/DetailsStep.tsx`: business details form.
+- Create: `client/src/components/onboarding/LogoStep.tsx`: logo upload, background removal, color extraction, review/confirm.
+- Modify: `client/src/pages/Onboarding.tsx`: orchestrates the two steps.
+- Create: `client/src/pages/Dashboard.tsx`: minimal landing stub.
+- Modify: `client/src/App.tsx`: add the `/dashboard` route.
 
 Each new component gets its own colocated `.test.tsx` file, matching the existing pattern (`FormField.tsx` / `FormField.test.tsx`, etc).
 
@@ -68,7 +68,7 @@ describe("API_BASE_URL", () => {
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `npm run test --workspace=client -- apiClient.test.ts`
-Expected: FAIL — `API_BASE_URL` is not exported, and the FormData test fails because the body gets `JSON.stringify`'d into a broken value and a `Content-Type: application/json` header gets sent.
+Expected: FAIL: `API_BASE_URL` is not exported, and the FormData test fails because the body gets `JSON.stringify`'d into a broken value and a `Content-Type: application/json` header gets sent.
 
 - [ ] **Step 3: Implement**
 
@@ -149,7 +149,7 @@ describe("OnboardingLayout", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npm run test --workspace=client -- OnboardingLayout.test.tsx`
-Expected: FAIL — `./OnboardingLayout` does not exist.
+Expected: FAIL: `./OnboardingLayout` does not exist.
 
 - [ ] **Step 3: Implement**
 
@@ -304,7 +304,7 @@ describe("DetailsStep", () => {
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `npm run test --workspace=client -- DetailsStep.test.tsx`
-Expected: FAIL — `./DetailsStep` does not exist.
+Expected: FAIL: `./DetailsStep` does not exist.
 
 - [ ] **Step 3: Implement**
 
@@ -571,7 +571,7 @@ describe("LogoStep", () => {
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `npm run test --workspace=client -- LogoStep.test.tsx`
-Expected: FAIL — `./LogoStep` does not exist.
+Expected: FAIL: `./LogoStep` does not exist.
 
 - [ ] **Step 3: Implement**
 
@@ -941,7 +941,7 @@ describe("Onboarding", () => {
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `npm run test --workspace=client -- Onboarding.test.tsx`
-Expected: FAIL — current `Onboarding.tsx` is a one-line stub with none of this markup.
+Expected: FAIL: current `Onboarding.tsx` is a one-line stub with none of this markup.
 
 - [ ] **Step 3: Implement**
 
@@ -1031,7 +1031,7 @@ describe("Dashboard", () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npm run test --workspace=client -- Dashboard.test.tsx`
-Expected: FAIL — `./Dashboard` does not exist.
+Expected: FAIL: `./Dashboard` does not exist.
 
 - [ ] **Step 3: Implement**
 
@@ -1052,7 +1052,7 @@ export default function Dashboard() {
 }
 ```
 
-Modify `client/src/App.tsx` — add the import and route:
+Modify `client/src/App.tsx` to add the import and route:
 
 ```tsx
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
@@ -1129,10 +1129,10 @@ Expected: unchanged, all passing (these workspaces weren't touched by this plan)
 Start the client dev server (and confirm the API server + rembg service used by earlier stages are running, since this step exercises the live logo/background-removal/color-extraction pipeline, not mocks). Using the Browser pane:
 
 1. Register a fresh test account (or reuse a logged-in session) and land on `/onboarding`.
-2. Fill in a couple of business detail fields, click Continue — confirm it advances to "Step 2 of 2" and `GET /business` afterward (or the PATCH response) reflects the saved fields.
-3. Upload a real logo image — confirm the "Setting up your logo…" loading state appears, then the review screen shows the logo on both backgrounds with real extracted colors.
-4. Click "Adjust colors", change the primary color, click "Use these colors" — confirm it navigates to `/dashboard` and shows the welcome message.
-5. Separately, re-run onboarding and use "Skip onboarding" from the details step — confirm it goes straight to `/dashboard` with no API calls.
+2. Fill in a couple of business detail fields, click Continue. Confirm it advances to "Step 2 of 2" and `GET /business` afterward (or the PATCH response) reflects the saved fields.
+3. Upload a real logo image. Confirm the "Setting up your logo…" loading state appears, then the review screen shows the logo on both backgrounds with real extracted colors.
+4. Click "Adjust colors", change the primary color, click "Use these colors". Confirm it navigates to `/dashboard` and shows the welcome message.
+5. Separately, re-run onboarding and use "Skip onboarding" from the details step. Confirm it goes straight to `/dashboard` with no API calls.
 6. Check the Browser pane's console and network tab for unexpected errors.
 
 - [ ] **Step 5: Commit any fixes found during manual verification**
@@ -1150,5 +1150,5 @@ If no bugs are found, nothing to commit for this task.
 ## Self-Review Notes
 
 - **Spec coverage:** step flow (Task 5), details step with per-field PATCH (Task 3), logo pipeline with adjust/retry/skip (Task 4), dashboard landing (Task 6), error handling (covered inline in Tasks 3–4's tests), testing (every task is TDD). All spec sections have a corresponding task.
-- **Deviation from spec, fixed inline during spec review (see spec's Section 2):** the client does not reuse `businessProfileSchema` — it defines a local `detailsFormSchema` in `DetailsStep.tsx`, same pattern as Register's `confirmPassword` extension. No shared-workspace changes in this plan.
+- **Deviation from spec, fixed inline during spec review (see spec's Section 2):** the client does not reuse `businessProfileSchema`. It defines a local `detailsFormSchema` in `DetailsStep.tsx`, same pattern as Register's `confirmPassword` extension. No shared-workspace changes in this plan.
 - **Type consistency checked:** `onComplete: () => void` prop name is identical across `DetailsStep`, `LogoStep`, and how `Onboarding.tsx` calls them. `LogoStepState`'s `phase` values (`"upload" | "processing" | "review"`) are used consistently in both the component and its tests. `API_BASE_URL` is defined once in Task 1 and consumed only in Task 4.

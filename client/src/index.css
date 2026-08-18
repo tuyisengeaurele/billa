@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  /* brand — exact values, do not adjust */
+  /* brand colors, exact values, do not adjust */
   --color-primary-500: #c2185b;
   --color-secondary: #e0f2fe;
 
