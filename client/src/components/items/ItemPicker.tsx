@@ -37,6 +37,7 @@ export function ItemPicker({ value, error, onSelect }: ItemPickerProps) {
           setOptions(data.results.map((item) => ({ id: item.id, label: item.description, sublabel: item.unit })));
           setResultsById(Object.fromEntries(data.results.map((item) => [item.id, item])));
         })
+        .catch(() => setOptions([]))
         .finally(() => setIsLoading(false));
     }, 300);
     return () => clearTimeout(timeout);

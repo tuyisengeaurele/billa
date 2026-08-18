@@ -33,6 +33,7 @@ export function CustomerPicker({ value, error, onSelect }: CustomerPickerProps) 
         .then((data) => {
           setOptions(data.results.map((c) => ({ id: c.id, label: c.name, sublabel: c.phone ?? undefined })));
         })
+        .catch(() => setOptions([]))
         .finally(() => setIsLoading(false));
     }, 300);
     return () => clearTimeout(timeout);
