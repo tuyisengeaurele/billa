@@ -1,14 +1,24 @@
 import { Router } from "express";
+import multer from "multer";
 import type { DocumentType as PrismaDocumentType } from "@prisma/client";
 import { businessProfileSchema, updateSequencesSchema } from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/require-auth.js";
 import { validateBody } from "../middleware/validate.js";
 import { mergeSequences } from "../lib/document-sequences.js";
+import { detectAllowedImageType } from "../lib/file-sniff.js";
+import { LocalDiskStorage } from "../lib/storage.js";
 
 export const businessRouter = Router();
 
 businessRouter.use(requireAuth);
+
+const uploadLogo = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+}).single("logo");
+
+const logoStorage = new LocalDiskStorage(process.env.UPLOADS_DIR ?? "./uploads");
 
 businessRouter.get("/", async (req, res) => {
   const business = await prisma.business.findUnique({ where: { id: req.auth!.businessId } });
@@ -61,3 +71,31 @@ businessRouter.put("/sequences", validateBody(updateSequencesSchema), async (req
   const saved = await prisma.documentSequence.findMany({ where: { businessId: req.auth!.businessId } });
   res.json({ sequences: mergeSequences(saved) });
 });
+
+businessRouter.post(
+  "/logo",
+  (req, res, next) => {
+    uploadLogo(req, res, (err) => {
+      if (err) {
+        res.status(400).json({ error: "upload_failed" });
+        return;
+      }
+      next();
+    });
+  },
+  async (req, res) => {
+    if (!req.file) {
+      res.status(400).json({ error: "no_file" });
+      return;
+    }
+
+    const detected = await detectAllowedImageType(req.file.buffer);
+    if (!detected) {
+      res.status(400).json({ error: "invalid_file_type" });
+      return;
+    }
+
+    const { url } = await logoStorage.save(req.file.buffer, req.auth!.businessId, detected.ext);
+    res.status(201).json({ url });
+  },
+);
