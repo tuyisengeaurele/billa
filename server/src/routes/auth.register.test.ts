@@ -15,7 +15,7 @@ describe("POST /auth/register", () => {
   it("creates a business and owner user, and sets session cookies", async () => {
     const res = await request(createApp()).post("/auth/register").send({
       email: "owner@example.com",
-      password: "supersecret1",
+      password: "Supersecret1!",
       businessName: "Kigali Traders",
     });
 
@@ -37,13 +37,13 @@ describe("POST /auth/register", () => {
     const app = createApp();
     await request(app).post("/auth/register").send({
       email: "owner@example.com",
-      password: "supersecret1",
+      password: "Supersecret1!",
       businessName: "Kigali Traders",
     });
 
     const res = await request(app).post("/auth/register").send({
       email: "owner@example.com",
-      password: "anotherpassword",
+      password: "AnotherPassword1!",
       businessName: "Another Business",
     });
 

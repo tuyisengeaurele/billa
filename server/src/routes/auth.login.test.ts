@@ -13,7 +13,7 @@ beforeEach(resetDb);
 async function registerUser(app: ReturnType<typeof createApp>) {
   await request(app).post("/auth/register").send({
     email: "owner@example.com",
-    password: "supersecret1",
+    password: "Supersecret1!",
     businessName: "Kigali Traders",
   });
 }
@@ -25,7 +25,7 @@ describe("POST /auth/login", () => {
 
     const res = await request(app).post("/auth/login").send({
       email: "owner@example.com",
-      password: "supersecret1",
+      password: "Supersecret1!",
     });
 
     expect(res.status).toBe(200);

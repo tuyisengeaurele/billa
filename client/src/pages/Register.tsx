@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { registerSchema, type RegisterInput } from "@billa/shared";
+import { PASSWORD_REQUIREMENTS, registerSchema, type RegisterInput } from "@billa/shared";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
@@ -16,8 +16,10 @@ export default function Register() {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<RegisterInput>({ resolver: zodResolver(registerSchema) });
+  const password = watch("password") ?? "";
 
   async function onSubmit(data: RegisterInput) {
     setApiError(null);
@@ -77,6 +79,19 @@ export default function Register() {
           error={errors.password?.message}
           {...register("password")}
         />
+        <ul className="-mt-2 flex flex-col gap-1">
+          {PASSWORD_REQUIREMENTS.map((requirement) => {
+            const met = requirement.test(password);
+            return (
+              <li
+                key={requirement.label}
+                className={`font-sans text-xs transition-colors ${met ? "text-success" : "text-neutral-400"}`}
+              >
+                {requirement.label}
+              </li>
+            );
+          })}
+        </ul>
         <Button type="submit" isLoading={isSubmitting}>
           Create account
         </Button>

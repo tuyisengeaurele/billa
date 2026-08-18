@@ -16,7 +16,7 @@ describe("POST /auth/logout", () => {
     const app = createApp();
     const registerRes = await request(app).post("/auth/register").send({
       email: "owner@example.com",
-      password: "supersecret1",
+      password: "Supersecret1!",
       businessName: "Kigali Traders",
     });
     const cookies = registerRes.headers["set-cookie"] as unknown as string[];

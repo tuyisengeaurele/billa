@@ -19,7 +19,7 @@ afterEach(() => {
 async function registerAndGetCookies(app: ReturnType<typeof createApp>) {
   const res = await request(app).post("/auth/register").send({
     email: "owner@example.com",
-    password: "supersecret1",
+    password: "Supersecret1!",
     businessName: "Kigali Traders",
   });
   return res.headers["set-cookie"] as unknown as string[];
