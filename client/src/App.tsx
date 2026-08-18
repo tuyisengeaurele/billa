@@ -9,6 +9,7 @@ import Customers from "./pages/Customers";
 import Items from "./pages/Items";
 import DocumentForm from "./pages/DocumentForm";
 import Documents from "./pages/Documents";
+import DocumentView from "./pages/DocumentView";
 
 export default function App() {
   return (
@@ -25,6 +26,7 @@ export default function App() {
             <Route path="/documents" element={<Documents />} />
             <Route path="/documents/new" element={<DocumentForm />} />
             <Route path="/documents/:id/edit" element={<DocumentForm />} />
+            <Route path="/documents/:id" element={<DocumentView />} />
           </Route>
           <Route path="/" element={<Navigate to="/onboarding" replace />} />
         </Routes>
