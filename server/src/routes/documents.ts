@@ -7,6 +7,7 @@ import { requireAuth } from "../middleware/require-auth.js";
 import { validateBody } from "../middleware/validate.js";
 import { validateQuery } from "../middleware/validate-query.js";
 import { calculateDocumentTotals } from "../lib/document-totals.js";
+import { DEFAULT_PREFIXES } from "../lib/document-sequences.js";
 
 export const documentsRouter = Router();
 
@@ -149,4 +150,49 @@ documentsRouter.patch("/:id", validateBody(documentSchema), async (req, res) => 
   });
 
   res.json({ document });
+});
+
+documentsRouter.post("/:id/finalize", async (req, res) => {
+  const businessId = req.auth!.businessId;
+  const { id } = req.params;
+
+  const document = await prisma.document.findFirst({ where: { id, businessId }, include: { lines: true } });
+  if (!document) {
+    res.status(404).json({ error: "not_found" });
+    return;
+  }
+  if (document.status === "FINALIZED") {
+    res.status(409).json({ error: "already_finalized" });
+    return;
+  }
+  if (document.lines.length === 0) {
+    res.status(400).json({ error: "no_lines" });
+    return;
+  }
+
+  const finalized = await prisma.$transaction(async (tx) => {
+    const existingSequence = await tx.documentSequence.findUnique({
+      where: { businessId_type: { businessId, type: document.type } },
+    });
+
+    const assignedNumber = existingSequence ? existingSequence.nextNumber : 1;
+    const prefix = existingSequence ? existingSequence.prefix : DEFAULT_PREFIXES[document.type];
+
+    await tx.documentSequence.upsert({
+      where: { businessId_type: { businessId, type: document.type } },
+      create: { businessId, type: document.type, prefix, nextNumber: assignedNumber + 1 },
+      update: { nextNumber: assignedNumber + 1 },
+    });
+
+    return tx.document.update({
+      where: { id },
+      data: {
+        number: `${prefix}${String(assignedNumber).padStart(4, "0")}`,
+        status: "FINALIZED",
+      },
+      include: DOCUMENT_INCLUDE,
+    });
+  });
+
+  res.json({ document: finalized });
 });

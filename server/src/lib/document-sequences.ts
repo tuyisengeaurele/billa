@@ -1,6 +1,6 @@
 import { DOCUMENT_TYPES, type DocumentType } from "@billa/shared";
 
-const DEFAULT_PREFIXES: Record<DocumentType, string> = {
+export const DEFAULT_PREFIXES: Record<DocumentType, string> = {
   INVOICE: "INV-",
   PROFORMA: "PRO-",
   DELIVERY_NOTE: "DN-",
