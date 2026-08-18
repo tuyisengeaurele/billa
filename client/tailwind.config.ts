@@ -37,6 +37,10 @@ export default {
           DEFAULT: "var(--color-warning)",
         },
       },
+      fontFamily: {
+        display: ["Fraunces Variable", "ui-serif", "serif"],
+        sans: ["Plus Jakarta Sans Variable", "ui-sans-serif", "sans-serif"],
+      },
     },
   },
   plugins: [],
