@@ -236,4 +236,32 @@ describe("DocumentForm", () => {
 
     expect(await screen.findByLabelText("Valid until")).toBeInTheDocument();
   });
+
+  it("shows a Converted from proforma link when editing a converted invoice", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.endsWith("/documents/d1")) {
+        return new Response(
+          JSON.stringify({
+            document: {
+              id: "d1",
+              customerId: "c1",
+              customer: { name: "Kigali Traders" },
+              issueDate: "2026-08-19T00:00:00.000Z",
+              dueDate: null,
+              notes: null,
+              lines: [],
+              convertedFrom: { id: "proforma1", number: "PRO-0001" },
+            },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    renderEdit("d1");
+
+    expect(await screen.findByText(/converted from proforma pro-0001/i)).toBeInTheDocument();
+  });
 });

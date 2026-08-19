@@ -2,7 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { getDueDateLabel, type DocumentType } from "@billa/shared";
 import { useEffect, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import { AppLayout } from "../components/AppLayout";
 import { CustomerPicker } from "../components/customers/CustomerPicker";
@@ -52,6 +52,7 @@ interface DocumentResponse {
   dueDate: string | null;
   notes: string | null;
   lines: DocumentLineResponse[];
+  convertedFrom: { id: string; number: string | null } | null;
 }
 
 function calculateLiveTotals(lines: { quantity?: number; unitPrice?: number; taxRate?: number }[]) {
@@ -79,6 +80,7 @@ export default function DocumentForm() {
   const [isSaving, setIsSaving] = useState(false);
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [isLoaded, setIsLoaded] = useState(!isEditing);
+  const [convertedFrom, setConvertedFrom] = useState<{ id: string; number: string | null } | null>(null);
 
   const {
     register,
@@ -121,6 +123,7 @@ export default function DocumentForm() {
           taxRate: Number(line.taxRate),
         })),
       });
+      setConvertedFrom(doc.convertedFrom ?? null);
       setIsLoaded(true);
     });
   }, [id, isEditing, reset]);
@@ -195,6 +198,15 @@ export default function DocumentForm() {
         <h1 className="font-display text-2xl font-semibold text-neutral-900">
           {isEditing ? `Edit ${labels.singular}` : `New ${labels.singular}`}
         </h1>
+
+        {convertedFrom && (
+          <Link
+            to={`/documents/${convertedFrom.id}`}
+            className="font-sans text-sm text-primary-500 hover:text-primary-700"
+          >
+            Converted from proforma {convertedFrom.number ?? "Draft"}
+          </Link>
+        )}
 
         {apiError && (
           <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
