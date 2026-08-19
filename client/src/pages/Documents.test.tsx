@@ -121,4 +121,35 @@ describe("Documents", () => {
 
     await waitFor(() => expect(screen.getByText("new document page")).toBeInTheDocument());
   });
+
+  it("opens the PDF download URL when the row's download button is clicked", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async () =>
+      new Response(
+        JSON.stringify({
+          results: [
+            {
+              id: "d1",
+              number: "INV-0001",
+              status: "FINALIZED",
+              issueDate: "2026-08-18T00:00:00.000Z",
+              total: 5000,
+              customer: { name: "Kigali Traders" },
+            },
+          ],
+          total: 1,
+          page: 1,
+          pageSize: 20,
+        }),
+        { status: 200 },
+      ),
+    );
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+    const user = userEvent.setup();
+
+    renderDocuments();
+
+    await user.click(await screen.findByRole("button", { name: /download/i }));
+
+    expect(openSpy).toHaveBeenCalledWith(expect.stringContaining("/documents/d1/pdf"), "_blank");
+  });
 });

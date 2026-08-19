@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { AppLayout } from "../components/AppLayout";
 import { usePaginatedList } from "../lib/usePaginatedList";
 import { formatRwf } from "@billa/shared";
+import { API_BASE_URL } from "../lib/apiClient";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
 
 interface DocumentRow {
@@ -96,6 +97,7 @@ export default function Documents() {
                   Total {list.sortBy === "total" && (list.sortOrder === "asc" ? "↑" : "↓")}
                 </th>
                 <th className="py-2">Status</th>
+                <th className="py-2" />
               </tr>
             </thead>
             <tbody>
@@ -110,6 +112,18 @@ export default function Documents() {
                   <td className="py-3 text-neutral-600">{document.customer.name}</td>
                   <td className="py-3 text-neutral-600">{formatRwf(document.total)}</td>
                   <td className="py-3 text-neutral-600">{document.status}</td>
+                  <td className="py-3">
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        window.open(`${API_BASE_URL}/documents/${document.id}/pdf`, "_blank");
+                      }}
+                      className="font-sans text-sm text-primary-500 hover:text-primary-700"
+                    >
+                      Download
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
