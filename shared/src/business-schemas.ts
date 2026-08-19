@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { DOCUMENT_TYPES } from "./document-types.js";
+import { DOCUMENT_TYPES, DOCUMENT_TEMPLATES } from "./document-types.js";
 
 export const businessProfileSchema = z
   .object({
@@ -10,6 +10,7 @@ export const businessProfileSchema = z
     email: z.string().email().optional(),
     address: z.string().trim().min(1).optional(),
     rraEbmNumber: z.string().trim().min(1).optional(),
+    defaultTemplate: z.enum(DOCUMENT_TEMPLATES).optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "at least one field is required",

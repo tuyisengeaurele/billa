@@ -16,6 +16,16 @@ describe("businessProfileSchema", () => {
     const result = businessProfileSchema.safeParse({});
     expect(result.success).toBe(false);
   });
+
+  it("accepts a valid defaultTemplate", () => {
+    const result = businessProfileSchema.safeParse({ defaultTemplate: "FORMAL" });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an invalid defaultTemplate", () => {
+    const result = businessProfileSchema.safeParse({ defaultTemplate: "NEON" });
+    expect(result.success).toBe(false);
+  });
 });
 
 describe("documentSequenceSchema", () => {
