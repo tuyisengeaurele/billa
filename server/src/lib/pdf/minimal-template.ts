@@ -50,7 +50,7 @@ export function renderMinimalHtml(data: PdfRenderData): string {
     <div class="rule" style="background:${data.business.accentColor}"></div>
     <div class="parties">
       <div>
-        <div class="party-label">Bill to</div>
+        <div class="party-label">${data.partyLabel}</div>
         <div>${data.customer.name}</div>
         ${data.customer.address ? `<div>${data.customer.address}</div>` : ""}
       </div>

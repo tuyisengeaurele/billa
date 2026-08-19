@@ -75,4 +75,10 @@ describe("renderMinimalHtml", () => {
     const html = renderMinimalHtml(makeData({ business: { ...makeData().business, accentColor: "#00FF00" } }));
     expect(html).toContain("#00FF00");
   });
+
+  it("uses the dynamic party label instead of a hardcoded one", () => {
+    const html = renderMinimalHtml(makeData({ partyLabel: "Deliver to" }));
+    expect(html).toContain("Deliver to");
+    expect(html).not.toContain("Bill to");
+  });
 });
