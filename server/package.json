@@ -15,6 +15,8 @@
   },
   "dependencies": {
     "@billa/shared": "*",
+    "@fontsource-variable/fraunces": "^5.3.0",
+    "@fontsource-variable/plus-jakarta-sans": "^5.3.0",
     "@prisma/client": "^5.18.0",
     "bcrypt": "^5.1.1",
     "cookie-parser": "^1.4.6",
@@ -25,6 +27,7 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.2.0",
     "node-vibrant": "^4.0.4",
+    "puppeteer": "^25.8.0",
     "sharp": "^0.35.3",
     "zod": "^3.23.8"
   },
@@ -36,12 +39,12 @@
     "@types/jsonwebtoken": "^9.0.6",
     "@types/multer": "^2.2.0",
     "@types/node": "^22.5.0",
+    "@types/supertest": "^6.0.2",
     "file-type": "^22.0.2",
     "prisma": "^5.18.0",
     "supertest": "^7.0.0",
     "tsx": "^4.19.0",
     "typescript": "^5.5.4",
-    "vitest": "^2.0.5",
-    "@types/supertest": "^6.0.2"
+    "vitest": "^2.0.5"
   }
 }
