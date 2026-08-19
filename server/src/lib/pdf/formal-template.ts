@@ -45,7 +45,7 @@ export function renderFormalHtml(data: PdfRenderData): string {
       </div>
       <div class="meta-row">
         <div class="meta-box">
-          <div class="meta-box-label">Bill to</div>
+          <div class="meta-box-label">${data.partyLabel}</div>
           <div>${data.customer.name}</div>
           ${data.customer.address ? `<div>${data.customer.address}</div>` : ""}
         </div>
@@ -53,7 +53,7 @@ export function renderFormalHtml(data: PdfRenderData): string {
           <div class="meta-box-label">Document details</div>
           <div>No: ${data.number ?? "DRAFT"}</div>
           <div>Issued: ${data.issueDate}</div>
-          ${data.dueDate ? `<div>Due: ${data.dueDate}</div>` : ""}
+          ${data.dueDateLabel && data.dueDate ? `<div>${data.dueDateLabel}: ${data.dueDate}</div>` : ""}
         </div>
       </div>
       <table>

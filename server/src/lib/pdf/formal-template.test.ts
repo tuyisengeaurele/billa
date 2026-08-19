@@ -68,4 +68,22 @@ describe("renderFormalHtml", () => {
     const html = renderFormalHtml(makeData({ business: { ...makeData().business, accentColor: "#00FF00" } }));
     expect(html).toContain("#00FF00");
   });
+
+  it("uses the dynamic party label instead of a hardcoded one", () => {
+    const html = renderFormalHtml(makeData({ partyLabel: "Deliver to" }));
+    expect(html).toContain("Deliver to");
+  });
+
+  it("uses the dynamic due date label when both are present", () => {
+    const html = renderFormalHtml(
+      makeData({ dueDateLabel: "Valid until", dueDate: "2026-09-01" }),
+    );
+    expect(html).toContain("Valid until: 2026-09-01");
+    expect(html).not.toContain("Due:");
+  });
+
+  it("omits the due date line when there is no due date label", () => {
+    const html = renderFormalHtml(makeData({ dueDateLabel: null, dueDate: null }));
+    expect(html).not.toMatch(/Due date:|Valid until:/);
+  });
 });
