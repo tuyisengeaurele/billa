@@ -8,6 +8,8 @@ import { validateBody } from "../middleware/validate.js";
 import { validateQuery } from "../middleware/validate-query.js";
 import { calculateDocumentTotals } from "../lib/document-totals.js";
 import { DEFAULT_PREFIXES } from "../lib/document-sequences.js";
+import { buildPdfRenderData } from "../lib/pdf/render-data.js";
+import { renderDocumentPdf } from "../lib/pdf/render-document-pdf.js";
 
 export const documentsRouter = Router();
 
@@ -101,6 +103,36 @@ documentsRouter.get("/:id", async (req, res) => {
   }
 
   res.json({ document });
+});
+
+documentsRouter.get("/:id/pdf", async (req, res) => {
+  const businessId = req.auth!.businessId;
+  const { id } = req.params;
+
+  const document = await prisma.document.findFirst({
+    where: { id, businessId },
+    include: { lines: { orderBy: { sortOrder: "asc" } }, customer: true },
+  });
+  if (!document) {
+    res.status(404).json({ error: "not_found" });
+    return;
+  }
+
+  const business = await prisma.business.findUnique({ where: { id: businessId } });
+  const data = await buildPdfRenderData(document, business!);
+
+  let pdfBuffer: Buffer;
+  try {
+    pdfBuffer = await renderDocumentPdf(document.template, data);
+  } catch {
+    res.status(500).json({ error: "pdf_render_failed" });
+    return;
+  }
+
+  const filename = document.number ? `${document.number}.pdf` : `Draft-${document.id.slice(0, 8)}.pdf`;
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+  res.send(pdfBuffer);
 });
 
 documentsRouter.patch("/:id", validateBody(documentSchema), async (req, res) => {
