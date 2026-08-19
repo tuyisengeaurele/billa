@@ -24,6 +24,21 @@ function renderDocuments() {
   );
 }
 
+function renderAllDocuments() {
+  return render(
+    <MemoryRouter initialEntries={["/documents"]}>
+      <AuthProvider>
+        <Routes>
+          <Route path="/documents" element={<Documents />} />
+          <Route path="/documents/new" element={<div>new document page</div>} />
+          <Route path="/documents/:id/edit" element={<div>edit document page</div>} />
+          <Route path="/documents/:id" element={<div>view document page</div>} />
+        </Routes>
+      </AuthProvider>
+    </MemoryRouter>,
+  );
+}
+
 describe("Documents", () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -151,5 +166,87 @@ describe("Documents", () => {
     await user.click(await screen.findByRole("button", { name: /download/i }));
 
     expect(openSpy).toHaveBeenCalledWith(expect.stringContaining("/documents/d1/pdf"), "_blank");
+  });
+
+  it("shows a Type column and no New-document button in unified mode", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.includes("/documents")) {
+        return new Response(
+          JSON.stringify({
+            results: [
+              {
+                id: "d1",
+                type: "INVOICE",
+                number: "INV-0001",
+                status: "FINALIZED",
+                issueDate: "2026-08-19T00:00:00.000Z",
+                total: 5900,
+                customer: { name: "Kigali Traders" },
+              },
+              {
+                id: "d2",
+                type: "PROFORMA",
+                number: "PRO-0001",
+                status: "FINALIZED",
+                issueDate: "2026-08-18T00:00:00.000Z",
+                total: 3000,
+                customer: { name: "Musanze Supplies" },
+              },
+            ],
+            total: 2,
+            page: 1,
+            pageSize: 20,
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    renderAllDocuments();
+
+    expect(await screen.findByText("invoice")).toBeInTheDocument();
+    expect(screen.getByText("proforma invoice")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^new /i })).not.toBeInTheDocument();
+  });
+
+  it("narrows results by type when a chip is toggled on", async () => {
+    const calls: string[] = [];
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      calls.push(url);
+      return new Response(JSON.stringify({ results: [], total: 0, page: 1, pageSize: 20 }), { status: 200 });
+    });
+    const user = userEvent.setup();
+    renderAllDocuments();
+    await screen.findByText(/no documents yet/i);
+
+    await user.click(screen.getByRole("button", { name: /^invoices$/i }));
+
+    await waitFor(() => {
+      const url = new URL(calls[calls.length - 1], "http://localhost");
+      expect(url.searchParams.get("type")).toBe("INVOICE");
+    });
+  });
+
+  it("adds to the type filter when a second chip is toggled on", async () => {
+    const calls: string[] = [];
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      calls.push(url);
+      return new Response(JSON.stringify({ results: [], total: 0, page: 1, pageSize: 20 }), { status: 200 });
+    });
+    const user = userEvent.setup();
+    renderAllDocuments();
+    await screen.findByText(/no documents yet/i);
+
+    await user.click(screen.getByRole("button", { name: /^invoices$/i }));
+    await user.click(screen.getByRole("button", { name: /^proforma invoices$/i }));
+
+    await waitFor(() => {
+      const url = new URL(calls[calls.length - 1], "http://localhost");
+      expect(url.searchParams.get("type")).toBe("INVOICE,PROFORMA");
+    });
   });
 });
