@@ -1,5 +1,5 @@
 import type { Business, Customer, Document, DocumentLine, DocumentType } from "@prisma/client";
-import { formatRwf } from "@billa/shared";
+import { formatRwf, getDueDateLabel, getPartyLabel } from "@billa/shared";
 import { escapeHtml } from "./escape-html.js";
 import { readLogoDataUri } from "./logo.js";
 
@@ -40,6 +40,8 @@ export interface PdfRenderData {
     email: string | null;
   };
   typeLabel: string;
+  partyLabel: string;
+  dueDateLabel: string | null;
   number: string | null;
   status: "DRAFT" | "FINALIZED";
   issueDate: string;
@@ -82,6 +84,8 @@ export async function buildPdfRenderData(
       email: escapeNullable(document.customer.email),
     },
     typeLabel: TYPE_LABELS[document.type],
+    partyLabel: getPartyLabel(document.type),
+    dueDateLabel: getDueDateLabel(document.type),
     number: document.number,
     status: document.status,
     issueDate: document.issueDate.toISOString().slice(0, 10),

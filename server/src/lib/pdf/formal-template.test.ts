@@ -16,6 +16,8 @@ function makeData(overrides: Partial<PdfRenderData> = {}): PdfRenderData {
     },
     customer: { name: "Acme Ltd", tin: null, address: null, phone: null, email: null },
     typeLabel: "Invoice",
+    partyLabel: "Bill to",
+    dueDateLabel: "Due date",
     number: "INV-0001",
     status: "FINALIZED",
     issueDate: "2026-08-18",

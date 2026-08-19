@@ -113,4 +113,16 @@ describe("buildPdfRenderData", () => {
     const data = await buildPdfRenderData(makeDocument(), makeBusiness({ logoUrl: null }));
     expect(data.business.logoDataUri).toBeNull();
   });
+
+  it("computes the party label and hides the due date label for a delivery note", async () => {
+    const data = await buildPdfRenderData(makeDocument({ type: "DELIVERY_NOTE" }), makeBusiness());
+    expect(data.partyLabel).toBe("Deliver to");
+    expect(data.dueDateLabel).toBeNull();
+  });
+
+  it("computes 'Valid until' as the due date label for a quote", async () => {
+    const data = await buildPdfRenderData(makeDocument({ type: "QUOTE" }), makeBusiness());
+    expect(data.dueDateLabel).toBe("Valid until");
+    expect(data.partyLabel).toBe("Bill to");
+  });
 });
