@@ -6,3 +6,4 @@ export * from "./customer-schemas.js";
 export * from "./item-schemas.js";
 export * from "./document-schemas.js";
 export * from "./money.js";
+export * from "./document-labels.js";
