@@ -4,6 +4,7 @@ import { AppLayout } from "../components/AppLayout";
 import { FormField } from "../components/FormField";
 import { Button } from "../components/Button";
 import { apiRequest, ApiError } from "../lib/apiClient";
+import { SequenceEditor } from "../components/business/SequenceEditor";
 
 interface BusinessProfile {
   name: string;
@@ -123,6 +124,8 @@ export default function BusinessSettings() {
             Save
           </Button>
         </form>
+
+        <SequenceEditor />
       </div>
     </AppLayout>
   );
