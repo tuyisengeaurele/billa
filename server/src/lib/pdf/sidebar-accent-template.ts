@@ -60,13 +60,13 @@ export function renderSidebarAccentHtml(data: PdfRenderData): string {
         <div class="sidebar-label">${data.typeLabel}</div>
         <div>${data.number ?? "DRAFT"}</div>
         <div>${data.issueDate}</div>
-        ${data.dueDate ? `<div>Due ${data.dueDate}</div>` : ""}
+        ${data.dueDateLabel && data.dueDate ? `<div>${data.dueDateLabel} ${data.dueDate}</div>` : ""}
         <div>${data.status}</div>
       </div>
     </div>
     <div class="main">
       <div class="doc-title">${data.typeLabel}</div>
-      <div class="party-label">Bill to</div>
+      <div class="party-label">${data.partyLabel}</div>
       <div>${data.customer.name}</div>
       ${data.customer.address ? `<div>${data.customer.address}</div>` : ""}
       <table style="margin-top:8mm">

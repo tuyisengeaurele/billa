@@ -68,4 +68,21 @@ describe("renderSidebarAccentHtml", () => {
     const html = renderSidebarAccentHtml(makeData({ business: { ...makeData().business, accentColor: "#F5F5F5" } }));
     expect(html).toContain("#1F2937");
   });
+
+  it("uses the dynamic party label instead of a hardcoded one", () => {
+    const html = renderSidebarAccentHtml(makeData({ partyLabel: "Deliver to" }));
+    expect(html).toContain("Deliver to");
+  });
+
+  it("uses the dynamic due date label when both are present", () => {
+    const html = renderSidebarAccentHtml(
+      makeData({ dueDateLabel: "Valid until", dueDate: "2026-09-01" }),
+    );
+    expect(html).toContain("Valid until 2026-09-01");
+  });
+
+  it("omits the due date line when there is no due date label", () => {
+    const html = renderSidebarAccentHtml(makeData({ dueDateLabel: null, dueDate: null }));
+    expect(html).not.toMatch(/Due date |Valid until /);
+  });
 });
