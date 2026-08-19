@@ -28,7 +28,15 @@ documentsRouter.get("/", validateQuery(documentListQuerySchema), async (req, res
 
   const where: Prisma.DocumentWhereInput = {
     businessId,
-    type: query.type,
+    ...(query.type && query.type.length > 0 ? { type: { in: query.type } } : {}),
+    ...(query.dateFrom || query.dateTo
+      ? {
+          issueDate: {
+            ...(query.dateFrom ? { gte: new Date(query.dateFrom) } : {}),
+            ...(query.dateTo ? { lt: new Date(new Date(query.dateTo).getTime() + 24 * 60 * 60 * 1000) } : {}),
+          },
+        }
+      : {}),
     ...(query.search
       ? {
           OR: [

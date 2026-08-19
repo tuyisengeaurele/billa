@@ -29,6 +29,7 @@ async function createDocument(
   cookies: string[],
   customerId: string,
   type = "INVOICE",
+  issueDate = "2026-08-19",
 ) {
   const res = await request(app)
     .post("/documents")
@@ -36,7 +37,7 @@ async function createDocument(
     .send({
       type,
       customerId,
-      issueDate: "2026-08-19",
+      issueDate,
       lines: [{ description: "Printing", quantity: 2, unitPrice: 5000, taxRate: 18 }],
     });
   return res.body.document.id as string;
@@ -70,12 +71,79 @@ describe("GET /documents", () => {
     expect(res.body.total).toBe(1);
   });
 
-  it("rejects a missing type with 400", async () => {
+  it("returns all types when type is omitted", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies);
+    await createDocument(app, cookies, customerId, "INVOICE");
+    await createDocument(app, cookies, customerId, "QUOTE");
 
     const res = await request(app).get("/documents").set("Cookie", cookies);
-    expect(res.status).toBe(400);
+
+    expect(res.status).toBe(200);
+    expect(res.body.total).toBe(2);
+  });
+
+  it("filters by multiple types via a comma-separated list", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies);
+    await createDocument(app, cookies, customerId, "INVOICE");
+    await createDocument(app, cookies, customerId, "PROFORMA");
+    await createDocument(app, cookies, customerId, "QUOTE");
+
+    const res = await request(app).get("/documents?type=INVOICE,PROFORMA").set("Cookie", cookies);
+
+    expect(res.body.total).toBe(2);
+  });
+
+  it("filters by dateFrom", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies);
+    await createDocument(app, cookies, customerId, "INVOICE", "2026-08-01");
+    await createDocument(app, cookies, customerId, "INVOICE", "2026-08-20");
+
+    const res = await request(app).get("/documents?dateFrom=2026-08-10").set("Cookie", cookies);
+
+    expect(res.body.total).toBe(1);
+  });
+
+  it("filters by dateTo, inclusive of that day", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies);
+    await createDocument(app, cookies, customerId, "INVOICE", "2026-08-10");
+    await createDocument(app, cookies, customerId, "INVOICE", "2026-08-11");
+
+    const res = await request(app).get("/documents?dateTo=2026-08-10").set("Cookie", cookies);
+
+    expect(res.body.total).toBe(1);
+  });
+
+  it("filters by both dateFrom and dateTo", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies);
+    await createDocument(app, cookies, customerId, "INVOICE", "2026-08-05");
+    await createDocument(app, cookies, customerId, "INVOICE", "2026-08-15");
+    await createDocument(app, cookies, customerId, "INVOICE", "2026-08-25");
+
+    const res = await request(app).get("/documents?dateFrom=2026-08-10&dateTo=2026-08-20").set("Cookie", cookies);
+
+    expect(res.body.total).toBe(1);
+  });
+
+  it("combines search with a type filter", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies);
+    await createDocument(app, cookies, customerId, "INVOICE");
+    await createDocument(app, cookies, customerId, "QUOTE");
+
+    const res = await request(app).get("/documents?type=INVOICE&search=Musanze").set("Cookie", cookies);
+
+    expect(res.body.total).toBe(1);
   });
 
   it("does not return another business's documents", async () => {
