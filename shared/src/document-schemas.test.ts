@@ -46,17 +46,31 @@ describe("documentSchema", () => {
 });
 
 describe("documentListQuerySchema", () => {
-  it("requires a type", () => {
-    expect(documentListQuerySchema.safeParse({}).success).toBe(false);
+  it("has no type filter when type is omitted", () => {
+    expect(documentListQuerySchema.parse({}).type).toBeUndefined();
   });
 
-  it("applies defaults when only type is provided", () => {
+  it("parses a single type into a one-item array", () => {
     expect(documentListQuerySchema.parse({ type: "INVOICE" })).toEqual({
-      type: "INVOICE",
+      type: ["INVOICE"],
       sortBy: "createdAt",
       sortOrder: "desc",
       page: 1,
       pageSize: 20,
     });
+  });
+
+  it("parses a comma-separated type list into an array", () => {
+    expect(documentListQuerySchema.parse({ type: "INVOICE,PROFORMA" }).type).toEqual(["INVOICE", "PROFORMA"]);
+  });
+
+  it("rejects an unknown type", () => {
+    expect(documentListQuerySchema.safeParse({ type: "BANANA" }).success).toBe(false);
+  });
+
+  it("accepts dateFrom and dateTo", () => {
+    const result = documentListQuerySchema.parse({ dateFrom: "2026-08-01", dateTo: "2026-08-31" });
+    expect(result.dateFrom).toBe("2026-08-01");
+    expect(result.dateTo).toBe("2026-08-31");
   });
 });

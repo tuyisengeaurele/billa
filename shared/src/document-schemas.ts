@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { DOCUMENT_TYPES } from "./document-types.js";
+import { DOCUMENT_TYPES, type DocumentType } from "./document-types.js";
 
 export const documentLineSchema = z.object({
   itemId: z.string().trim().min(1).optional(),
@@ -27,8 +27,18 @@ export const documentSchema = z.object({
 export type DocumentInput = z.infer<typeof documentSchema>;
 
 export const documentListQuerySchema = z.object({
-  type: z.enum(DOCUMENT_TYPES),
+  type: z
+    .string()
+    .optional()
+    .transform((val) => (val ? val.split(",") : undefined))
+    .refine(
+      (types): types is DocumentType[] | undefined =>
+        !types || types.every((t) => (DOCUMENT_TYPES as readonly string[]).includes(t)),
+      "Invalid document type",
+    ),
   search: z.string().trim().optional(),
+  dateFrom: z.string().trim().optional(),
+  dateTo: z.string().trim().optional(),
   sortBy: z.enum(["issueDate", "total", "createdAt"]).optional().default("createdAt"),
   sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
   page: z.coerce.number().int().positive().optional().default(1),
