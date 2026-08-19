@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { AppLayout } from "../components/AppLayout";
-import { apiRequest } from "../lib/apiClient";
+import { apiRequest, API_BASE_URL } from "../lib/apiClient";
 import { formatRwf } from "@billa/shared";
 
 interface DocumentLine {
@@ -44,7 +44,16 @@ export default function DocumentView() {
       <div className="mx-auto flex max-w-3xl flex-col gap-6">
         <div className="flex items-center justify-between">
           <h1 className="font-display text-2xl font-semibold text-neutral-900">{document.number ?? "Draft"}</h1>
-          <span className="font-sans text-sm text-neutral-500">{document.status}</span>
+          <div className="flex items-center gap-4">
+            <span className="font-sans text-sm text-neutral-500">{document.status}</span>
+            <button
+              type="button"
+              onClick={() => window.open(`${API_BASE_URL}/documents/${document.id}/pdf`, "_blank")}
+              className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+            >
+              Download PDF
+            </button>
+          </div>
         </div>
         <p className="font-sans text-sm text-neutral-600">{document.customer.name}</p>
         <table className="w-full border-collapse font-sans text-sm">

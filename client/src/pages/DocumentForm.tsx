@@ -8,7 +8,7 @@ import { AppLayout } from "../components/AppLayout";
 import { CustomerPicker } from "../components/customers/CustomerPicker";
 import { ItemPicker } from "../components/items/ItemPicker";
 import { FormField } from "../components/FormField";
-import { apiRequest, ApiError } from "../lib/apiClient";
+import { apiRequest, ApiError, API_BASE_URL } from "../lib/apiClient";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
 import { formatRwf } from "@billa/shared";
 
@@ -327,6 +327,15 @@ export default function DocumentForm() {
             >
               {isSaving ? "Saving…" : "Save draft"}
             </button>
+            {isEditing && (
+              <button
+                type="button"
+                onClick={() => window.open(`${API_BASE_URL}/documents/${id}/pdf`, "_blank")}
+                className="flex items-center justify-center rounded-lg border border-neutral-200 px-6 py-2.5 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+              >
+                Download PDF
+              </button>
+            )}
             {isEditing && (
               <button
                 type="button"
