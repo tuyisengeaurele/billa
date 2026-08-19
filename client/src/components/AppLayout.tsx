@@ -28,6 +28,9 @@ export function AppLayout({ children }: AppLayoutProps) {
           <Link to="/items" className="font-sans text-sm font-medium text-neutral-600 hover:text-neutral-900">
             Items
           </Link>
+          <Link to="/settings" className="font-sans text-sm font-medium text-neutral-600 hover:text-neutral-900">
+            Settings
+          </Link>
         </nav>
         <button
           type="button"
