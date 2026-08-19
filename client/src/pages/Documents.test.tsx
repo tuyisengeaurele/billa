@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -247,6 +247,26 @@ describe("Documents", () => {
     await waitFor(() => {
       const url = new URL(calls[calls.length - 1], "http://localhost");
       expect(url.searchParams.get("type")).toBe("INVOICE,PROFORMA");
+    });
+  });
+
+  it("sends dateFrom and dateTo when the date range is set", async () => {
+    const calls: string[] = [];
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      calls.push(url);
+      return new Response(JSON.stringify({ results: [], total: 0, page: 1, pageSize: 20 }), { status: 200 });
+    });
+    renderDocuments();
+    await screen.findByText(/no invoices yet/i);
+
+    fireEvent.change(screen.getByLabelText("From date"), { target: { value: "2026-08-01" } });
+    fireEvent.change(screen.getByLabelText("To date"), { target: { value: "2026-08-31" } });
+
+    await waitFor(() => {
+      const url = new URL(calls[calls.length - 1], "http://localhost");
+      expect(url.searchParams.get("dateFrom")).toBe("2026-08-01");
+      expect(url.searchParams.get("dateTo")).toBe("2026-08-31");
     });
   });
 });

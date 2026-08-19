@@ -26,6 +26,8 @@ export default function Documents() {
   const isUnified = typeParam === null;
   const labels = typeParam ? DOCUMENT_TYPE_LABELS[typeParam] : null;
   const [selectedTypes, setSelectedTypes] = useState<DocumentType[]>([]);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   const extraParams: Record<string, string> = {};
   if (typeParam) {
@@ -33,6 +35,8 @@ export default function Documents() {
   } else if (selectedTypes.length > 0) {
     extraParams.type = selectedTypes.join(",");
   }
+  if (dateFrom) extraParams.dateFrom = dateFrom;
+  if (dateTo) extraParams.dateTo = dateTo;
 
   const list = usePaginatedList<DocumentRow, SortBy>({
     resourcePath: "/documents",
@@ -94,13 +98,38 @@ export default function Documents() {
           </div>
         )}
 
-        <input
-          type="text"
-          placeholder={searchPlaceholder}
-          value={list.search}
-          onChange={(event) => list.updateSearch(event.target.value)}
-          className="w-full max-w-xs rounded-lg border border-neutral-200 px-3.5 py-2 font-sans text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
-        />
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            type="text"
+            placeholder={searchPlaceholder}
+            value={list.search}
+            onChange={(event) => list.updateSearch(event.target.value)}
+            className="w-full max-w-xs rounded-lg border border-neutral-200 px-3.5 py-2 font-sans text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+          />
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              aria-label="From date"
+              value={dateFrom}
+              onChange={(event) => {
+                setDateFrom(event.target.value);
+                list.setPage(1);
+              }}
+              className="rounded-lg border border-neutral-200 px-3 py-2 font-sans text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+            />
+            <span className="font-sans text-sm text-neutral-400">to</span>
+            <input
+              type="date"
+              aria-label="To date"
+              value={dateTo}
+              onChange={(event) => {
+                setDateTo(event.target.value);
+                list.setPage(1);
+              }}
+              className="rounded-lg border border-neutral-200 px-3 py-2 font-sans text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+            />
+          </div>
+        </div>
 
         {list.error && (
           <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
