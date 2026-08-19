@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { DOCUMENT_TYPES } from "@billa/shared";
 import { useAuth } from "../context/AuthContext";
+import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -19,9 +21,15 @@ export function AppLayout({ children }: AppLayoutProps) {
           <span className="font-display text-lg font-semibold text-neutral-900">Billa</span>
         </div>
         <nav className="flex items-center gap-6">
-          <Link to="/documents?type=INVOICE" className="font-sans text-sm font-medium text-neutral-600 hover:text-neutral-900">
-            Invoices
-          </Link>
+          {DOCUMENT_TYPES.map((type) => (
+            <Link
+              key={type}
+              to={`/documents?type=${type}`}
+              className="font-sans text-sm font-medium text-neutral-600 hover:text-neutral-900"
+            >
+              {DOCUMENT_TYPE_LABELS[type].plural}
+            </Link>
+          ))}
           <Link to="/customers" className="font-sans text-sm font-medium text-neutral-600 hover:text-neutral-900">
             Customers
           </Link>
