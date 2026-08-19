@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import type { DocumentType } from "@billa/shared";
+import { getDueDateLabel, type DocumentType } from "@billa/shared";
 import { useEffect, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -71,6 +71,7 @@ export default function DocumentForm() {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const type = (searchParams.get("type") as DocumentType) ?? "INVOICE";
+  const dueDateLabel = getDueDateLabel(type);
   const isEditing = Boolean(id);
   const labels = DOCUMENT_TYPE_LABELS[type];
 
@@ -218,7 +219,15 @@ export default function DocumentForm() {
               error={errors.issueDate?.message}
               {...register("issueDate")}
             />
-            <FormField id="dueDate" label="Due date" type="date" error={errors.dueDate?.message} {...register("dueDate")} />
+            {dueDateLabel && (
+              <FormField
+                id="dueDate"
+                label={dueDateLabel}
+                type="date"
+                error={errors.dueDate?.message}
+                {...register("dueDate")}
+              />
+            )}
             <FormField id="notes" label="Notes" type="text" error={errors.notes?.message} {...register("notes")} />
           </div>
 

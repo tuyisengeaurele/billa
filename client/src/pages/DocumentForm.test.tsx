@@ -23,6 +23,20 @@ function renderNew() {
   );
 }
 
+function renderNewForType(type: string) {
+  return render(
+    <MemoryRouter initialEntries={[`/documents/new?type=${type}`]}>
+      <AuthProvider>
+        <Routes>
+          <Route path="/documents/new" element={<DocumentForm />} />
+          <Route path="/documents/:id/edit" element={<DocumentForm />} />
+          <Route path="/documents/:id" element={<div>view document page</div>} />
+        </Routes>
+      </AuthProvider>
+    </MemoryRouter>,
+  );
+}
+
 function renderEdit(id: string) {
   return render(
     <MemoryRouter initialEntries={[`/documents/${id}/edit`]}>
@@ -205,5 +219,21 @@ describe("DocumentForm", () => {
     await user.click(await screen.findByRole("button", { name: /download pdf/i }));
 
     expect(openSpy).toHaveBeenCalledWith(expect.stringContaining("/documents/d1/pdf"), "_blank");
+  });
+
+  it("hides the due date field for a delivery note", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async () => new Response("{}", { status: 401 }));
+    renderNewForType("DELIVERY_NOTE");
+
+    await screen.findByText(/new delivery note/i);
+    expect(screen.queryByLabelText(/due date/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/valid until/i)).not.toBeInTheDocument();
+  });
+
+  it("labels the due date field 'Valid until' for a quote", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async () => new Response("{}", { status: 401 }));
+    renderNewForType("QUOTE");
+
+    expect(await screen.findByLabelText("Valid until")).toBeInTheDocument();
   });
 });
