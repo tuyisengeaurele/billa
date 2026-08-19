@@ -18,6 +18,8 @@ documentsRouter.use(requireAuth);
 const DOCUMENT_INCLUDE = {
   lines: { orderBy: { sortOrder: "asc" as const } },
   customer: { select: { name: true } },
+  convertedFrom: { select: { id: true, number: true, type: true } },
+  convertedTo: { select: { id: true, number: true, type: true } },
 };
 
 documentsRouter.get("/", validateQuery(documentListQuerySchema), async (req, res) => {
@@ -227,6 +229,71 @@ documentsRouter.post("/:id/finalize", async (req, res) => {
   });
 
   res.json({ document: finalized });
+});
+
+documentsRouter.post("/:id/convert", async (req, res) => {
+  const businessId = req.auth!.businessId;
+  const { id } = req.params;
+
+  const proforma = await prisma.document.findFirst({
+    where: { id, businessId },
+    include: { lines: true, convertedTo: { select: { id: true } } },
+  });
+  if (!proforma) {
+    res.status(404).json({ error: "not_found" });
+    return;
+  }
+  if (proforma.type !== "PROFORMA") {
+    res.status(400).json({ error: "not_a_proforma" });
+    return;
+  }
+  if (proforma.status !== "FINALIZED") {
+    res.status(409).json({ error: "not_finalized" });
+    return;
+  }
+  if (proforma.convertedTo) {
+    res.status(409).json({ error: "already_converted" });
+    return;
+  }
+
+  const business = await prisma.business.findUnique({ where: { id: businessId } });
+  const totals = calculateDocumentTotals(
+    proforma.lines.map((line) => ({
+      quantity: Number(line.quantity),
+      unitPrice: line.unitPrice,
+      taxRate: Number(line.taxRate),
+    })),
+  );
+
+  const invoice = await prisma.document.create({
+    data: {
+      businessId,
+      type: "INVOICE",
+      status: "DRAFT",
+      template: business!.defaultTemplate,
+      customerId: proforma.customerId,
+      issueDate: new Date(new Date().toISOString().slice(0, 10)),
+      notes: proforma.notes,
+      subtotal: totals.subtotal,
+      taxTotal: totals.taxTotal,
+      total: totals.total,
+      convertedFromId: proforma.id,
+      lines: {
+        create: proforma.lines.map((line, index) => ({
+          itemId: line.itemId,
+          description: line.description,
+          quantity: line.quantity,
+          unitPrice: line.unitPrice,
+          taxRate: line.taxRate,
+          lineTotal: totals.lines[index].lineTotal,
+          sortOrder: index,
+        })),
+      },
+    },
+    include: DOCUMENT_INCLUDE,
+  });
+
+  res.status(201).json({ document: invoice });
 });
 
 documentsRouter.delete("/:id", async (req, res) => {
