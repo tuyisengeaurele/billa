@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { AppLayout } from "../components/AppLayout";
 import { apiRequest } from "../lib/apiClient";
-import { formatRwf } from "../lib/money";
+import { formatRwf } from "@billa/shared";
 
 interface DocumentLine {
   id: string;

@@ -4,7 +4,7 @@ import { Button } from "../components/Button";
 import { Modal } from "../components/Modal";
 import { ItemForm, type ItemFormValues } from "../components/items/ItemForm";
 import { apiRequest, ApiError } from "../lib/apiClient";
-import { formatRwf } from "../lib/money";
+import { formatRwf } from "@billa/shared";
 import { usePaginatedList } from "../lib/usePaginatedList";
 
 interface Item {

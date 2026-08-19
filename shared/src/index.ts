@@ -5,3 +5,4 @@ export * from "./logo-schemas.js";
 export * from "./customer-schemas.js";
 export * from "./item-schemas.js";
 export * from "./document-schemas.js";
+export * from "./money.js";

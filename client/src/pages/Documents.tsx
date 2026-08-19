@@ -2,7 +2,7 @@ import type { DocumentType } from "@billa/shared";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AppLayout } from "../components/AppLayout";
 import { usePaginatedList } from "../lib/usePaginatedList";
-import { formatRwf } from "../lib/money";
+import { formatRwf } from "@billa/shared";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
 
 interface DocumentRow {

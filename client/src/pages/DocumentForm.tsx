@@ -10,7 +10,7 @@ import { ItemPicker } from "../components/items/ItemPicker";
 import { FormField } from "../components/FormField";
 import { apiRequest, ApiError } from "../lib/apiClient";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
-import { formatRwf } from "../lib/money";
+import { formatRwf } from "@billa/shared";
 
 const lineFormSchema = z.object({
   itemId: z.string().optional(),

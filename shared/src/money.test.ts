@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatRwf } from "./money";
+import { formatRwf } from "./money.js";
 
 describe("formatRwf", () => {
   it("formats with thousands separators and an RWF suffix", () => {
