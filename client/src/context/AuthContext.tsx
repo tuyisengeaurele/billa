@@ -1,5 +1,12 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { apiRequest } from "../lib/apiClient";
+import {
+  resetPassword as resetPasswordFirebase,
+  signInWithEmail,
+  signInWithGoogle as signInWithGoogleFirebase,
+  signOutFirebase,
+  signUpWithEmail,
+} from "../lib/firebaseAuth";
 
 interface User {
   id: string;
@@ -17,10 +24,20 @@ interface AuthContextValue {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, businessName: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
+  registerWithGoogle: (businessName: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+async function exchangeSession(idToken: string, businessName?: string) {
+  return apiRequest<{ user: User; business: Business }>("/auth/session", {
+    method: "POST",
+    body: businessName ? { idToken, businessName } : { idToken },
+  });
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -41,32 +58,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   async function login(email: string, password: string) {
-    const data = await apiRequest<{ user: User }>("/auth/login", {
-      method: "POST",
-      body: { email, password },
-    });
-    setUser(data.user);
-    const me = await apiRequest<{ business: Business }>("/auth/me");
-    setBusiness(me.business);
-  }
-
-  async function register(email: string, password: string, businessName: string) {
-    const data = await apiRequest<{ user: User; business: Business }>("/auth/register", {
-      method: "POST",
-      body: { email, password, businessName },
-    });
+    const idToken = await signInWithEmail(email, password);
+    const data = await exchangeSession(idToken);
     setUser(data.user);
     setBusiness(data.business);
   }
 
+  async function register(email: string, password: string, businessName: string) {
+    const idToken = await signUpWithEmail(email, password);
+    const data = await exchangeSession(idToken, businessName);
+    setUser(data.user);
+    setBusiness(data.business);
+  }
+
+  async function loginWithGoogle() {
+    const idToken = await signInWithGoogleFirebase();
+    const data = await exchangeSession(idToken);
+    setUser(data.user);
+    setBusiness(data.business);
+  }
+
+  async function registerWithGoogle(businessName: string) {
+    const idToken = await signInWithGoogleFirebase();
+    const data = await exchangeSession(idToken, businessName);
+    setUser(data.user);
+    setBusiness(data.business);
+  }
+
+  async function resetPassword(email: string) {
+    await resetPasswordFirebase(email);
+  }
+
   async function logout() {
+    await signOutFirebase();
     await apiRequest("/auth/logout", { method: "POST" });
     setUser(null);
     setBusiness(null);
   }
 
   return (
-    <AuthContext.Provider value={{ user, business, isLoading, login, register, logout }}>
+    <AuthContext.Provider
+      value={{ user, business, isLoading, login, register, loginWithGoogle, registerWithGoogle, resetPassword, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );

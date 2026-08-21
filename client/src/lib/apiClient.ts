@@ -40,7 +40,7 @@ async function parseBody(response: Response): Promise<unknown> {
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   let response = await rawRequest(path, options);
 
-  if (response.status === 401 && path !== "/auth/login" && path !== "/auth/refresh") {
+  if (response.status === 401 && path !== "/auth/session" && path !== "/auth/refresh") {
     const refreshResponse = await rawRequest("/auth/refresh", { method: "POST" });
     if (refreshResponse.ok) {
       response = await rawRequest(path, options);
