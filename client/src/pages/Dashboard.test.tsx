@@ -10,10 +10,12 @@ describe("Dashboard", () => {
   });
 
   it("shows a welcome message with the business name", async () => {
-    vi.spyOn(global, "fetch").mockResolvedValue(
-      new Response(
-        JSON.stringify({ user: { id: "u1", email: "owner@example.com" }, business: { id: "b1", name: "Kigali Traders" } }),
-        { status: 200 },
+    vi.spyOn(global, "fetch").mockImplementation(() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({ user: { id: "u1", email: "owner@example.com" }, business: { id: "b1", name: "Kigali Traders" } }),
+          { status: 200 },
+        ),
       ),
     );
 

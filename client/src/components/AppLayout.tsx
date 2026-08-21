@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { DOCUMENT_TYPES } from "@billa/shared";
 import { useAuth } from "../context/AuthContext";
+import { apiRequest } from "../lib/apiClient";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
 
 interface AppLayoutProps {
@@ -10,6 +12,22 @@ interface AppLayoutProps {
 
 export function AppLayout({ children }: AppLayoutProps) {
   const { logout } = useAuth();
+  const [billingBanner, setBillingBanner] = useState<string | null>(null);
+
+  useEffect(() => {
+    apiRequest<{ activeUntil: string }>("/billing/status")
+      .then((data) => {
+        const daysLeft = Math.ceil((new Date(data.activeUntil).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+        if (daysLeft <= 0) {
+          setBillingBanner("Your trial has ended. Subscribe in Settings to keep creating documents.");
+        } else if (daysLeft <= 3) {
+          setBillingBanner(
+            `Your trial ends in ${daysLeft} day${daysLeft === 1 ? "" : "s"}. Subscribe in Settings to avoid interruption.`,
+          );
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <div className="min-h-screen bg-neutral-50">
@@ -51,6 +69,11 @@ export function AppLayout({ children }: AppLayoutProps) {
           Log out
         </button>
       </header>
+      {billingBanner && (
+        <div className="bg-warning-bg px-6 py-2 font-sans text-sm text-warning" role="status">
+          {billingBanner}
+        </div>
+      )}
       <main className="px-6 py-8">{children}</main>
     </div>
   );
