@@ -38,9 +38,12 @@ export default function DocumentView() {
   const [document, setDocument] = useState<DocumentDetail | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
   const [isConverting, setIsConverting] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
-    apiRequest<{ document: DocumentDetail }>(`/documents/${id}`).then((data) => setDocument(data.document));
+    apiRequest<{ document: DocumentDetail }>(`/documents/${id}`)
+      .then((data) => setDocument(data.document))
+      .catch(() => setLoadError(true));
   }, [id]);
 
   async function handleConvert() {
@@ -62,6 +65,16 @@ export default function DocumentView() {
     } finally {
       setIsConverting(false);
     }
+  }
+
+  if (loadError) {
+    return (
+      <AppLayout>
+        <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
+          Couldn't load this document. Try again.
+        </div>
+      </AppLayout>
+    );
   }
 
   if (!document) {

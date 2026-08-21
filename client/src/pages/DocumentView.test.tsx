@@ -204,4 +204,20 @@ describe("DocumentView", () => {
 
     expect(await screen.findByText(/converted from proforma pro-0001/i)).toBeInTheDocument();
   });
+
+  it("shows an error message when the document fails to load", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async () => new Response("{}", { status: 500 }));
+
+    render(
+      <MemoryRouter initialEntries={["/documents/d1"]}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/documents/:id" element={<DocumentView />} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/couldn't load this document/i);
+  });
 });
