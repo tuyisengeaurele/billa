@@ -11,6 +11,7 @@ import DocumentForm from "./pages/DocumentForm";
 import Documents from "./pages/Documents";
 import DocumentView from "./pages/DocumentView";
 import BusinessSettings from "./pages/BusinessSettings";
+import BillingCallback from "./pages/BillingCallback";
 
 export default function App() {
   return (
@@ -29,6 +30,7 @@ export default function App() {
             <Route path="/documents/:id/edit" element={<DocumentForm />} />
             <Route path="/documents/:id" element={<DocumentView />} />
             <Route path="/settings" element={<BusinessSettings />} />
+            <Route path="/billing/callback" element={<BillingCallback />} />
           </Route>
           <Route path="/" element={<Navigate to="/onboarding" replace />} />
         </Routes>
