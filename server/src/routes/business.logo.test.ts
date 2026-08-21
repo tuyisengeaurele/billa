@@ -17,11 +17,10 @@ const MINIMAL_PNG = Buffer.from(
 );
 
 async function registerAndGetCookies(app: ReturnType<typeof createApp>) {
-  const res = await request(app).post("/auth/register").send({
-    email: "owner@example.com",
-    password: "Supersecret1!",
-    businessName: "Kigali Traders",
-  });
+  const res = await request(app).post("/auth/session").send({
+      idToken: JSON.stringify({ uid: "owner@example.com", email: "owner@example.com" }),
+      businessName: "Kigali Traders",
+    });
   return res.headers["set-cookie"] as unknown as string[];
 }
 

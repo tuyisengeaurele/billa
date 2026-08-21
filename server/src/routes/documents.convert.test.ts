@@ -11,11 +11,10 @@ beforeAll(() => {
 beforeEach(resetDb);
 
 async function registerAndGetCookies(app: ReturnType<typeof createApp>) {
-  const res = await request(app).post("/auth/register").send({
-    email: "owner@example.com",
-    password: "Supersecret1!",
-    businessName: "Kigali Traders",
-  });
+  const res = await request(app).post("/auth/session").send({
+      idToken: JSON.stringify({ uid: "owner@example.com", email: "owner@example.com" }),
+      businessName: "Kigali Traders",
+    });
   return res.headers["set-cookie"] as unknown as string[];
 }
 
@@ -136,9 +135,8 @@ describe("POST /documents/:id/convert", () => {
     const customerId = await createCustomer(app, cookies);
     const proformaId = await createFinalizedProforma(app, cookies, customerId);
 
-    const otherCookies = await request(app).post("/auth/register").send({
-      email: "other@example.com",
-      password: "Supersecret1!",
+    const otherCookies = await request(app).post("/auth/session").send({
+      idToken: JSON.stringify({ uid: "other@example.com", email: "other@example.com" }),
       businessName: "Other Biz",
     });
 

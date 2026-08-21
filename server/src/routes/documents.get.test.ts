@@ -11,11 +11,10 @@ beforeAll(() => {
 beforeEach(resetDb);
 
 async function registerAndGetCookies(app: ReturnType<typeof createApp>) {
-  const res = await request(app).post("/auth/register").send({
-    email: "owner@example.com",
-    password: "Supersecret1!",
-    businessName: "Kigali Traders",
-  });
+  const res = await request(app).post("/auth/session").send({
+      idToken: JSON.stringify({ uid: "owner@example.com", email: "owner@example.com" }),
+      businessName: "Kigali Traders",
+    });
   return res.headers["set-cookie"] as unknown as string[];
 }
 
@@ -55,9 +54,8 @@ describe("GET /documents/:id", () => {
       .set("Cookie", cookies)
       .send({ type: "INVOICE", customerId, issueDate: "2026-08-19", lines: [] });
 
-    const otherRes = await request(app).post("/auth/register").send({
-      email: "other@example.com",
-      password: "Supersecret1!",
+    const otherRes = await request(app).post("/auth/session").send({
+      idToken: JSON.stringify({ uid: "other@example.com", email: "other@example.com" }),
       businessName: "Other Co",
     });
     const otherCookies = otherRes.headers["set-cookie"] as unknown as string[];
