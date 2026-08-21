@@ -93,6 +93,7 @@ export default function Customers() {
           <input
             type="text"
             placeholder="Search customers"
+            aria-label="Search customers"
             value={list.search}
             onChange={(event) => list.updateSearch(event.target.value)}
             className="w-full max-w-xs rounded-lg border border-neutral-200 px-3.5 py-2 font-sans text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
@@ -130,8 +131,10 @@ export default function Customers() {
           <table className="w-full border-collapse font-sans text-sm">
             <thead>
               <tr className="border-b border-neutral-200 text-left text-neutral-500">
-                <th className="cursor-pointer py-2" onClick={() => list.toggleSort("name")}>
-                  Name {list.sortBy === "name" && (list.sortOrder === "asc" ? "↑" : "↓")}
+                <th className="py-2">
+                  <button type="button" onClick={() => list.toggleSort("name")} className="cursor-pointer">
+                    Name {list.sortBy === "name" && (list.sortOrder === "asc" ? "↑" : "↓")}
+                  </button>
                 </th>
                 <th className="py-2">Phone</th>
                 <th className="py-2">Email</th>
@@ -142,8 +145,10 @@ export default function Customers() {
             <tbody>
               {list.results.map((customer) => (
                 <tr key={customer.id} className={`border-b border-neutral-100 ${customer.isActive ? "" : "opacity-50"}`}>
-                  <td className="cursor-pointer py-3" onClick={() => openEditModal(customer)}>
-                    {customer.name}
+                  <td className="py-3">
+                    <button type="button" onClick={() => openEditModal(customer)} className="cursor-pointer text-left">
+                      {customer.name}
+                    </button>
                   </td>
                   <td className="py-3 text-neutral-600">{customer.phone ?? "-"}</td>
                   <td className="py-3 text-neutral-600">{customer.email ?? "-"}</td>

@@ -145,4 +145,64 @@ describe("Customers", () => {
 
     await waitFor(() => expect(screen.getByText(/no customers yet/i)).toBeInTheDocument());
   });
+
+  it("has an accessible label on the search input", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(
+      async () => new Response(JSON.stringify({ results: [], total: 0, page: 1, pageSize: 20 }), { status: 200 }),
+    );
+    renderCustomers();
+    await screen.findByText(/no customers yet/i);
+
+    expect(screen.getByLabelText("Search customers")).toBeInTheDocument();
+  });
+
+  it("opens the edit modal when a customer's name button is clicked", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.includes("/customers")) {
+        return new Response(
+          JSON.stringify({
+            results: [
+              { id: "c1", name: "Kigali Traders", tin: null, address: null, phone: null, email: null, isActive: true },
+            ],
+            total: 1,
+            page: 1,
+            pageSize: 20,
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+    const user = userEvent.setup();
+    renderCustomers();
+    await screen.findByText("Kigali Traders");
+
+    await user.click(screen.getByRole("button", { name: "Kigali Traders" }));
+
+    expect(await screen.findByText("Edit customer")).toBeInTheDocument();
+  });
+
+  it("sorts by name when the Name header button is clicked", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async () =>
+      new Response(
+        JSON.stringify({
+          results: [
+            { id: "c1", name: "Kigali Traders", tin: null, address: null, phone: null, email: null, isActive: true },
+          ],
+          total: 1,
+          page: 1,
+          pageSize: 20,
+        }),
+        { status: 200 },
+      ),
+    );
+    const user = userEvent.setup();
+    renderCustomers();
+    await screen.findByText("Kigali Traders");
+
+    await user.click(screen.getByRole("button", { name: /^name$/i }));
+
+    expect(screen.getByRole("button", { name: /^name ↑$/i })).toBeInTheDocument();
+  });
 });
