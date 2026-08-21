@@ -11,6 +11,7 @@ type SequencesFormInput = z.infer<typeof sequencesFormSchema>;
 
 export function SequenceEditor() {
   const [isLoaded, setIsLoaded] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -20,10 +21,12 @@ export function SequenceEditor() {
   });
 
   useEffect(() => {
-    apiRequest<{ sequences: DocumentSequenceInput[] }>("/business/sequences").then((data) => {
-      reset({ sequences: data.sequences });
-      setIsLoaded(true);
-    });
+    apiRequest<{ sequences: DocumentSequenceInput[] }>("/business/sequences")
+      .then((data) => {
+        reset({ sequences: data.sequences });
+        setIsLoaded(true);
+      })
+      .catch(() => setLoadError(true));
   }, [reset]);
 
   async function onSubmit(data: SequencesFormInput) {
@@ -36,6 +39,14 @@ export function SequenceEditor() {
     } finally {
       setIsSaving(false);
     }
+  }
+
+  if (loadError) {
+    return (
+      <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
+        Couldn't load document numbering. Try again.
+      </div>
+    );
   }
 
   if (!isLoaded) {

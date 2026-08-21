@@ -118,4 +118,57 @@ describe("BusinessSettings", () => {
 
     await waitFor(() => expect(patchBody).toMatchObject({ defaultTemplate: "SIDEBAR_ACCENT" }));
   });
+
+  it("shows an error message when the business profile fails to load", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.endsWith("/business/sequences")) {
+        return new Response(
+          JSON.stringify({
+            sequences: [
+              { type: "INVOICE", prefix: "INV-", nextNumber: 1 },
+              { type: "PROFORMA", prefix: "PRO-", nextNumber: 1 },
+              { type: "DELIVERY_NOTE", prefix: "DN-", nextNumber: 1 },
+              { type: "QUOTE", prefix: "QTE-", nextNumber: 1 },
+              { type: "RECEIPT", prefix: "RCT-", nextNumber: 1 },
+            ],
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 500 });
+    });
+
+    renderPage();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/couldn't load your business settings/i);
+  });
+
+  it("shows an error message when document numbering fails to load", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.endsWith("/business") || url.endsWith("/auth/me")) {
+        return new Response(
+          JSON.stringify({
+            business: {
+              name: "Kigali Traders",
+              tin: null,
+              industry: null,
+              phone: null,
+              email: null,
+              address: null,
+              rraEbmNumber: null,
+              defaultTemplate: "MINIMAL",
+            },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 500 });
+    });
+
+    renderPage();
+
+    expect(await screen.findByText(/couldn't load document numbering/i)).toBeInTheDocument();
+  });
 });

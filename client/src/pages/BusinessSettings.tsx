@@ -37,9 +37,12 @@ export default function BusinessSettings() {
   const [profile, setProfile] = useState<BusinessProfile | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
-    apiRequest<{ business: BusinessProfile }>("/business").then((data) => setProfile(data.business));
+    apiRequest<{ business: BusinessProfile }>("/business")
+      .then((data) => setProfile(data.business))
+      .catch(() => setLoadError(true));
   }, []);
 
   async function handleSubmit(event: React.FormEvent) {
@@ -61,6 +64,16 @@ export default function BusinessSettings() {
     } finally {
       setIsSaving(false);
     }
+  }
+
+  if (loadError) {
+    return (
+      <AppLayout>
+        <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
+          Couldn't load your business settings. Try again.
+        </div>
+      </AppLayout>
+    );
   }
 
   if (!profile) {
