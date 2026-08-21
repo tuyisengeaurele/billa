@@ -299,4 +299,12 @@ describe("DocumentForm", () => {
     expect(screen.getByLabelText("Valid until")).toBeInTheDocument();
     expect(screen.queryByLabelText(/due date/i)).not.toBeInTheDocument();
   });
+
+  it("shows an error message when the document fails to load", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async () => new Response("{}", { status: 500 }));
+
+    renderEdit("d1");
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/couldn't load this document/i);
+  });
 });

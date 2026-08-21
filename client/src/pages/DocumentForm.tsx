@@ -81,6 +81,7 @@ export default function DocumentForm() {
   const [isSaving, setIsSaving] = useState(false);
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [isLoaded, setIsLoaded] = useState(!isEditing);
+  const [loadError, setLoadError] = useState(false);
   const [convertedFrom, setConvertedFrom] = useState<{ id: string; number: string | null } | null>(null);
 
   const {
@@ -108,26 +109,28 @@ export default function DocumentForm() {
 
   useEffect(() => {
     if (!isEditing) return;
-    apiRequest<{ document: DocumentResponse }>(`/documents/${id}`).then((data) => {
-      const doc = data.document;
-      setType(doc.type);
-      reset({
-        customerId: doc.customerId,
-        customerName: doc.customer.name,
-        issueDate: doc.issueDate.slice(0, 10),
-        dueDate: doc.dueDate ? doc.dueDate.slice(0, 10) : "",
-        notes: doc.notes ?? "",
-        lines: doc.lines.map((line) => ({
-          itemId: line.itemId ?? undefined,
-          description: line.description,
-          quantity: Number(line.quantity),
-          unitPrice: line.unitPrice,
-          taxRate: Number(line.taxRate),
-        })),
-      });
-      setConvertedFrom(doc.convertedFrom ?? null);
-      setIsLoaded(true);
-    });
+    apiRequest<{ document: DocumentResponse }>(`/documents/${id}`)
+      .then((data) => {
+        const doc = data.document;
+        setType(doc.type);
+        reset({
+          customerId: doc.customerId,
+          customerName: doc.customer.name,
+          issueDate: doc.issueDate.slice(0, 10),
+          dueDate: doc.dueDate ? doc.dueDate.slice(0, 10) : "",
+          notes: doc.notes ?? "",
+          lines: doc.lines.map((line) => ({
+            itemId: line.itemId ?? undefined,
+            description: line.description,
+            quantity: Number(line.quantity),
+            unitPrice: line.unitPrice,
+            taxRate: Number(line.taxRate),
+          })),
+        });
+        setConvertedFrom(doc.convertedFrom ?? null);
+        setIsLoaded(true);
+      })
+      .catch(() => setLoadError(true));
   }, [id, isEditing, reset]);
 
   const totals = calculateLiveTotals(watchedLines ?? []);
@@ -184,6 +187,16 @@ export default function DocumentForm() {
     } finally {
       setIsFinalizing(false);
     }
+  }
+
+  if (loadError) {
+    return (
+      <AppLayout>
+        <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
+          Couldn't load this document. Try again.
+        </div>
+      </AppLayout>
+    );
   }
 
   if (!isLoaded) {
