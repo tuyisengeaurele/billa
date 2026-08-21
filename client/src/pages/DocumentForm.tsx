@@ -53,6 +53,7 @@ interface DocumentResponse {
   notes: string | null;
   lines: DocumentLineResponse[];
   convertedFrom: { id: string; number: string | null } | null;
+  type: DocumentType;
 }
 
 function calculateLiveTotals(lines: { quantity?: number; unitPrice?: number; taxRate?: number }[]) {
@@ -71,7 +72,7 @@ export default function DocumentForm() {
   const navigate = useNavigate();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
-  const type = (searchParams.get("type") as DocumentType) ?? "INVOICE";
+  const [type, setType] = useState<DocumentType>(() => (searchParams.get("type") as DocumentType) ?? "INVOICE");
   const dueDateLabel = getDueDateLabel(type);
   const isEditing = Boolean(id);
   const labels = DOCUMENT_TYPE_LABELS[type];
@@ -109,6 +110,7 @@ export default function DocumentForm() {
     if (!isEditing) return;
     apiRequest<{ document: DocumentResponse }>(`/documents/${id}`).then((data) => {
       const doc = data.document;
+      setType(doc.type);
       reset({
         customerId: doc.customerId,
         customerName: doc.customer.name,
