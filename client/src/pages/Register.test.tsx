@@ -5,6 +5,18 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../context/AuthContext";
 import Register from "./Register";
 
+vi.mock("../lib/firebaseAuth", () => ({
+  signInWithEmail: vi.fn(),
+  signUpWithEmail: vi.fn(),
+  signInWithGoogle: vi.fn(),
+  signOutFirebase: vi.fn(),
+  resetPassword: vi.fn(),
+  firebaseErrorCode: (err: unknown) =>
+    typeof err === "object" && err !== null && "code" in err ? String((err as { code: unknown }).code) : null,
+}));
+
+import { signInWithGoogle, signUpWithEmail } from "../lib/firebaseAuth";
+
 function renderRegister() {
   return render(
     <MemoryRouter initialEntries={["/register"]}>
@@ -40,9 +52,13 @@ describe("Register", () => {
   });
 
   it("navigates to /onboarding after a successful registration", async () => {
+    vi.mocked(signUpWithEmail).mockResolvedValue("fake-id-token");
     vi.spyOn(global, "fetch").mockImplementation(async (input) => {
       const url = urlOf(input);
-      if (url.endsWith("/auth/register")) {
+      if (url.endsWith("/auth/me")) {
+        return new Response("{}", { status: 401 });
+      }
+      if (url.endsWith("/auth/session")) {
         return new Response(
           JSON.stringify({
             user: { id: "u1", email: "owner@example.com" },
@@ -67,13 +83,8 @@ describe("Register", () => {
   });
 
   it("shows an error banner when the email is already taken", async () => {
-    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
-      const url = urlOf(input);
-      if (url.endsWith("/auth/register")) {
-        return new Response(JSON.stringify({ error: "email_taken" }), { status: 409 });
-      }
-      return new Response("{}", { status: 401 });
-    });
+    vi.mocked(signUpWithEmail).mockRejectedValue({ code: "auth/email-already-in-use" });
+    vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 401 }));
 
     const user = userEvent.setup();
     renderRegister();
@@ -92,6 +103,8 @@ describe("Register", () => {
     const user = userEvent.setup();
     renderRegister();
 
+    await user.type(await screen.findByLabelText(/business name/i), "Kigali Traders");
+    await user.type(screen.getByLabelText(/email/i), "owner@example.com");
     await user.type(await screen.findByLabelText(/^password/i), "Supersecret1!");
     await user.type(screen.getByLabelText(/confirm password/i), "Different1!");
     await user.click(screen.getByRole("button", { name: /create account/i }));
@@ -120,5 +133,48 @@ describe("Register", () => {
     for (const item of items) {
       expect(item).toHaveClass("text-success");
     }
+  });
+
+  it("signs up with Google using the entered business name", async () => {
+    vi.mocked(signInWithGoogle).mockResolvedValue("fake-google-token");
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/auth/me")) {
+        return new Response("{}", { status: 401 });
+      }
+      if (url.endsWith("/auth/session")) {
+        const body = JSON.parse(init?.body as string);
+        expect(body.businessName).toBe("Kigali Traders");
+        return new Response(
+          JSON.stringify({
+            user: { id: "u1", email: "owner@example.com" },
+            business: { id: "b1", name: "Kigali Traders" },
+          }),
+          { status: 201 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderRegister();
+
+    await user.type(await screen.findByLabelText(/business name/i), "Kigali Traders");
+    await user.click(screen.getByRole("button", { name: /continue with google/i }));
+
+    await waitFor(() => expect(screen.getByText("onboarding page")).toBeInTheDocument());
+  });
+
+  it("blocks Google sign-up until a business name is entered", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 401 }));
+    const user = userEvent.setup();
+    renderRegister();
+
+    await user.click(await screen.findByRole("button", { name: /continue with google/i }));
+
+    expect(signInWithGoogle).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(screen.getByLabelText(/business name/i)).toHaveAttribute("aria-invalid", "true"),
+    );
   });
 });

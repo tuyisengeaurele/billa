@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { PASSWORD_REQUIREMENTS, registerSchema } from "@billa/shared";
+import { PASSWORD_REQUIREMENTS } from "@billa/shared";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
@@ -8,10 +8,17 @@ import { AuthLayout } from "../components/AuthLayout";
 import { Button } from "../components/Button";
 import { FormField } from "../components/FormField";
 import { useAuth } from "../context/AuthContext";
-import { ApiError } from "../lib/apiClient";
+import { firebaseErrorCode } from "../lib/firebaseAuth";
 
-const registerFormSchema = registerSchema
-  .extend({ confirmPassword: z.string().min(1, "Confirm your password") })
+const registerFormSchema = z
+  .object({
+    businessName: z.string().min(1, "Enter your business name"),
+    email: z.string().email("Enter a valid email address"),
+    password: z.string().refine((value) => PASSWORD_REQUIREMENTS.every((requirement) => requirement.test(value)), {
+      message: "Password doesn't meet the requirements below",
+    }),
+    confirmPassword: z.string().min(1, "Confirm your password"),
+  })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
     path: ["confirmPassword"],
@@ -19,13 +26,15 @@ const registerFormSchema = registerSchema
 type RegisterFormInput = z.infer<typeof registerFormSchema>;
 
 export default function Register() {
-  const { register: registerBusiness } = useAuth();
+  const { register: registerBusiness, registerWithGoogle } = useAuth();
   const navigate = useNavigate();
   const [apiError, setApiError] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
     watch,
+    trigger,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm<RegisterFormInput>({ resolver: zodResolver(registerFormSchema) });
   const password = watch("password") ?? "";
@@ -36,9 +45,23 @@ export default function Register() {
       await registerBusiness(data.email, data.password, data.businessName);
       navigate("/onboarding");
     } catch (err) {
-      if (err instanceof ApiError && err.status === 409) {
+      if (firebaseErrorCode(err) === "auth/email-already-in-use") {
         setApiError("That email is already registered. Try logging in instead.");
       } else {
+        setApiError("Something went wrong. Try again.");
+      }
+    }
+  }
+
+  async function handleGoogle() {
+    const valid = await trigger("businessName");
+    if (!valid) return;
+    setApiError(null);
+    try {
+      await registerWithGoogle(getValues("businessName"));
+      navigate("/onboarding");
+    } catch (err) {
+      if (firebaseErrorCode(err) !== "auth/popup-closed-by-user") {
         setApiError("Something went wrong. Try again.");
       }
     }
@@ -72,6 +95,13 @@ export default function Register() {
           error={errors.businessName?.message}
           {...register("businessName")}
         />
+        <Button
+          type="button"
+          onClick={handleGoogle}
+          className="border border-neutral-200 bg-white text-neutral-900 hover:bg-neutral-50"
+        >
+          Continue with Google
+        </Button>
         <FormField
           id="email"
           label="Email"
