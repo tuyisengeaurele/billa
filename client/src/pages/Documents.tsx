@@ -102,6 +102,7 @@ export default function Documents() {
           <input
             type="text"
             placeholder={searchPlaceholder}
+            aria-label={searchPlaceholder}
             value={list.search}
             onChange={(event) => list.updateSearch(event.target.value)}
             className="w-full max-w-xs rounded-lg border border-neutral-200 px-3.5 py-2 font-sans text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
@@ -160,14 +161,18 @@ export default function Documents() {
           <table className="w-full border-collapse font-sans text-sm">
             <thead>
               <tr className="border-b border-neutral-200 text-left text-neutral-500">
-                <th className="cursor-pointer py-2" onClick={() => list.toggleSort("issueDate")}>
-                  Date {list.sortBy === "issueDate" && (list.sortOrder === "asc" ? "↑" : "↓")}
+                <th className="py-2">
+                  <button type="button" onClick={() => list.toggleSort("issueDate")} className="cursor-pointer">
+                    Date {list.sortBy === "issueDate" && (list.sortOrder === "asc" ? "↑" : "↓")}
+                  </button>
                 </th>
                 {isUnified && <th className="py-2">Type</th>}
                 <th className="py-2">Number</th>
                 <th className="py-2">Customer</th>
-                <th className="cursor-pointer py-2" onClick={() => list.toggleSort("total")}>
-                  Total {list.sortBy === "total" && (list.sortOrder === "asc" ? "↑" : "↓")}
+                <th className="py-2">
+                  <button type="button" onClick={() => list.toggleSort("total")} className="cursor-pointer">
+                    Total {list.sortBy === "total" && (list.sortOrder === "asc" ? "↑" : "↓")}
+                  </button>
                 </th>
                 <th className="py-2">Status</th>
                 <th className="py-2" />
@@ -178,6 +183,16 @@ export default function Documents() {
                 <tr
                   key={document.id}
                   onClick={() => openDocument(document)}
+                  onKeyDown={(event) => {
+                    if (event.target !== event.currentTarget) return;
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      openDocument(document);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`View ${document.number ?? "draft"} document`}
                   className="cursor-pointer border-b border-neutral-100 hover:bg-neutral-50"
                 >
                   <td className="py-3">{document.issueDate.slice(0, 10)}</td>

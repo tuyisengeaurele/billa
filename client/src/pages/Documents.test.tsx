@@ -269,4 +269,77 @@ describe("Documents", () => {
       expect(url.searchParams.get("dateTo")).toBe("2026-08-31");
     });
   });
+
+  it("has an accessible label on the search input", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(
+      async () => new Response(JSON.stringify({ results: [], total: 0, page: 1, pageSize: 20 }), { status: 200 }),
+    );
+    renderDocuments();
+    await screen.findByText(/no invoices yet/i);
+
+    expect(screen.getByLabelText("Search invoices")).toBeInTheDocument();
+  });
+
+  it("sorts by date when the Date header button is clicked", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async () =>
+      new Response(
+        JSON.stringify({
+          results: [
+            {
+              id: "d1",
+              type: "INVOICE",
+              number: "INV-0001",
+              status: "FINALIZED",
+              issueDate: "2026-08-19T00:00:00.000Z",
+              total: 5900,
+              customer: { name: "Kigali Traders" },
+            },
+          ],
+          total: 1,
+          page: 1,
+          pageSize: 20,
+        }),
+        { status: 200 },
+      ),
+    );
+    const user = userEvent.setup();
+    renderDocuments();
+    await screen.findByText("INV-0001");
+
+    await user.click(screen.getByRole("button", { name: /^date$/i }));
+
+    expect(screen.getByRole("button", { name: /^date ↑$/i })).toBeInTheDocument();
+  });
+
+  it("navigates via the keyboard when Enter is pressed on a row", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async () =>
+      new Response(
+        JSON.stringify({
+          results: [
+            {
+              id: "d1",
+              type: "INVOICE",
+              number: null,
+              status: "DRAFT",
+              issueDate: "2026-08-19T00:00:00.000Z",
+              total: 0,
+              customer: { name: "Kigali Traders" },
+            },
+          ],
+          total: 1,
+          page: 1,
+          pageSize: 20,
+        }),
+        { status: 200 },
+      ),
+    );
+    const user = userEvent.setup();
+    renderDocuments();
+
+    const row = await screen.findByRole("button", { name: /view draft document/i });
+    row.focus();
+    await user.keyboard("{Enter}");
+
+    await waitFor(() => expect(screen.getByText("edit document page")).toBeInTheDocument());
+  });
 });
