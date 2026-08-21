@@ -5,6 +5,18 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../context/AuthContext";
 import Login from "./Login";
 
+vi.mock("../lib/firebaseAuth", () => ({
+  signInWithEmail: vi.fn(),
+  signUpWithEmail: vi.fn(),
+  signInWithGoogle: vi.fn(),
+  signOutFirebase: vi.fn(),
+  resetPassword: vi.fn(),
+  firebaseErrorCode: (err: unknown) =>
+    typeof err === "object" && err !== null && "code" in err ? String((err as { code: unknown }).code) : null,
+}));
+
+import { resetPassword, signInWithEmail, signInWithGoogle } from "../lib/firebaseAuth";
+
 function renderLogin() {
   return render(
     <MemoryRouter initialEntries={["/login"]}>
@@ -38,22 +50,20 @@ describe("Login", () => {
   });
 
   it("navigates to /onboarding after a successful login", async () => {
-    // /auth/me is called twice: once by AuthProvider's bootstrap (must be
-    // 401, unauthenticated), once by login() itself right after a
-    // successful /auth/login to fetch the business (must succeed). A
-    // call counter distinguishes the two.
-    let authMeCalls = 0;
+    vi.mocked(signInWithEmail).mockResolvedValue("fake-id-token");
     vi.spyOn(global, "fetch").mockImplementation(async (input) => {
       const url = urlOf(input);
       if (url.endsWith("/auth/me")) {
-        authMeCalls += 1;
-        if (authMeCalls === 1) return new Response("{}", { status: 401 });
-        return new Response(JSON.stringify({ business: { id: "b1", name: "Kigali Traders" } }), {
-          status: 200,
-        });
+        return new Response("{}", { status: 401 });
       }
-      if (url.endsWith("/auth/login")) {
-        return new Response(JSON.stringify({ user: { id: "u1", email: "owner@example.com" } }), { status: 200 });
+      if (url.endsWith("/auth/session")) {
+        return new Response(
+          JSON.stringify({
+            user: { id: "u1", email: "owner@example.com" },
+            business: { id: "b1", name: "Kigali Traders" },
+          }),
+          { status: 200 },
+        );
       }
       return new Response("{}", { status: 401 });
     });
@@ -69,13 +79,8 @@ describe("Login", () => {
   });
 
   it("shows an error banner on invalid credentials", async () => {
-    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
-      const url = urlOf(input);
-      if (url.endsWith("/auth/login")) {
-        return new Response(JSON.stringify({ error: "invalid_credentials" }), { status: 401 });
-      }
-      return new Response("{}", { status: 401 });
-    });
+    vi.mocked(signInWithEmail).mockRejectedValue({ code: "auth/invalid-credential" });
+    vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 401 }));
 
     const user = userEvent.setup();
     renderLogin();
@@ -85,5 +90,45 @@ describe("Login", () => {
     await user.click(screen.getByRole("button", { name: /log in/i }));
 
     expect(await screen.findByText(/doesn't match our records/i)).toBeInTheDocument();
+  });
+
+  it("signs in with Google and navigates to /onboarding", async () => {
+    vi.mocked(signInWithGoogle).mockResolvedValue("fake-google-token");
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.endsWith("/auth/me")) {
+        return new Response("{}", { status: 401 });
+      }
+      if (url.endsWith("/auth/session")) {
+        return new Response(
+          JSON.stringify({
+            user: { id: "u1", email: "owner@example.com" },
+            business: { id: "b1", name: "Kigali Traders" },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderLogin();
+
+    await user.click(await screen.findByRole("button", { name: /continue with google/i }));
+
+    await waitFor(() => expect(screen.getByText("onboarding page")).toBeInTheDocument());
+  });
+
+  it("shows a message after requesting a password reset", async () => {
+    vi.mocked(resetPassword).mockResolvedValue(undefined);
+    vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 401 }));
+
+    const user = userEvent.setup();
+    renderLogin();
+
+    await user.type(await screen.findByLabelText(/email/i), "owner@example.com");
+    await user.click(screen.getByRole("button", { name: /forgot password/i }));
+
+    expect(await screen.findByText(/check your email/i)).toBeInTheDocument();
   });
 });

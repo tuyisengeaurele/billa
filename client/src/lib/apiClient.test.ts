@@ -48,12 +48,12 @@ describe("apiRequest", () => {
     expect(fetchSpy).toHaveBeenCalledTimes(3);
   });
 
-  it("does not attempt refresh when the failing request is /auth/login", async () => {
+  it("does not attempt refresh when the failing request is /auth/session", async () => {
     const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({ error: "invalid_credentials" }), { status: 401 }),
+      new Response(JSON.stringify({ error: "no_account" }), { status: 401 }),
     );
 
-    await expect(apiRequest("/auth/login", { method: "POST" })).rejects.toBeInstanceOf(ApiError);
+    await expect(apiRequest("/auth/session", { method: "POST" })).rejects.toBeInstanceOf(ApiError);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
