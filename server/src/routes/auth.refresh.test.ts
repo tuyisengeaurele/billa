@@ -18,9 +18,8 @@ function refreshCookie(cookies: string[]): string {
 }
 
 async function registerAndGetRefreshCookie(app: ReturnType<typeof createApp>) {
-  const res = await request(app).post("/auth/register").send({
-    email: "owner@example.com",
-    password: "Supersecret1!",
+  const res = await request(app).post("/auth/session").send({
+    idToken: JSON.stringify({ uid: "owner@example.com", email: "owner@example.com" }),
     businessName: "Kigali Traders",
   });
   return refreshCookie(res.headers["set-cookie"] as unknown as string[]);

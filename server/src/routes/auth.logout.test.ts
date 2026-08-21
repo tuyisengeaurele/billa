@@ -14,9 +14,8 @@ beforeEach(resetDb);
 describe("POST /auth/logout", () => {
   it("revokes the refresh token and clears cookies", async () => {
     const app = createApp();
-    const registerRes = await request(app).post("/auth/register").send({
-      email: "owner@example.com",
-      password: "Supersecret1!",
+    const registerRes = await request(app).post("/auth/session").send({
+      idToken: JSON.stringify({ uid: "owner@example.com", email: "owner@example.com" }),
       businessName: "Kigali Traders",
     });
     const cookies = registerRes.headers["set-cookie"] as unknown as string[];

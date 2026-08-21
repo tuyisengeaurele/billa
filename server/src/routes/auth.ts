@@ -1,8 +1,9 @@
 import crypto from "node:crypto";
 import { Router } from "express";
-import { loginSchema, registerSchema } from "@billa/shared";
+import { sessionSchema } from "@billa/shared";
+import type { SessionInput } from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
-import { hashPassword, verifyPassword } from "../lib/password.js";
+import { verifyFirebaseToken } from "../lib/firebase-admin.js";
 import { generateRefreshToken, hashRefreshToken, signAccessToken } from "../lib/tokens.js";
 import { ttlToMs } from "../lib/ttl.js";
 import { clearAuthCookies, setAccessTokenCookie, setRefreshTokenCookie } from "../lib/cookies.js";
@@ -34,21 +35,37 @@ async function issueSession(res: Parameters<typeof setAccessTokenCookie>[0], use
   setRefreshTokenCookie(res, refreshToken, ttlMs);
 }
 
-authRouter.post("/register", authRateLimit, validateBody(registerSchema), async (req, res) => {
-  const { email, password, businessName } = req.body;
+authRouter.post("/session", authRateLimit, validateBody(sessionSchema), async (req, res) => {
+  const { idToken, businessName } = req.body as SessionInput;
 
-  const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) {
-    res.status(409).json({ error: "email_taken" });
+  let firebaseUser: { uid: string; email: string };
+  try {
+    firebaseUser = await verifyFirebaseToken(idToken);
+  } catch {
+    res.status(401).json({ error: "invalid_token" });
     return;
   }
 
-  const passwordHash = await hashPassword(password);
+  const existing = await prisma.user.findUnique({ where: { firebaseUid: firebaseUser.uid } });
+  if (existing) {
+    const business = await prisma.business.findUnique({ where: { id: existing.businessId } });
+    await issueSession(res, existing.id, existing.businessId);
+    res.json({
+      user: { id: existing.id, email: existing.email },
+      business: { id: business!.id, name: business!.name },
+    });
+    return;
+  }
+
+  if (!businessName) {
+    res.status(404).json({ error: "no_account" });
+    return;
+  }
 
   const { user, business } = await prisma.$transaction(async (tx) => {
     const business = await tx.business.create({ data: { name: businessName } });
     const user = await tx.user.create({
-      data: { email, passwordHash, businessId: business.id },
+      data: { email: firebaseUser.email, firebaseUid: firebaseUser.uid, businessId: business.id },
     });
     return { user, business };
   });
@@ -58,19 +75,6 @@ authRouter.post("/register", authRateLimit, validateBody(registerSchema), async 
     user: { id: user.id, email: user.email },
     business: { id: business.id, name: business.name },
   });
-});
-
-authRouter.post("/login", authRateLimit, validateBody(loginSchema), async (req, res) => {
-  const { email, password } = req.body;
-
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user || !(await verifyPassword(password, user.passwordHash))) {
-    res.status(401).json({ error: "invalid_credentials" });
-    return;
-  }
-
-  await issueSession(res, user.id, user.businessId);
-  res.json({ user: { id: user.id, email: user.email } });
 });
 
 authRouter.get("/me", requireAuth, async (req, res) => {
