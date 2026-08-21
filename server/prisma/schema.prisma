@@ -50,13 +50,13 @@ model Business {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  businessId   String
-  email        String   @unique
-  passwordHash String
-  name         String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id          String   @id @default(cuid())
+  businessId  String
+  email       String   @unique
+  firebaseUid String   @unique
+  name        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   business      Business       @relation(fields: [businessId], references: [id])
   refreshTokens RefreshToken[]
