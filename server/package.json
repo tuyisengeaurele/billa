@@ -23,6 +23,7 @@
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "express-rate-limit": "^7.4.0",
+    "firebase-admin": "^14.3.0",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.2.0",
     "node-vibrant": "^4.0.4",
