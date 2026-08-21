@@ -74,4 +74,16 @@ describe("POST /auth/session", () => {
     const res = await request(createApp()).post("/auth/session").send({ businessName: "Kigali Traders" });
     expect(res.status).toBe(400);
   });
+
+  it("sets a 14-day trial on a newly created business", async () => {
+    const res = await request(createApp()).post("/auth/session").send({
+      idToken: fakeIdToken("uid-1", "owner@example.com"),
+      businessName: "Kigali Traders",
+    });
+
+    const business = await prisma.business.findUniqueOrThrow({ where: { id: res.body.business.id } });
+    const daysUntilTrialEnd = (business.trialEndsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+    expect(daysUntilTrialEnd).toBeGreaterThan(13.9);
+    expect(daysUntilTrialEnd).toBeLessThan(14.1);
+  });
 });

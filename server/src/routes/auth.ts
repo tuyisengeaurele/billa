@@ -63,7 +63,8 @@ authRouter.post("/session", authRateLimit, validateBody(sessionSchema), async (r
   }
 
   const { user, business } = await prisma.$transaction(async (tx) => {
-    const business = await tx.business.create({ data: { name: businessName } });
+    const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+    const business = await tx.business.create({ data: { name: businessName, trialEndsAt } });
     const user = await tx.user.create({
       data: { email: firebaseUser.email, firebaseUid: firebaseUser.uid, businessId: business.id },
     });

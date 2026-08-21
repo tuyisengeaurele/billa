@@ -27,26 +27,30 @@ enum DocumentTemplate {
 }
 
 model Business {
-  id              String           @id @default(cuid())
-  name            String
-  tin             String?
-  industry        String?
-  phone           String?
-  email           String?
-  address         String?
-  logoUrl         String?
-  primaryColor    String?
-  accentColors    Json?
-  rraEbmNumber    String?
-  defaultTemplate DocumentTemplate @default(MINIMAL)
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  id               String            @id @default(cuid())
+  name             String
+  tin              String?
+  industry         String?
+  phone            String?
+  email            String?
+  address          String?
+  logoUrl          String?
+  primaryColor     String?
+  accentColors     Json?
+  rraEbmNumber     String?
+  defaultTemplate  DocumentTemplate  @default(MINIMAL)
+  trialEndsAt      DateTime
+  currentPeriodEnd DateTime?
+  plan             SubscriptionPlan?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
   users     User[]
   customers Customer[]
   items     Item[]
   documents Document[]
   sequences DocumentSequence[]
+  payments  Payment[]
 }
 
 model User {
@@ -60,6 +64,7 @@ model User {
 
   business      Business       @relation(fields: [businessId], references: [id])
   refreshTokens RefreshToken[]
+  payments      Payment[]
 
   @@index([businessId])
 }
@@ -169,4 +174,34 @@ model DocumentLine {
   item     Item?    @relation(fields: [itemId], references: [id])
 
   @@index([documentId])
+}
+
+enum SubscriptionPlan {
+  MONTHLY
+  ANNUAL
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESSFUL
+  FAILED
+}
+
+model Payment {
+  id              String           @id @default(cuid())
+  businessId      String
+  userId          String
+  plan            SubscriptionPlan
+  amount          Int
+  currency        String
+  txRef           String           @unique
+  flutterwaveTxId String?
+  status          PaymentStatus    @default(PENDING)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
+
+  @@index([businessId])
 }
