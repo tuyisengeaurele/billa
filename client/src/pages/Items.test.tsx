@@ -135,4 +135,60 @@ describe("Items", () => {
 
     await waitFor(() => expect(screen.getByText(/no items yet/i)).toBeInTheDocument());
   });
+
+  it("has an accessible label on the search input", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(
+      async () => new Response(JSON.stringify({ results: [], total: 0, page: 1, pageSize: 20 }), { status: 200 }),
+    );
+    renderItems();
+    await screen.findByText(/no items yet/i);
+
+    expect(screen.getByLabelText("Search items")).toBeInTheDocument();
+  });
+
+  it("opens the edit modal when an item's description button is clicked", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.includes("/items")) {
+        return new Response(
+          JSON.stringify({
+            results: [{ id: "i1", description: "Printing service", unitPrice: 5000, unit: "service", isActive: true }],
+            total: 1,
+            page: 1,
+            pageSize: 20,
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+    const user = userEvent.setup();
+    renderItems();
+    await screen.findByText("Printing service");
+
+    await user.click(screen.getByRole("button", { name: "Printing service" }));
+
+    expect(await screen.findByText("Edit item")).toBeInTheDocument();
+  });
+
+  it("sorts by description when the Description header button is clicked", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async () =>
+      new Response(
+        JSON.stringify({
+          results: [{ id: "i1", description: "Printing service", unitPrice: 5000, unit: "service", isActive: true }],
+          total: 1,
+          page: 1,
+          pageSize: 20,
+        }),
+        { status: 200 },
+      ),
+    );
+    const user = userEvent.setup();
+    renderItems();
+    await screen.findByText("Printing service");
+
+    await user.click(screen.getByRole("button", { name: /^description$/i }));
+
+    expect(screen.getByRole("button", { name: /^description ↑$/i })).toBeInTheDocument();
+  });
 });

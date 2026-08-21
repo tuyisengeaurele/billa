@@ -84,6 +84,7 @@ export default function Items() {
           <input
             type="text"
             placeholder="Search items"
+            aria-label="Search items"
             value={list.search}
             onChange={(event) => list.updateSearch(event.target.value)}
             className="w-full max-w-xs rounded-lg border border-neutral-200 px-3.5 py-2 font-sans text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
@@ -121,11 +122,15 @@ export default function Items() {
           <table className="w-full border-collapse font-sans text-sm">
             <thead>
               <tr className="border-b border-neutral-200 text-left text-neutral-500">
-                <th className="cursor-pointer py-2" onClick={() => list.toggleSort("description")}>
-                  Description {list.sortBy === "description" && (list.sortOrder === "asc" ? "↑" : "↓")}
+                <th className="py-2">
+                  <button type="button" onClick={() => list.toggleSort("description")} className="cursor-pointer">
+                    Description {list.sortBy === "description" && (list.sortOrder === "asc" ? "↑" : "↓")}
+                  </button>
                 </th>
-                <th className="cursor-pointer py-2" onClick={() => list.toggleSort("unitPrice")}>
-                  Price {list.sortBy === "unitPrice" && (list.sortOrder === "asc" ? "↑" : "↓")}
+                <th className="py-2">
+                  <button type="button" onClick={() => list.toggleSort("unitPrice")} className="cursor-pointer">
+                    Price {list.sortBy === "unitPrice" && (list.sortOrder === "asc" ? "↑" : "↓")}
+                  </button>
                 </th>
                 <th className="py-2">Unit</th>
                 <th className="py-2">Status</th>
@@ -135,8 +140,10 @@ export default function Items() {
             <tbody>
               {list.results.map((item) => (
                 <tr key={item.id} className={`border-b border-neutral-100 ${item.isActive ? "" : "opacity-50"}`}>
-                  <td className="cursor-pointer py-3" onClick={() => openEditModal(item)}>
-                    {item.description}
+                  <td className="py-3">
+                    <button type="button" onClick={() => openEditModal(item)} className="cursor-pointer text-left">
+                      {item.description}
+                    </button>
                   </td>
                   <td className="py-3 text-neutral-600">{formatRwf(item.unitPrice)}</td>
                   <td className="py-3 text-neutral-600">{item.unit}</td>
