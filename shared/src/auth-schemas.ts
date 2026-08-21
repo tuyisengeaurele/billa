@@ -13,21 +13,8 @@ export const PASSWORD_REQUIREMENTS = [
   { label: "One special character", test: (value: string) => SPECIAL_RE.test(value) },
 ] as const;
 
-export const registerSchema = z.object({
-  email: z.string().email("Enter a valid email address"),
-  password: z
-    .string()
-    .min(8, "Password must be at least 8 characters")
-    .regex(LOWERCASE_RE, "Password must include a lowercase letter")
-    .regex(UPPERCASE_RE, "Password must include an uppercase letter")
-    .regex(NUMBER_RE, "Password must include a number")
-    .regex(SPECIAL_RE, "Password must include a special character"),
-  businessName: z.string().min(1, "Enter your business name"),
+export const sessionSchema = z.object({
+  idToken: z.string().trim().min(1, "Missing ID token"),
+  businessName: z.string().trim().min(1).optional(),
 });
-export type RegisterInput = z.infer<typeof registerSchema>;
-
-export const loginSchema = z.object({
-  email: z.string().email("Enter a valid email address"),
-  password: z.string().min(1, "Enter your password"),
-});
-export type LoginInput = z.infer<typeof loginSchema>;
+export type SessionInput = z.infer<typeof sessionSchema>;
