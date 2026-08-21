@@ -5,6 +5,7 @@ import { FormField } from "../components/FormField";
 import { Button } from "../components/Button";
 import { apiRequest, ApiError } from "../lib/apiClient";
 import { SequenceEditor } from "../components/business/SequenceEditor";
+import { BillingSection } from "../components/business/BillingSection";
 
 interface BusinessProfile {
   name: string;
@@ -139,6 +140,8 @@ export default function BusinessSettings() {
         </form>
 
         <SequenceEditor />
+
+        <BillingSection />
       </div>
     </AppLayout>
   );
