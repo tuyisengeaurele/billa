@@ -307,4 +307,32 @@ describe("DocumentForm", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/couldn't load this document/i);
   });
+
+  it("shows a subscription message when saving is blocked by a lapsed trial", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.includes("/customers")) {
+        return new Response(
+          JSON.stringify({ results: [{ id: "c1", name: "Kigali Traders", phone: null }], total: 1, page: 1, pageSize: 10 }),
+          { status: 200 },
+        );
+      }
+      if (url.includes("/documents") && init?.method === "POST") {
+        return new Response(JSON.stringify({ error: "subscription_required" }), { status: 402 });
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderNew();
+
+    const customerInput = screen.getByLabelText("Customer");
+    await user.click(customerInput);
+    await user.type(customerInput, "Kigali");
+    await user.click(await screen.findByText("Kigali Traders"));
+
+    await user.click(screen.getByRole("button", { name: /save draft/i }));
+
+    expect(await screen.findByText(/trial has ended/i)).toBeInTheDocument();
+  });
 });

@@ -205,4 +205,27 @@ describe("Customers", () => {
 
     expect(screen.getByRole("button", { name: /^name ↑$/i })).toBeInTheDocument();
   });
+
+  it("shows a subscription message when creating a customer is blocked by a lapsed trial", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.includes("/customers") && init?.method === "POST") {
+        return new Response(JSON.stringify({ error: "subscription_required" }), { status: 402 });
+      }
+      if (url.includes("/customers")) {
+        return new Response(JSON.stringify({ results: [], total: 0, page: 1, pageSize: 20 }), { status: 200 });
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderCustomers();
+    await screen.findByText(/no customers yet/i);
+
+    await user.click(screen.getAllByRole("button", { name: /add customer/i })[0]);
+    await user.type(screen.getByLabelText("Name"), "New Co");
+    await user.click(screen.getByRole("button", { name: /save customer/i }));
+
+    expect(await screen.findByText(/trial has ended/i)).toBeInTheDocument();
+  });
 });

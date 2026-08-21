@@ -191,4 +191,28 @@ describe("Items", () => {
 
     expect(screen.getByRole("button", { name: /^description ↑$/i })).toBeInTheDocument();
   });
+
+  it("shows a subscription message when creating an item is blocked by a lapsed trial", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.includes("/items") && init?.method === "POST") {
+        return new Response(JSON.stringify({ error: "subscription_required" }), { status: 402 });
+      }
+      if (url.includes("/items")) {
+        return new Response(JSON.stringify({ results: [], total: 0, page: 1, pageSize: 20 }), { status: 200 });
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderItems();
+    await screen.findByText(/no items yet/i);
+
+    await user.click(screen.getAllByRole("button", { name: /add item/i })[0]);
+    await user.type(screen.getByLabelText("Description"), "New item");
+    await user.type(screen.getByLabelText("Unit price (RWF)"), "1000");
+    await user.click(screen.getByRole("button", { name: /save item/i }));
+
+    expect(await screen.findByText(/trial has ended/i)).toBeInTheDocument();
+  });
 });

@@ -48,7 +48,13 @@ export default function Items() {
       setIsModalOpen(false);
       list.reload();
     } catch (err) {
-      setFormError(err instanceof ApiError ? "Couldn't save that item. Try again." : "Something went wrong. Try again.");
+      if (err instanceof ApiError && err.status === 402) {
+        setFormError("Your trial has ended. Subscribe in Settings to continue.");
+      } else {
+        setFormError(
+          err instanceof ApiError ? "Couldn't save that item. Try again." : "Something went wrong. Try again.",
+        );
+      }
     } finally {
       setIsSaving(false);
     }

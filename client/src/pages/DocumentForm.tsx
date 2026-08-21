@@ -156,9 +156,13 @@ export default function DocumentForm() {
         : await apiRequest<{ document: DocumentResponse }>("/documents", { method: "POST", body: payload });
       navigate(`/documents/${response.document.id}/edit`, { replace: true });
     } catch (err) {
-      setApiError(
-        err instanceof ApiError ? "Couldn't save this document. Try again." : "Something went wrong. Try again.",
-      );
+      if (err instanceof ApiError && err.status === 402) {
+        setApiError("Your trial has ended. Subscribe in Settings to continue.");
+      } else {
+        setApiError(
+          err instanceof ApiError ? "Couldn't save this document. Try again." : "Something went wrong. Try again.",
+        );
+      }
     } finally {
       setIsSaving(false);
     }
