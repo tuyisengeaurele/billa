@@ -6,6 +6,7 @@ import { businessRouter } from "./routes/business.js";
 import { customersRouter } from "./routes/customers.js";
 import { itemsRouter } from "./routes/items.js";
 import { documentsRouter } from "./routes/documents.js";
+import { billingRouter } from "./routes/billing.js";
 
 export function createApp() {
   const app = express();
@@ -29,6 +30,7 @@ export function createApp() {
   app.use("/customers", customersRouter);
   app.use("/items", itemsRouter);
   app.use("/documents", documentsRouter);
+  app.use("/billing", billingRouter);
 
   return app;
 }

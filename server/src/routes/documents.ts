@@ -4,6 +4,7 @@ import { documentListQuerySchema, documentSchema } from "@billa/shared";
 import type { DocumentInput, DocumentListQuery } from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/require-auth.js";
+import { requireActiveSubscription } from "../middleware/require-active-subscription.js";
 import { validateBody } from "../middleware/validate.js";
 import { validateQuery } from "../middleware/validate-query.js";
 import { calculateDocumentTotals } from "../lib/document-totals.js";
@@ -14,6 +15,7 @@ import { renderDocumentPdf } from "../lib/pdf/render-document-pdf.js";
 export const documentsRouter = Router();
 
 documentsRouter.use(requireAuth);
+documentsRouter.use(requireActiveSubscription);
 
 const DOCUMENT_INCLUDE = {
   lines: { orderBy: { sortOrder: "asc" as const } },

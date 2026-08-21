@@ -4,12 +4,14 @@ import { customerListQuerySchema, customerSchema, customerUpdateSchema } from "@
 import type { CustomerListQuery } from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/require-auth.js";
+import { requireActiveSubscription } from "../middleware/require-active-subscription.js";
 import { validateBody } from "../middleware/validate.js";
 import { validateQuery } from "../middleware/validate-query.js";
 
 export const customersRouter = Router();
 
 customersRouter.use(requireAuth);
+customersRouter.use(requireActiveSubscription);
 
 customersRouter.get("/", validateQuery(customerListQuerySchema), async (req, res) => {
   const query = req.listQuery as CustomerListQuery;
