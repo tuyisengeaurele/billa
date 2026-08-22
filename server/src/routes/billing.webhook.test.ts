@@ -35,12 +35,10 @@ describe("POST /billing/webhook", () => {
       idToken: JSON.stringify({ uid: "owner@example.com", email: "owner@example.com" }),
       businessName: "Kigali Traders",
     });
-    const businessId = registerRes.body.business.id as string;
-    const user = await prisma.user.findFirstOrThrow({ where: { businessId } });
+    const userId = registerRes.body.user.id as string;
     const payment = await prisma.payment.create({
       data: {
-        businessId,
-        userId: user.id,
+        userId,
         plan: "MONTHLY",
         amount: 6500,
         currency: "RWF",

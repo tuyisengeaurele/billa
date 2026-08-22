@@ -13,16 +13,12 @@ const PLAN_DAYS: Record<"MONTHLY" | "ANNUAL", number> = { MONTHLY: 30, ANNUAL: 3
 
 billingRouter.post("/checkout", requireAuth, validateBody(billingCheckoutSchema), async (req, res) => {
   const { plan } = req.body as BillingCheckoutInput;
-  const businessId = req.auth!.businessId;
   const userId = req.auth!.userId;
-
   const user = await prisma.user.findUnique({ where: { id: userId } });
-  const txRef = `billa-${businessId}-${crypto.randomUUID()}`;
-
+  const txRef = `billa-${userId}-${crypto.randomUUID()}`;
   await prisma.payment.create({
-    data: { businessId, userId, plan, amount: PLAN_PRICES[plan], currency: "RWF", txRef, status: "PENDING" },
+    data: { userId, plan, amount: PLAN_PRICES[plan], currency: "RWF", txRef, status: "PENDING" },
   });
-
   const clientOrigin = process.env.CLIENT_ORIGIN ?? "http://localhost:5173";
   const { link } = await initiateCheckout({
     txRef,
@@ -31,7 +27,6 @@ billingRouter.post("/checkout", requireAuth, validateBody(billingCheckoutSchema)
     redirectUrl: `${clientOrigin}/billing/callback`,
     customerEmail: user!.email,
   });
-
   res.json({ link });
 });
 
@@ -40,13 +35,8 @@ async function verifyAndRecordPayment(
   transactionId: string,
 ): Promise<"success" | "already_processed" | "mismatch"> {
   const payment = await prisma.payment.findUnique({ where: { txRef } });
-  if (!payment) {
-    throw new Error("payment_not_found");
-  }
-  if (payment.status === "SUCCESSFUL") {
-    return "already_processed";
-  }
-
+  if (!payment) throw new Error("payment_not_found");
+  if (payment.status === "SUCCESSFUL") return "already_processed";
   const verified = await verifyTransaction(transactionId);
   if (
     verified.txRef !== txRef ||
@@ -57,30 +47,25 @@ async function verifyAndRecordPayment(
     await prisma.payment.update({ where: { txRef }, data: { status: "FAILED" } });
     return "mismatch";
   }
-
-  const business = await prisma.business.findUnique({ where: { id: payment.businessId } });
+  const user = await prisma.user.findUnique({ where: { id: payment.userId } });
   const now = new Date();
-  const base = business!.currentPeriodEnd && business!.currentPeriodEnd > now ? business!.currentPeriodEnd : now;
+  const base = user!.currentPeriodEnd && user!.currentPeriodEnd > now ? user!.currentPeriodEnd : now;
   const currentPeriodEnd = new Date(base.getTime() + PLAN_DAYS[payment.plan] * 24 * 60 * 60 * 1000);
-
   await prisma.$transaction([
     prisma.payment.update({ where: { txRef }, data: { status: "SUCCESSFUL", flutterwaveTxId: transactionId } }),
-    prisma.business.update({ where: { id: payment.businessId }, data: { currentPeriodEnd, plan: payment.plan } }),
+    prisma.user.update({ where: { id: payment.userId }, data: { currentPeriodEnd, plan: payment.plan } }),
   ]);
-
   return "success";
 }
 
 billingRouter.post("/verify", requireAuth, validateBody(billingVerifySchema), async (req, res) => {
   const { txRef, transactionId } = req.body as BillingVerifyInput;
-  const businessId = req.auth!.businessId;
-
-  const payment = await prisma.payment.findFirst({ where: { txRef, businessId } });
+  const userId = req.auth!.userId;
+  const payment = await prisma.payment.findFirst({ where: { txRef, userId } });
   if (!payment) {
     res.status(404).json({ error: "not_found" });
     return;
   }
-
   try {
     const result = await verifyAndRecordPayment(txRef, transactionId);
     if (result === "mismatch") {
@@ -99,33 +84,26 @@ billingRouter.post("/webhook", async (req, res) => {
     res.status(401).json({ error: "invalid_signature" });
     return;
   }
-
   const txRef = req.body?.data?.tx_ref as string | undefined;
   const transactionId = req.body?.data?.id ? String(req.body.data.id) : undefined;
   if (!txRef || !transactionId) {
     res.status(400).json({ error: "invalid_payload" });
     return;
   }
-
   try {
     await verifyAndRecordPayment(txRef, transactionId);
   } catch {
-    // An unrecognized tx_ref isn't something Flutterwave should keep retrying over.
+    /* swallow */
   }
   res.json({ ok: true });
 });
 
 billingRouter.get("/status", requireAuth, async (req, res) => {
-  const business = await prisma.business.findUnique({ where: { id: req.auth!.businessId } });
-  if (!business) {
+  const user = await prisma.user.findUnique({ where: { id: req.auth!.userId } });
+  if (!user) {
     res.status(404).json({ error: "not_found" });
     return;
   }
-  const activeUntil = business.currentPeriodEnd ?? business.trialEndsAt;
-  res.json({
-    trialEndsAt: business.trialEndsAt,
-    currentPeriodEnd: business.currentPeriodEnd,
-    plan: business.plan,
-    activeUntil,
-  });
+  const activeUntil = user.currentPeriodEnd ?? user.trialEndsAt;
+  res.json({ trialEndsAt: user.trialEndsAt, currentPeriodEnd: user.currentPeriodEnd, plan: user.plan, activeUntil });
 });
