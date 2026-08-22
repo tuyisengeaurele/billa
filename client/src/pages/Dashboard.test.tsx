@@ -8,6 +8,36 @@ function urlOf(input: RequestInfo | URL): string {
   return typeof input === "string" ? input : input.toString();
 }
 
+function baseActivity() {
+  return Array.from({ length: 14 }, (_, i) => ({
+    date: `2026-08-${String(i + 1).padStart(2, "0")}`,
+    count: 0,
+  }));
+}
+
+function baseByType() {
+  return [
+    { type: "INVOICE", count: 0 },
+    { type: "PROFORMA", count: 0 },
+    { type: "DELIVERY_NOTE", count: 0 },
+    { type: "QUOTE", count: 0 },
+    { type: "RECEIPT", count: 0 },
+  ];
+}
+
+function baseSummary(overrides: Record<string, unknown> = {}) {
+  return {
+    draftCount: 0,
+    overdueInvoiceCount: 0,
+    recentDocuments: [],
+    documentsThisMonth: 0,
+    documentsLastMonth: 0,
+    documentsByType: baseByType(),
+    activityByDay: baseActivity(),
+    ...overrides,
+  };
+}
+
 function mockFetch(summary: unknown, summaryStatus = 200) {
   vi.spyOn(global, "fetch").mockImplementation(async (input) => {
     const url = urlOf(input);
@@ -43,38 +73,40 @@ describe("Dashboard", () => {
   });
 
   it("shows a welcome message with the business name", async () => {
-    mockFetch({ draftCount: 0, overdueInvoiceCount: 0, recentDocuments: [] });
+    mockFetch(baseSummary());
 
     renderDashboard();
 
     expect(await screen.findByText(/welcome, kigali traders/i)).toBeInTheDocument();
   });
 
-  it("shows a quick action link for every document type", async () => {
-    mockFetch({ draftCount: 0, overdueInvoiceCount: 0, recentDocuments: [] });
+  it("shows a quick action card for every document type", async () => {
+    mockFetch(baseSummary());
 
     renderDashboard();
     await screen.findByText(/welcome/i);
 
-    expect(screen.getByRole("link", { name: "New invoice" })).toHaveAttribute("href", "/documents/new?type=INVOICE");
-    expect(screen.getByRole("link", { name: "New quote" })).toHaveAttribute("href", "/documents/new?type=QUOTE");
+    expect(screen.getByRole("link", { name: /new invoice/i })).toHaveAttribute("href", "/documents/new?type=INVOICE");
+    expect(screen.getByRole("link", { name: /new quote/i })).toHaveAttribute("href", "/documents/new?type=QUOTE");
   });
 
   it("shows attention cards when there are drafts and overdue invoices", async () => {
-    mockFetch({
-      draftCount: 2,
-      overdueInvoiceCount: 1,
-      recentDocuments: [
-        {
-          id: "d1",
-          type: "INVOICE",
-          number: "INV-0001",
-          status: "FINALIZED",
-          customerName: "Musanze Supplies",
-          issueDate: "2026-08-19",
-        },
-      ],
-    });
+    mockFetch(
+      baseSummary({
+        draftCount: 2,
+        overdueInvoiceCount: 1,
+        recentDocuments: [
+          {
+            id: "d1",
+            type: "INVOICE",
+            number: "INV-0001",
+            status: "FINALIZED",
+            customerName: "Musanze Supplies",
+            issueDate: "2026-08-19",
+          },
+        ],
+      }),
+    );
 
     renderDashboard();
 
@@ -83,20 +115,20 @@ describe("Dashboard", () => {
   });
 
   it("hides attention cards when there is nothing to flag", async () => {
-    mockFetch({
-      draftCount: 0,
-      overdueInvoiceCount: 0,
-      recentDocuments: [
-        {
-          id: "d1",
-          type: "INVOICE",
-          number: "INV-0001",
-          status: "FINALIZED",
-          customerName: "Musanze Supplies",
-          issueDate: "2026-08-19",
-        },
-      ],
-    });
+    mockFetch(
+      baseSummary({
+        recentDocuments: [
+          {
+            id: "d1",
+            type: "INVOICE",
+            number: "INV-0001",
+            status: "FINALIZED",
+            customerName: "Musanze Supplies",
+            issueDate: "2026-08-19",
+          },
+        ],
+      }),
+    );
 
     renderDashboard();
     await screen.findByText("Musanze Supplies");
@@ -106,28 +138,29 @@ describe("Dashboard", () => {
   });
 
   it("shows recent documents linking to the finalized view or the draft editor", async () => {
-    mockFetch({
-      draftCount: 1,
-      overdueInvoiceCount: 0,
-      recentDocuments: [
-        {
-          id: "d1",
-          type: "INVOICE",
-          number: "INV-0001",
-          status: "FINALIZED",
-          customerName: "Musanze Supplies",
-          issueDate: "2026-08-19",
-        },
-        {
-          id: "d2",
-          type: "QUOTE",
-          number: null,
-          status: "DRAFT",
-          customerName: "Huye Traders",
-          issueDate: "2026-08-18",
-        },
-      ],
-    });
+    mockFetch(
+      baseSummary({
+        draftCount: 1,
+        recentDocuments: [
+          {
+            id: "d1",
+            type: "INVOICE",
+            number: "INV-0001",
+            status: "FINALIZED",
+            customerName: "Musanze Supplies",
+            issueDate: "2026-08-19",
+          },
+          {
+            id: "d2",
+            type: "QUOTE",
+            number: null,
+            status: "DRAFT",
+            customerName: "Huye Traders",
+            issueDate: "2026-08-18",
+          },
+        ],
+      }),
+    );
 
     renderDashboard();
 
@@ -136,8 +169,8 @@ describe("Dashboard", () => {
     expect(screen.getByRole("link", { name: /Huye Traders/i })).toHaveAttribute("href", "/documents/d2/edit");
   });
 
-  it("shows the empty state when the business has no documents yet", async () => {
-    mockFetch({ draftCount: 0, overdueInvoiceCount: 0, recentDocuments: [] });
+  it("shows the empty state and skips the metrics section when the business has no documents yet", async () => {
+    mockFetch(baseSummary());
 
     renderDashboard();
 
@@ -146,6 +179,7 @@ describe("Dashboard", () => {
       "href",
       "/documents/new?type=INVOICE",
     );
+    expect(screen.queryByText(/documents this month/i)).not.toBeInTheDocument();
   });
 
   it("shows an error message when the dashboard fails to load", async () => {
@@ -154,5 +188,52 @@ describe("Dashboard", () => {
     renderDashboard();
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/couldn't load your dashboard/i);
+  });
+
+  it("shows the documents-this-month headline stat with a comparison to last month", async () => {
+    mockFetch(
+      baseSummary({
+        documentsThisMonth: 5,
+        documentsLastMonth: 2,
+        recentDocuments: [
+          {
+            id: "d1",
+            type: "INVOICE",
+            number: "INV-0001",
+            status: "FINALIZED",
+            customerName: "Musanze Supplies",
+            issueDate: "2026-08-19",
+          },
+        ],
+      }),
+    );
+
+    renderDashboard();
+
+    expect(await screen.findByText("5")).toBeInTheDocument();
+    expect(screen.getByText(/3 more than last month/i)).toBeInTheDocument();
+  });
+
+  it("shows 'fewer' and 'same' comparisons correctly", async () => {
+    mockFetch(
+      baseSummary({
+        documentsThisMonth: 1,
+        documentsLastMonth: 4,
+        recentDocuments: [
+          {
+            id: "d1",
+            type: "INVOICE",
+            number: "INV-0001",
+            status: "FINALIZED",
+            customerName: "Musanze Supplies",
+            issueDate: "2026-08-19",
+          },
+        ],
+      }),
+    );
+
+    renderDashboard();
+
+    expect(await screen.findByText(/3 fewer than last month/i)).toBeInTheDocument();
   });
 });

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { DOCUMENT_TYPES, type DocumentStatus, type DocumentType } from "@billa/shared";
 import { AppLayout } from "../components/AppLayout";
 import { useAuth } from "../context/AuthContext";
@@ -15,10 +16,39 @@ interface RecentDocument {
   issueDate: string;
 }
 
+interface DocumentTypeCount {
+  type: DocumentType;
+  count: number;
+}
+
+interface ActivityDay {
+  date: string;
+  count: number;
+}
+
 interface DashboardSummary {
   draftCount: number;
   overdueInvoiceCount: number;
   recentDocuments: RecentDocument[];
+  documentsThisMonth: number;
+  documentsLastMonth: number;
+  documentsByType: DocumentTypeCount[];
+  activityByDay: ActivityDay[];
+}
+
+const TYPE_MONOGRAM: Record<DocumentType, string> = {
+  INVOICE: "IN",
+  PROFORMA: "PR",
+  DELIVERY_NOTE: "DN",
+  QUOTE: "QU",
+  RECEIPT: "RE",
+};
+
+function monthComparison(thisMonth: number, lastMonth: number): string {
+  const diff = thisMonth - lastMonth;
+  if (diff === 0) return "Same as last month";
+  if (diff > 0) return `${diff} more than last month`;
+  return `${Math.abs(diff)} fewer than last month`;
 }
 
 export default function Dashboard() {
@@ -37,19 +67,27 @@ export default function Dashboard() {
 
   return (
     <AppLayout>
-      <div className="mx-auto flex max-w-4xl flex-col gap-8">
+      <div className="mx-auto flex max-w-5xl flex-col gap-8">
         <h1 className="font-display text-3xl font-semibold text-neutral-900">
           Welcome, {business?.name ?? "there"}.
         </h1>
 
-        <div className="flex flex-wrap gap-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {DOCUMENT_TYPES.map((type) => (
             <Link
               key={type}
               to={`/documents/new?type=${type}`}
-              className="rounded-lg border border-neutral-200 px-4 py-2.5 font-sans text-sm font-medium text-neutral-700 transition-colors hover:border-primary-500 hover:text-primary-700"
+              className="group flex flex-col gap-3 rounded-xl border border-neutral-200 p-5 transition-all hover:border-primary-500 hover:shadow-md"
             >
-              New {DOCUMENT_TYPE_LABELS[type].singular}
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-100 font-sans text-xs font-semibold text-primary-700 transition-colors group-hover:bg-primary-500 group-hover:text-white">
+                {TYPE_MONOGRAM[type]}
+              </span>
+              <div>
+                <p className="font-display text-base font-semibold text-neutral-900">
+                  New {DOCUMENT_TYPE_LABELS[type].singular}
+                </p>
+                <p className="mt-1 font-sans text-sm text-neutral-500">{DOCUMENT_TYPE_LABELS[type].description}</p>
+              </div>
             </Link>
           ))}
         </div>
@@ -92,6 +130,88 @@ export default function Dashboard() {
                 {summary.overdueInvoiceCount} invoice{summary.overdueInvoiceCount === 1 ? "" : "s"} past due date
               </Link>
             )}
+          </div>
+        )}
+
+        {summary && !hasNoDocuments && (
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <div className="rounded-xl border border-neutral-200 p-6">
+              <p className="font-sans text-sm text-neutral-500">Documents this month</p>
+              <p className="mt-2 font-display text-4xl font-semibold text-neutral-900">
+                {summary.documentsThisMonth}
+              </p>
+              <p className="mt-2 font-sans text-sm text-neutral-500">
+                {monthComparison(summary.documentsThisMonth, summary.documentsLastMonth)}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-neutral-200 p-6 lg:col-span-2">
+              <p className="font-sans text-sm font-semibold text-neutral-900">Documents by type</p>
+              <ResponsiveContainer width="100%" height={180}>
+                <BarChart data={summary.documentsByType} layout="vertical" margin={{ left: 8, right: 16, top: 8 }}>
+                  <CartesianGrid horizontal={false} stroke="#e4e4e7" />
+                  <XAxis
+                    type="number"
+                    allowDecimals={false}
+                    tick={{ fontSize: 12, fill: "#71717a" }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    type="category"
+                    dataKey="type"
+                    tickFormatter={(type: DocumentType) => DOCUMENT_TYPE_LABELS[type].plural}
+                    tick={{ fontSize: 12, fill: "#52525b" }}
+                    axisLine={false}
+                    tickLine={false}
+                    width={110}
+                  />
+                  <Tooltip
+                    formatter={(value) => [value, "Documents"]}
+                    labelFormatter={(label) => DOCUMENT_TYPE_LABELS[label as DocumentType].plural}
+                    contentStyle={{ borderRadius: 8, borderColor: "#e4e4e7", fontSize: 12 }}
+                  />
+                  <Bar dataKey="count" fill="#c2185b" radius={[0, 4, 4, 0]} maxBarSize={18} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="rounded-xl border border-neutral-200 p-6 lg:col-span-3">
+              <p className="font-sans text-sm font-semibold text-neutral-900">Activity, last 14 days</p>
+              <ResponsiveContainer width="100%" height={200}>
+                <LineChart data={summary.activityByDay} margin={{ left: 0, right: 12, top: 8, bottom: 0 }}>
+                  <CartesianGrid vertical={false} stroke="#e4e4e7" />
+                  <XAxis
+                    dataKey="date"
+                    tickFormatter={(date: string) => date.slice(5)}
+                    tick={{ fontSize: 11, fill: "#71717a" }}
+                    axisLine={false}
+                    tickLine={false}
+                    interval={2}
+                  />
+                  <YAxis
+                    allowDecimals={false}
+                    tick={{ fontSize: 12, fill: "#71717a" }}
+                    axisLine={false}
+                    tickLine={false}
+                    width={28}
+                  />
+                  <Tooltip
+                    formatter={(value) => [value, "Documents"]}
+                    labelFormatter={(label) => String(label)}
+                    contentStyle={{ borderRadius: 8, borderColor: "#e4e4e7", fontSize: 12 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="count"
+                    stroke="#c2185b"
+                    strokeWidth={2}
+                    dot={{ r: 3, fill: "#c2185b" }}
+                    activeDot={{ r: 5 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         )}
 
