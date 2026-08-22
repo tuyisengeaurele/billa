@@ -3,14 +3,14 @@ import { formatRwf } from "@billa/shared";
 export function InvoicePreview() {
   return (
     <div className="w-full max-w-sm rounded-2xl border border-neutral-200 bg-white p-6 shadow-xl">
-      <div className="flex items-center justify-between border-b border-neutral-100 pb-4">
+      <div className="flex items-start justify-between gap-3 border-b border-neutral-100 pb-4">
         <div className="flex items-center gap-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-500">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-500">
             <img src="/logo.png" alt="" className="h-4 w-4" style={{ filter: "brightness(0) invert(1)" }} />
           </span>
           <span className="font-display text-base font-semibold text-neutral-900">Kigali Traders</span>
         </div>
-        <div className="text-right">
+        <div className="shrink-0 text-right">
           <p className="font-sans text-xs uppercase tracking-wide text-neutral-400">Invoice</p>
           <p className="font-sans text-sm font-semibold text-neutral-900">INV-0004</p>
         </div>

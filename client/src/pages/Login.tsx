@@ -86,11 +86,7 @@ export default function Login() {
         </Link>
       </p>
 
-      <Button
-        type="button"
-        onClick={handleGoogle}
-        className="mt-6 border border-neutral-200 bg-white text-neutral-900 hover:bg-neutral-50"
-      >
+      <Button type="button" variant="outline" onClick={handleGoogle} className="mt-6">
         Continue with Google
       </Button>
 

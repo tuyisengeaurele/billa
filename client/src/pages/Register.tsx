@@ -95,11 +95,7 @@ export default function Register() {
           error={errors.businessName?.message}
           {...register("businessName")}
         />
-        <Button
-          type="button"
-          onClick={handleGoogle}
-          className="border border-neutral-200 bg-white text-neutral-900 hover:bg-neutral-50"
-        >
+        <Button type="button" variant="outline" onClick={handleGoogle}>
           Continue with Google
         </Button>
         <FormField
