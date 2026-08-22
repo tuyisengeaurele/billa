@@ -28,6 +28,7 @@ enum DocumentTemplate {
 
 model Business {
   id               String            @id @default(cuid())
+  ownerId          String
   name             String
   tin              String?
   industry         String?
@@ -39,44 +40,44 @@ model Business {
   accentColors     Json?
   rraEbmNumber     String?
   defaultTemplate  DocumentTemplate  @default(MINIMAL)
-  trialEndsAt      DateTime
-  currentPeriodEnd DateTime?
-  plan             SubscriptionPlan?
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
 
-  users     User[]
+  owner     User               @relation(fields: [ownerId], references: [id])
   customers Customer[]
   items     Item[]
   documents Document[]
   sequences DocumentSequence[]
-  payments  Payment[]
+
+  @@index([ownerId])
 }
 
 model User {
-  id          String   @id @default(cuid())
-  businessId  String
-  email       String   @unique
-  firebaseUid String   @unique
-  name        String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                   String            @id @default(cuid())
+  email                String            @unique
+  firebaseUid          String            @unique
+  name                 String?
+  trialEndsAt          DateTime
+  currentPeriodEnd     DateTime?
+  plan                 SubscriptionPlan?
+  lastActiveBusinessId String?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
 
-  business      Business       @relation(fields: [businessId], references: [id])
+  businesses    Business[]
   refreshTokens RefreshToken[]
   payments      Payment[]
-
-  @@index([businessId])
 }
 
 model RefreshToken {
-  id        String    @id @default(cuid())
-  userId    String
-  tokenHash String
-  family    String
-  expiresAt DateTime
-  revokedAt DateTime?
-  createdAt DateTime  @default(now())
+  id         String    @id @default(cuid())
+  userId     String
+  businessId String
+  tokenHash  String
+  family     String
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id])
 
@@ -189,7 +190,6 @@ enum PaymentStatus {
 
 model Payment {
   id              String           @id @default(cuid())
-  businessId      String
   userId          String
   plan            SubscriptionPlan
   amount          Int
@@ -200,8 +200,7 @@ model Payment {
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 
-  business Business @relation(fields: [businessId], references: [id])
-  user     User     @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 
-  @@index([businessId])
+  @@index([userId])
 }
