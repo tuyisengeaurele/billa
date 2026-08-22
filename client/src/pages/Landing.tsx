@@ -1,8 +1,8 @@
-import { useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { DOCUMENT_TYPES, formatRwf, PLAN_PRICES } from "@billa/shared";
-import { InvoicePreview } from "../components/landing/InvoicePreview";
+import { DocumentPreviewStack } from "../components/landing/DocumentPreviewStack";
+import { FaqItem } from "../components/FaqItem";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
 
 const STEPS = [
@@ -48,39 +48,6 @@ const fadeUp = {
   hidden: { opacity: 0, y: 24 },
   visible: { opacity: 1, y: 0 },
 };
-
-function FaqItem({ question, answer }: { question: string; answer: string }) {
-  const [isOpen, setIsOpen] = useState(false);
-
-  return (
-    <div className="border-b border-neutral-200 py-2">
-      <button
-        type="button"
-        onClick={() => setIsOpen((open) => !open)}
-        aria-expanded={isOpen}
-        className="flex w-full items-center justify-between gap-4 py-4 text-left"
-      >
-        <h3 className="font-display text-lg font-semibold text-neutral-900">{question}</h3>
-        <motion.span
-          animate={{ rotate: isOpen ? 45 : 0 }}
-          transition={{ duration: 0.2 }}
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-neutral-100 font-sans text-lg text-neutral-500"
-          aria-hidden="true"
-        >
-          +
-        </motion.span>
-      </button>
-      <motion.div
-        initial={false}
-        animate={{ height: isOpen ? "auto" : 0, opacity: isOpen ? 1 : 0 }}
-        transition={{ duration: 0.25, ease: "easeInOut" }}
-        className="overflow-hidden"
-      >
-        <p className="pb-4 font-sans text-sm text-neutral-600">{answer}</p>
-      </motion.div>
-    </div>
-  );
-}
 
 export default function Landing() {
   return (
@@ -142,13 +109,12 @@ export default function Landing() {
             >
               Start free trial
             </Link>
-            <span className="font-sans text-sm text-neutral-500">14 days free. No card required.</span>
+            <span className="font-sans text-sm text-neutral-500">14 days free, full access.</span>
           </div>
         </motion.div>
         <motion.div
           initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0, rotate: -3 }}
-          whileHover={{ rotate: 0, scale: 1.02 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.15, ease: "easeOut" }}
           className="relative flex flex-1 items-center justify-center"
         >
@@ -156,7 +122,7 @@ export default function Landing() {
             className="pointer-events-none absolute inset-0 -z-10"
             style={{ backgroundImage: "radial-gradient(circle at 60% 40%, rgba(194,24,91,0.12) 0, transparent 55%)" }}
           />
-          <InvoicePreview />
+          <DocumentPreviewStack />
         </motion.div>
       </section>
 
@@ -270,7 +236,7 @@ export default function Landing() {
           Simple pricing
         </motion.h2>
         <p className="mx-auto mt-3 max-w-md text-center font-sans text-sm text-neutral-500">
-          Try every feature free for 14 days. No card needed to start, upgrade only when you're ready.
+          Every plan includes a 14-day free trial before you pay anything.
         </p>
         <div className="mt-12 grid grid-cols-1 gap-8 sm:grid-cols-2">
           <motion.div
@@ -338,9 +304,7 @@ export default function Landing() {
           transition={{ duration: 0.5, ease: "easeOut" }}
         >
           <h2 className="font-display text-3xl font-semibold text-neutral-900">Start your free trial</h2>
-          <p className="mt-4 font-sans text-lg text-neutral-600">
-            14 days free, full access. No card needed to sign up.
-          </p>
+          <p className="mt-4 font-sans text-lg text-neutral-600">14 days free, full access from day one.</p>
           <Link
             to="/register"
             className="mt-8 inline-block rounded-lg bg-primary-500 px-6 py-3 font-sans text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-primary-700 hover:shadow-lg"
@@ -350,8 +314,12 @@ export default function Landing() {
         </motion.div>
       </section>
 
-      <footer className="border-t border-neutral-100 bg-neutral-50 px-6 pb-8 pt-16">
-        <div className="mx-auto grid max-w-6xl grid-cols-2 gap-10 sm:grid-cols-4">
+      <footer className="relative overflow-hidden border-t border-neutral-100 bg-white px-6 pb-10 pt-20">
+        <div
+          className="pointer-events-none absolute inset-0 -z-10"
+          style={{ backgroundImage: "radial-gradient(circle at 50% 0%, rgba(194,24,91,0.06) 0, transparent 60%)" }}
+        />
+        <div className="mx-auto grid max-w-6xl grid-cols-2 gap-x-10 gap-y-12 sm:grid-cols-4">
           <div className="col-span-2 sm:col-span-1">
             <div className="flex items-center gap-2">
               <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-500">
@@ -365,7 +333,7 @@ export default function Landing() {
           </div>
           <div>
             <p className="font-sans text-xs font-semibold uppercase tracking-wide text-neutral-400">Product</p>
-            <ul className="mt-4 flex flex-col gap-3">
+            <ul className="mt-5 flex flex-col gap-3.5">
               <li>
                 <a href="#features" className="font-sans text-sm text-neutral-600 hover:text-neutral-900">
                   Features
@@ -384,8 +352,28 @@ export default function Landing() {
             </ul>
           </div>
           <div>
+            <p className="font-sans text-xs font-semibold uppercase tracking-wide text-neutral-400">Company</p>
+            <ul className="mt-5 flex flex-col gap-3.5">
+              <li>
+                <Link to="/help" className="font-sans text-sm text-neutral-600 hover:text-neutral-900">
+                  Help center
+                </Link>
+              </li>
+              <li>
+                <Link to="/privacy" className="font-sans text-sm text-neutral-600 hover:text-neutral-900">
+                  Privacy policy
+                </Link>
+              </li>
+              <li>
+                <Link to="/terms" className="font-sans text-sm text-neutral-600 hover:text-neutral-900">
+                  Terms of service
+                </Link>
+              </li>
+            </ul>
+          </div>
+          <div>
             <p className="font-sans text-xs font-semibold uppercase tracking-wide text-neutral-400">Account</p>
-            <ul className="mt-4 flex flex-col gap-3">
+            <ul className="mt-5 flex flex-col gap-3.5">
               <li>
                 <Link to="/login" className="font-sans text-sm text-neutral-600 hover:text-neutral-900">
                   Log in
@@ -399,8 +387,8 @@ export default function Landing() {
             </ul>
           </div>
         </div>
-        <div className="mx-auto mt-12 flex max-w-6xl flex-col items-center justify-between gap-4 border-t border-neutral-200 pt-8 sm:flex-row">
-          <p className="font-sans text-sm text-neutral-500">© 2026 Billa. Built in Kigali.</p>
+        <div className="mx-auto mt-16 flex max-w-6xl flex-col items-center justify-between gap-4 border-t border-neutral-200 pt-8 sm:flex-row">
+          <p className="font-sans text-sm text-neutral-500">© 2026 Billa.</p>
         </div>
       </footer>
     </div>
