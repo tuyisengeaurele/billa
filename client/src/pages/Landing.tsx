@@ -117,12 +117,20 @@ export default function Landing() {
         </motion.div>
       </section>
 
-      <section className="border-t border-neutral-100 bg-neutral-50 px-6 py-20">
-        <div className="mx-auto max-w-3xl text-center">
-          <h2 className="font-display text-3xl font-semibold text-neutral-900">
+      <section className="relative overflow-hidden bg-primary-500 px-6 py-24">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-20"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 15% 20%, rgba(255,255,255,0.35) 0, transparent 40%), radial-gradient(circle at 85% 80%, rgba(255,255,255,0.2) 0, transparent 45%)",
+          }}
+        />
+        <div className="relative mx-auto max-w-3xl text-center">
+          <p className="font-sans text-sm font-semibold uppercase tracking-[0.2em] text-primary-100">The problem</p>
+          <h2 className="mt-4 font-display text-3xl font-semibold text-white lg:text-4xl">
             Built for how Rwandan businesses actually invoice
           </h2>
-          <p className="mt-6 font-sans text-lg text-neutral-600">
+          <p className="mt-6 font-sans text-lg text-primary-100">
             Most small businesses in Rwanda still write invoices in Word, Excel, or by hand. It works until a
             customer asks for something more formal, or you lose track of what you've already numbered. Billa gives
             every document a real sequence, RWF totals, and a design that looks considered, without asking you to
@@ -131,15 +139,17 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-5xl px-6 py-20">
-        <h2 className="text-center font-display text-3xl font-semibold text-neutral-900">
-          Every document your business sends
-        </h2>
-        <div className="mt-12 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-          {DOCUMENT_TYPES.map((doc) => (
-            <div key={doc.name} className="rounded-xl border border-neutral-100 p-6">
-              <h3 className="font-display text-lg font-semibold text-neutral-900">{doc.name}</h3>
-              <p className="mt-2 font-sans text-sm text-neutral-600">{doc.description}</p>
+      <section className="mx-auto max-w-4xl px-6 py-24">
+        <h2 className="font-display text-3xl font-semibold text-neutral-900">Every document your business sends</h2>
+        <div className="mt-12 flex flex-col">
+          {DOCUMENT_TYPES.map((doc, index) => (
+            <div
+              key={doc.name}
+              className="flex flex-col gap-1 border-t border-neutral-200 py-6 first:border-t-0 sm:flex-row sm:items-baseline sm:gap-6"
+            >
+              <span className="font-display text-sm text-neutral-400">0{index + 1}</span>
+              <h3 className="font-display text-xl font-semibold text-neutral-900 sm:w-48 sm:shrink-0">{doc.name}</h3>
+              <p className="font-sans text-base text-neutral-600">{doc.description}</p>
             </div>
           ))}
         </div>
