@@ -93,110 +93,127 @@ export default function Customers() {
           </Button>
         </div>
 
-        <div className="flex items-center gap-4">
-          <input
-            type="text"
-            placeholder="Search customers"
-            aria-label="Search customers"
-            value={list.search}
-            onChange={(event) => list.updateSearch(event.target.value)}
-            className="w-full max-w-xs rounded-lg border border-neutral-200 px-3.5 py-2 font-sans text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
-          />
-          <label className="flex items-center gap-2 font-sans text-sm text-neutral-600">
+        <div className="rounded-xl border border-neutral-200 bg-white p-6">
+          <div className="flex items-center gap-4">
             <input
-              type="checkbox"
-              checked={list.includeInactive}
-              onChange={(event) => list.updateIncludeInactive(event.target.checked)}
+              type="text"
+              placeholder="Search customers"
+              aria-label="Search customers"
+              value={list.search}
+              onChange={(event) => list.updateSearch(event.target.value)}
+              className="w-full max-w-xs rounded-lg border border-neutral-200 px-3.5 py-2 font-sans text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
             />
-            Show inactive
-          </label>
-        </div>
-
-        {list.error && (
-          <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
-            {list.error}
+            <label className="flex items-center gap-2 font-sans text-sm text-neutral-600">
+              <input
+                type="checkbox"
+                checked={list.includeInactive}
+                onChange={(event) => list.updateIncludeInactive(event.target.checked)}
+              />
+              Show inactive
+            </label>
           </div>
-        )}
 
-        {list.isLoading ? (
-          <div className="flex flex-col gap-2" aria-label="Loading customers">
-            {[0, 1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-12 animate-pulse rounded-lg bg-neutral-100" />
-            ))}
-          </div>
-        ) : list.results.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-neutral-200 py-16 text-center">
-            <p className="font-sans text-sm text-neutral-600">No customers yet.</p>
-            <Button type="button" onClick={openCreateModal} className="w-auto px-5">
-              Add customer
-            </Button>
-          </div>
-        ) : (
-          <table className="w-full border-collapse font-sans text-sm">
-            <thead>
-              <tr className="border-b border-neutral-200 text-left text-neutral-500">
-                <th className="py-2">
-                  <button type="button" onClick={() => list.toggleSort("name")} className="cursor-pointer">
-                    Name {list.sortBy === "name" && (list.sortOrder === "asc" ? "↑" : "↓")}
-                  </button>
-                </th>
-                <th className="py-2">Phone</th>
-                <th className="py-2">Email</th>
-                <th className="py-2">Status</th>
-                <th className="py-2" />
-              </tr>
-            </thead>
-            <tbody>
-              {list.results.map((customer) => (
-                <tr key={customer.id} className={`border-b border-neutral-100 ${customer.isActive ? "" : "opacity-50"}`}>
-                  <td className="py-3">
-                    <button type="button" onClick={() => openEditModal(customer)} className="cursor-pointer text-left">
-                      {customer.name}
-                    </button>
-                  </td>
-                  <td className="py-3 text-neutral-600">{customer.phone ?? "-"}</td>
-                  <td className="py-3 text-neutral-600">{customer.email ?? "-"}</td>
-                  <td className="py-3 text-neutral-600">{customer.isActive ? "Active" : "Inactive"}</td>
-                  <td className="py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => handleToggleActive(customer)}
-                      className="font-sans text-sm text-neutral-500 hover:text-neutral-700 hover:underline"
-                    >
-                      {customer.isActive ? "Deactivate" : "Reactivate"}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-
-        {!list.isLoading && list.results.length > 0 && (
-          <div className="flex items-center justify-between font-sans text-sm text-neutral-600">
-            <span>
-              Page {list.page} of {totalPages}
-            </span>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                disabled={list.page <= 1}
-                onClick={() => list.setPage(list.page - 1)}
-                className="disabled:opacity-40"
-              >
-                Previous
-              </button>
-              <button
-                type="button"
-                disabled={list.page >= totalPages}
-                onClick={() => list.setPage(list.page + 1)}
-                className="disabled:opacity-40"
-              >
-                Next
-              </button>
+          {list.error && (
+            <div className="mt-4 rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
+              {list.error}
             </div>
-          </div>
-        )}
+          )}
+
+          {list.isLoading ? (
+            <div className="mt-4 flex flex-col gap-2" aria-label="Loading customers">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-12 animate-pulse rounded-lg bg-neutral-100" />
+              ))}
+            </div>
+          ) : list.results.length === 0 ? (
+            <div className="mt-4 flex flex-col items-center gap-3 rounded-xl border border-dashed border-neutral-200 py-16 text-center">
+              <p className="font-sans text-sm text-neutral-600">No customers yet.</p>
+              <Button type="button" onClick={openCreateModal} className="w-auto px-5">
+                Add customer
+              </Button>
+            </div>
+          ) : (
+            <table className="mt-4 w-full border-collapse font-sans text-sm">
+              <thead>
+                <tr className="border-b border-neutral-200 text-left text-neutral-500">
+                  <th className="py-2">
+                    <button type="button" onClick={() => list.toggleSort("name")} className="cursor-pointer">
+                      Name {list.sortBy === "name" && (list.sortOrder === "asc" ? "↑" : "↓")}
+                    </button>
+                  </th>
+                  <th className="py-2">Phone</th>
+                  <th className="py-2">Email</th>
+                  <th className="py-2">Status</th>
+                  <th className="py-2" />
+                </tr>
+              </thead>
+              <tbody>
+                {list.results.map((customer) => (
+                  <tr
+                    key={customer.id}
+                    className={`border-b border-neutral-100 hover:bg-neutral-50 ${customer.isActive ? "" : "opacity-50"}`}
+                  >
+                    <td className="py-3">
+                      <button
+                        type="button"
+                        onClick={() => openEditModal(customer)}
+                        className="cursor-pointer text-left font-medium text-neutral-900"
+                      >
+                        {customer.name}
+                      </button>
+                    </td>
+                    <td className="py-3 text-neutral-600">{customer.phone ?? "-"}</td>
+                    <td className="py-3 text-neutral-600">{customer.email ?? "-"}</td>
+                    <td className="py-3">
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                          customer.isActive ? "bg-primary-100 text-primary-700" : "bg-neutral-100 text-neutral-600"
+                        }`}
+                      >
+                        {customer.isActive ? "Active" : "Inactive"}
+                      </span>
+                    </td>
+                    <td className="py-3 text-right">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleActive(customer)}
+                        className="font-sans text-sm text-neutral-500 hover:text-neutral-700 hover:underline"
+                      >
+                        {customer.isActive ? "Deactivate" : "Reactivate"}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+
+          {!list.isLoading && list.results.length > 0 && (
+            <div className="mt-4 flex items-center justify-between font-sans text-sm text-neutral-600">
+              <span>
+                Page {list.page} of {totalPages}
+              </span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={list.page <= 1}
+                  onClick={() => list.setPage(list.page - 1)}
+                  className="disabled:opacity-40"
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  disabled={list.page >= totalPages}
+                  onClick={() => list.setPage(list.page + 1)}
+                  className="disabled:opacity-40"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       <Modal

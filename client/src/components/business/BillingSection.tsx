@@ -59,18 +59,18 @@ export function BillingSection() {
       : "Your free trial has ended.";
 
   return (
-    <div className="flex flex-col gap-3">
-      <span className="font-sans text-sm font-medium text-neutral-800">Billing</span>
+    <section className="rounded-xl border border-neutral-200 bg-white p-6">
+      <h2 className="font-display text-base font-semibold text-neutral-900">Billing</h2>
 
       {checkoutError && (
-        <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
+        <div className="mt-4 rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
           {checkoutError}
         </div>
       )}
 
-      <p className="font-sans text-sm text-neutral-600">{statusText}</p>
+      <p className="mt-4 font-sans text-sm text-neutral-600">{statusText}</p>
 
-      <div className="flex gap-3">
+      <div className="mt-4 flex gap-3">
         <button
           type="button"
           disabled={isRedirecting !== null}
@@ -88,6 +88,6 @@ export function BillingSection() {
           {isRedirecting === "ANNUAL" ? "Redirecting…" : "Subscribe annually"}
         </button>
       </div>
-    </div>
+    </section>
   );
 }

@@ -54,16 +54,16 @@ export function SequenceEditor() {
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <span className="font-sans text-sm font-medium text-neutral-800">Document numbering</span>
+    <section className="rounded-xl border border-neutral-200 bg-white p-6">
+      <h2 className="font-display text-base font-semibold text-neutral-900">Document numbering</h2>
 
       {apiError && (
-        <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
+        <div className="mt-4 rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
           {apiError}
         </div>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-3">
+      <form onSubmit={handleSubmit(onSubmit)} className="mt-4 flex flex-col gap-3">
         {DOCUMENT_TYPES.map((type, index) => (
           <div key={type} className="flex items-center gap-3">
             <span className="w-40 font-sans text-sm text-neutral-700">{DOCUMENT_TYPE_LABELS[type].plural}</span>
@@ -88,6 +88,6 @@ export function SequenceEditor() {
           {isSaving ? "Saving…" : "Save numbering"}
         </button>
       </form>
-    </div>
+    </section>
   );
 }

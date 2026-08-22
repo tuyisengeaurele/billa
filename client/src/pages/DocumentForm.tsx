@@ -234,37 +234,40 @@ export default function DocumentForm() {
         )}
 
         <form onSubmit={handleSubmit(saveDraft)} className="flex flex-col gap-6">
-          <div className="grid grid-cols-2 gap-4">
-            <CustomerPicker
-              value={watch("customerName")}
-              error={errors.customerId?.message}
-              onSelect={(customer) => {
-                setValue("customerId", customer.id);
-                setValue("customerName", customer.name);
-              }}
-            />
-            <FormField
-              id="issueDate"
-              label="Issue date"
-              type="date"
-              error={errors.issueDate?.message}
-              {...register("issueDate")}
-            />
-            {dueDateLabel && (
-              <FormField
-                id="dueDate"
-                label={dueDateLabel}
-                type="date"
-                error={errors.dueDate?.message}
-                {...register("dueDate")}
+          <section className="rounded-xl border border-neutral-200 bg-white p-6">
+            <h2 className="font-display text-base font-semibold text-neutral-900">Details</h2>
+            <div className="mt-4 grid grid-cols-2 gap-4">
+              <CustomerPicker
+                value={watch("customerName")}
+                error={errors.customerId?.message}
+                onSelect={(customer) => {
+                  setValue("customerId", customer.id);
+                  setValue("customerName", customer.name);
+                }}
               />
-            )}
-            <FormField id="notes" label="Notes" type="text" error={errors.notes?.message} {...register("notes")} />
-          </div>
+              <FormField
+                id="issueDate"
+                label="Issue date"
+                type="date"
+                error={errors.issueDate?.message}
+                {...register("issueDate")}
+              />
+              {dueDateLabel && (
+                <FormField
+                  id="dueDate"
+                  label={dueDateLabel}
+                  type="date"
+                  error={errors.dueDate?.message}
+                  {...register("dueDate")}
+                />
+              )}
+              <FormField id="notes" label="Notes" type="text" error={errors.notes?.message} {...register("notes")} />
+            </div>
+          </section>
 
-          <div className="flex flex-col gap-3">
+          <section className="rounded-xl border border-neutral-200 bg-white p-6">
             <div className="flex items-center justify-between">
-              <h2 className="font-sans text-sm font-semibold text-neutral-800">Line items</h2>
+              <h2 className="font-display text-base font-semibold text-neutral-900">Line items</h2>
               <button
                 type="button"
                 onClick={addLine}
@@ -275,9 +278,9 @@ export default function DocumentForm() {
             </div>
 
             {fields.length === 0 ? (
-              <p className="font-sans text-sm text-neutral-400">No lines yet.</p>
+              <p className="mt-4 font-sans text-sm text-neutral-400">No lines yet.</p>
             ) : (
-              <table className="w-full border-collapse font-sans text-sm">
+              <table className="mt-4 w-full border-collapse font-sans text-sm">
                 <thead>
                   <tr className="border-b border-neutral-200 text-left text-neutral-500">
                     <th className="py-2">Item</th>
@@ -351,13 +354,13 @@ export default function DocumentForm() {
                 </tbody>
               </table>
             )}
-          </div>
 
-          <div className="flex flex-col items-end gap-1 font-sans text-sm text-neutral-600">
-            <span>Subtotal: {formatRwf(totals.subtotal)}</span>
-            <span>Tax: {formatRwf(totals.taxTotal)}</span>
-            <span className="font-semibold text-neutral-900">Total: {formatRwf(totals.total)}</span>
-          </div>
+            <div className="mt-4 flex flex-col items-end gap-1 border-t border-neutral-100 pt-4 font-sans text-sm text-neutral-600">
+              <span>Subtotal: {formatRwf(totals.subtotal)}</span>
+              <span>Tax: {formatRwf(totals.taxTotal)}</span>
+              <span className="font-semibold text-neutral-900">Total: {formatRwf(totals.total)}</span>
+            </div>
+          </section>
 
           <div className="flex gap-3">
             <button

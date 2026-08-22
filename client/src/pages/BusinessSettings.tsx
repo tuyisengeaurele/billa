@@ -34,6 +34,10 @@ const TEXT_FIELDS: { id: keyof BusinessProfile; label: string; type: "text" | "t
   { id: "rraEbmNumber", label: "RRA EBM number", type: "text" },
 ];
 
+const IDENTITY_FIELD_IDS: (keyof BusinessProfile)[] = ["name", "tin", "industry"];
+const CONTACT_FIELD_IDS: (keyof BusinessProfile)[] = ["phone", "email", "address"];
+const TAX_FIELD_IDS: (keyof BusinessProfile)[] = ["rraEbmNumber"];
+
 export default function BusinessSettings() {
   const [profile, setProfile] = useState<BusinessProfile | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
@@ -96,43 +100,86 @@ export default function BusinessSettings() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-          {TEXT_FIELDS.map((field) => (
-            <FormField
-              key={field.id}
-              id={field.id}
-              label={field.label}
-              type={field.type}
-              value={profile[field.id] ?? ""}
-              onChange={(e) => setProfile({ ...profile, [field.id]: e.target.value })}
-            />
-          ))}
-
-          <div className="flex flex-col gap-3">
-            <span className="font-sans text-sm font-medium text-neutral-800">Document template</span>
-            {TEMPLATE_OPTIONS.map((option) => (
-              <label
-                key={option.value}
-                htmlFor={`template-${option.value}`}
-                className="flex items-start gap-3 rounded-lg border border-neutral-200 p-3.5"
-              >
-                <input
-                  type="radio"
-                  id={`template-${option.value}`}
-                  name="defaultTemplate"
-                  value={option.value}
-                  aria-label={option.label}
-                  checked={profile.defaultTemplate === option.value}
-                  onChange={() => setProfile({ ...profile, defaultTemplate: option.value })}
-                  className="mt-1"
+        <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+          <section className="rounded-xl border border-neutral-200 bg-white p-6">
+            <h2 className="font-display text-base font-semibold text-neutral-900">Business identity</h2>
+            <div className="mt-4 flex flex-col gap-5">
+              {TEXT_FIELDS.filter((field) => IDENTITY_FIELD_IDS.includes(field.id)).map((field) => (
+                <FormField
+                  key={field.id}
+                  id={field.id}
+                  label={field.label}
+                  type={field.type}
+                  value={profile[field.id] ?? ""}
+                  onChange={(e) => setProfile({ ...profile, [field.id]: e.target.value })}
                 />
-                <span>
-                  <span className="block font-sans text-sm font-medium text-neutral-900">{option.label}</span>
-                  <span className="block font-sans text-sm text-neutral-500">{option.description}</span>
-                </span>
-              </label>
-            ))}
-          </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-xl border border-neutral-200 bg-white p-6">
+            <h2 className="font-display text-base font-semibold text-neutral-900">Contact</h2>
+            <div className="mt-4 flex flex-col gap-5">
+              {TEXT_FIELDS.filter((field) => CONTACT_FIELD_IDS.includes(field.id)).map((field) => (
+                <FormField
+                  key={field.id}
+                  id={field.id}
+                  label={field.label}
+                  type={field.type}
+                  value={profile[field.id] ?? ""}
+                  onChange={(e) => setProfile({ ...profile, [field.id]: e.target.value })}
+                />
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-xl border border-neutral-200 bg-white p-6">
+            <h2 className="font-display text-base font-semibold text-neutral-900">Tax and compliance</h2>
+            <div className="mt-4 flex flex-col gap-5">
+              {TEXT_FIELDS.filter((field) => TAX_FIELD_IDS.includes(field.id)).map((field) => (
+                <FormField
+                  key={field.id}
+                  id={field.id}
+                  label={field.label}
+                  type={field.type}
+                  value={profile[field.id] ?? ""}
+                  onChange={(e) => setProfile({ ...profile, [field.id]: e.target.value })}
+                />
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-xl border border-neutral-200 bg-white p-6">
+            <h2 className="font-display text-base font-semibold text-neutral-900">Document template</h2>
+            <div className="mt-4 flex flex-col gap-3">
+              {TEMPLATE_OPTIONS.map((option) => (
+                <label
+                  key={option.value}
+                  htmlFor={`template-${option.value}`}
+                  className={`flex items-start gap-3 rounded-lg border p-3.5 transition-colors ${
+                    profile.defaultTemplate === option.value
+                      ? "border-primary-500 bg-primary-100/40"
+                      : "border-neutral-200"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    id={`template-${option.value}`}
+                    name="defaultTemplate"
+                    value={option.value}
+                    aria-label={option.label}
+                    checked={profile.defaultTemplate === option.value}
+                    onChange={() => setProfile({ ...profile, defaultTemplate: option.value })}
+                    className="mt-1"
+                  />
+                  <span>
+                    <span className="block font-sans text-sm font-medium text-neutral-900">{option.label}</span>
+                    <span className="block font-sans text-sm text-neutral-500">{option.description}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </section>
 
           <Button type="submit" isLoading={isSaving}>
             Save
