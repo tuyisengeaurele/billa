@@ -1,12 +1,12 @@
-import crypto from "node:crypto";
 import { Router } from "express";
-import { sessionSchema } from "@billa/shared";
-import type { SessionInput } from "@billa/shared";
+import { sessionSchema, switchBusinessSchema } from "@billa/shared";
+import type { SessionInput, SwitchBusinessInput } from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
 import { verifyFirebaseToken } from "../lib/firebase-admin.js";
 import { generateRefreshToken, hashRefreshToken, signAccessToken } from "../lib/tokens.js";
 import { ttlToMs } from "../lib/ttl.js";
 import { clearAuthCookies, setAccessTokenCookie, setRefreshTokenCookie } from "../lib/cookies.js";
+import { issueSession } from "../lib/session.js";
 import { validateBody } from "../middleware/validate.js";
 import { authRateLimit } from "../middleware/auth-rate-limit.js";
 import { requireAuth } from "../middleware/require-auth.js";
@@ -15,24 +15,6 @@ export const authRouter = Router();
 
 function refreshTtlMs(): number {
   return ttlToMs(process.env.JWT_REFRESH_TTL ?? "30d");
-}
-
-async function issueSession(res: Parameters<typeof setAccessTokenCookie>[0], userId: string, businessId: string) {
-  const accessToken = signAccessToken({ userId, businessId });
-  const refreshToken = generateRefreshToken();
-  const ttlMs = refreshTtlMs();
-
-  await prisma.refreshToken.create({
-    data: {
-      userId,
-      tokenHash: hashRefreshToken(refreshToken),
-      family: crypto.randomUUID(),
-      expiresAt: new Date(Date.now() + ttlMs),
-    },
-  });
-
-  setAccessTokenCookie(res, accessToken);
-  setRefreshTokenCookie(res, refreshToken, ttlMs);
 }
 
 authRouter.post("/session", authRateLimit, validateBody(sessionSchema), async (req, res) => {
@@ -48,11 +30,19 @@ authRouter.post("/session", authRateLimit, validateBody(sessionSchema), async (r
 
   const existing = await prisma.user.findUnique({ where: { firebaseUid: firebaseUser.uid } });
   if (existing) {
-    const business = await prisma.business.findUnique({ where: { id: existing.businessId } });
-    await issueSession(res, existing.id, existing.businessId);
+    let businessId = existing.lastActiveBusinessId;
+    if (!businessId) {
+      const firstBusiness = await prisma.business.findFirstOrThrow({
+        where: { ownerId: existing.id },
+        orderBy: { createdAt: "asc" },
+      });
+      businessId = firstBusiness.id;
+    }
+    const business = await prisma.business.findUniqueOrThrow({ where: { id: businessId } });
+    await issueSession(res, existing.id, businessId);
     res.json({
       user: { id: existing.id, email: existing.email },
-      business: { id: business!.id, name: business!.name },
+      business: { id: business.id, name: business.name },
     });
     return;
   }
@@ -64,11 +54,15 @@ authRouter.post("/session", authRateLimit, validateBody(sessionSchema), async (r
 
   const { user, business } = await prisma.$transaction(async (tx) => {
     const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
-    const business = await tx.business.create({ data: { name: businessName, trialEndsAt } });
     const user = await tx.user.create({
-      data: { email: firebaseUser.email, firebaseUid: firebaseUser.uid, businessId: business.id },
+      data: { email: firebaseUser.email, firebaseUid: firebaseUser.uid, trialEndsAt },
     });
-    return { user, business };
+    const business = await tx.business.create({ data: { name: businessName, ownerId: user.id } });
+    const updatedUser = await tx.user.update({
+      where: { id: user.id },
+      data: { lastActiveBusinessId: business.id },
+    });
+    return { user: updatedUser, business };
   });
 
   await issueSession(res, user.id, business.id);
@@ -79,18 +73,32 @@ authRouter.post("/session", authRateLimit, validateBody(sessionSchema), async (r
 });
 
 authRouter.get("/me", requireAuth, async (req, res) => {
-  const user = await prisma.user.findUnique({
-    where: { id: req.auth!.userId },
-    include: { business: true },
-  });
+  const user = await prisma.user.findUnique({ where: { id: req.auth!.userId } });
   if (!user) {
+    res.status(401).json({ error: "unauthenticated" });
+    return;
+  }
+  const business = await prisma.business.findUnique({ where: { id: req.auth!.businessId } });
+  if (!business) {
     res.status(401).json({ error: "unauthenticated" });
     return;
   }
   res.json({
     user: { id: user.id, email: user.email },
-    business: { id: user.business.id, name: user.business.name },
+    business: { id: business.id, name: business.name },
   });
+});
+
+authRouter.post("/switch-business", requireAuth, validateBody(switchBusinessSchema), async (req, res) => {
+  const { businessId } = req.body as SwitchBusinessInput;
+  const business = await prisma.business.findUnique({ where: { id: businessId } });
+  if (!business || business.ownerId !== req.auth!.userId) {
+    res.status(403).json({ error: "not_owner" });
+    return;
+  }
+  await prisma.user.update({ where: { id: req.auth!.userId }, data: { lastActiveBusinessId: businessId } });
+  await issueSession(res, req.auth!.userId, businessId);
+  res.json({ business: { id: business.id, name: business.name } });
 });
 
 authRouter.post("/refresh", async (req, res) => {
@@ -133,13 +141,14 @@ authRouter.post("/refresh", async (req, res) => {
     data: { revokedAt: new Date() },
   });
 
-  const accessToken = signAccessToken({ userId: user.id, businessId: user.businessId });
+  const accessToken = signAccessToken({ userId: user.id, businessId: stored.businessId });
   const newRefreshToken = generateRefreshToken();
   const ttlMs = refreshTtlMs();
 
   await prisma.refreshToken.create({
     data: {
       userId: user.id,
+      businessId: stored.businessId,
       tokenHash: hashRefreshToken(newRefreshToken),
       family: stored.family,
       expiresAt: new Date(Date.now() + ttlMs),

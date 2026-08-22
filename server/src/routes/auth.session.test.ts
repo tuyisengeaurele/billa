@@ -75,15 +75,30 @@ describe("POST /auth/session", () => {
     expect(res.status).toBe(400);
   });
 
-  it("sets a 14-day trial on a newly created business", async () => {
+  it("sets a 14-day trial on a newly created account", async () => {
     const res = await request(createApp()).post("/auth/session").send({
       idToken: fakeIdToken("uid-1", "owner@example.com"),
       businessName: "Kigali Traders",
     });
 
-    const business = await prisma.business.findUniqueOrThrow({ where: { id: res.body.business.id } });
-    const daysUntilTrialEnd = (business.trialEndsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: res.body.user.id } });
+    const daysUntilTrialEnd = (user.trialEndsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24);
     expect(daysUntilTrialEnd).toBeGreaterThan(13.9);
     expect(daysUntilTrialEnd).toBeLessThan(14.1);
+  });
+
+  it("signs in to the account's last active business when it owns more than one", async () => {
+    const app = createApp();
+    const firstRes = await request(app).post("/auth/session").send({
+      idToken: fakeIdToken("uid-1", "owner@example.com"),
+      businessName: "Kigali Traders",
+    });
+    const userId = firstRes.body.user.id as string;
+    const secondBusiness = await prisma.business.create({ data: { name: "Side Hustle", ownerId: userId } });
+    await prisma.user.update({ where: { id: userId }, data: { lastActiveBusinessId: secondBusiness.id } });
+
+    const res = await request(app).post("/auth/session").send({ idToken: fakeIdToken("uid-1", "owner@example.com") });
+
+    expect(res.body.business.name).toBe("Side Hustle");
   });
 });
