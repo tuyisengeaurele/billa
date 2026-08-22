@@ -1,19 +1,15 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { DOCUMENT_TYPES } from "@billa/shared";
-import { useAuth } from "../context/AuthContext";
 import { apiRequest } from "../lib/apiClient";
-import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
-import { BusinessSwitcher } from "./BusinessSwitcher";
+import { Sidebar } from "./Sidebar";
 
 interface AppLayoutProps {
   children: ReactNode;
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
-  const { logout } = useAuth();
   const [billingBanner, setBillingBanner] = useState<string | null>(null);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
   useEffect(() => {
     apiRequest<{ activeUntil: string }>("/billing/status")
@@ -31,51 +27,36 @@ export function AppLayout({ children }: AppLayoutProps) {
   }, []);
 
   return (
-    <div className="min-h-screen bg-neutral-50">
-      <header className="flex items-center justify-between border-b border-neutral-200 bg-white px-6 py-4">
-        <div className="flex items-center gap-3">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-500">
-            <img src="/logo.png" alt="" className="h-5 w-5" style={{ filter: "brightness(0) invert(1)" }} />
-          </span>
-          <BusinessSwitcher />
-        </div>
-        <nav className="flex items-center gap-6">
-          <Link to="/documents" className="font-sans text-sm font-medium text-neutral-600 hover:text-neutral-900">
-            All documents
-          </Link>
-          {DOCUMENT_TYPES.map((type) => (
-            <Link
-              key={type}
-              to={`/documents?type=${type}`}
-              className="font-sans text-sm font-medium text-neutral-600 hover:text-neutral-900"
-            >
-              {DOCUMENT_TYPE_LABELS[type].plural}
-            </Link>
-          ))}
-          <Link to="/customers" className="font-sans text-sm font-medium text-neutral-600 hover:text-neutral-900">
-            Customers
-          </Link>
-          <Link to="/items" className="font-sans text-sm font-medium text-neutral-600 hover:text-neutral-900">
-            Items
-          </Link>
-          <Link to="/settings" className="font-sans text-sm font-medium text-neutral-600 hover:text-neutral-900">
-            Settings
-          </Link>
-        </nav>
-        <button
-          type="button"
-          onClick={() => logout()}
-          className="font-sans text-sm font-medium text-neutral-600 hover:text-neutral-900"
-        >
-          Log out
-        </button>
-      </header>
-      {billingBanner && (
-        <div className="bg-warning-bg px-6 py-2 font-sans text-sm text-warning" role="status">
-          {billingBanner}
+    <div className="flex min-h-screen bg-neutral-50">
+      <aside className="hidden w-64 shrink-0 border-r border-neutral-200 bg-white lg:block">
+        <Sidebar billingBanner={billingBanner} />
+      </aside>
+
+      {isMobileNavOpen && (
+        <div className="fixed inset-0 z-40 lg:hidden">
+          <div className="absolute inset-0 bg-neutral-900/40" onClick={() => setIsMobileNavOpen(false)} />
+          <aside className="absolute inset-y-0 left-0 w-64 border-r border-neutral-200 bg-white">
+            <Sidebar billingBanner={billingBanner} onNavigate={() => setIsMobileNavOpen(false)} />
+          </aside>
         </div>
       )}
-      <main className="px-6 py-8">{children}</main>
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="flex items-center gap-3 border-b border-neutral-200 bg-white px-4 py-3 lg:hidden">
+          <button
+            type="button"
+            onClick={() => setIsMobileNavOpen(true)}
+            aria-label="Open menu"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 text-neutral-600"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <span className="font-display text-base font-semibold text-neutral-900">Billa</span>
+        </header>
+        <main className="flex-1 px-6 py-8">{children}</main>
+      </div>
     </div>
   );
 }

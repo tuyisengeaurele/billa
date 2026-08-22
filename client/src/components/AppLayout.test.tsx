@@ -47,4 +47,18 @@ describe("AppLayout", () => {
 
     expect(fetchSpy).toHaveBeenCalled();
   });
+
+  it("opens and closes the mobile navigation drawer", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 401 }));
+    const user = userEvent.setup();
+    renderAppLayout();
+    await screen.findByRole("link", { name: /customers/i });
+
+    await user.click(screen.getByRole("button", { name: /open menu/i }));
+    const customersLinks = screen.getAllByRole("link", { name: /customers/i });
+    expect(customersLinks.length).toBeGreaterThan(1);
+
+    await user.click(customersLinks[customersLinks.length - 1]);
+    expect(screen.getAllByRole("link", { name: /customers/i })).toHaveLength(1);
+  });
 });
