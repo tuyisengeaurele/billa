@@ -268,9 +268,9 @@ export default function DocumentForm() {
               <button
                 type="button"
                 onClick={addLine}
-                className="font-sans text-sm text-primary-500 hover:text-primary-700"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 px-3 py-1.5 font-sans text-sm font-medium text-neutral-700 transition-colors hover:border-primary-500 hover:text-primary-700"
               >
-                Add line
+                <span aria-hidden="true">+</span> Add line
               </button>
             </div>
 
