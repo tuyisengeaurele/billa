@@ -144,6 +144,7 @@ model Document {
   subtotal   Int
   taxTotal   Int
   total      Int
+  sentAt     DateTime?
 
   convertedFromId String?   @unique
   convertedFrom   Document? @relation("DocumentConversion", fields: [convertedFromId], references: [id])

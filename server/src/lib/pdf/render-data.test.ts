@@ -41,6 +41,7 @@ function makeDocument(
     subtotal: 15000,
     taxTotal: 2700,
     total: 17700,
+    sentAt: null,
     convertedFromId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
