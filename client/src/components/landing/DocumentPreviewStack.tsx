@@ -45,7 +45,7 @@ const SLOTS = [
   { x: -32, y: 24, rotate: -10, opacity: 0.9, zIndex: 10 },
 ];
 
-const SHUFFLE_INTERVAL_MS = 45000;
+const SHUFFLE_INTERVAL_MS = 8000;
 
 export function DocumentPreviewStack() {
   const [order, setOrder] = useState([2, 1, 0]);

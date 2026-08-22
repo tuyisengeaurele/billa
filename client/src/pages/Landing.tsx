@@ -369,6 +369,11 @@ export default function Landing() {
                   Terms of service
                 </Link>
               </li>
+              <li>
+                <Link to="/contact" className="font-sans text-sm text-neutral-600 hover:text-neutral-900">
+                  Contact us
+                </Link>
+              </li>
             </ul>
           </div>
           <div>

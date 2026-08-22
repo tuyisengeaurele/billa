@@ -9,3 +9,4 @@ export * from "./money.js";
 export * from "./document-labels.js";
 export * from "./billing-schemas.js";
 export * from "./multi-business-schemas.js";
+export * from "./contact-schemas.js";

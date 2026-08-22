@@ -109,7 +109,13 @@ export default function HelpCenter() {
 
       <main className="mx-auto max-w-3xl px-6 py-16">
         <h1 className="font-display text-3xl font-semibold text-neutral-900">Help center</h1>
-        <p className="mt-3 font-sans text-base text-neutral-600">Answers to the questions we hear most.</p>
+        <p className="mt-3 font-sans text-base text-neutral-600">
+          Answers to the questions we hear most. Can't find yours?{" "}
+          <Link to="/contact" className="font-medium text-primary-500 hover:text-primary-700">
+            Contact us
+          </Link>
+          .
+        </p>
 
         <div className="mt-12 flex flex-col gap-12">
           {GROUPS.map((group) => (

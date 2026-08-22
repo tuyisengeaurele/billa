@@ -9,6 +9,7 @@ import { documentsRouter } from "./routes/documents.js";
 import { billingRouter } from "./routes/billing.js";
 import { dashboardRouter } from "./routes/dashboard.js";
 import { businessesRouter } from "./routes/businesses.js";
+import { contactRouter } from "./routes/contact.js";
 
 export function createApp() {
   const app = express();
@@ -35,6 +36,7 @@ export function createApp() {
   app.use("/billing", billingRouter);
   app.use("/dashboard", dashboardRouter);
   app.use("/businesses", businessesRouter);
+  app.use("/contact", contactRouter);
 
   return app;
 }
