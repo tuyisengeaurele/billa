@@ -17,6 +17,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import HelpCenter from "./pages/HelpCenter";
 import Contact from "./pages/Contact";
+import AdminMessages from "./pages/AdminMessages";
 
 export default function App() {
   return (
@@ -40,6 +41,7 @@ export default function App() {
             <Route path="/documents/:id" element={<DocumentView />} />
             <Route path="/settings" element={<BusinessSettings />} />
             <Route path="/billing/callback" element={<BillingCallback />} />
+            <Route path="/admin/messages" element={<AdminMessages />} />
           </Route>
           <Route path="/" element={<RootRoute />} />
         </Routes>

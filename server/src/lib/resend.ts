@@ -31,3 +31,21 @@ export async function sendDocumentEmail(input: SendDocumentEmailInput): Promise<
     throw new Error(error.message ?? "resend_send_failed");
   }
 }
+
+export interface SendEmailInput {
+  to: string;
+  subject: string;
+  html: string;
+}
+
+export async function sendEmail(input: SendEmailInput): Promise<void> {
+  const { error } = await getClient().emails.send({
+    from: "Billa <onboarding@resend.dev>",
+    to: [input.to],
+    subject: input.subject,
+    html: input.html,
+  });
+  if (error) {
+    throw new Error(error.message ?? "resend_send_failed");
+  }
+}
