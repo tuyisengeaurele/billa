@@ -6,6 +6,7 @@ import { z } from "zod";
 import { AuthLayout } from "../components/AuthLayout";
 import { Button } from "../components/Button";
 import { FormField } from "../components/FormField";
+import { GoogleIcon } from "../components/icons/GoogleIcon";
 import { useAuth } from "../context/AuthContext";
 import { ApiError } from "../lib/apiClient";
 import { firebaseErrorCode } from "../lib/firebaseAuth";
@@ -86,7 +87,8 @@ export default function Login() {
         </Link>
       </p>
 
-      <Button type="button" variant="outline" onClick={handleGoogle} className="mt-6">
+      <Button type="button" variant="outline" onClick={handleGoogle} className="mt-6 gap-2">
+        <GoogleIcon />
         Continue with Google
       </Button>
 

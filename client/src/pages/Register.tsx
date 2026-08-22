@@ -7,6 +7,7 @@ import { z } from "zod";
 import { AuthLayout } from "../components/AuthLayout";
 import { Button } from "../components/Button";
 import { FormField } from "../components/FormField";
+import { GoogleIcon } from "../components/icons/GoogleIcon";
 import { useAuth } from "../context/AuthContext";
 import { firebaseErrorCode } from "../lib/firebaseAuth";
 
@@ -95,7 +96,8 @@ export default function Register() {
           error={errors.businessName?.message}
           {...register("businessName")}
         />
-        <Button type="button" variant="outline" onClick={handleGoogle}>
+        <Button type="button" variant="outline" onClick={handleGoogle} className="gap-2">
+          <GoogleIcon />
           Continue with Google
         </Button>
         <FormField

@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+html {
+  scroll-behavior: smooth;
+}
+
 :root {
   /* brand colors, exact values, do not adjust */
   --color-primary-500: #c2185b;
