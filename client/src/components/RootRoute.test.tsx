@@ -43,4 +43,12 @@ describe("RootRoute", () => {
 
     expect(await screen.findByText("Dashboard page")).toBeInTheDocument();
   });
+
+  it("shows the landing page when logged out", async () => {
+    mockFetch(false);
+
+    renderRootRoute();
+
+    expect((await screen.findAllByRole("link", { name: /start free trial/i }))[0]).toBeInTheDocument();
+  });
 });
