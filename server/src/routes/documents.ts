@@ -11,6 +11,7 @@ import { calculateDocumentTotals } from "../lib/document-totals.js";
 import { DEFAULT_PREFIXES } from "../lib/document-sequences.js";
 import { buildPdfRenderData } from "../lib/pdf/render-data.js";
 import { renderDocumentPdf } from "../lib/pdf/render-document-pdf.js";
+import { sendDocumentEmail } from "../lib/resend.js";
 
 export const documentsRouter = Router();
 
@@ -19,7 +20,7 @@ documentsRouter.use(requireActiveSubscription);
 
 const DOCUMENT_INCLUDE = {
   lines: { orderBy: { sortOrder: "asc" as const } },
-  customer: { select: { name: true } },
+  customer: { select: { name: true, email: true } },
   convertedFrom: { select: { id: true, number: true, type: true } },
   convertedTo: { select: { id: true, number: true, type: true } },
 };
@@ -145,6 +146,66 @@ documentsRouter.get("/:id/pdf", async (req, res) => {
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
   res.send(pdfBuffer);
+});
+
+const DOCUMENT_TYPE_DISPLAY: Record<string, string> = {
+  INVOICE: "Invoice",
+  PROFORMA: "Proforma invoice",
+  DELIVERY_NOTE: "Delivery note",
+  QUOTE: "Quote",
+  RECEIPT: "Receipt",
+};
+
+documentsRouter.post("/:id/send", async (req, res) => {
+  const businessId = req.auth!.businessId;
+  const { id } = req.params;
+
+  const document = await prisma.document.findFirst({
+    where: { id, businessId },
+    include: { lines: { orderBy: { sortOrder: "asc" } }, customer: true },
+  });
+  if (!document) {
+    res.status(404).json({ error: "not_found" });
+    return;
+  }
+  if (document.status !== "FINALIZED") {
+    res.status(409).json({ error: "not_finalized" });
+    return;
+  }
+  if (!document.customer.email) {
+    res.status(400).json({ error: "customer_has_no_email" });
+    return;
+  }
+
+  const business = await prisma.business.findUnique({ where: { id: businessId } });
+  const data = await buildPdfRenderData(document, business!);
+
+  let pdfBuffer: Buffer;
+  try {
+    pdfBuffer = await renderDocumentPdf(document.template, data);
+  } catch {
+    res.status(500).json({ error: "pdf_render_failed" });
+    return;
+  }
+
+  const typeLabel = DOCUMENT_TYPE_DISPLAY[document.type];
+  const filename = document.number ? `${document.number}.pdf` : `Draft-${document.id.slice(0, 8)}.pdf`;
+
+  try {
+    await sendDocumentEmail({
+      to: document.customer.email,
+      subject: `${typeLabel} ${document.number} from ${business!.name}`,
+      html: `<p>Hello ${document.customer.name},</p><p>Please find your ${typeLabel.toLowerCase()} ${document.number} from ${business!.name} attached.</p>`,
+      attachmentFilename: filename,
+      attachmentBuffer: pdfBuffer,
+    });
+  } catch {
+    res.status(502).json({ error: "email_send_failed" });
+    return;
+  }
+
+  const updated = await prisma.document.update({ where: { id }, data: { sentAt: new Date() } });
+  res.json({ sentAt: updated.sentAt });
 });
 
 documentsRouter.patch("/:id", validateBody(documentSchema), async (req, res) => {
