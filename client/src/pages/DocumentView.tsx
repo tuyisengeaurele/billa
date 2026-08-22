@@ -23,7 +23,8 @@ interface DocumentDetail {
   type: DocumentType;
   number: string | null;
   status: "DRAFT" | "FINALIZED";
-  customer: { name: string };
+  customer: { name: string; email: string | null };
+  sentAt: string | null;
   lines: DocumentLine[];
   subtotal: number;
   taxTotal: number;
@@ -38,6 +39,8 @@ export default function DocumentView() {
   const [document, setDocument] = useState<DocumentDetail | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
   const [isConverting, setIsConverting] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [sendMessage, setSendMessage] = useState<string | null>(null);
   const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
@@ -64,6 +67,24 @@ export default function DocumentView() {
       );
     } finally {
       setIsConverting(false);
+    }
+  }
+
+  async function handleSend() {
+    if (!document || !document.customer.email) return;
+    setApiError(null);
+    setSendMessage(null);
+    setIsSending(true);
+    try {
+      const response = await apiRequest<{ sentAt: string }>(`/documents/${document.id}/send`, { method: "POST" });
+      setDocument({ ...document, sentAt: response.sentAt });
+      setSendMessage(`Sent to ${document.customer.email}`);
+    } catch (err) {
+      setApiError(
+        err instanceof ApiError ? "Couldn't send this document. Try again." : "Something went wrong. Try again.",
+      );
+    } finally {
+      setIsSending(false);
     }
   }
 
@@ -118,8 +139,28 @@ export default function DocumentView() {
             >
               Download PDF
             </button>
+            {document.status === "FINALIZED" && (
+              <button
+                type="button"
+                disabled={isSending || !document.customer.email}
+                onClick={handleSend}
+                title={!document.customer.email ? "Add an email to this customer to send it" : undefined}
+                className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {isSending ? "Sending…" : document.sentAt ? "Resend" : "Send by email"}
+              </button>
+            )}
           </div>
         </div>
+
+        {sendMessage && (
+          <div className="rounded-lg bg-success-bg px-4 py-3 font-sans text-sm text-success" role="status">
+            {sendMessage}
+          </div>
+        )}
+        {document.sentAt && !sendMessage && (
+          <p className="font-sans text-xs text-neutral-400">Sent {document.sentAt.slice(0, 10)}</p>
+        )}
 
         {apiError && (
           <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">

@@ -220,4 +220,123 @@ describe("DocumentView", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/couldn't load this document/i);
   });
+
+  it("disables the send button and shows a hint when the customer has no email", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async () =>
+      new Response(
+        JSON.stringify({
+          document: {
+            id: "d1",
+            number: "INV-0001",
+            status: "FINALIZED",
+            customer: { name: "Kigali Traders", email: null },
+            sentAt: null,
+            lines: [],
+            subtotal: 0,
+            taxTotal: 0,
+            total: 0,
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/documents/d1"]}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/documents/:id" element={<DocumentView />} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("button", { name: /send by email/i })).toBeDisabled();
+  });
+
+  it("sends the document by email and shows a sent confirmation", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/documents/d1/send") && init?.method === "POST") {
+        return new Response(JSON.stringify({ sentAt: "2026-08-22T10:00:00.000Z" }), { status: 200 });
+      }
+      if (url.endsWith("/documents/d1")) {
+        return new Response(
+          JSON.stringify({
+            document: {
+              id: "d1",
+              number: "INV-0001",
+              status: "FINALIZED",
+              customer: { name: "Kigali Traders", email: "owner@acme.test" },
+              sentAt: null,
+              lines: [],
+              subtotal: 0,
+              taxTotal: 0,
+              total: 0,
+            },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={["/documents/d1"]}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/documents/:id" element={<DocumentView />} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: /send by email/i }));
+
+    expect(await screen.findByText(/sent to owner@acme.test/i)).toBeInTheDocument();
+  });
+
+  it("shows an error message when sending fails", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/documents/d1/send") && init?.method === "POST") {
+        return new Response(JSON.stringify({ error: "email_send_failed" }), { status: 502 });
+      }
+      if (url.endsWith("/documents/d1")) {
+        return new Response(
+          JSON.stringify({
+            document: {
+              id: "d1",
+              number: "INV-0001",
+              status: "FINALIZED",
+              customer: { name: "Kigali Traders", email: "owner@acme.test" },
+              sentAt: null,
+              lines: [],
+              subtotal: 0,
+              taxTotal: 0,
+              total: 0,
+            },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={["/documents/d1"]}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/documents/:id" element={<DocumentView />} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: /send by email/i }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/couldn't send this document/i);
+  });
 });
