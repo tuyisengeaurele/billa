@@ -5,6 +5,7 @@ import { DOCUMENT_TYPES } from "@billa/shared";
 import { useAuth } from "../context/AuthContext";
 import { apiRequest } from "../lib/apiClient";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
+import { BusinessSwitcher } from "./BusinessSwitcher";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -36,7 +37,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-500">
             <img src="/logo.png" alt="" className="h-5 w-5" style={{ filter: "brightness(0) invert(1)" }} />
           </span>
-          <span className="font-display text-lg font-semibold text-neutral-900">Billa</span>
+          <BusinessSwitcher />
         </div>
         <nav className="flex items-center gap-6">
           <Link to="/documents" className="font-sans text-sm font-medium text-neutral-600 hover:text-neutral-900">
