@@ -1,6 +1,7 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { RootRoute } from "./components/RootRoute";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Onboarding from "./pages/Onboarding";
@@ -32,7 +33,7 @@ export default function App() {
             <Route path="/settings" element={<BusinessSettings />} />
             <Route path="/billing/callback" element={<BillingCallback />} />
           </Route>
-          <Route path="/" element={<Navigate to="/onboarding" replace />} />
+          <Route path="/" element={<RootRoute />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>
