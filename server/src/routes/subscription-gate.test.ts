@@ -17,8 +17,8 @@ async function registerWithExpiredTrial(app: ReturnType<typeof createApp>) {
     businessName: "Kigali Traders",
   });
   const cookies = res.headers["set-cookie"] as unknown as string[];
-  await prisma.business.update({
-    where: { id: res.body.business.id },
+  await prisma.user.update({
+    where: { id: res.body.user.id },
     data: { trialEndsAt: new Date(Date.now() - 1000) },
   });
   return cookies;

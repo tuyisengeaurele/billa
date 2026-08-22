@@ -7,13 +7,13 @@ export async function requireActiveSubscription(req: Request, res: Response, nex
     return;
   }
 
-  const business = await prisma.business.findUnique({ where: { id: req.auth!.businessId } });
-  if (!business) {
+  const user = await prisma.user.findUnique({ where: { id: req.auth!.userId } });
+  if (!user) {
     res.status(401).json({ error: "unauthenticated" });
     return;
   }
 
-  const activeUntil = business.currentPeriodEnd ?? business.trialEndsAt;
+  const activeUntil = user.currentPeriodEnd ?? user.trialEndsAt;
   if (activeUntil > new Date()) {
     next();
     return;
