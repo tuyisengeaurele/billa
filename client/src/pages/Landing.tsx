@@ -54,12 +54,16 @@ export default function Landing() {
     <div className="min-h-screen bg-white">
       <header className="sticky top-0 z-30 border-b border-transparent bg-white/80 backdrop-blur-sm">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-          <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+            className="flex items-center gap-3"
+          >
             <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-500">
               <img src="/logo.png" alt="" className="h-5 w-5" style={{ filter: "brightness(0) invert(1)" }} />
             </span>
             <span className="font-display text-lg font-semibold text-neutral-900">Billa</span>
-          </div>
+          </button>
           <nav className="hidden items-center gap-8 md:flex">
             <a href="#features" className="font-sans text-sm font-medium text-neutral-600 hover:text-neutral-900">
               Features
@@ -292,6 +296,13 @@ export default function Landing() {
               <FaqItem key={faq.question} question={faq.question} answer={faq.answer} />
             ))}
           </div>
+          <p className="mt-8 text-center font-sans text-sm text-neutral-600">
+            Still have questions?{" "}
+            <Link to="/contact" className="font-medium text-primary-500 hover:text-primary-700">
+              Contact us
+            </Link>
+            .
+          </p>
         </div>
       </section>
 
@@ -321,12 +332,16 @@ export default function Landing() {
         />
         <div className="mx-auto grid max-w-6xl grid-cols-2 gap-x-10 gap-y-12 sm:grid-cols-4">
           <div className="col-span-2 sm:col-span-1">
-            <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+              className="flex items-center gap-2"
+            >
               <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-500">
                 <img src="/logo.png" alt="" className="h-4 w-4" style={{ filter: "brightness(0) invert(1)" }} />
               </span>
               <span className="font-display text-base font-semibold text-neutral-900">Billa</span>
-            </div>
+            </button>
             <p className="mt-4 max-w-[16rem] font-sans text-sm text-neutral-500">
               Professional invoices, proforma invoices, delivery notes, quotes, and receipts for Rwandan businesses.
             </p>
