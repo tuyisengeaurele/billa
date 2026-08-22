@@ -387,7 +387,7 @@ export default function Landing() {
             </ul>
           </div>
         </div>
-        <div className="mx-auto mt-16 flex max-w-6xl flex-col items-center justify-between gap-4 border-t border-neutral-200 pt-8 sm:flex-row">
+        <div className="mx-auto mt-16 max-w-6xl border-t border-neutral-200 pt-8 text-center">
           <p className="font-sans text-sm text-neutral-500">© 2026 Billa.</p>
         </div>
       </footer>

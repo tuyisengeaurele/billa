@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { DocumentPreviewCard } from "./DocumentPreviewCard";
 
@@ -36,37 +37,47 @@ const INVOICE = {
   total: 59000,
 };
 
+const DOCS = [RECEIPT, QUOTE, INVOICE];
+
+const SLOTS = [
+  { x: 0, y: 0, rotate: 0, opacity: 1, zIndex: 30 },
+  { x: 32, y: -18, rotate: 8, opacity: 0.95, zIndex: 20 },
+  { x: -32, y: 24, rotate: -10, opacity: 0.9, zIndex: 10 },
+];
+
+const SHUFFLE_INTERVAL_MS = 45000;
+
 export function DocumentPreviewStack() {
+  const [order, setOrder] = useState([2, 1, 0]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setOrder(([front, middle, back]) => [back, front, middle]);
+    }, SHUFFLE_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="relative flex h-[340px] w-full max-w-md items-center justify-center sm:h-[420px]">
-      <motion.div
-        initial={{ opacity: 0, y: 60, x: -32, rotate: -12 }}
-        animate={{ opacity: 1, y: 24, x: -32, rotate: -10 }}
-        transition={{ duration: 0.6, delay: 0.1, ease: "easeOut" }}
-        className="absolute hidden sm:block"
-        style={{ zIndex: 10 }}
-      >
-        <DocumentPreviewCard {...RECEIPT} className="opacity-90" />
-      </motion.div>
-      <motion.div
-        initial={{ opacity: 0, y: 60, x: 32, rotate: 12 }}
-        animate={{ opacity: 1, y: -18, x: 32, rotate: 8 }}
-        transition={{ duration: 0.6, delay: 0.25, ease: "easeOut" }}
-        className="absolute hidden sm:block"
-        style={{ zIndex: 20 }}
-      >
-        <DocumentPreviewCard {...QUOTE} className="opacity-95" />
-      </motion.div>
-      <motion.div
-        initial={{ opacity: 0, y: 16, rotate: -3 }}
-        animate={{ opacity: 1, y: 0, rotate: -3 }}
-        whileHover={{ rotate: 0, scale: 1.02 }}
-        transition={{ duration: 0.6, delay: 0.4, ease: "easeOut" }}
-        className="absolute"
-        style={{ zIndex: 30 }}
-      >
-        <DocumentPreviewCard {...INVOICE} />
-      </motion.div>
+      {DOCS.map((doc, docIndex) => {
+        const slotIndex = order.indexOf(docIndex);
+        const slot = SLOTS[slotIndex];
+        const isFront = slotIndex === 0;
+
+        return (
+          <motion.div
+            key={doc.number}
+            initial={{ opacity: 0, y: slot.y + 40, x: slot.x, rotate: slot.rotate }}
+            animate={{ opacity: slot.opacity, y: slot.y, x: slot.x, rotate: slot.rotate }}
+            whileHover={isFront ? { rotate: 0, scale: 1.02 } : undefined}
+            transition={{ duration: isFront ? 0.6 : 1, delay: docIndex * 0.15, ease: "easeInOut" }}
+            className={isFront ? "absolute" : "absolute hidden sm:block"}
+            style={{ zIndex: slot.zIndex }}
+          >
+            <DocumentPreviewCard {...doc} />
+          </motion.div>
+        );
+      })}
     </div>
   );
 }
