@@ -1,18 +1,8 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { formatRwf, PLAN_PRICES } from "@billa/shared";
+import { DOCUMENT_TYPES, formatRwf, PLAN_PRICES } from "@billa/shared";
 import { InvoicePreview } from "../components/landing/InvoicePreview";
-
-const DOCUMENT_TYPES = [
-  { name: "Invoices", description: "Bill customers with itemized totals and RWF tax calculations." },
-  {
-    name: "Proforma invoices",
-    description: "Send a formal quote before the sale, then convert it to an invoice in one click.",
-  },
-  { name: "Delivery notes", description: "Confirm what was delivered, separate from what's being billed." },
-  { name: "Quotes", description: "Give a customer a price before they commit." },
-  { name: "Receipts", description: "Confirm that payment was received." },
-];
+import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
 
 const STEPS = [
   {
@@ -142,14 +132,16 @@ export default function Landing() {
       <section className="mx-auto max-w-4xl px-6 py-24">
         <h2 className="font-display text-3xl font-semibold text-neutral-900">Every document your business sends</h2>
         <div className="mt-12 flex flex-col">
-          {DOCUMENT_TYPES.map((doc, index) => (
+          {DOCUMENT_TYPES.map((type, index) => (
             <div
-              key={doc.name}
+              key={type}
               className="flex flex-col gap-1 border-t border-neutral-200 py-6 first:border-t-0 sm:flex-row sm:items-baseline sm:gap-6"
             >
               <span className="font-display text-sm text-neutral-400">0{index + 1}</span>
-              <h3 className="font-display text-xl font-semibold text-neutral-900 sm:w-48 sm:shrink-0">{doc.name}</h3>
-              <p className="font-sans text-base text-neutral-600">{doc.description}</p>
+              <h3 className="font-display text-xl font-semibold text-neutral-900 sm:w-48 sm:shrink-0">
+                {DOCUMENT_TYPE_LABELS[type].plural}
+              </h3>
+              <p className="font-sans text-base text-neutral-600">{DOCUMENT_TYPE_LABELS[type].description}</p>
             </div>
           ))}
         </div>
