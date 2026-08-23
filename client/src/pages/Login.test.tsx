@@ -78,6 +78,45 @@ describe("Login", () => {
     await waitFor(() => expect(screen.getByText("onboarding page")).toBeInTheDocument());
   });
 
+  it("navigates straight to the dashboard when onboarding is already complete", async () => {
+    vi.mocked(signInWithEmail).mockResolvedValue("fake-id-token");
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.endsWith("/auth/me")) {
+        return new Response("{}", { status: 401 });
+      }
+      if (url.endsWith("/auth/session")) {
+        return new Response(
+          JSON.stringify({
+            user: { id: "u1", email: "owner@example.com" },
+            business: { id: "b1", name: "Kigali Traders", onboardingCompletedAt: "2026-08-01T00:00:00.000Z" },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={["/login"]}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/onboarding" element={<div>onboarding page</div>} />
+            <Route path="/dashboard" element={<div>dashboard page</div>} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    await user.type(await screen.findByLabelText(/email/i), "owner@example.com");
+    await user.type(screen.getByLabelText("Password"), "supersecret1");
+    await user.click(screen.getByRole("button", { name: /log in/i }));
+
+    await waitFor(() => expect(screen.getByText("dashboard page")).toBeInTheDocument());
+  });
+
   it("shows an error banner on invalid credentials", async () => {
     vi.mocked(signInWithEmail).mockRejectedValue({ code: "auth/invalid-credential" });
     vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 401 }));

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { DetailsStep } from "../components/onboarding/DetailsStep";
 import { LogoStep } from "../components/onboarding/LogoStep";
 import { OnboardingLayout } from "../components/onboarding/OnboardingLayout";
+import { apiRequest } from "../lib/apiClient";
 
 type Step = "details" | "logo";
 
@@ -10,7 +11,12 @@ export default function Onboarding() {
   const [step, setStep] = useState<Step>("details");
   const navigate = useNavigate();
 
-  function goToDashboard() {
+  async function goToDashboard() {
+    try {
+      await apiRequest("/business/onboarding/complete", { method: "POST" });
+    } catch {
+      // Not fatal: onboarding may just be re-shown on the next login.
+    }
     navigate("/dashboard");
   }
 

@@ -43,8 +43,8 @@ export default function Register() {
   async function onSubmit(data: RegisterFormInput) {
     setApiError(null);
     try {
-      await registerBusiness(data.email, data.password, data.businessName);
-      navigate("/onboarding");
+      const business = await registerBusiness(data.email, data.password, data.businessName);
+      navigate(business.onboardingCompletedAt ? "/dashboard" : "/onboarding");
     } catch (err) {
       if (firebaseErrorCode(err) === "auth/email-already-in-use") {
         setApiError("That email is already registered. Try logging in instead.");
@@ -59,8 +59,8 @@ export default function Register() {
     if (!valid) return;
     setApiError(null);
     try {
-      await registerWithGoogle(getValues("businessName"));
-      navigate("/onboarding");
+      const business = await registerWithGoogle(getValues("businessName"));
+      navigate(business.onboardingCompletedAt ? "/dashboard" : "/onboarding");
     } catch (err) {
       if (firebaseErrorCode(err) !== "auth/popup-closed-by-user") {
         setApiError("Something went wrong. Try again.");

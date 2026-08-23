@@ -35,8 +35,8 @@ export default function Login() {
     setApiError(null);
     setResetMessage(null);
     try {
-      await login(data.email, data.password);
-      navigate("/onboarding");
+      const business = await login(data.email, data.password);
+      navigate(business.onboardingCompletedAt ? "/dashboard" : "/onboarding");
     } catch (err) {
       const code = firebaseErrorCode(err);
       if (code && INVALID_CREDENTIAL_CODES.has(code)) {
@@ -51,8 +51,8 @@ export default function Login() {
     setApiError(null);
     setResetMessage(null);
     try {
-      await loginWithGoogle();
-      navigate("/onboarding");
+      const business = await loginWithGoogle();
+      navigate(business.onboardingCompletedAt ? "/dashboard" : "/onboarding");
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) {
         setApiError("No account found for that Google account. Create one instead?");

@@ -42,7 +42,7 @@ authRouter.post("/session", authRateLimit, validateBody(sessionSchema), async (r
     await issueSession(res, existing.id, businessId);
     res.json({
       user: { id: existing.id, email: existing.email },
-      business: { id: business.id, name: business.name },
+      business: { id: business.id, name: business.name, onboardingCompletedAt: business.onboardingCompletedAt },
     });
     return;
   }
@@ -68,7 +68,7 @@ authRouter.post("/session", authRateLimit, validateBody(sessionSchema), async (r
   await issueSession(res, user.id, business.id);
   res.status(201).json({
     user: { id: user.id, email: user.email },
-    business: { id: business.id, name: business.name },
+    business: { id: business.id, name: business.name, onboardingCompletedAt: business.onboardingCompletedAt },
   });
 });
 
@@ -85,7 +85,7 @@ authRouter.get("/me", requireAuth, async (req, res) => {
   }
   res.json({
     user: { id: user.id, email: user.email },
-    business: { id: business.id, name: business.name },
+    business: { id: business.id, name: business.name, onboardingCompletedAt: business.onboardingCompletedAt },
   });
 });
 
@@ -98,7 +98,7 @@ authRouter.post("/switch-business", requireAuth, validateBody(switchBusinessSche
   }
   await prisma.user.update({ where: { id: req.auth!.userId }, data: { lastActiveBusinessId: businessId } });
   await issueSession(res, req.auth!.userId, businessId);
-  res.json({ business: { id: business.id, name: business.name } });
+  res.json({ business: { id: business.id, name: business.name, onboardingCompletedAt: business.onboardingCompletedAt } });
 });
 
 authRouter.post("/refresh", async (req, res) => {

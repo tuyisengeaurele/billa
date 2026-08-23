@@ -46,6 +46,14 @@ businessRouter.patch("/", validateBody(businessProfileSchema), async (req, res) 
   res.json({ business });
 });
 
+businessRouter.post("/onboarding/complete", async (req, res) => {
+  const business = await prisma.business.update({
+    where: { id: req.auth!.businessId },
+    data: { onboardingCompletedAt: new Date() },
+  });
+  res.json({ business });
+});
+
 businessRouter.put("/sequences", validateBody(updateSequencesSchema), async (req, res) => {
   const updates = req.body as { type: string; prefix: string; nextNumber: number }[];
 

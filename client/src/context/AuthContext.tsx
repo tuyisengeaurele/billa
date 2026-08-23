@@ -16,16 +16,17 @@ interface User {
 interface Business {
   id: string;
   name: string;
+  onboardingCompletedAt: string | null;
 }
 
 interface AuthContextValue {
   user: User | null;
   business: Business | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, businessName: string) => Promise<void>;
-  loginWithGoogle: () => Promise<void>;
-  registerWithGoogle: (businessName: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<Business>;
+  register: (email: string, password: string, businessName: string) => Promise<Business>;
+  loginWithGoogle: () => Promise<Business>;
+  registerWithGoogle: (businessName: string) => Promise<Business>;
   resetPassword: (email: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -62,6 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const data = await exchangeSession(idToken);
     setUser(data.user);
     setBusiness(data.business);
+    return data.business;
   }
 
   async function register(email: string, password: string, businessName: string) {
@@ -69,6 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const data = await exchangeSession(idToken, businessName);
     setUser(data.user);
     setBusiness(data.business);
+    return data.business;
   }
 
   async function loginWithGoogle() {
@@ -76,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const data = await exchangeSession(idToken);
     setUser(data.user);
     setBusiness(data.business);
+    return data.business;
   }
 
   async function registerWithGoogle(businessName: string) {
@@ -83,6 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const data = await exchangeSession(idToken, businessName);
     setUser(data.user);
     setBusiness(data.business);
+    return data.business;
   }
 
   async function resetPassword(email: string) {

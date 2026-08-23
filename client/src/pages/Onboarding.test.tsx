@@ -38,7 +38,8 @@ describe("Onboarding", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it("navigates to the dashboard once the logo step completes", async () => {
+  it("navigates to the dashboard once the logo step completes, marking onboarding complete", async () => {
+    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 200 }));
     const user = userEvent.setup();
     renderOnboarding();
 
@@ -46,14 +47,23 @@ describe("Onboarding", () => {
     await user.click(screen.getByRole("button", { name: /skip this step/i }));
 
     await waitFor(() => expect(screen.getByText("dashboard page")).toBeInTheDocument());
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringContaining("/business/onboarding/complete"),
+      expect.objectContaining({ method: "POST" }),
+    );
   });
 
-  it("navigates straight to the dashboard when 'skip onboarding' is clicked", async () => {
+  it("navigates straight to the dashboard when 'skip onboarding' is clicked, marking onboarding complete", async () => {
+    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 200 }));
     const user = userEvent.setup();
     renderOnboarding();
 
     await user.click(screen.getByRole("button", { name: /skip onboarding/i }));
 
     await waitFor(() => expect(screen.getByText("dashboard page")).toBeInTheDocument());
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringContaining("/business/onboarding/complete"),
+      expect.objectContaining({ method: "POST" }),
+    );
   });
 });

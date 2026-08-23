@@ -17,6 +17,7 @@ function makeBusiness(overrides: Partial<Business> = {}): Business {
     accentColors: null,
     rraEbmNumber: "EBM-1",
     defaultTemplate: "MINIMAL",
+    onboardingCompletedAt: null,
     ownerId: "u1",
     createdAt: new Date(),
     updatedAt: new Date(),
