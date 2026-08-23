@@ -30,7 +30,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   return (
     <div data-theme={theme} className="flex min-h-screen bg-page">
-      <aside className="hidden w-64 shrink-0 border-r border-neutral-200 bg-surface lg:block">
+      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-neutral-200 bg-surface lg:block">
         <Sidebar billingBanner={billingBanner} />
       </aside>
 

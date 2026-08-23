@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -63,14 +63,18 @@ describe("Sidebar", () => {
     expect(await screen.findByText("Your trial ends in 2 days.")).toBeInTheDocument();
   });
 
-  it("calls the logout endpoint when 'Log out' is confirmed", async () => {
+  it("opens a confirmation modal and calls the logout endpoint once confirmed", async () => {
     const user = userEvent.setup();
     renderSidebar();
     await screen.findByRole("link", { name: "Dashboard" });
 
-    vi.spyOn(window, "confirm").mockReturnValue(true);
     const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 200 }));
     await user.click(screen.getByRole("button", { name: /log out/i }));
+
+    const dialog = await screen.findByRole("dialog", { name: /log out/i });
+    expect(fetchSpy).not.toHaveBeenCalled();
+
+    await user.click(within(dialog).getByRole("button", { name: /log out/i }));
 
     expect(fetchSpy).toHaveBeenCalled();
   });
@@ -80,9 +84,11 @@ describe("Sidebar", () => {
     renderSidebar();
     await screen.findByRole("link", { name: "Dashboard" });
 
-    vi.spyOn(window, "confirm").mockReturnValue(false);
     const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 200 }));
     await user.click(screen.getByRole("button", { name: /log out/i }));
+
+    const dialog = await screen.findByRole("dialog", { name: /log out/i });
+    await user.click(within(dialog).getByRole("button", { name: /cancel/i }));
 
     expect(fetchSpy).not.toHaveBeenCalled();
   });

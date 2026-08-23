@@ -260,7 +260,13 @@ export default function Dashboard() {
                   </span>
                   <span>{doc.number ?? "Draft"}</span>
                   <span className="text-neutral-600">{doc.customerName}</span>
-                  <span className="text-neutral-600">{doc.status}</span>
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                      doc.status === "FINALIZED" ? "bg-primary-100 text-primary-700" : "bg-neutral-100 text-neutral-600"
+                    }`}
+                  >
+                    {doc.status}
+                  </span>
                   <span className="text-neutral-600">{doc.issueDate.slice(0, 10)}</span>
                 </Link>
               ))}

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -36,15 +36,17 @@ describe("AppLayout", () => {
     expect(screen.getByText("page content")).toBeInTheDocument();
   });
 
-  it("calls the logout endpoint when 'Log out' is clicked", async () => {
+  it("calls the logout endpoint once the confirmation modal is confirmed", async () => {
     vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 401 }));
     const user = userEvent.setup();
     renderAppLayout();
     await screen.findByRole("link", { name: /customers/i });
 
-    vi.spyOn(window, "confirm").mockReturnValue(true);
     const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 200 }));
     await user.click(screen.getByRole("button", { name: /log out/i }));
+
+    const dialog = await screen.findByRole("dialog", { name: /log out/i });
+    await user.click(within(dialog).getByRole("button", { name: /log out/i }));
 
     expect(fetchSpy).toHaveBeenCalled();
   });

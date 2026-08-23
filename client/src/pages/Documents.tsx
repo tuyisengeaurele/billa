@@ -233,7 +233,7 @@ export default function Documents() {
                           event.stopPropagation();
                           window.open(`${API_BASE_URL}/documents/${document.id}/pdf`, "_blank");
                         }}
-                        className="font-sans text-sm text-primary-500 hover:text-primary-700"
+                        className="rounded-lg border border-neutral-200 px-2.5 py-1 font-sans text-xs font-medium text-neutral-700 transition-colors hover:border-primary-500 hover:text-primary-700"
                       >
                         Download
                       </button>
