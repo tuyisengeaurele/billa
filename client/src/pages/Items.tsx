@@ -23,6 +23,7 @@ export default function Items() {
   const [editingItem, setEditingItem] = useState<Item | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [deactivateTarget, setDeactivateTarget] = useState<Item | null>(null);
 
   function openCreateModal() {
     setEditingItem(null);
@@ -61,13 +62,18 @@ export default function Items() {
   }
 
   async function handleToggleActive(item: Item) {
-    if (
-      item.isActive &&
-      !window.confirm(`Deactivate ${item.description}? It'll be hidden from new documents until reactivated.`)
-    ) {
+    if (item.isActive) {
+      setDeactivateTarget(item);
       return;
     }
-    await apiRequest(`/items/${item.id}`, { method: "PATCH", body: { isActive: !item.isActive } });
+    await apiRequest(`/items/${item.id}`, { method: "PATCH", body: { isActive: true } });
+    list.reload();
+  }
+
+  async function confirmDeactivate() {
+    if (!deactivateTarget) return;
+    await apiRequest(`/items/${deactivateTarget.id}`, { method: "PATCH", body: { isActive: false } });
+    setDeactivateTarget(null);
     list.reload();
   }
 
@@ -127,6 +133,13 @@ export default function Items() {
             </div>
           ) : (
             <table className="mt-4 w-full border-collapse font-sans text-sm">
+              <colgroup>
+                <col />
+                <col style={{ width: 120 }} />
+                <col style={{ width: 100 }} />
+                <col style={{ width: 100 }} />
+                <col style={{ width: 110 }} />
+              </colgroup>
               <thead>
                 <tr className="border-b border-neutral-200 text-left text-neutral-500">
                   <th className="py-2">
@@ -170,7 +183,7 @@ export default function Items() {
                         {item.isActive ? "Active" : "Inactive"}
                       </span>
                     </td>
-                    <td className="py-3 text-right">
+                    <td className="py-3">
                       <button
                         type="button"
                         onClick={() => handleToggleActive(item)}
@@ -215,6 +228,28 @@ export default function Items() {
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingItem ? "Edit item" : "Add item"}>
         <ItemForm initialValues={editingValues} isSubmitting={isSaving} apiError={formError} onSubmit={handleSubmit} />
+      </Modal>
+
+      <Modal isOpen={deactivateTarget !== null} onClose={() => setDeactivateTarget(null)} title="Deactivate item">
+        <p className="font-sans text-sm text-neutral-600">
+          Deactivate {deactivateTarget?.description}? It'll be hidden from new documents until reactivated.
+        </p>
+        <div className="mt-6 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={() => setDeactivateTarget(null)}
+            className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={confirmDeactivate}
+            className="rounded-lg bg-error px-4 py-2 font-sans text-sm font-semibold text-white hover:opacity-90"
+          >
+            Deactivate
+          </button>
+        </div>
       </Modal>
     </AppLayout>
   );

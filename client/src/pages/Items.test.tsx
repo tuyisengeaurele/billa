@@ -1,7 +1,7 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../context/AuthContext";
 import Items from "./Items";
 
@@ -20,10 +20,6 @@ function renderItems() {
 }
 
 describe("Items", () => {
-  beforeEach(() => {
-    vi.spyOn(window, "confirm").mockReturnValue(true);
-  });
-
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -132,6 +128,9 @@ describe("Items", () => {
     await screen.findByText("Printing service");
 
     await user.click(screen.getByRole("button", { name: /deactivate/i }));
+
+    const dialog = await screen.findByRole("dialog", { name: /deactivate item/i });
+    await user.click(within(dialog).getByRole("button", { name: /deactivate/i }));
 
     await waitFor(() => expect(screen.getByText(/no items yet/i)).toBeInTheDocument());
   });

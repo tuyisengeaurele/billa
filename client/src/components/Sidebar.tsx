@@ -132,7 +132,7 @@ export function Sidebar({ billingBanner, onNavigate }: SidebarProps) {
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
 
   return (
-    <div className="flex h-full flex-col bg-surface">
+    <div className="flex h-full flex-col overflow-y-auto bg-surface">
       <div className="flex items-center gap-3 px-4 py-5">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-500">
           <img src="/logo.png" alt="" className="h-5 w-5" style={{ filter: "brightness(0) invert(1)" }} />
@@ -140,7 +140,7 @@ export function Sidebar({ billingBanner, onNavigate }: SidebarProps) {
         <BusinessSwitcher />
       </div>
 
-      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-2">
+      <nav className="flex flex-1 flex-col gap-1 px-3 py-2">
         <SidebarLink to="/dashboard" isActive={pathname === "/dashboard"} onNavigate={onNavigate} icon={<DashboardIcon />}>
           Dashboard
         </SidebarLink>
@@ -163,7 +163,7 @@ export function Sidebar({ billingBanner, onNavigate }: SidebarProps) {
           </SidebarLink>
         ))}
 
-        <div className="mt-4 flex flex-col gap-1 border-t border-neutral-100 pt-4">
+        <div className="mt-4 flex flex-col gap-1">
           <SidebarLink to="/customers" isActive={pathname === "/customers"} onNavigate={onNavigate} icon={<CustomersIcon />}>
             Customers
           </SidebarLink>
@@ -179,7 +179,7 @@ export function Sidebar({ billingBanner, onNavigate }: SidebarProps) {
         </div>
       </nav>
 
-      <div className="flex flex-col gap-3 border-t border-neutral-100 px-4 py-4">
+      <div className="flex flex-col gap-3 px-4 py-4">
         {billingBanner && (
           <p className="rounded-lg bg-warning-bg px-3 py-2 font-sans text-xs text-warning" role="status">
             {billingBanner}

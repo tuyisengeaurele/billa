@@ -36,7 +36,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
       {isMobileNavOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
-          <div className="absolute inset-0 bg-neutral-900/40" onClick={() => setIsMobileNavOpen(false)} />
+          <div className="absolute inset-0 bg-black/40" onClick={() => setIsMobileNavOpen(false)} />
           <aside className="absolute inset-y-0 left-0 w-64 border-r border-neutral-200 bg-surface">
             <Sidebar billingBanner={billingBanner} onNavigate={() => setIsMobileNavOpen(false)} />
           </aside>

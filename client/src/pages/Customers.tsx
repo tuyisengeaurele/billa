@@ -24,6 +24,7 @@ export default function Customers() {
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [deactivateTarget, setDeactivateTarget] = useState<Customer | null>(null);
 
   function openCreateModal() {
     setEditingCustomer(null);
@@ -62,13 +63,18 @@ export default function Customers() {
   }
 
   async function handleToggleActive(customer: Customer) {
-    if (
-      customer.isActive &&
-      !window.confirm(`Deactivate ${customer.name}? They'll be hidden from new documents until reactivated.`)
-    ) {
+    if (customer.isActive) {
+      setDeactivateTarget(customer);
       return;
     }
-    await apiRequest(`/customers/${customer.id}`, { method: "PATCH", body: { isActive: !customer.isActive } });
+    await apiRequest(`/customers/${customer.id}`, { method: "PATCH", body: { isActive: true } });
+    list.reload();
+  }
+
+  async function confirmDeactivate() {
+    if (!deactivateTarget) return;
+    await apiRequest(`/customers/${deactivateTarget.id}`, { method: "PATCH", body: { isActive: false } });
+    setDeactivateTarget(null);
     list.reload();
   }
 
@@ -134,6 +140,13 @@ export default function Customers() {
             </div>
           ) : (
             <table className="mt-4 w-full border-collapse font-sans text-sm">
+              <colgroup>
+                <col />
+                <col style={{ width: 140 }} />
+                <col style={{ width: 200 }} />
+                <col style={{ width: 100 }} />
+                <col style={{ width: 110 }} />
+              </colgroup>
               <thead>
                 <tr className="border-b border-neutral-200 text-left text-neutral-500">
                   <th className="py-2">
@@ -173,7 +186,7 @@ export default function Customers() {
                         {customer.isActive ? "Active" : "Inactive"}
                       </span>
                     </td>
-                    <td className="py-3 text-right">
+                    <td className="py-3">
                       <button
                         type="button"
                         onClick={() => handleToggleActive(customer)}
@@ -222,6 +235,28 @@ export default function Customers() {
         title={editingCustomer ? "Edit customer" : "Add customer"}
       >
         <CustomerForm initialValues={editingValues} isSubmitting={isSaving} apiError={formError} onSubmit={handleSubmit} />
+      </Modal>
+
+      <Modal isOpen={deactivateTarget !== null} onClose={() => setDeactivateTarget(null)} title="Deactivate customer">
+        <p className="font-sans text-sm text-neutral-600">
+          Deactivate {deactivateTarget?.name}? They'll be hidden from new documents until reactivated.
+        </p>
+        <div className="mt-6 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={() => setDeactivateTarget(null)}
+            className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={confirmDeactivate}
+            className="rounded-lg bg-error px-4 py-2 font-sans text-sm font-semibold text-white hover:opacity-90"
+          >
+            Deactivate
+          </button>
+        </div>
       </Modal>
     </AppLayout>
   );

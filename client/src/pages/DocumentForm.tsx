@@ -384,7 +384,7 @@ export default function DocumentForm() {
                 type="button"
                 disabled={isFinalizing}
                 onClick={handleFinalize}
-                className="flex items-center justify-center rounded-lg bg-neutral-900 px-6 py-2.5 font-sans text-sm font-semibold text-white transition-colors hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-70"
+                className="flex items-center justify-center rounded-lg bg-[#18181b] px-6 py-2.5 font-sans text-sm font-semibold text-white transition-colors hover:bg-[#3f3f46] disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {isFinalizing ? "Finalizing…" : "Finalize"}
               </button>
