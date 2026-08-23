@@ -7,6 +7,7 @@ import { FormField } from "../FormField";
 import { apiRequest, ApiError } from "../../lib/apiClient";
 
 const detailsFormSchema = z.object({
+  name: z.string().trim().min(1, "Enter your business name"),
   tin: z.string().trim(),
   industry: z.string().trim(),
   phone: z.string().trim(),
@@ -16,7 +17,7 @@ const detailsFormSchema = z.object({
 });
 type DetailsFormInput = z.infer<typeof detailsFormSchema>;
 
-const FIELDS: { id: keyof DetailsFormInput; label: string; type: "text" | "tel" | "email" }[] = [
+const OPTIONAL_FIELDS: { id: keyof DetailsFormInput; label: string; type: "text" | "tel" | "email" }[] = [
   { id: "tin", label: "TIN", type: "text" },
   { id: "industry", label: "Industry", type: "text" },
   { id: "phone", label: "Phone", type: "tel" },
@@ -26,30 +27,29 @@ const FIELDS: { id: keyof DetailsFormInput; label: string; type: "text" | "tel" 
 ];
 
 interface DetailsStepProps {
+  initialName: string;
   onComplete: () => void;
 }
 
-export function DetailsStep({ onComplete }: DetailsStepProps) {
+export function DetailsStep({ initialName, onComplete }: DetailsStepProps) {
   const [apiError, setApiError] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<DetailsFormInput>({ resolver: zodResolver(detailsFormSchema) });
+  } = useForm<DetailsFormInput>({
+    resolver: zodResolver(detailsFormSchema),
+    defaultValues: { name: initialName },
+  });
 
   async function onSubmit(data: DetailsFormInput) {
     setApiError(null);
-    const payload: Record<string, string> = {};
-    for (const field of FIELDS) {
+    const payload: Record<string, string> = { name: data.name.trim() };
+    for (const field of OPTIONAL_FIELDS) {
       const value = data[field.id].trim();
       if (value.length > 0) {
         payload[field.id] = value;
       }
-    }
-
-    if (Object.keys(payload).length === 0) {
-      onComplete();
-      return;
     }
 
     try {
@@ -68,7 +68,7 @@ export function DetailsStep({ onComplete }: DetailsStepProps) {
     <div>
       <h2 className="font-display text-2xl font-semibold text-neutral-900">Tell us about your business</h2>
       <p className="mt-2 font-sans text-sm text-neutral-600">
-        Everything here is optional. Fill in what you have and skip the rest.
+        Confirm your business name, add anything else you'd like, and skip the rest.
       </p>
 
       <form onSubmit={handleSubmit(onSubmit)} className="mt-8 flex flex-col gap-5" noValidate>
@@ -77,7 +77,14 @@ export function DetailsStep({ onComplete }: DetailsStepProps) {
             {apiError}
           </div>
         )}
-        {FIELDS.map((field) => (
+        <FormField
+          id="name"
+          label="Business name"
+          type="text"
+          error={errors.name?.message}
+          {...register("name")}
+        />
+        {OPTIONAL_FIELDS.map((field) => (
           <FormField
             key={field.id}
             id={field.id}

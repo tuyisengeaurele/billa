@@ -45,7 +45,7 @@ export const FormField = forwardRef<HTMLInputElement, FormFieldProps>(function F
           ref={ref}
           id={id}
           type={resolvedType}
-          className={`w-full rounded-lg border px-3.5 py-2.5 font-sans text-sm text-neutral-900 outline-none transition-colors focus:border-primary-500 focus:ring-2 focus:ring-primary-100 ${
+          className={`w-full rounded-lg border bg-surface px-3.5 py-2.5 font-sans text-sm text-neutral-900 outline-none transition-colors focus:border-primary-500 focus:ring-2 focus:ring-primary-100 ${
             isPassword ? "pr-11" : ""
           } ${error ? "border-error" : "border-neutral-200"}`}
           aria-invalid={error ? "true" : "false"}

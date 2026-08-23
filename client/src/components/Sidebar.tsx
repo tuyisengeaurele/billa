@@ -128,7 +128,11 @@ export function Sidebar({ billingBanner, onNavigate }: SidebarProps) {
         <ThemeToggle />
         <button
           type="button"
-          onClick={() => logout()}
+          onClick={() => {
+            if (window.confirm("Log out of Billa?")) {
+              logout();
+            }
+          }}
           className="flex items-center gap-2 rounded-lg px-3 py-2 font-sans text-sm font-medium text-neutral-600 transition-colors hover:bg-error-bg hover:text-error"
         >
           <LogoutIcon />

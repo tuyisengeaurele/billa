@@ -117,9 +117,8 @@ describe("DocumentForm", () => {
     const user = userEvent.setup();
     renderNew();
 
-    const customerInput = screen.getByLabelText("Customer");
-    await user.click(customerInput);
-    await user.type(customerInput, "Kigali");
+    await user.click(screen.getByRole("button", { name: /select a customer/i }));
+    await user.type(screen.getByLabelText("Search customers"), "Kigali");
     await user.click(await screen.findByText("Kigali Traders"));
 
     await user.click(screen.getByRole("button", { name: /save draft/i }));
@@ -326,9 +325,8 @@ describe("DocumentForm", () => {
     const user = userEvent.setup();
     renderNew();
 
-    const customerInput = screen.getByLabelText("Customer");
-    await user.click(customerInput);
-    await user.type(customerInput, "Kigali");
+    await user.click(screen.getByRole("button", { name: /select a customer/i }));
+    await user.type(screen.getByLabelText("Search customers"), "Kigali");
     await user.click(await screen.findByText("Kigali Traders"));
 
     await user.click(screen.getByRole("button", { name: /save draft/i }));

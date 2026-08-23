@@ -63,14 +63,27 @@ describe("Sidebar", () => {
     expect(await screen.findByText("Your trial ends in 2 days.")).toBeInTheDocument();
   });
 
-  it("calls the logout endpoint when 'Log out' is clicked", async () => {
+  it("calls the logout endpoint when 'Log out' is confirmed", async () => {
     const user = userEvent.setup();
     renderSidebar();
     await screen.findByRole("link", { name: "Dashboard" });
 
+    vi.spyOn(window, "confirm").mockReturnValue(true);
     const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 200 }));
     await user.click(screen.getByRole("button", { name: /log out/i }));
 
     expect(fetchSpy).toHaveBeenCalled();
+  });
+
+  it("does not log out when the confirmation is dismissed", async () => {
+    const user = userEvent.setup();
+    renderSidebar();
+    await screen.findByRole("link", { name: "Dashboard" });
+
+    vi.spyOn(window, "confirm").mockReturnValue(false);
+    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 200 }));
+    await user.click(screen.getByRole("button", { name: /log out/i }));
+
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });

@@ -317,7 +317,7 @@ export default function DocumentForm() {
                             type="number"
                             step="0.01"
                             aria-label="Quantity"
-                            className="w-20 rounded-lg border border-neutral-200 px-2 py-1.5"
+                            className="w-20 rounded-lg border border-neutral-200 bg-surface px-2 py-1.5 text-neutral-900"
                             {...register(`lines.${index}.quantity`, { valueAsNumber: true })}
                           />
                         </td>
@@ -325,7 +325,7 @@ export default function DocumentForm() {
                           <input
                             type="number"
                             aria-label="Unit price"
-                            className="w-24 rounded-lg border border-neutral-200 px-2 py-1.5"
+                            className="w-24 rounded-lg border border-neutral-200 bg-surface px-2 py-1.5 text-neutral-900"
                             {...register(`lines.${index}.unitPrice`, { valueAsNumber: true })}
                           />
                         </td>
@@ -333,7 +333,7 @@ export default function DocumentForm() {
                           <input
                             type="number"
                             aria-label="Tax rate"
-                            className="w-16 rounded-lg border border-neutral-200 px-2 py-1.5"
+                            className="w-16 rounded-lg border border-neutral-200 bg-surface px-2 py-1.5 text-neutral-900"
                             {...register(`lines.${index}.taxRate`, { valueAsNumber: true })}
                           />
                         </td>

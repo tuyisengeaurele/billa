@@ -69,13 +69,13 @@ export function SequenceEditor() {
             <span className="w-40 font-sans text-sm text-neutral-700">{DOCUMENT_TYPE_LABELS[type].plural}</span>
             <input
               aria-label={`${DOCUMENT_TYPE_LABELS[type].plural} prefix`}
-              className="w-24 rounded-lg border border-neutral-200 px-3 py-1.5 font-sans text-sm"
+              className="w-24 rounded-lg border border-neutral-200 bg-surface px-3 py-1.5 font-sans text-sm text-neutral-900"
               {...register(`sequences.${index}.prefix`)}
             />
             <input
               type="number"
               aria-label={`${DOCUMENT_TYPE_LABELS[type].plural} next number`}
-              className="w-24 rounded-lg border border-neutral-200 px-3 py-1.5 font-sans text-sm"
+              className="w-24 rounded-lg border border-neutral-200 bg-surface px-3 py-1.5 font-sans text-sm text-neutral-900"
               {...register(`sequences.${index}.nextNumber`, { valueAsNumber: true })}
             />
           </div>

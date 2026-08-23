@@ -39,30 +39,49 @@ describe("Register", () => {
     vi.restoreAllMocks();
   });
 
-  it("marks the business name field invalid on an empty submit", async () => {
+  it("has no business name field", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 401 }));
+    renderRegister();
+
+    await screen.findByRole("button", { name: /create account/i });
+    expect(screen.queryByLabelText(/business name/i)).not.toBeInTheDocument();
+  });
+
+  it("puts Continue with Google below the Create account button", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 401 }));
+    renderRegister();
+
+    const buttons = await screen.findAllByRole("button");
+    const createIndex = buttons.findIndex((b) => /create account/i.test(b.textContent ?? ""));
+    const googleIndex = buttons.findIndex((b) => /continue with google/i.test(b.textContent ?? ""));
+    expect(createIndex).toBeGreaterThanOrEqual(0);
+    expect(googleIndex).toBeGreaterThan(createIndex);
+  });
+
+  it("marks the email field invalid on an empty submit", async () => {
     vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 401 }));
     const user = userEvent.setup();
     renderRegister();
 
     await user.click(await screen.findByRole("button", { name: /create account/i }));
 
-    await waitFor(() =>
-      expect(screen.getByLabelText(/business name/i)).toHaveAttribute("aria-invalid", "true"),
-    );
+    await waitFor(() => expect(screen.getByLabelText(/email/i)).toHaveAttribute("aria-invalid", "true"));
   });
 
-  it("navigates to /onboarding after a successful registration", async () => {
+  it("navigates to /onboarding after a successful registration with a default business name", async () => {
     vi.mocked(signUpWithEmail).mockResolvedValue("fake-id-token");
-    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
       const url = urlOf(input);
       if (url.endsWith("/auth/me")) {
         return new Response("{}", { status: 401 });
       }
       if (url.endsWith("/auth/session")) {
+        const body = JSON.parse(init?.body as string);
+        expect(body.businessName).toBe("My Business");
         return new Response(
           JSON.stringify({
             user: { id: "u1", email: "owner@example.com" },
-            business: { id: "b1", name: "Kigali Traders" },
+            business: { id: "b1", name: "My Business" },
           }),
           { status: 201 },
         );
@@ -73,8 +92,7 @@ describe("Register", () => {
     const user = userEvent.setup();
     renderRegister();
 
-    await user.type(await screen.findByLabelText(/business name/i), "Kigali Traders");
-    await user.type(screen.getByLabelText(/email/i), "owner@example.com");
+    await user.type(await screen.findByLabelText(/email/i), "owner@example.com");
     await user.type(screen.getByLabelText(/^password/i), "Supersecret1!");
     await user.type(screen.getByLabelText(/confirm password/i), "Supersecret1!");
     await user.click(screen.getByRole("button", { name: /create account/i }));
@@ -89,8 +107,7 @@ describe("Register", () => {
     const user = userEvent.setup();
     renderRegister();
 
-    await user.type(await screen.findByLabelText(/business name/i), "Kigali Traders");
-    await user.type(screen.getByLabelText(/email/i), "owner@example.com");
+    await user.type(await screen.findByLabelText(/email/i), "owner@example.com");
     await user.type(screen.getByLabelText(/^password/i), "Supersecret1!");
     await user.type(screen.getByLabelText(/confirm password/i), "Supersecret1!");
     await user.click(screen.getByRole("button", { name: /create account/i }));
@@ -103,8 +120,7 @@ describe("Register", () => {
     const user = userEvent.setup();
     renderRegister();
 
-    await user.type(await screen.findByLabelText(/business name/i), "Kigali Traders");
-    await user.type(screen.getByLabelText(/email/i), "owner@example.com");
+    await user.type(await screen.findByLabelText(/email/i), "owner@example.com");
     await user.type(await screen.findByLabelText(/^password/i), "Supersecret1!");
     await user.type(screen.getByLabelText(/confirm password/i), "Different1!");
     await user.click(screen.getByRole("button", { name: /create account/i }));
@@ -135,7 +151,7 @@ describe("Register", () => {
     }
   });
 
-  it("signs up with Google using the entered business name", async () => {
+  it("signs up with Google using a default business name", async () => {
     vi.mocked(signInWithGoogle).mockResolvedValue("fake-google-token");
     vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
       const url = urlOf(input);
@@ -144,11 +160,11 @@ describe("Register", () => {
       }
       if (url.endsWith("/auth/session")) {
         const body = JSON.parse(init?.body as string);
-        expect(body.businessName).toBe("Kigali Traders");
+        expect(body.businessName).toBe("My Business");
         return new Response(
           JSON.stringify({
             user: { id: "u1", email: "owner@example.com" },
-            business: { id: "b1", name: "Kigali Traders" },
+            business: { id: "b1", name: "My Business" },
           }),
           { status: 201 },
         );
@@ -159,22 +175,8 @@ describe("Register", () => {
     const user = userEvent.setup();
     renderRegister();
 
-    await user.type(await screen.findByLabelText(/business name/i), "Kigali Traders");
-    await user.click(screen.getByRole("button", { name: /continue with google/i }));
-
-    await waitFor(() => expect(screen.getByText("onboarding page")).toBeInTheDocument());
-  });
-
-  it("blocks Google sign-up until a business name is entered", async () => {
-    vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 401 }));
-    const user = userEvent.setup();
-    renderRegister();
-
     await user.click(await screen.findByRole("button", { name: /continue with google/i }));
 
-    expect(signInWithGoogle).not.toHaveBeenCalled();
-    await waitFor(() =>
-      expect(screen.getByLabelText(/business name/i)).toHaveAttribute("aria-invalid", "true"),
-    );
+    await waitFor(() => expect(screen.getByText("onboarding page")).toBeInTheDocument());
   });
 });

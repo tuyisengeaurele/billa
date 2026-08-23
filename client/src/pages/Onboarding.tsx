@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { DetailsStep } from "../components/onboarding/DetailsStep";
 import { LogoStep } from "../components/onboarding/LogoStep";
 import { OnboardingLayout } from "../components/onboarding/OnboardingLayout";
+import { useAuth } from "../context/AuthContext";
 import { apiRequest } from "../lib/apiClient";
 
 type Step = "details" | "logo";
@@ -11,6 +12,7 @@ type Step = "details" | "logo";
 export default function Onboarding() {
   const [step, setStep] = useState<Step>("details");
   const navigate = useNavigate();
+  const { business, isLoading } = useAuth();
 
   async function goToDashboard() {
     try {
@@ -19,6 +21,10 @@ export default function Onboarding() {
       // Not fatal: onboarding may just be re-shown on the next login.
     }
     navigate("/dashboard");
+  }
+
+  if (isLoading || !business) {
+    return null;
   }
 
   return (
@@ -30,7 +36,7 @@ export default function Onboarding() {
         transition={{ duration: 0.25, ease: "easeOut" }}
       >
         {step === "details" ? (
-          <DetailsStep onComplete={() => setStep("logo")} />
+          <DetailsStep initialName={business?.name ?? ""} onComplete={() => setStep("logo")} />
         ) : (
           <LogoStep onComplete={goToDashboard} />
         )}

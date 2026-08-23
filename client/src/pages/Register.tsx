@@ -11,9 +11,10 @@ import { GoogleIcon } from "../components/icons/GoogleIcon";
 import { useAuth } from "../context/AuthContext";
 import { firebaseErrorCode } from "../lib/firebaseAuth";
 
+const DEFAULT_BUSINESS_NAME = "My Business";
+
 const registerFormSchema = z
   .object({
-    businessName: z.string().min(1, "Enter your business name"),
     email: z.string().email("Enter a valid email address"),
     password: z.string().refine((value) => PASSWORD_REQUIREMENTS.every((requirement) => requirement.test(value)), {
       message: "Password doesn't meet the requirements below",
@@ -34,8 +35,6 @@ export default function Register() {
     register,
     handleSubmit,
     watch,
-    trigger,
-    getValues,
     formState: { errors, isSubmitting },
   } = useForm<RegisterFormInput>({ resolver: zodResolver(registerFormSchema) });
   const password = watch("password") ?? "";
@@ -43,7 +42,7 @@ export default function Register() {
   async function onSubmit(data: RegisterFormInput) {
     setApiError(null);
     try {
-      const business = await registerBusiness(data.email, data.password, data.businessName);
+      const business = await registerBusiness(data.email, data.password, DEFAULT_BUSINESS_NAME);
       navigate(business.onboardingCompletedAt ? "/dashboard" : "/onboarding");
     } catch (err) {
       if (firebaseErrorCode(err) === "auth/email-already-in-use") {
@@ -55,11 +54,9 @@ export default function Register() {
   }
 
   async function handleGoogle() {
-    const valid = await trigger("businessName");
-    if (!valid) return;
     setApiError(null);
     try {
-      const business = await registerWithGoogle(getValues("businessName"));
+      const business = await registerWithGoogle(DEFAULT_BUSINESS_NAME);
       navigate(business.onboardingCompletedAt ? "/dashboard" : "/onboarding");
     } catch (err) {
       if (firebaseErrorCode(err) !== "auth/popup-closed-by-user") {
@@ -88,18 +85,6 @@ export default function Register() {
             {apiError}
           </div>
         )}
-        <FormField
-          id="businessName"
-          label="Business name"
-          type="text"
-          autoComplete="organization"
-          error={errors.businessName?.message}
-          {...register("businessName")}
-        />
-        <Button type="button" variant="outline" onClick={handleGoogle} className="gap-2">
-          <GoogleIcon />
-          Continue with Google
-        </Button>
         <FormField
           id="email"
           label="Email"
@@ -141,6 +126,17 @@ export default function Register() {
           Create account
         </Button>
       </form>
+
+      <div className="my-6 flex items-center gap-3">
+        <div className="h-px flex-1 bg-neutral-200" />
+        <span className="font-sans text-xs uppercase tracking-wide text-neutral-400">or</span>
+        <div className="h-px flex-1 bg-neutral-200" />
+      </div>
+
+      <Button type="button" variant="outline" onClick={handleGoogle} className="gap-2">
+        <GoogleIcon />
+        Continue with Google
+      </Button>
     </AuthLayout>
   );
 }

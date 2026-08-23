@@ -87,11 +87,6 @@ export default function Login() {
         </Link>
       </p>
 
-      <Button type="button" variant="outline" onClick={handleGoogle} className="mt-6 gap-2">
-        <GoogleIcon />
-        Continue with Google
-      </Button>
-
       <form onSubmit={handleSubmit(onSubmit)} className="mt-6 flex flex-col gap-5" noValidate>
         {apiError && (
           <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
@@ -130,6 +125,17 @@ export default function Login() {
           Log in
         </Button>
       </form>
+
+      <div className="my-6 flex items-center gap-3">
+        <div className="h-px flex-1 bg-neutral-200" />
+        <span className="font-sans text-xs uppercase tracking-wide text-neutral-400">or</span>
+        <div className="h-px flex-1 bg-neutral-200" />
+      </div>
+
+      <Button type="button" variant="outline" onClick={handleGoogle} className="gap-2">
+        <GoogleIcon />
+        Continue with Google
+      </Button>
     </AuthLayout>
   );
 }

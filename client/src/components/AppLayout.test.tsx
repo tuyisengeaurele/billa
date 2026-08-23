@@ -42,6 +42,7 @@ describe("AppLayout", () => {
     renderAppLayout();
     await screen.findByRole("link", { name: /customers/i });
 
+    vi.spyOn(window, "confirm").mockReturnValue(true);
     const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 200 }));
     await user.click(screen.getByRole("button", { name: /log out/i }));
 

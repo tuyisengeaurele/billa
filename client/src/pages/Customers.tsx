@@ -101,7 +101,7 @@ export default function Customers() {
               aria-label="Search customers"
               value={list.search}
               onChange={(event) => list.updateSearch(event.target.value)}
-              className="w-full max-w-xs rounded-lg border border-neutral-200 px-3.5 py-2 font-sans text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+              className="w-full max-w-xs rounded-lg border border-neutral-200 bg-surface px-3.5 py-2 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
             />
             <label className="flex items-center gap-2 font-sans text-sm text-neutral-600">
               <input

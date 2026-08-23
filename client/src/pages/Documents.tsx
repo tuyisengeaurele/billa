@@ -112,7 +112,7 @@ export default function Documents() {
               aria-label={searchPlaceholder}
               value={list.search}
               onChange={(event) => list.updateSearch(event.target.value)}
-              className="w-full max-w-xs rounded-lg border border-neutral-200 px-3.5 py-2 font-sans text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+              className="w-full max-w-xs rounded-lg border border-neutral-200 bg-surface px-3.5 py-2 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
             />
             <div className="flex items-center gap-2">
               <input
@@ -123,7 +123,7 @@ export default function Documents() {
                   setDateFrom(event.target.value);
                   list.setPage(1);
                 }}
-                className="rounded-lg border border-neutral-200 px-3 py-2 font-sans text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                className="rounded-lg border border-neutral-200 bg-surface px-3 py-2 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
               />
               <span className="font-sans text-sm text-neutral-400">to</span>
               <input
@@ -134,7 +134,7 @@ export default function Documents() {
                   setDateTo(event.target.value);
                   list.setPage(1);
                 }}
-                className="rounded-lg border border-neutral-200 px-3 py-2 font-sans text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                className="rounded-lg border border-neutral-200 bg-surface px-3 py-2 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
               />
             </div>
           </div>
@@ -202,7 +202,7 @@ export default function Documents() {
                     aria-label={`View ${document.number ?? "draft"} document`}
                     className="cursor-pointer border-b border-neutral-100 hover:bg-neutral-50"
                   >
-                    <td className="py-3">{document.issueDate.slice(0, 10)}</td>
+                    <td className="py-3 text-neutral-600">{document.issueDate.slice(0, 10)}</td>
                     {isUnified && (
                       <td className="py-3">
                         <span
