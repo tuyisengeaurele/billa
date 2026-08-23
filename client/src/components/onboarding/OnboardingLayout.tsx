@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import type { ReactNode } from "react";
 
 interface OnboardingLayoutProps {
@@ -9,7 +10,12 @@ interface OnboardingLayoutProps {
 export function OnboardingLayout({ stepLabel, onSkipAll, children }: OnboardingLayoutProps) {
   return (
     <div className="flex min-h-screen justify-center bg-neutral-50 px-6 py-12">
-      <div className="w-full max-w-xl">
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
+        className="w-full max-w-xl"
+      >
         <div className="mb-8 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-500">
@@ -28,7 +34,7 @@ export function OnboardingLayout({ stepLabel, onSkipAll, children }: OnboardingL
           </button>
         </div>
         <div className="rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm">{children}</div>
-      </div>
+      </motion.div>
     </div>
   );
 }
