@@ -54,7 +54,7 @@ export function SequenceEditor() {
   }
 
   return (
-    <section className="rounded-xl border border-neutral-200 bg-white p-6">
+    <section className="rounded-xl border border-neutral-200 bg-surface p-6">
       <h2 className="font-display text-base font-semibold text-neutral-900">Document numbering</h2>
 
       {apiError && (

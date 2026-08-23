@@ -88,12 +88,12 @@ export default function Customers() {
       <div className="mx-auto flex max-w-4xl flex-col gap-6">
         <div className="flex items-center justify-between">
           <h1 className="font-display text-2xl font-semibold text-neutral-900">Customers</h1>
-          <Button type="button" onClick={openCreateModal} className="w-auto px-5">
+          <Button type="button" onClick={openCreateModal} fullWidth={false} className="px-5">
             Add customer
           </Button>
         </div>
 
-        <div className="rounded-xl border border-neutral-200 bg-white p-6">
+        <div className="rounded-xl border border-neutral-200 bg-surface p-6">
           <div className="flex items-center gap-4">
             <input
               type="text"
@@ -128,7 +128,7 @@ export default function Customers() {
           ) : list.results.length === 0 ? (
             <div className="mt-4 flex flex-col items-center gap-3 rounded-xl border border-dashed border-neutral-200 py-16 text-center">
               <p className="font-sans text-sm text-neutral-600">No customers yet.</p>
-              <Button type="button" onClick={openCreateModal} className="w-auto px-5">
+              <Button type="button" onClick={openCreateModal} fullWidth={false} className="px-5">
                 Add customer
               </Button>
             </div>

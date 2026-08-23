@@ -6,6 +6,7 @@ import { usePaginatedList } from "../lib/usePaginatedList";
 import { formatRwf } from "@billa/shared";
 import { API_BASE_URL } from "../lib/apiClient";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
+import { DOCUMENT_TYPE_COLORS } from "../lib/documentTypeColors";
 
 interface DocumentRow {
   id: string;
@@ -81,24 +82,29 @@ export default function Documents() {
 
         {isUnified && (
           <div className="flex flex-wrap gap-2">
-            {DOCUMENT_TYPES.map((type) => (
-              <button
-                key={type}
-                type="button"
-                onClick={() => toggleType(type)}
-                className={`rounded-full border px-3 py-1 font-sans text-sm transition-colors ${
-                  selectedTypes.includes(type)
-                    ? "border-primary-500 bg-primary-50 text-primary-700"
-                    : "border-neutral-200 text-neutral-600 hover:bg-neutral-50"
-                }`}
-              >
-                {DOCUMENT_TYPE_LABELS[type].plural}
-              </button>
-            ))}
+            {DOCUMENT_TYPES.map((type) => {
+              const colors = DOCUMENT_TYPE_COLORS[type];
+              const isSelected = selectedTypes.includes(type);
+              return (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => toggleType(type)}
+                  className={`flex items-center gap-1.5 rounded-full border px-3 py-1 font-sans text-sm transition-colors ${
+                    isSelected
+                      ? "border-transparent " + colors.chipBgSelected
+                      : "border-neutral-200 text-neutral-600 hover:bg-neutral-50"
+                  }`}
+                >
+                  {!isSelected && <span className={`h-1.5 w-1.5 rounded-full ${colors.dot}`} aria-hidden="true" />}
+                  {DOCUMENT_TYPE_LABELS[type].plural}
+                </button>
+              );
+            })}
           </div>
         )}
 
-        <div className="rounded-xl border border-neutral-200 bg-white p-6">
+        <div className="rounded-xl border border-neutral-200 bg-surface p-6">
           <div className="flex flex-wrap items-center gap-3">
             <input
               type="text"
@@ -198,7 +204,13 @@ export default function Documents() {
                   >
                     <td className="py-3">{document.issueDate.slice(0, 10)}</td>
                     {isUnified && (
-                      <td className="py-3 text-neutral-600">{DOCUMENT_TYPE_LABELS[document.type].singular}</td>
+                      <td className="py-3">
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-xs font-medium ${DOCUMENT_TYPE_COLORS[document.type].chipBg} ${DOCUMENT_TYPE_COLORS[document.type].chipText}`}
+                        >
+                          {DOCUMENT_TYPE_LABELS[document.type].singular}
+                        </span>
+                      </td>
                     )}
                     <td className="py-3 font-medium text-neutral-900">{document.number ?? "Draft"}</td>
                     <td className="py-3 text-neutral-600">{document.customer.name}</td>

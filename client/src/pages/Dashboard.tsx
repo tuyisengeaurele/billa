@@ -1,11 +1,24 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { DOCUMENT_TYPES, type DocumentStatus, type DocumentType } from "@billa/shared";
 import { AppLayout } from "../components/AppLayout";
 import { useAuth } from "../context/AuthContext";
 import { apiRequest } from "../lib/apiClient";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
+import { DOCUMENT_TYPE_COLORS } from "../lib/documentTypeColors";
+import { useTheme } from "../context/ThemeContext";
 
 interface RecentDocument {
   id: string;
@@ -53,6 +66,18 @@ function monthComparison(thisMonth: number, lastMonth: number): string {
 
 export default function Dashboard() {
   const { business } = useAuth();
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+  const gridColor = isDark ? "#3f3f46" : "#e4e4e7";
+  const tickColor = isDark ? "#8b8b93" : "#71717a";
+  const tickColorStrong = isDark ? "#b4b4bb" : "#52525b";
+  const tooltipStyle = {
+    borderRadius: 8,
+    borderColor: gridColor,
+    fontSize: 12,
+    backgroundColor: isDark ? "#1c1c1f" : "#ffffff",
+    color: isDark ? "#fafafa" : "#18181b",
+  };
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [loadError, setLoadError] = useState(false);
 
@@ -72,24 +97,29 @@ export default function Dashboard() {
           Welcome, {business?.name ?? "there"}.
         </h1>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {DOCUMENT_TYPES.map((type) => (
-            <Link
-              key={type}
-              to={`/documents/new?type=${type}`}
-              className="group flex flex-col gap-3 rounded-xl border border-neutral-200 p-5 transition-all hover:border-primary-500 hover:shadow-md"
-            >
-              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-100 font-sans text-xs font-semibold text-primary-700 transition-colors group-hover:bg-primary-500 group-hover:text-white">
-                {TYPE_MONOGRAM[type]}
-              </span>
-              <div>
-                <p className="font-display text-base font-semibold text-neutral-900">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          {DOCUMENT_TYPES.map((type) => {
+            const colors = DOCUMENT_TYPE_COLORS[type];
+            return (
+              <Link
+                key={type}
+                to={`/documents/new?type=${type}`}
+                className="group flex flex-col gap-2 rounded-xl border border-neutral-200 bg-surface p-4 transition-all hover:-translate-y-0.5 hover:shadow-md"
+              >
+                <span
+                  className={`flex h-9 w-9 items-center justify-center rounded-lg font-sans text-xs font-semibold transition-colors ${colors.iconBg} ${colors.iconText}`}
+                >
+                  {TYPE_MONOGRAM[type]}
+                </span>
+                <p className="font-display text-sm font-semibold text-neutral-900">
                   New {DOCUMENT_TYPE_LABELS[type].singular}
                 </p>
-                <p className="mt-1 font-sans text-sm text-neutral-500">{DOCUMENT_TYPE_LABELS[type].description}</p>
-              </div>
-            </Link>
-          ))}
+                <p className="line-clamp-2 font-sans text-xs text-neutral-500">
+                  {DOCUMENT_TYPE_LABELS[type].description}
+                </p>
+              </Link>
+            );
+          })}
         </div>
 
         {loadError && (
@@ -117,7 +147,7 @@ export default function Dashboard() {
             {summary.draftCount > 0 && (
               <Link
                 to="/documents"
-                className="rounded-lg border border-neutral-200 px-4 py-3 font-sans text-sm text-neutral-700 hover:bg-neutral-50"
+                className="rounded-lg bg-warning-bg px-4 py-3 font-sans text-sm text-warning transition-transform hover:-translate-y-0.5"
               >
                 {summary.draftCount} draft{summary.draftCount === 1 ? "" : "s"} waiting to be finalized
               </Link>
@@ -125,7 +155,7 @@ export default function Dashboard() {
             {summary.overdueInvoiceCount > 0 && (
               <Link
                 to="/documents"
-                className="rounded-lg border border-neutral-200 px-4 py-3 font-sans text-sm text-neutral-700 hover:bg-neutral-50"
+                className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error transition-transform hover:-translate-y-0.5"
               >
                 {summary.overdueInvoiceCount} invoice{summary.overdueInvoiceCount === 1 ? "" : "s"} past due date
               </Link>
@@ -135,7 +165,7 @@ export default function Dashboard() {
 
         {summary && !hasNoDocuments && (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            <div className="rounded-xl border border-neutral-200 p-6">
+            <div className="rounded-xl border border-neutral-200 bg-surface p-6">
               <p className="font-sans text-sm text-neutral-500">Documents this month</p>
               <p className="mt-2 font-display text-4xl font-semibold text-neutral-900">
                 {summary.documentsThisMonth}
@@ -145,15 +175,15 @@ export default function Dashboard() {
               </p>
             </div>
 
-            <div className="rounded-xl border border-neutral-200 p-6 lg:col-span-2">
+            <div className="rounded-xl border border-neutral-200 bg-surface p-6 lg:col-span-2">
               <p className="font-sans text-sm font-semibold text-neutral-900">Documents by type</p>
               <ResponsiveContainer width="100%" height={180}>
                 <BarChart data={summary.documentsByType} layout="vertical" margin={{ left: 8, right: 16, top: 8 }}>
-                  <CartesianGrid horizontal={false} stroke="#e4e4e7" />
+                  <CartesianGrid horizontal={false} stroke={gridColor} />
                   <XAxis
                     type="number"
                     allowDecimals={false}
-                    tick={{ fontSize: 12, fill: "#71717a" }}
+                    tick={{ fontSize: 12, fill: tickColor }}
                     axisLine={false}
                     tickLine={false}
                   />
@@ -161,7 +191,7 @@ export default function Dashboard() {
                     type="category"
                     dataKey="type"
                     tickFormatter={(type: DocumentType) => DOCUMENT_TYPE_LABELS[type].plural}
-                    tick={{ fontSize: 12, fill: "#52525b" }}
+                    tick={{ fontSize: 12, fill: tickColorStrong }}
                     axisLine={false}
                     tickLine={false}
                     width={110}
@@ -169,37 +199,35 @@ export default function Dashboard() {
                   <Tooltip
                     formatter={(value) => [value, "Documents"]}
                     labelFormatter={(label) => DOCUMENT_TYPE_LABELS[label as DocumentType].plural}
-                    contentStyle={{ borderRadius: 8, borderColor: "#e4e4e7", fontSize: 12 }}
+                    contentStyle={tooltipStyle}
                   />
-                  <Bar dataKey="count" fill="#c2185b" radius={[0, 4, 4, 0]} maxBarSize={18} />
+                  <Bar dataKey="count" radius={[0, 4, 4, 0]} maxBarSize={18}>
+                    {summary.documentsByType.map((entry) => (
+                      <Cell key={entry.type} fill={DOCUMENT_TYPE_COLORS[entry.type].hex} />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
 
-            <div className="rounded-xl border border-neutral-200 p-6 lg:col-span-3">
+            <div className="rounded-xl border border-neutral-200 bg-surface p-6 lg:col-span-3">
               <p className="font-sans text-sm font-semibold text-neutral-900">Activity, last 14 days</p>
               <ResponsiveContainer width="100%" height={200}>
                 <LineChart data={summary.activityByDay} margin={{ left: 0, right: 12, top: 8, bottom: 0 }}>
-                  <CartesianGrid vertical={false} stroke="#e4e4e7" />
+                  <CartesianGrid vertical={false} stroke={gridColor} />
                   <XAxis
                     dataKey="date"
                     tickFormatter={(date: string) => date.slice(5)}
-                    tick={{ fontSize: 11, fill: "#71717a" }}
+                    tick={{ fontSize: 11, fill: tickColor }}
                     axisLine={false}
                     tickLine={false}
                     interval={2}
                   />
-                  <YAxis
-                    allowDecimals={false}
-                    tick={{ fontSize: 12, fill: "#71717a" }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={28}
-                  />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: tickColor }} axisLine={false} tickLine={false} width={28} />
                   <Tooltip
                     formatter={(value) => [value, "Documents"]}
                     labelFormatter={(label) => String(label)}
-                    contentStyle={{ borderRadius: 8, borderColor: "#e4e4e7", fontSize: 12 }}
+                    contentStyle={tooltipStyle}
                   />
                   <Line
                     type="monotone"
@@ -223,9 +251,13 @@ export default function Dashboard() {
                 <Link
                   key={doc.id}
                   to={doc.status === "DRAFT" ? `/documents/${doc.id}/edit` : `/documents/${doc.id}`}
-                  className="flex items-center justify-between gap-4 rounded-lg border border-neutral-100 px-4 py-3 font-sans text-sm hover:bg-neutral-50"
+                  className="flex items-center justify-between gap-4 rounded-lg border border-neutral-100 bg-surface px-4 py-3 font-sans text-sm transition-colors hover:bg-surface-hover"
                 >
-                  <span className="text-neutral-600">{DOCUMENT_TYPE_LABELS[doc.type].singular}</span>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${DOCUMENT_TYPE_COLORS[doc.type].chipBg} ${DOCUMENT_TYPE_COLORS[doc.type].chipText}`}
+                  >
+                    {DOCUMENT_TYPE_LABELS[doc.type].singular}
+                  </span>
                   <span>{doc.number ?? "Draft"}</span>
                   <span className="text-neutral-600">{doc.customerName}</span>
                   <span className="text-neutral-600">{doc.status}</span>

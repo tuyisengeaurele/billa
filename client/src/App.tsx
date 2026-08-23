@@ -1,5 +1,6 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
+import { ThemeProvider } from "./context/ThemeContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { RootRoute } from "./components/RootRoute";
 import Login from "./pages/Login";
@@ -21,31 +22,33 @@ import AdminMessages from "./pages/AdminMessages";
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/privacy" element={<PrivacyPolicy />} />
-          <Route path="/terms" element={<TermsOfService />} />
-          <Route path="/help" element={<HelpCenter />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route element={<ProtectedRoute />}>
-            <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/customers" element={<Customers />} />
-            <Route path="/items" element={<Items />} />
-            <Route path="/documents" element={<Documents />} />
-            <Route path="/documents/new" element={<DocumentForm />} />
-            <Route path="/documents/:id/edit" element={<DocumentForm />} />
-            <Route path="/documents/:id" element={<DocumentView />} />
-            <Route path="/settings" element={<BusinessSettings />} />
-            <Route path="/billing/callback" element={<BillingCallback />} />
-            <Route path="/admin/messages" element={<AdminMessages />} />
-          </Route>
-          <Route path="/" element={<RootRoute />} />
-        </Routes>
-      </AuthProvider>
-    </BrowserRouter>
+    <ThemeProvider>
+      <BrowserRouter>
+        <AuthProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/terms" element={<TermsOfService />} />
+            <Route path="/help" element={<HelpCenter />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route element={<ProtectedRoute />}>
+              <Route path="/onboarding" element={<Onboarding />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/customers" element={<Customers />} />
+              <Route path="/items" element={<Items />} />
+              <Route path="/documents" element={<Documents />} />
+              <Route path="/documents/new" element={<DocumentForm />} />
+              <Route path="/documents/:id/edit" element={<DocumentForm />} />
+              <Route path="/documents/:id" element={<DocumentView />} />
+              <Route path="/settings" element={<BusinessSettings />} />
+              <Route path="/billing/callback" element={<BillingCallback />} />
+              <Route path="/admin/messages" element={<AdminMessages />} />
+            </Route>
+            <Route path="/" element={<RootRoute />} />
+          </Routes>
+        </AuthProvider>
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }

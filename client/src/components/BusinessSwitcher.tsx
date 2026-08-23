@@ -65,7 +65,7 @@ export function BusinessSwitcher() {
         {label} {isOpen ? "▲" : "▼"}
       </button>
       {isOpen && (
-        <div className="absolute left-0 top-full z-10 mt-1 w-56 rounded-lg border border-neutral-200 bg-white py-1 shadow-lg">
+        <div className="absolute left-0 top-full z-10 mt-1 w-56 rounded-lg border border-neutral-200 bg-surface py-1 shadow-lg">
           {businesses.map((b) => (
             <button
               key={b.id}

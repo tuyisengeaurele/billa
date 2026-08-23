@@ -53,7 +53,7 @@ export function SearchDropdown({
         }`}
       />
       {isOpen && (
-        <div className="absolute top-full z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-neutral-200 bg-white shadow-lg">
+        <div className="absolute top-full z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-neutral-200 bg-surface shadow-lg">
           {isLoading ? (
             <p className="px-3.5 py-2.5 font-sans text-sm text-neutral-400">Searching…</p>
           ) : options.length === 0 ? (

@@ -135,7 +135,7 @@ export default function DocumentView() {
             <button
               type="button"
               onClick={() => window.open(`${API_BASE_URL}/documents/${document.id}/pdf`, "_blank")}
-              className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+              className="rounded-lg bg-secondary px-4 py-2 font-sans text-sm font-semibold text-secondary-deep transition-all hover:-translate-y-0.5 hover:brightness-95"
             >
               Download PDF
             </button>
@@ -145,7 +145,7 @@ export default function DocumentView() {
                 disabled={isSending || !document.customer.email}
                 onClick={handleSend}
                 title={!document.customer.email ? "Add an email to this customer to send it" : undefined}
-                className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-70"
+                className="rounded-lg bg-primary-100 px-4 py-2 font-sans text-sm font-semibold text-primary-700 transition-all hover:-translate-y-0.5 hover:brightness-95 disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-60"
               >
                 {isSending ? "Sending…" : document.sentAt ? "Resend" : "Send by email"}
               </button>

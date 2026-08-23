@@ -101,7 +101,7 @@ export default function BusinessSettings() {
         )}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-          <section className="rounded-xl border border-neutral-200 bg-white p-6">
+          <section className="rounded-xl border border-neutral-200 bg-surface p-6">
             <h2 className="font-display text-base font-semibold text-neutral-900">Business identity</h2>
             <div className="mt-4 flex flex-col gap-5">
               {TEXT_FIELDS.filter((field) => IDENTITY_FIELD_IDS.includes(field.id)).map((field) => (
@@ -117,7 +117,7 @@ export default function BusinessSettings() {
             </div>
           </section>
 
-          <section className="rounded-xl border border-neutral-200 bg-white p-6">
+          <section className="rounded-xl border border-neutral-200 bg-surface p-6">
             <h2 className="font-display text-base font-semibold text-neutral-900">Contact</h2>
             <div className="mt-4 flex flex-col gap-5">
               {TEXT_FIELDS.filter((field) => CONTACT_FIELD_IDS.includes(field.id)).map((field) => (
@@ -133,7 +133,7 @@ export default function BusinessSettings() {
             </div>
           </section>
 
-          <section className="rounded-xl border border-neutral-200 bg-white p-6">
+          <section className="rounded-xl border border-neutral-200 bg-surface p-6">
             <h2 className="font-display text-base font-semibold text-neutral-900">Tax and compliance</h2>
             <div className="mt-4 flex flex-col gap-5">
               {TEXT_FIELDS.filter((field) => TAX_FIELD_IDS.includes(field.id)).map((field) => (
@@ -149,7 +149,7 @@ export default function BusinessSettings() {
             </div>
           </section>
 
-          <section className="rounded-xl border border-neutral-200 bg-white p-6">
+          <section className="rounded-xl border border-neutral-200 bg-surface p-6">
             <h2 className="font-display text-base font-semibold text-neutral-900">Document template</h2>
             <div className="mt-4 flex flex-col gap-3">
               {TEMPLATE_OPTIONS.map((option) => (

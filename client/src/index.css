@@ -21,8 +21,11 @@ html {
   --color-neutral-50: #fafafa;
   --color-neutral-100: #f4f4f5;
   --color-neutral-200: #e4e4e7;
+  --color-neutral-300: #d4d4d8;
   --color-neutral-400: #a1a1aa;
+  --color-neutral-500: #71717a;
   --color-neutral-600: #52525b;
+  --color-neutral-700: #3f3f46;
   --color-neutral-800: #27272a;
   --color-neutral-900: #18181b;
 
@@ -32,4 +35,46 @@ html {
   --color-error-bg: #fee2e2;
   --color-warning: #d97706;
   --color-warning-bg: #fef3c7;
+
+  /* surfaces: cards/panels sitting on top of the page background */
+  --color-surface: #ffffff;
+  --color-surface-hover: #fafafa;
+  --color-page: #fafafa;
+}
+
+[data-theme="dark"] {
+  --color-primary-100: #3d1428;
+  --color-primary-700: #f472b6;
+
+  --color-secondary-deep: #7dd3fc;
+
+  --color-neutral-50: #232326;
+  --color-neutral-100: #2a2a2e;
+  --color-neutral-200: #3f3f46;
+  --color-neutral-300: #54545c;
+  --color-neutral-400: #8b8b93;
+  --color-neutral-500: #9f9fa6;
+  --color-neutral-600: #b4b4bb;
+  --color-neutral-700: #c7c7cd;
+  --color-neutral-800: #e4e4e7;
+  --color-neutral-900: #fafafa;
+
+  --color-success: #4ade80;
+  --color-success-bg: #0f2c1c;
+  --color-error: #f87171;
+  --color-error-bg: #3a1212;
+  --color-warning: #fbbf24;
+  --color-warning-bg: #3a2705;
+
+  --color-surface: #1c1c1f;
+  --color-surface-hover: #26262a;
+  --color-page: #131315;
+}
+
+body {
+  background-color: #ffffff;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
 }

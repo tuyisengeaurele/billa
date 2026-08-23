@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { apiRequest } from "../lib/apiClient";
+import { useTheme } from "../context/ThemeContext";
 import { Sidebar } from "./Sidebar";
 
 interface AppLayoutProps {
@@ -8,6 +9,7 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
+  const { theme } = useTheme();
   const [billingBanner, setBillingBanner] = useState<string | null>(null);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
@@ -27,22 +29,22 @@ export function AppLayout({ children }: AppLayoutProps) {
   }, []);
 
   return (
-    <div className="flex min-h-screen bg-neutral-50">
-      <aside className="hidden w-64 shrink-0 border-r border-neutral-200 bg-white lg:block">
+    <div data-theme={theme} className="flex min-h-screen bg-page">
+      <aside className="hidden w-64 shrink-0 border-r border-neutral-200 bg-surface lg:block">
         <Sidebar billingBanner={billingBanner} />
       </aside>
 
       {isMobileNavOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div className="absolute inset-0 bg-neutral-900/40" onClick={() => setIsMobileNavOpen(false)} />
-          <aside className="absolute inset-y-0 left-0 w-64 border-r border-neutral-200 bg-white">
+          <aside className="absolute inset-y-0 left-0 w-64 border-r border-neutral-200 bg-surface">
             <Sidebar billingBanner={billingBanner} onNavigate={() => setIsMobileNavOpen(false)} />
           </aside>
         </div>
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center gap-3 border-b border-neutral-200 bg-white px-4 py-3 lg:hidden">
+        <header className="flex items-center gap-3 border-b border-neutral-200 bg-surface px-4 py-3 lg:hidden">
           <button
             type="button"
             onClick={() => setIsMobileNavOpen(true)}

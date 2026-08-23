@@ -1,9 +1,12 @@
 import type { ReactNode } from "react";
+import { motion } from "framer-motion";
 import { Link, useLocation } from "react-router-dom";
 import { DOCUMENT_TYPES } from "@billa/shared";
 import { useAuth } from "../context/AuthContext";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
+import { DOCUMENT_TYPE_COLORS } from "../lib/documentTypeColors";
 import { BusinessSwitcher } from "./BusinessSwitcher";
+import { ThemeToggle } from "./ThemeToggle";
 
 interface SidebarProps {
   billingBanner: string | null;
@@ -24,22 +27,42 @@ function SidebarLink({
   children,
   isActive,
   onNavigate,
+  dotColor,
 }: {
   to: string;
   children: ReactNode;
   isActive: boolean;
   onNavigate?: () => void;
+  dotColor?: string;
 }) {
   return (
-    <Link
-      to={to}
-      onClick={onNavigate}
-      className={`block rounded-lg px-3 py-2 font-sans text-sm font-medium transition-colors ${
-        isActive ? "bg-primary-100 text-primary-700" : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
-      }`}
-    >
-      {children}
+    <Link to={to} onClick={onNavigate} className="relative block rounded-lg px-3 py-2 font-sans text-sm font-medium">
+      {isActive && (
+        <motion.span
+          layoutId="sidebar-active-pill"
+          className="absolute inset-0 rounded-lg bg-primary-100"
+          transition={{ type: "spring", bounce: 0.2, duration: 0.5 }}
+        />
+      )}
+      <span
+        className={`relative z-10 flex items-center gap-2 transition-colors ${
+          isActive ? "text-primary-700" : "text-neutral-600 hover:text-neutral-900"
+        }`}
+      >
+        {dotColor && <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dotColor}`} aria-hidden="true" />}
+        {children}
+      </span>
     </Link>
+  );
+}
+
+function LogoutIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16 17l5-5-5-5" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M21 12H9" />
+    </svg>
   );
 }
 
@@ -49,7 +72,7 @@ export function Sidebar({ billingBanner, onNavigate }: SidebarProps) {
   const active = (to: string) => isLinkActive(pathname, search, to);
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col bg-surface">
       <div className="flex items-center gap-3 px-4 py-5">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-500">
           <img src="/logo.png" alt="" className="h-5 w-5" style={{ filter: "brightness(0) invert(1)" }} />
@@ -74,6 +97,7 @@ export function Sidebar({ billingBanner, onNavigate }: SidebarProps) {
             to={`/documents?type=${type}`}
             isActive={active(`/documents?type=${type}`)}
             onNavigate={onNavigate}
+            dotColor={DOCUMENT_TYPE_COLORS[type].dot}
           >
             {DOCUMENT_TYPE_LABELS[type].plural}
           </SidebarLink>
@@ -101,11 +125,13 @@ export function Sidebar({ billingBanner, onNavigate }: SidebarProps) {
             {billingBanner}
           </p>
         )}
+        <ThemeToggle />
         <button
           type="button"
           onClick={() => logout()}
-          className="text-left font-sans text-sm font-medium text-neutral-600 hover:text-neutral-900"
+          className="flex items-center gap-2 rounded-lg px-3 py-2 font-sans text-sm font-medium text-neutral-600 transition-colors hover:bg-error-bg hover:text-error"
         >
+          <LogoutIcon />
           Log out
         </button>
       </div>

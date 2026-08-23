@@ -49,7 +49,7 @@ export default function AdminMessages() {
       <div className="mx-auto flex max-w-4xl flex-col gap-6">
         <h1 className="font-display text-2xl font-semibold text-neutral-900">Contact messages</h1>
 
-        <div className="rounded-xl border border-neutral-200 bg-white p-6">
+        <div className="rounded-xl border border-neutral-200 bg-surface p-6">
           {isForbidden && (
             <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
               You don't have access to this page.

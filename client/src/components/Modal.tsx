@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, type ReactNode } from "react";
 
 interface ModalProps {
@@ -18,36 +18,43 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
-
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label={title}
-      className="fixed inset-0 z-50 flex justify-end bg-neutral-900/40 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <motion.div
-        initial={{ x: 24, opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        transition={{ duration: 0.3, ease: "easeOut" }}
-        className="flex h-full w-full max-w-md flex-col overflow-y-auto bg-white p-6 shadow-xl"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="mb-6 flex items-center justify-between">
-          <h2 className="font-display text-xl font-semibold text-neutral-900">{title}</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="text-xl leading-none text-neutral-400 hover:text-neutral-600"
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          role="dialog"
+          aria-modal="true"
+          aria-label={title}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/40 p-6 backdrop-blur-sm"
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: 8 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="flex max-h-[85vh] w-full max-w-md flex-col overflow-y-auto rounded-2xl bg-surface p-6 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
           >
-            ×
-          </button>
-        </div>
-        {children}
-      </motion.div>
-    </div>
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="font-display text-xl font-semibold text-neutral-900">{title}</h2>
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Close"
+                className="flex h-8 w-8 items-center justify-center rounded-full text-xl leading-none text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-600"
+              >
+                ×
+              </button>
+            </div>
+            {children}
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

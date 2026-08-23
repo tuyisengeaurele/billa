@@ -234,7 +234,7 @@ export default function DocumentForm() {
         )}
 
         <form onSubmit={handleSubmit(saveDraft)} className="flex flex-col gap-6">
-          <section className="rounded-xl border border-neutral-200 bg-white p-6">
+          <section className="rounded-xl border border-neutral-200 bg-surface p-6">
             <h2 className="font-display text-base font-semibold text-neutral-900">Details</h2>
             <div className="mt-4 grid grid-cols-2 gap-4">
               <CustomerPicker
@@ -265,7 +265,7 @@ export default function DocumentForm() {
             </div>
           </section>
 
-          <section className="rounded-xl border border-neutral-200 bg-white p-6">
+          <section className="rounded-xl border border-neutral-200 bg-surface p-6">
             <div className="flex items-center justify-between">
               <h2 className="font-display text-base font-semibold text-neutral-900">Line items</h2>
               <button

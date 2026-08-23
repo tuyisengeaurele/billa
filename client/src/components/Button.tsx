@@ -9,12 +9,13 @@ type NativeButtonProps = Omit<
 interface ButtonProps extends NativeButtonProps {
   isLoading?: boolean;
   variant?: "primary" | "outline";
+  fullWidth?: boolean;
   children: ReactNode;
 }
 
 const VARIANT_CLASSES: Record<"primary" | "outline", string> = {
   primary: "bg-primary-500 text-white hover:bg-primary-700",
-  outline: "border border-neutral-200 bg-white text-neutral-900 hover:bg-neutral-50",
+  outline: "border border-neutral-200 bg-surface text-neutral-900 hover:bg-neutral-50",
 };
 
 const SPINNER_CLASSES: Record<"primary" | "outline", string> = {
@@ -22,7 +23,15 @@ const SPINNER_CLASSES: Record<"primary" | "outline", string> = {
   outline: "border-neutral-300 border-t-neutral-700",
 };
 
-export function Button({ isLoading, variant = "primary", children, disabled, className, ...props }: ButtonProps) {
+export function Button({
+  isLoading,
+  variant = "primary",
+  fullWidth = true,
+  children,
+  disabled,
+  className,
+  ...props
+}: ButtonProps) {
   const isDisabled = disabled || isLoading;
 
   return (
@@ -30,7 +39,7 @@ export function Button({ isLoading, variant = "primary", children, disabled, cla
       whileHover={{ scale: isDisabled ? 1 : 1.01 }}
       whileTap={{ scale: isDisabled ? 1 : 0.98 }}
       disabled={isDisabled}
-      className={`flex w-full items-center justify-center rounded-lg px-4 py-2.5 font-sans text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-70 ${VARIANT_CLASSES[variant]} ${className ?? ""}`}
+      className={`flex items-center justify-center rounded-lg px-4 py-2.5 font-sans text-sm font-semibold shadow-sm transition-all hover:shadow-md disabled:cursor-not-allowed disabled:opacity-70 disabled:shadow-none ${fullWidth ? "w-full" : ""} ${VARIANT_CLASSES[variant]} ${className ?? ""}`}
       {...props}
     >
       {isLoading ? (

@@ -59,7 +59,7 @@ export function BillingSection() {
       : "Your free trial has ended.";
 
   return (
-    <section className="rounded-xl border border-neutral-200 bg-white p-6">
+    <section className="rounded-xl border border-neutral-200 bg-surface p-6">
       <h2 className="font-display text-base font-semibold text-neutral-900">Billing</h2>
 
       {checkoutError && (
