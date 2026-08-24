@@ -298,7 +298,7 @@ export default function DocumentForm() {
                     const lineTotal = line ? Math.round((line.quantity || 0) * (line.unitPrice || 0)) : 0;
                     return (
                       <tr key={field.id} className="border-b border-neutral-100">
-                        <td className="py-2">
+                        <td className="py-2 align-top">
                           <ItemPicker
                             value={watch(`lines.${index}.description`) ?? ""}
                             error={errors.lines?.[index]?.description?.message}
@@ -313,7 +313,7 @@ export default function DocumentForm() {
                             }}
                           />
                         </td>
-                        <td className="py-2">
+                        <td className="py-2 align-top">
                           <input
                             type="number"
                             step="0.01"
@@ -322,7 +322,7 @@ export default function DocumentForm() {
                             {...register(`lines.${index}.quantity`, { valueAsNumber: true })}
                           />
                         </td>
-                        <td className="py-2">
+                        <td className="py-2 align-top">
                           <input
                             type="number"
                             aria-label="Unit price"
@@ -330,7 +330,7 @@ export default function DocumentForm() {
                             {...register(`lines.${index}.unitPrice`, { valueAsNumber: true })}
                           />
                         </td>
-                        <td className="py-2">
+                        <td className="py-2 align-top">
                           <input
                             type="number"
                             aria-label="Tax rate"
@@ -338,8 +338,8 @@ export default function DocumentForm() {
                             {...register(`lines.${index}.taxRate`, { valueAsNumber: true })}
                           />
                         </td>
-                        <td className="py-2 text-neutral-600">{formatRwf(lineTotal)}</td>
-                        <td className="py-2">
+                        <td className="py-2 align-top text-neutral-600">{formatRwf(lineTotal)}</td>
+                        <td className="py-2 align-top">
                           <button
                             type="button"
                             onClick={() => remove(index)}

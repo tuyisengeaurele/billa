@@ -9,6 +9,7 @@ export interface SearchDropdownOption {
 interface SearchDropdownProps {
   id: string;
   label: string;
+  hideLabel?: boolean;
   placeholder: string;
   error?: string;
   query: string;
@@ -21,6 +22,7 @@ interface SearchDropdownProps {
 export function SearchDropdown({
   id,
   label,
+  hideLabel = false,
   placeholder,
   error,
   query,
@@ -33,7 +35,7 @@ export function SearchDropdown({
 
   return (
     <div className="relative flex flex-col gap-1.5">
-      <label htmlFor={id} className="font-sans text-sm font-medium text-neutral-800">
+      <label htmlFor={id} className={hideLabel ? "sr-only" : "font-sans text-sm font-medium text-neutral-800"}>
         {label}
       </label>
       <input

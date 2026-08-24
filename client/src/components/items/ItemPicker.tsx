@@ -48,6 +48,7 @@ export function ItemPicker({ value, error, onSelect, onDescriptionChange }: Item
     <SearchDropdown
       id="item"
       label="Item"
+      hideLabel
       placeholder="Search items"
       error={error}
       query={query}
