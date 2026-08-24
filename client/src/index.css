@@ -29,11 +29,13 @@ html {
   --color-neutral-800: #27272a;
   --color-neutral-900: #18181b;
 
-  --color-success: #16a34a;
+  /* darker than the usual 500/600 shade: these sit on their own -bg tint
+     (role="alert"/"status" banners), and the lighter shade fails WCAG AA there */
+  --color-success: #166534;
   --color-success-bg: #dcfce7;
-  --color-error: #dc2626;
+  --color-error: #b91c1c;
   --color-error-bg: #fee2e2;
-  --color-warning: #d97706;
+  --color-warning: #92400e;
   --color-warning-bg: #fef3c7;
 
   /* surfaces: cards/panels sitting on top of the page background */
