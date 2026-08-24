@@ -65,6 +65,41 @@ describe("POST /documents", () => {
     expect(res.body.document.total).toBe(0);
   });
 
+  it("schedules the next occurrence when recurrence is set", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies);
+
+    const res = await request(app)
+      .post("/documents")
+      .set("Cookie", cookies)
+      .send({
+        type: "INVOICE",
+        customerId,
+        issueDate: "2026-08-19",
+        lines: [],
+        recurrence: { interval: "MONTHLY" },
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.document.recurrenceInterval).toBe("MONTHLY");
+    expect(res.body.document.nextRecurrenceAt.slice(0, 10)).toBe("2026-09-19");
+  });
+
+  it("leaves recurrence fields null when recurrence is not set", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies);
+
+    const res = await request(app)
+      .post("/documents")
+      .set("Cookie", cookies)
+      .send({ type: "INVOICE", customerId, issueDate: "2026-08-19", lines: [] });
+
+    expect(res.body.document.recurrenceInterval).toBeNull();
+    expect(res.body.document.nextRecurrenceAt).toBeNull();
+  });
+
   it("rejects a missing customerId with 400", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app);

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { DOCUMENT_TYPES, type DocumentType } from "./document-types.js";
+import { DOCUMENT_TYPES, RECURRENCE_INTERVALS, type DocumentType } from "./document-types.js";
 
 export const documentLineSchema = z.object({
   itemId: z.string().trim().min(1).optional(),
@@ -16,6 +16,15 @@ export const documentLineSchema = z.object({
 });
 export type DocumentLineInput = z.infer<typeof documentLineSchema>;
 
+export const recurrenceSchema = z
+  .object({
+    interval: z.enum(RECURRENCE_INTERVALS),
+    endDate: z.string().trim().min(1).optional(),
+  })
+  .nullable()
+  .optional();
+export type RecurrenceInput = z.infer<typeof recurrenceSchema>;
+
 export const documentSchema = z.object({
   type: z.enum(DOCUMENT_TYPES),
   customerId: z.string().trim().min(1, "Choose a customer"),
@@ -23,6 +32,7 @@ export const documentSchema = z.object({
   dueDate: z.string().trim().min(1).optional(),
   notes: z.string().trim().min(1).optional(),
   lines: z.array(documentLineSchema),
+  recurrence: recurrenceSchema,
 });
 export type DocumentInput = z.infer<typeof documentSchema>;
 

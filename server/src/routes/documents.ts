@@ -12,6 +12,8 @@ import { DEFAULT_PREFIXES } from "../lib/document-sequences.js";
 import { buildPdfRenderData } from "../lib/pdf/render-data.js";
 import { renderDocumentPdf } from "../lib/pdf/render-document-pdf.js";
 import { sendDocumentEmail } from "../lib/resend.js";
+import { addInterval, generateDueRecurringDocuments } from "../lib/recurring-documents.js";
+import { sendOverdueReminders } from "../lib/overdue-reminders.js";
 
 export const documentsRouter = Router();
 
@@ -24,6 +26,27 @@ const DOCUMENT_INCLUDE = {
   convertedFrom: { select: { id: true, number: true, type: true } },
   convertedTo: { select: { id: true, number: true, type: true } },
 };
+
+function recurrenceFields(body: DocumentInput) {
+  if (!body.recurrence) {
+    return { recurrenceInterval: null, recurrenceEndDate: null, nextRecurrenceAt: null };
+  }
+  return {
+    recurrenceInterval: body.recurrence.interval,
+    recurrenceEndDate: body.recurrence.endDate ? new Date(body.recurrence.endDate) : null,
+    nextRecurrenceAt: addInterval(new Date(body.issueDate), body.recurrence.interval),
+  };
+}
+
+documentsRouter.post("/recurring/generate-due", async (req, res) => {
+  const generated = await generateDueRecurringDocuments(req.auth!.businessId);
+  res.json({ generated });
+});
+
+documentsRouter.post("/overdue/send-reminders", async (req, res) => {
+  const sent = await sendOverdueReminders(req.auth!.businessId);
+  res.json({ sent });
+});
 
 documentsRouter.get("/", validateQuery(documentListQuerySchema), async (req, res) => {
   const query = req.listQuery as DocumentListQuery;
@@ -83,6 +106,7 @@ documentsRouter.post("/", validateBody(documentSchema), async (req, res) => {
       subtotal: totals.subtotal,
       taxTotal: totals.taxTotal,
       total: totals.total,
+      ...recurrenceFields(body),
       lines: {
         create: body.lines.map((line, index) => ({
           itemId: line.itemId,
@@ -238,6 +262,7 @@ documentsRouter.patch("/:id", validateBody(documentSchema), async (req, res) => 
         subtotal: totals.subtotal,
         taxTotal: totals.taxTotal,
         total: totals.total,
+        ...recurrenceFields(body),
         lines: {
           create: body.lines.map((line, index) => ({
             itemId: line.itemId,

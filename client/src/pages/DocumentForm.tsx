@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { getDueDateLabel, type DocumentType } from "@billa/shared";
+import { getDueDateLabel, RECURRENCE_INTERVALS, type DocumentType, type RecurrenceInterval } from "@billa/shared";
 import { useEffect, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -34,8 +34,18 @@ const documentFormSchema = z.object({
   dueDate: z.string().trim(),
   notes: z.string().trim(),
   lines: z.array(lineFormSchema),
+  recurrenceEnabled: z.boolean(),
+  recurrenceInterval: z.string(),
+  recurrenceEndDate: z.string(),
 });
 type DocumentFormInput = z.infer<typeof documentFormSchema>;
+
+const RECURRENCE_INTERVAL_LABELS: Record<RecurrenceInterval, string> = {
+  WEEKLY: "Weekly",
+  MONTHLY: "Monthly",
+  QUARTERLY: "Quarterly",
+  ANNUALLY: "Annually",
+};
 
 interface DocumentLineResponse {
   itemId: string | null;
@@ -55,6 +65,8 @@ interface DocumentResponse {
   lines: DocumentLineResponse[];
   convertedFrom: { id: string; number: string | null } | null;
   type: DocumentType;
+  recurrenceInterval: RecurrenceInterval | null;
+  recurrenceEndDate: string | null;
 }
 
 function calculateLiveTotals(lines: { quantity?: number; unitPrice?: number; taxRate?: number }[]) {
@@ -103,6 +115,9 @@ export default function DocumentForm() {
       dueDate: "",
       notes: "",
       lines: [],
+      recurrenceEnabled: false,
+      recurrenceInterval: "MONTHLY",
+      recurrenceEndDate: "",
     },
   });
 
@@ -128,6 +143,9 @@ export default function DocumentForm() {
             unitPrice: line.unitPrice,
             taxRate: Number(line.taxRate),
           })),
+          recurrenceEnabled: doc.recurrenceInterval !== null,
+          recurrenceInterval: doc.recurrenceInterval ?? "MONTHLY",
+          recurrenceEndDate: doc.recurrenceEndDate ? doc.recurrenceEndDate.slice(0, 10) : "",
         });
         setConvertedFrom(doc.convertedFrom ?? null);
         setIsLoaded(true);
@@ -152,6 +170,12 @@ export default function DocumentForm() {
         dueDate: data.dueDate.trim() || undefined,
         notes: data.notes.trim() || undefined,
         lines: data.lines,
+        recurrence: data.recurrenceEnabled
+          ? {
+              interval: data.recurrenceInterval as RecurrenceInterval,
+              endDate: data.recurrenceEndDate.trim() || undefined,
+            }
+          : null,
       };
       const response = isEditing
         ? await apiRequest<{ document: DocumentResponse }>(`/documents/${id}`, { method: "PATCH", body: payload })
@@ -263,6 +287,39 @@ export default function DocumentForm() {
                 />
               )}
               <FormField id="notes" label="Notes" type="text" error={errors.notes?.message} {...register("notes")} />
+            </div>
+
+            <div className="mt-5 flex flex-col gap-3 border-t border-neutral-100 pt-4">
+              <label className="flex items-center gap-2 font-sans text-sm font-medium text-neutral-800">
+                <input type="checkbox" {...register("recurrenceEnabled")} />
+                Make this recurring
+              </label>
+              {watch("recurrenceEnabled") && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label htmlFor="recurrenceInterval" className="font-sans text-sm font-medium text-neutral-800">
+                      Repeats
+                    </label>
+                    <select
+                      id="recurrenceInterval"
+                      className="rounded-lg border border-neutral-200 bg-surface px-3.5 py-2.5 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                      {...register("recurrenceInterval")}
+                    >
+                      {RECURRENCE_INTERVALS.map((interval) => (
+                        <option key={interval} value={interval}>
+                          {RECURRENCE_INTERVAL_LABELS[interval]}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <FormField
+                    id="recurrenceEndDate"
+                    label="Ends on (optional)"
+                    type="date"
+                    {...register("recurrenceEndDate")}
+                  />
+                </div>
+              )}
             </div>
           </section>
 

@@ -106,12 +106,36 @@ export default function Dashboard() {
   const tooltipItemStyle = { color: isDark ? "#fafafa" : "#18181b" };
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const [isSendingReminders, setIsSendingReminders] = useState(false);
+  const [reminderMessage, setReminderMessage] = useState<string | null>(null);
+  const [reminderIsError, setReminderIsError] = useState(false);
 
   useEffect(() => {
     apiRequest<DashboardSummary>("/dashboard/summary")
       .then(setSummary)
       .catch(() => setLoadError(true));
   }, []);
+
+  async function handleSendReminders() {
+    setReminderMessage(null);
+    setReminderIsError(false);
+    setIsSendingReminders(true);
+    try {
+      const result = await apiRequest<{ sent: { documentId: string }[] }>("/documents/overdue/send-reminders", {
+        method: "POST",
+      });
+      setReminderMessage(
+        result.sent.length > 0
+          ? `Sent ${result.sent.length} reminder${result.sent.length === 1 ? "" : "s"}.`
+          : "No reminders to send right now.",
+      );
+    } catch {
+      setReminderIsError(true);
+      setReminderMessage("Couldn't send reminders. Try again.");
+    } finally {
+      setIsSendingReminders(false);
+    }
+  }
 
   const hasNoDocuments = summary !== null && summary.recentDocuments.length === 0;
   const hasAttentionItems = summary !== null && (summary.draftCount > 0 || summary.overdueInvoiceCount > 0);
@@ -195,6 +219,27 @@ export default function Dashboard() {
                 {summary.overdueInvoiceCount} invoice{summary.overdueInvoiceCount === 1 ? "" : "s"} past due date
               </Link>
             )}
+            {summary.overdueInvoiceCount > 0 && (
+              <button
+                type="button"
+                disabled={isSendingReminders}
+                onClick={handleSendReminders}
+                className="rounded-lg border border-neutral-200 px-4 py-3 font-sans text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {isSendingReminders ? "Sending…" : "Send reminders"}
+              </button>
+            )}
+          </div>
+        )}
+
+        {reminderMessage && (
+          <div
+            className={`rounded-lg px-4 py-3 font-sans text-sm ${
+              reminderIsError ? "bg-error-bg text-error" : "bg-success-bg text-success"
+            }`}
+            role={reminderIsError ? "alert" : "status"}
+          >
+            {reminderMessage}
           </div>
         )}
 

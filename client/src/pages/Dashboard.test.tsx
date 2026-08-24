@@ -1,4 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../context/AuthContext";
@@ -90,6 +91,52 @@ describe("Dashboard", () => {
 
     expect(screen.getByRole("link", { name: /new invoice/i })).toHaveAttribute("href", "/documents/new?type=INVOICE");
     expect(screen.getByRole("link", { name: /new quote/i })).toHaveAttribute("href", "/documents/new?type=QUOTE");
+  });
+
+  it("sends reminders and shows a confirmation when 'Send reminders' is clicked", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.includes("/documents/overdue/send-reminders") && init?.method === "POST") {
+        return new Response(JSON.stringify({ sent: [{ documentId: "d1" }, { documentId: "d2" }] }), { status: 200 });
+      }
+      if (url.includes("/dashboard/summary")) {
+        return new Response(
+          JSON.stringify(
+            baseSummary({
+              overdueInvoiceCount: 1,
+              recentDocuments: [
+                {
+                  id: "d1",
+                  type: "INVOICE",
+                  number: "INV-0001",
+                  status: "FINALIZED",
+                  customerName: "Musanze Supplies",
+                  issueDate: "2026-08-19",
+                },
+              ],
+            }),
+          ),
+          { status: 200 },
+        );
+      }
+      if (url.includes("/auth/me")) {
+        return new Response(
+          JSON.stringify({
+            user: { id: "u1", email: "owner@example.com" },
+            business: { id: "b1", name: "Kigali Traders" },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+    const user = userEvent.setup();
+
+    renderDashboard();
+
+    await user.click(await screen.findByRole("button", { name: /send reminders/i }));
+
+    expect(await screen.findByText(/sent 2 reminders/i)).toBeInTheDocument();
   });
 
   it("shows attention cards when there are drafts and overdue invoices", async () => {

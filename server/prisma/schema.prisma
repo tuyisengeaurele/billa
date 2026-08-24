@@ -25,6 +25,13 @@ enum DocumentTemplate {
   SIDEBAR_ACCENT
 }
 
+enum RecurrenceInterval {
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  ANNUALLY
+}
+
 model Business {
   id               String            @id @default(cuid())
   ownerId          String
@@ -148,6 +155,12 @@ model Document {
 
   publicToken String @unique @default(dbgenerated("gen_random_uuid()::text"))
 
+  recurrenceInterval RecurrenceInterval?
+  recurrenceEndDate  DateTime?
+  nextRecurrenceAt   DateTime?
+
+  lastReminderSentAt DateTime?
+
   convertedFromId String?   @unique
   convertedFrom   Document? @relation("DocumentConversion", fields: [convertedFromId], references: [id])
   convertedTo     Document? @relation("DocumentConversion")
@@ -161,6 +174,7 @@ model Document {
 
   @@unique([businessId, type, number])
   @@index([businessId])
+  @@index([nextRecurrenceAt])
 }
 
 model DocumentLine {

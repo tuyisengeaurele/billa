@@ -124,6 +124,96 @@ describe("DocumentForm", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: /finalize/i })).toBeInTheDocument());
   });
 
+  it("sends recurrence in the payload when 'Make this recurring' is checked", async () => {
+    let postBody: unknown = null;
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.includes("/customers")) {
+        return new Response(
+          JSON.stringify({ results: [{ id: "c1", name: "Kigali Traders", phone: null }], total: 1, page: 1, pageSize: 10 }),
+          { status: 200 },
+        );
+      }
+      if (url.includes("/documents") && init?.method === "POST") {
+        postBody = JSON.parse(init.body as string);
+        return new Response(JSON.stringify({ document: { id: "d1" } }), { status: 201 });
+      }
+      if (url.endsWith("/documents/d1") && init?.method !== "PATCH") {
+        return new Response(
+          JSON.stringify({
+            document: {
+              id: "d1",
+              type: "INVOICE",
+              customerId: "c1",
+              customer: { name: "Kigali Traders" },
+              issueDate: "2026-08-19T00:00:00.000Z",
+              dueDate: null,
+              notes: null,
+              lines: [],
+              recurrenceInterval: null,
+              recurrenceEndDate: null,
+            },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderNew();
+
+    await user.click(screen.getByRole("button", { name: /select a customer/i }));
+    await user.type(screen.getByLabelText("Search customers"), "Kigali");
+    await user.click(await screen.findByText("Kigali Traders"));
+
+    await user.click(screen.getByLabelText(/make this recurring/i));
+    await user.selectOptions(screen.getByLabelText("Repeats"), "QUARTERLY");
+    await user.click(screen.getByRole("button", { name: /save draft/i }));
+
+    await waitFor(() =>
+      expect(postBody).toMatchObject({ recurrence: { interval: "QUARTERLY" } }),
+    );
+  });
+
+  it("does not show the interval picker until 'Make this recurring' is checked", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async () => new Response("{}", { status: 401 }));
+    renderNew();
+
+    expect(screen.queryByLabelText("Repeats")).not.toBeInTheDocument();
+  });
+
+  it("pre-fills recurrence when editing a document that already has it set", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.endsWith("/documents/d1")) {
+        return new Response(
+          JSON.stringify({
+            document: {
+              id: "d1",
+              type: "INVOICE",
+              customerId: "c1",
+              customer: { name: "Kigali Traders" },
+              issueDate: "2026-08-19T00:00:00.000Z",
+              dueDate: null,
+              notes: null,
+              lines: [],
+              recurrenceInterval: "WEEKLY",
+              recurrenceEndDate: null,
+            },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    renderEdit("d1");
+
+    expect(await screen.findByLabelText(/make this recurring/i)).toBeChecked();
+    expect(screen.getByLabelText("Repeats")).toHaveValue("WEEKLY");
+  });
+
   it("loads an existing draft for editing", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async (input) => {
       const url = urlOf(input);

@@ -43,6 +43,41 @@ describe("documentSchema", () => {
       documentSchema.safeParse({ type: "BANANA", customerId: "c1", issueDate: "2026-08-19", lines: [] }).success,
     ).toBe(false);
   });
+
+  it("accepts a valid recurrence", () => {
+    const result = documentSchema.safeParse({
+      type: "INVOICE",
+      customerId: "c1",
+      issueDate: "2026-08-19",
+      lines: [],
+      recurrence: { interval: "MONTHLY", endDate: "2027-08-19" },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts null recurrence to mean not recurring", () => {
+    expect(
+      documentSchema.safeParse({
+        type: "INVOICE",
+        customerId: "c1",
+        issueDate: "2026-08-19",
+        lines: [],
+        recurrence: null,
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects an unknown recurrence interval", () => {
+    expect(
+      documentSchema.safeParse({
+        type: "INVOICE",
+        customerId: "c1",
+        issueDate: "2026-08-19",
+        lines: [],
+        recurrence: { interval: "DAILY" },
+      }).success,
+    ).toBe(false);
+  });
 });
 
 describe("documentListQuerySchema", () => {
