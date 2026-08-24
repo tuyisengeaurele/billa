@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "./lib/sentry-init.js";
 import { createApp } from "./app.js";
 
 const app = createApp();

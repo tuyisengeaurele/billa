@@ -16,6 +16,9 @@ server/uploads/
 server/uploads-test/
 
 client/.vite/
+*.tsbuildinfo
+client/vite.config.js
+client/vite.config.d.ts
 
 # python
 bg-removal-service/.venv/

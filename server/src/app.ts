@@ -1,7 +1,9 @@
+import "express-async-errors";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
 import helmet from "helmet";
+import * as Sentry from "@sentry/node";
 import { authRouter } from "./routes/auth.js";
 import { businessRouter } from "./routes/business.js";
 import { customersRouter } from "./routes/customers.js";
@@ -13,6 +15,7 @@ import { businessesRouter } from "./routes/businesses.js";
 import { contactRouter } from "./routes/contact.js";
 import { getStorage } from "./lib/storage.js";
 import { detectAllowedImageType } from "./lib/file-sniff.js";
+import { errorHandler } from "./middleware/error-handler.js";
 
 export function createApp() {
   const app = express();
@@ -67,6 +70,9 @@ export function createApp() {
   app.use("/dashboard", dashboardRouter);
   app.use("/businesses", businessesRouter);
   app.use("/contact", contactRouter);
+
+  Sentry.setupExpressErrorHandler(app);
+  app.use(errorHandler);
 
   return app;
 }
