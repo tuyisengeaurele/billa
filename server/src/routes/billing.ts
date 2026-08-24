@@ -11,6 +11,13 @@ export const billingRouter = Router();
 
 const PLAN_DAYS: Record<"MONTHLY" | "ANNUAL", number> = { MONTHLY: 30, ANNUAL: 365 };
 
+function safeEqual(a: string, b: string): boolean {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
 billingRouter.post("/checkout", requireAuth, validateBody(billingCheckoutSchema), async (req, res) => {
   const { plan } = req.body as BillingCheckoutInput;
   const userId = req.auth!.userId;
@@ -80,7 +87,8 @@ billingRouter.post("/verify", requireAuth, validateBody(billingVerifySchema), as
 
 billingRouter.post("/webhook", async (req, res) => {
   const signature = req.header("verif-hash");
-  if (!signature || signature !== process.env.FLUTTERWAVE_WEBHOOK_HASH) {
+  const expected = process.env.FLUTTERWAVE_WEBHOOK_HASH;
+  if (!signature || !expected || !safeEqual(signature, expected)) {
     res.status(401).json({ error: "invalid_signature" });
     return;
   }

@@ -34,6 +34,17 @@ describe("PATCH /business", () => {
     expect(res.body.business.name).toBe("Kigali Traders");
   });
 
+  it("clears a field when it's explicitly set to null", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    await request(app).patch("/business").set("Cookie", cookies).send({ tin: "123456789" });
+
+    const res = await request(app).patch("/business").set("Cookie", cookies).send({ tin: null });
+
+    expect(res.status).toBe(200);
+    expect(res.body.business.tin).toBeNull();
+  });
+
   it("rejects an invalid email with 400", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app);

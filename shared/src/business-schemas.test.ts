@@ -17,6 +17,21 @@ describe("businessProfileSchema", () => {
     expect(result.success).toBe(false);
   });
 
+  it("accepts null on a nullable field to clear it", () => {
+    const result = businessProfileSchema.safeParse({ tin: null });
+    expect(result.success).toBe(true);
+  });
+
+  it("still rejects an empty string, only null clears a field", () => {
+    const result = businessProfileSchema.safeParse({ tin: "" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects null for name, which is required and can't be cleared", () => {
+    const result = businessProfileSchema.safeParse({ name: null });
+    expect(result.success).toBe(false);
+  });
+
   it("accepts a valid defaultTemplate", () => {
     const result = businessProfileSchema.safeParse({ defaultTemplate: "FORMAL" });
     expect(result.success).toBe(true);

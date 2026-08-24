@@ -56,12 +56,15 @@ export default function BusinessSettings() {
     setApiError(null);
     setIsSaving(true);
     try {
-      const payload: Record<string, string> = { defaultTemplate: profile.defaultTemplate };
+      const payload: Record<string, string | null> = {
+        defaultTemplate: profile.defaultTemplate,
+        name: profile.name.trim(),
+      };
       for (const field of TEXT_FIELDS) {
+        if (field.id === "name") continue;
         const value = profile[field.id];
-        if (typeof value === "string" && value.trim().length > 0) {
-          payload[field.id] = value.trim();
-        }
+        const trimmed = typeof value === "string" ? value.trim() : "";
+        payload[field.id] = trimmed.length > 0 ? trimmed : null;
       }
       await apiRequest("/business", { method: "PATCH", body: payload });
     } catch (err) {

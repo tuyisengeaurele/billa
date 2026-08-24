@@ -4,12 +4,12 @@ import { DOCUMENT_TYPES, DOCUMENT_TEMPLATES } from "./document-types.js";
 export const businessProfileSchema = z
   .object({
     name: z.string().trim().min(1).optional(),
-    tin: z.string().trim().min(1).optional(),
-    industry: z.string().trim().min(1).optional(),
-    phone: z.string().trim().min(1).optional(),
-    email: z.string().email().optional(),
-    address: z.string().trim().min(1).optional(),
-    rraEbmNumber: z.string().trim().min(1).optional(),
+    tin: z.string().trim().min(1).nullable().optional(),
+    industry: z.string().trim().min(1).nullable().optional(),
+    phone: z.string().trim().min(1).nullable().optional(),
+    email: z.string().email().nullable().optional(),
+    address: z.string().trim().min(1).nullable().optional(),
+    rraEbmNumber: z.string().trim().min(1).nullable().optional(),
     defaultTemplate: z.enum(DOCUMENT_TEMPLATES).optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {

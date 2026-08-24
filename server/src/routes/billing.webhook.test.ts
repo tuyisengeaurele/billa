@@ -29,6 +29,16 @@ describe("POST /billing/webhook", () => {
     expect(res.status).toBe(401);
   });
 
+  it("rejects a same-length verif-hash that doesn't match", async () => {
+    const wrongButSameLength = "x".repeat(process.env.FLUTTERWAVE_WEBHOOK_HASH!.length);
+    const res = await request(createApp())
+      .post("/billing/webhook")
+      .set("verif-hash", wrongButSameLength)
+      .send({ data: { tx_ref: "x", id: 1 } });
+
+    expect(res.status).toBe(401);
+  });
+
   it("extends the business's period on a genuine webhook", async () => {
     const app = createApp();
     const registerRes = await request(app).post("/auth/session").send({
