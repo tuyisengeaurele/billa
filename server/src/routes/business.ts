@@ -7,7 +7,7 @@ import { requireAuth } from "../middleware/require-auth.js";
 import { validateBody } from "../middleware/validate.js";
 import { mergeSequences } from "../lib/document-sequences.js";
 import { detectAllowedImageType } from "../lib/file-sniff.js";
-import { LocalDiskStorage } from "../lib/storage.js";
+import { getStorage } from "../lib/storage.js";
 import { detectBackground } from "../lib/background-detect.js";
 import { removeBackground } from "../lib/rembg-client.js";
 import { ForbiddenUploadPathError, readUploadedFile } from "../lib/uploaded-file.js";
@@ -21,8 +21,6 @@ const uploadLogo = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
 }).single("logo");
-
-const logoStorage = new LocalDiskStorage(process.env.UPLOADS_DIR ?? "./uploads");
 
 businessRouter.get("/", async (req, res) => {
   const business = await prisma.business.findUnique({ where: { id: req.auth!.businessId } });
@@ -107,7 +105,7 @@ businessRouter.post(
       return;
     }
 
-    const { url } = await logoStorage.save(req.file.buffer, req.auth!.businessId, detected.ext);
+    const { url } = await getStorage().save(req.file.buffer, req.auth!.businessId, detected.ext);
     res.status(201).json({ url });
   },
 );
@@ -136,7 +134,7 @@ businessRouter.post("/logo/remove-background", validateBody(logoUrlSchema), asyn
   }
 
   const processed = await removeBackground(buffer);
-  const saved = await logoStorage.save(processed, businessId, "png");
+  const saved = await getStorage().save(processed, businessId, "png");
   res.json({ url: saved.url, backgroundRemoved: true, detection });
 });
 

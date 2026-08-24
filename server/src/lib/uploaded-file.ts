@@ -1,5 +1,4 @@
-import path from "node:path";
-import { readFile } from "node:fs/promises";
+import { getStorage } from "./storage.js";
 
 export class ForbiddenUploadPathError extends Error {}
 
@@ -8,13 +7,14 @@ export async function readUploadedFile(url: string, businessId: string): Promise
     throw new ForbiddenUploadPathError();
   }
 
-  const uploadsRoot = path.resolve(process.env.UPLOADS_DIR ?? "./uploads");
-  const businessDir = path.resolve(uploadsRoot, businessId);
-  const filePath = path.resolve(uploadsRoot, url.slice("/uploads/".length));
-
-  if (!filePath.startsWith(businessDir + path.sep)) {
+  const key = url.slice("/uploads/".length);
+  const segments = key.split("/");
+  if (segments.some((segment) => segment === "" || segment === "." || segment === "..")) {
+    throw new ForbiddenUploadPathError();
+  }
+  if (segments[0] !== businessId) {
     throw new ForbiddenUploadPathError();
   }
 
-  return readFile(filePath);
+  return getStorage().read(key);
 }
