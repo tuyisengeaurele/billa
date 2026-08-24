@@ -190,7 +190,7 @@ export default function Customers() {
                       <button
                         type="button"
                         onClick={() => handleToggleActive(customer)}
-                        className="font-sans text-sm text-neutral-500 hover:text-neutral-700 hover:underline"
+                        className="rounded-lg border border-neutral-200 px-2.5 py-1 font-sans text-xs font-medium text-neutral-700 transition-colors hover:border-primary-500 hover:text-primary-700"
                       >
                         {customer.isActive ? "Deactivate" : "Reactivate"}
                       </button>

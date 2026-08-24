@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import type { DocumentType } from "@billa/shared";
 import { AppLayout } from "../components/AppLayout";
+import { Modal } from "../components/Modal";
 import { apiRequest, ApiError, API_BASE_URL } from "../lib/apiClient";
 import { formatRwf } from "@billa/shared";
 
@@ -42,6 +43,7 @@ export default function DocumentView() {
   const [isSending, setIsSending] = useState(false);
   const [sendMessage, setSendMessage] = useState<string | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const [isConvertConfirmOpen, setIsConvertConfirmOpen] = useState(false);
 
   useEffect(() => {
     apiRequest<{ document: DocumentDetail }>(`/documents/${id}`)
@@ -49,11 +51,9 @@ export default function DocumentView() {
       .catch(() => setLoadError(true));
   }, [id]);
 
-  async function handleConvert() {
+  async function confirmConvert() {
     if (!document) return;
-    if (!window.confirm("Convert this proforma to an invoice? This can't be undone.")) {
-      return;
-    }
+    setIsConvertConfirmOpen(false);
     setApiError(null);
     setIsConverting(true);
     try {
@@ -126,7 +126,7 @@ export default function DocumentView() {
                 <button
                   type="button"
                   disabled={isConverting}
-                  onClick={handleConvert}
+                  onClick={() => setIsConvertConfirmOpen(true)}
                   className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {isConverting ? "Converting…" : "Convert to invoice"}
@@ -203,6 +203,30 @@ export default function DocumentView() {
           <span className="font-semibold text-neutral-900">Total: {formatRwf(document.total)}</span>
         </div>
       </div>
+
+      <Modal
+        isOpen={isConvertConfirmOpen}
+        onClose={() => setIsConvertConfirmOpen(false)}
+        title="Convert to invoice"
+      >
+        <p className="font-sans text-sm text-neutral-600">Convert this proforma to an invoice? This can't be undone.</p>
+        <div className="mt-6 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={() => setIsConvertConfirmOpen(false)}
+            className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={confirmConvert}
+            className="rounded-lg bg-primary-500 px-4 py-2 font-sans text-sm font-semibold text-white hover:bg-primary-700"
+          >
+            Convert
+          </button>
+        </div>
+      </Modal>
     </AppLayout>
   );
 }

@@ -5,6 +5,7 @@ import { useFieldArray, useForm } from "react-hook-form";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import { AppLayout } from "../components/AppLayout";
+import { Modal } from "../components/Modal";
 import { CustomerPicker } from "../components/customers/CustomerPicker";
 import { ItemPicker } from "../components/items/ItemPicker";
 import { FormField } from "../components/FormField";
@@ -83,6 +84,7 @@ export default function DocumentForm() {
   const [isLoaded, setIsLoaded] = useState(!isEditing);
   const [loadError, setLoadError] = useState(false);
   const [convertedFrom, setConvertedFrom] = useState<{ id: string; number: string | null } | null>(null);
+  const [isFinalizeConfirmOpen, setIsFinalizeConfirmOpen] = useState(false);
 
   const {
     register,
@@ -168,19 +170,18 @@ export default function DocumentForm() {
     }
   }
 
-  async function handleFinalize() {
+  function handleFinalize() {
     if (!id) return;
     if ((watchedLines ?? []).length === 0) {
       setApiError("Add at least one line before finalizing.");
       return;
     }
-    if (
-      !window.confirm(
-        `Finalize this ${labels.singular}? It will get a permanent number and can no longer be edited.`,
-      )
-    ) {
-      return;
-    }
+    setIsFinalizeConfirmOpen(true);
+  }
+
+  async function confirmFinalize() {
+    if (!id) return;
+    setIsFinalizeConfirmOpen(false);
     setApiError(null);
     setIsFinalizing(true);
     try {
@@ -392,6 +393,32 @@ export default function DocumentForm() {
           </div>
         </form>
       </div>
+
+      <Modal
+        isOpen={isFinalizeConfirmOpen}
+        onClose={() => setIsFinalizeConfirmOpen(false)}
+        title={`Finalize ${labels.singular}`}
+      >
+        <p className="font-sans text-sm text-neutral-600">
+          Finalize this {labels.singular}? It will get a permanent number and can no longer be edited.
+        </p>
+        <div className="mt-6 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={() => setIsFinalizeConfirmOpen(false)}
+            className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={confirmFinalize}
+            className="rounded-lg bg-[#18181b] px-4 py-2 font-sans text-sm font-semibold text-white hover:bg-[#3f3f46]"
+          >
+            Finalize
+          </button>
+        </div>
+      </Modal>
     </AppLayout>
   );
 }

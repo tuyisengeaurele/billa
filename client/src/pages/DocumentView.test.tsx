@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -113,7 +113,6 @@ describe("DocumentView", () => {
       }
       return new Response("{}", { status: 401 });
     });
-    vi.spyOn(window, "confirm").mockReturnValue(true);
     const user = userEvent.setup();
 
     render(
@@ -128,6 +127,9 @@ describe("DocumentView", () => {
     );
 
     await user.click(await screen.findByRole("button", { name: /convert to invoice/i }));
+
+    const dialog = await screen.findByRole("dialog", { name: /convert to invoice/i });
+    await user.click(within(dialog).getByRole("button", { name: /^convert$/i }));
 
     await waitFor(() => expect(screen.getByText("edit invoice page")).toBeInTheDocument());
   });
