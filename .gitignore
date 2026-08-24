@@ -16,6 +16,11 @@ server/uploads/
 server/uploads-test/
 
 client/.vite/
+
+# playwright
+e2e/test-results/
+e2e/playwright-report/
+e2e/blob-report/
 *.tsbuildinfo
 client/vite.config.js
 client/vite.config.d.ts
