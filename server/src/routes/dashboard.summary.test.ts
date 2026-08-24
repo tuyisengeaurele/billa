@@ -166,6 +166,26 @@ describe("GET /dashboard/summary", () => {
     expect(quoteRow.count).toBe(0);
   });
 
+  it("reports customerCount and hasLogo for the onboarding checklist", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    await createCustomer(app, cookies);
+    const secondCustomerId = await createCustomer(app, cookies);
+
+    const before = await request(app).get("/dashboard/summary").set("Cookie", cookies);
+    expect(before.body.customerCount).toBe(2);
+    expect(before.body.hasLogo).toBe(false);
+
+    const secondCustomer = await prisma.customer.findUniqueOrThrow({ where: { id: secondCustomerId } });
+    await prisma.business.update({
+      where: { id: secondCustomer.businessId },
+      data: { logoUrl: "/uploads/biz1/logo.png" },
+    });
+
+    const after = await request(app).get("/dashboard/summary").set("Cookie", cookies);
+    expect(after.body.hasLogo).toBe(true);
+  });
+
   it("returns 14 days of activity, including zero-count days", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app);

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../context/AuthContext";
@@ -34,6 +34,8 @@ function baseSummary(overrides: Record<string, unknown> = {}) {
     documentsLastMonth: 0,
     documentsByType: baseByType(),
     activityByDay: baseActivity(),
+    customerCount: 0,
+    hasLogo: false,
     ...overrides,
   };
 }
@@ -169,17 +171,43 @@ describe("Dashboard", () => {
     expect(screen.getByRole("link", { name: /Huye Traders/i })).toHaveAttribute("href", "/documents/d2/edit");
   });
 
-  it("shows the empty state and skips the metrics section when the business has no documents yet", async () => {
+  it("shows the get-started checklist and skips the metrics section when the business has no documents yet", async () => {
     mockFetch(baseSummary());
 
     renderDashboard();
 
-    expect(await screen.findByText(/haven't created any documents yet/i)).toBeInTheDocument();
+    expect(await screen.findByText(/get started/i)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /create your first invoice/i })).toHaveAttribute(
       "href",
       "/documents/new?type=INVOICE",
     );
     expect(screen.queryByText(/documents this month/i)).not.toBeInTheDocument();
+  });
+
+  it("shows all checklist steps as not done when the business is brand new", async () => {
+    mockFetch(baseSummary({ customerCount: 0, hasLogo: false }));
+
+    renderDashboard();
+    await screen.findByText(/get started/i);
+
+    const logoItem = screen.getByText(/add your business logo/i).closest("a")!;
+    const customerItem = screen.getByText(/add a customer/i).closest("a")!;
+    expect(logoItem).toHaveAttribute("href", "/settings");
+    expect(customerItem).toHaveAttribute("href", "/customers");
+    expect(within(logoItem).queryByText(/done/i)).not.toBeInTheDocument();
+    expect(within(customerItem).queryByText(/done/i)).not.toBeInTheDocument();
+  });
+
+  it("marks logo and customer checklist steps done once they exist", async () => {
+    mockFetch(baseSummary({ customerCount: 1, hasLogo: true }));
+
+    renderDashboard();
+    await screen.findByText(/get started/i);
+
+    const logoItem = screen.getByText(/add your business logo/i).closest("a")!;
+    const customerItem = screen.getByText(/add a customer/i).closest("a")!;
+    expect(within(logoItem).getByText(/done/i)).toBeInTheDocument();
+    expect(within(customerItem).getByText(/done/i)).toBeInTheDocument();
   });
 
   it("shows an error message when the dashboard fails to load", async () => {

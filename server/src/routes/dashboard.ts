@@ -35,6 +35,8 @@ dashboardRouter.get("/summary", async (req, res) => {
     documentsLastMonth,
     documentsByTypeRaw,
     recentForActivity,
+    customerCount,
+    business,
   ] = await Promise.all([
     prisma.document.count({ where: { businessId, status: "DRAFT" } }),
     prisma.document.count({
@@ -55,6 +57,8 @@ dashboardRouter.get("/summary", async (req, res) => {
       where: { businessId, createdAt: { gte: fourteenDaysAgo } },
       select: { createdAt: true },
     }),
+    prisma.customer.count({ where: { businessId } }),
+    prisma.business.findUnique({ where: { id: businessId }, select: { logoUrl: true } }),
   ]);
 
   const countsByType = new Map(documentsByTypeRaw.map((row) => [row.type, row._count._all]));
@@ -87,5 +91,7 @@ dashboardRouter.get("/summary", async (req, res) => {
     documentsLastMonth,
     documentsByType,
     activityByDay,
+    customerCount,
+    hasLogo: Boolean(business?.logoUrl),
   });
 });

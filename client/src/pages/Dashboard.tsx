@@ -47,6 +47,8 @@ interface DashboardSummary {
   documentsLastMonth: number;
   documentsByType: DocumentTypeCount[];
   activityByDay: ActivityDay[];
+  customerCount: number;
+  hasLogo: boolean;
 }
 
 const TYPE_MONOGRAM: Record<DocumentType, string> = {
@@ -56,6 +58,28 @@ const TYPE_MONOGRAM: Record<DocumentType, string> = {
   QUOTE: "QU",
   RECEIPT: "RE",
 };
+
+function ChecklistStep({ to, label, done }: { to: string; label: string; done: boolean }) {
+  return (
+    <Link
+      to={to}
+      className="flex items-center justify-between gap-4 rounded-lg border border-neutral-200 px-4 py-3 font-sans text-sm transition-colors hover:bg-surface-hover"
+    >
+      <span className="flex items-center gap-3">
+        <span
+          aria-hidden="true"
+          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-xs ${
+            done ? "border-primary-500 bg-primary-500 text-white" : "border-neutral-300 text-transparent"
+          }`}
+        >
+          ✓
+        </span>
+        <span className={done ? "text-neutral-500 line-through" : "text-neutral-900"}>{label}</span>
+      </span>
+      {done && <span className="font-sans text-xs font-medium text-primary-700">Done</span>}
+    </Link>
+  );
+}
 
 function monthComparison(thisMonth: number, lastMonth: number): string {
   const diff = thisMonth - lastMonth;
@@ -133,11 +157,20 @@ export default function Dashboard() {
         {!summary && !loadError && <p className="font-sans text-sm text-neutral-600">Loading…</p>}
 
         {summary && hasNoDocuments && (
-          <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-neutral-200 py-16 text-center">
-            <p className="font-sans text-sm text-neutral-600">You haven't created any documents yet.</p>
+          <div className="flex flex-col gap-4 rounded-xl border border-neutral-200 bg-surface p-6">
+            <div>
+              <h2 className="font-display text-lg font-semibold text-neutral-900">Get started</h2>
+              <p className="mt-1 font-sans text-sm text-neutral-600">
+                A few quick steps before your first document.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2">
+              <ChecklistStep to="/settings" label="Add your business logo" done={summary.hasLogo} />
+              <ChecklistStep to="/customers" label="Add a customer" done={summary.customerCount > 0} />
+            </div>
             <Link
               to="/documents/new?type=INVOICE"
-              className="flex w-auto items-center justify-center rounded-lg bg-primary-500 px-5 py-2.5 font-sans text-sm font-semibold text-white transition-colors hover:bg-primary-700"
+              className="flex w-auto items-center justify-center self-start rounded-lg bg-primary-500 px-5 py-2.5 font-sans text-sm font-semibold text-white transition-colors hover:bg-primary-700"
             >
               Create your first invoice
             </Link>
