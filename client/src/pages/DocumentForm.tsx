@@ -413,7 +413,7 @@ export default function DocumentForm() {
           <button
             type="button"
             onClick={confirmFinalize}
-            className="rounded-lg bg-[#18181b] px-4 py-2 font-sans text-sm font-semibold text-white hover:bg-[#3f3f46]"
+            className="rounded-lg bg-primary-500 px-4 py-2 font-sans text-sm font-semibold text-white hover:bg-primary-700"
           >
             Finalize
           </button>

@@ -189,10 +189,10 @@ export default function DocumentView() {
           <tbody>
             {document.lines.map((line) => (
               <tr key={line.id} className="border-b border-neutral-100">
-                <td className="py-2">{line.description}</td>
-                <td className="py-2">{line.quantity}</td>
-                <td className="py-2">{formatRwf(line.unitPrice)}</td>
-                <td className="py-2">{formatRwf(line.lineTotal)}</td>
+                <td className="py-2 text-neutral-900">{line.description}</td>
+                <td className="py-2 text-neutral-600">{line.quantity}</td>
+                <td className="py-2 text-neutral-600">{formatRwf(line.unitPrice)}</td>
+                <td className="py-2 text-neutral-600">{formatRwf(line.lineTotal)}</td>
               </tr>
             ))}
           </tbody>

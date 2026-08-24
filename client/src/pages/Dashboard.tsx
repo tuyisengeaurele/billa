@@ -78,6 +78,8 @@ export default function Dashboard() {
     backgroundColor: isDark ? "#1c1c1f" : "#ffffff",
     color: isDark ? "#fafafa" : "#18181b",
   };
+  const tooltipLabelStyle = { color: isDark ? "#fafafa" : "#18181b" };
+  const tooltipItemStyle = { color: isDark ? "#fafafa" : "#18181b" };
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [loadError, setLoadError] = useState(false);
 
@@ -200,6 +202,8 @@ export default function Dashboard() {
                     formatter={(value) => [value, "Documents"]}
                     labelFormatter={(label) => DOCUMENT_TYPE_LABELS[label as DocumentType].plural}
                     contentStyle={tooltipStyle}
+                    labelStyle={tooltipLabelStyle}
+                    itemStyle={tooltipItemStyle}
                   />
                   <Bar dataKey="count" radius={[0, 4, 4, 0]} maxBarSize={18}>
                     {summary.documentsByType.map((entry) => (
@@ -228,6 +232,8 @@ export default function Dashboard() {
                     formatter={(value) => [value, "Documents"]}
                     labelFormatter={(label) => String(label)}
                     contentStyle={tooltipStyle}
+                    labelStyle={tooltipLabelStyle}
+                    itemStyle={tooltipItemStyle}
                   />
                   <Line
                     type="monotone"
@@ -258,7 +264,7 @@ export default function Dashboard() {
                   >
                     {DOCUMENT_TYPE_LABELS[doc.type].singular}
                   </span>
-                  <span>{doc.number ?? "Draft"}</span>
+                  <span className="font-medium text-neutral-900">{doc.number ?? "Draft"}</span>
                   <span className="text-neutral-600">{doc.customerName}</span>
                   <span
                     className={`rounded-full px-2.5 py-1 text-xs font-medium ${
