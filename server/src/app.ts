@@ -1,6 +1,7 @@
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
+import helmet from "helmet";
 import { authRouter } from "./routes/auth.js";
 import { businessRouter } from "./routes/business.js";
 import { customersRouter } from "./routes/customers.js";
@@ -16,6 +17,14 @@ import { detectAllowedImageType } from "./lib/file-sniff.js";
 export function createApp() {
   const app = express();
 
+  app.use(
+    helmet({
+      // Uploaded logos and PDFs are served from this API to a client on a different
+      // origin (separate port in dev, separate subdomain in prod) - helmet's
+      // same-origin default would block the browser from loading them there.
+      crossOriginResourcePolicy: { policy: "cross-origin" },
+    }),
+  );
   app.use(
     cors({
       origin: process.env.CLIENT_ORIGIN,

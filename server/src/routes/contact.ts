@@ -6,11 +6,12 @@ import { requireAuth } from "../middleware/require-auth.js";
 import { requireAdmin } from "../middleware/require-admin.js";
 import { validateBody } from "../middleware/validate.js";
 import { validateQuery } from "../middleware/validate-query.js";
+import { contactRateLimit } from "../middleware/contact-rate-limit.js";
 import { sendEmail } from "../lib/resend.js";
 
 export const contactRouter = Router();
 
-contactRouter.post("/", validateBody(contactMessageSchema), async (req, res) => {
+contactRouter.post("/", contactRateLimit, validateBody(contactMessageSchema), async (req, res) => {
   const { name, email, message } = req.body as { name: string; email: string; message: string };
 
   await prisma.contactMessage.create({ data: { name, email, message } });
