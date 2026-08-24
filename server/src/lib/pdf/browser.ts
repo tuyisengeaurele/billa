@@ -4,7 +4,12 @@ let browserPromise: Promise<Browser> | null = null;
 
 function getBrowser(): Promise<Browser> {
   if (!browserPromise) {
-    browserPromise = puppeteer.launch({ headless: true });
+    browserPromise = puppeteer.launch({
+      headless: true,
+      // CI runners don't have a working setuid sandbox; --no-sandbox is safe here
+      // since this browser only ever renders our own generated document HTML.
+      args: process.env.CI ? ["--no-sandbox", "--disable-setuid-sandbox"] : [],
+    });
   }
   return browserPromise;
 }

@@ -1,7 +1,9 @@
-import { Decimal } from "@prisma/client/runtime/library";
 import { describe, expect, it } from "vitest";
 import { buildPdfRenderData } from "./render-data.js";
+import { Prisma } from "@prisma/client";
 import type { Business, Customer, Document, DocumentLine } from "@prisma/client";
+
+const { Decimal } = Prisma;
 
 function makeBusiness(overrides: Partial<Business> = {}): Business {
   return {
