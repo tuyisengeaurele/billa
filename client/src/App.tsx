@@ -21,6 +21,7 @@ const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const HelpCenter = lazy(() => import("./pages/HelpCenter"));
 const Contact = lazy(() => import("./pages/Contact"));
 const AdminMessages = lazy(() => import("./pages/AdminMessages"));
+const PublicDocumentView = lazy(() => import("./pages/PublicDocumentView"));
 
 export default function App() {
   return (
@@ -35,6 +36,7 @@ export default function App() {
               <Route path="/terms" element={<TermsOfService />} />
               <Route path="/help" element={<HelpCenter />} />
               <Route path="/contact" element={<Contact />} />
+              <Route path="/view/:token" element={<PublicDocumentView />} />
               <Route element={<ProtectedRoute />}>
                 <Route path="/onboarding" element={<Onboarding />} />
                 <Route path="/dashboard" element={<Dashboard />} />

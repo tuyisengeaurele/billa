@@ -85,6 +85,78 @@ describe("DocumentView", () => {
     expect(openSpy).toHaveBeenCalledWith(expect.stringContaining("/documents/d1/pdf"), "_blank");
   });
 
+  it("copies the public share link and shows a confirmation", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async () =>
+      new Response(
+        JSON.stringify({
+          document: {
+            id: "d1",
+            number: "INV-0001",
+            status: "FINALIZED",
+            publicToken: "tok-abc123",
+            customer: { name: "Kigali Traders" },
+            lines: [],
+            subtotal: 0,
+            taxTotal: 0,
+            total: 0,
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+    const user = userEvent.setup();
+    const writeTextSpy = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue(undefined);
+
+    render(
+      <MemoryRouter initialEntries={["/documents/d1"]}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/documents/:id" element={<DocumentView />} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: /copy link/i }));
+
+    expect(writeTextSpy).toHaveBeenCalledWith(expect.stringContaining("/view/tok-abc123"));
+    expect(await screen.findByText(/link copied/i)).toBeInTheDocument();
+  });
+
+  it("does not show a share link button for a draft document", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async () =>
+      new Response(
+        JSON.stringify({
+          document: {
+            id: "d1",
+            number: null,
+            status: "DRAFT",
+            publicToken: "tok-abc123",
+            customer: { name: "Kigali Traders" },
+            lines: [],
+            subtotal: 0,
+            taxTotal: 0,
+            total: 0,
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/documents/d1"]}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/documents/:id" element={<DocumentView />} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("Kigali Traders");
+    expect(screen.queryByRole("button", { name: /copy link/i })).not.toBeInTheDocument();
+  });
+
   it("converts a finalized proforma to a draft invoice", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
       const url = urlOf(input);

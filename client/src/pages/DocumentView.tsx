@@ -24,6 +24,7 @@ interface DocumentDetail {
   type: DocumentType;
   number: string | null;
   status: "DRAFT" | "FINALIZED";
+  publicToken: string;
   customer: { name: string; email: string | null };
   sentAt: string | null;
   lines: DocumentLine[];
@@ -42,6 +43,7 @@ export default function DocumentView() {
   const [isConverting, setIsConverting] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [sendMessage, setSendMessage] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [isConvertConfirmOpen, setIsConvertConfirmOpen] = useState(false);
 
@@ -68,6 +70,14 @@ export default function DocumentView() {
     } finally {
       setIsConverting(false);
     }
+  }
+
+  async function handleCopyLink() {
+    if (!document) return;
+    const url = `${window.location.origin}/view/${document.publicToken}`;
+    await navigator.clipboard.writeText(url);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 3000);
   }
 
   async function handleSend() {
@@ -132,6 +142,15 @@ export default function DocumentView() {
                   {isConverting ? "Converting…" : "Convert to invoice"}
                 </button>
               ))}
+            {document.status === "FINALIZED" && (
+              <button
+                type="button"
+                onClick={handleCopyLink}
+                className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+              >
+                {linkCopied ? "Link copied" : "Copy link"}
+              </button>
+            )}
             <button
               type="button"
               onClick={() => window.open(`${API_BASE_URL}/documents/${document.id}/pdf`, "_blank")}

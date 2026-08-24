@@ -45,6 +45,7 @@ function makeDocument(
     taxTotal: 2700,
     total: 17700,
     sentAt: null,
+    publicToken: "token1",
     convertedFromId: null,
     createdAt: new Date(),
     updatedAt: new Date(),

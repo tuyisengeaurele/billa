@@ -13,6 +13,7 @@ import { billingRouter } from "./routes/billing.js";
 import { dashboardRouter } from "./routes/dashboard.js";
 import { businessesRouter } from "./routes/businesses.js";
 import { contactRouter } from "./routes/contact.js";
+import { publicDocumentsRouter } from "./routes/public-documents.js";
 import { getStorage } from "./lib/storage.js";
 import { detectAllowedImageType } from "./lib/file-sniff.js";
 import { errorHandler } from "./middleware/error-handler.js";
@@ -70,6 +71,7 @@ export function createApp() {
   app.use("/dashboard", dashboardRouter);
   app.use("/businesses", businessesRouter);
   app.use("/contact", contactRouter);
+  app.use("/public/documents", publicDocumentsRouter);
 
   Sentry.setupExpressErrorHandler(app);
   app.use(errorHandler);

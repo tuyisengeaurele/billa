@@ -146,6 +146,8 @@ model Document {
   total      Int
   sentAt     DateTime?
 
+  publicToken String @unique @default(dbgenerated("gen_random_uuid()::text"))
+
   convertedFromId String?   @unique
   convertedFrom   Document? @relation("DocumentConversion", fields: [convertedFromId], references: [id])
   convertedTo     Document? @relation("DocumentConversion")
