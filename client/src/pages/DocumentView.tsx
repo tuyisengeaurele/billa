@@ -46,6 +46,10 @@ export default function DocumentView() {
   const [linkCopied, setLinkCopied] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [isConvertConfirmOpen, setIsConvertConfirmOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     apiRequest<{ document: DocumentDetail }>(`/documents/${id}`)
@@ -95,6 +99,23 @@ export default function DocumentView() {
       );
     } finally {
       setIsSending(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!document) return;
+    setDeleteError(null);
+    setIsDeleting(true);
+    try {
+      await apiRequest(`/documents/${document.id}`, { method: "DELETE" });
+      navigate("/documents");
+    } catch (err) {
+      setDeleteError(
+        err instanceof ApiError && err.status === 409
+          ? "This document was just finalized and can no longer be deleted."
+          : "Couldn't delete this document. Try again.",
+      );
+      setIsDeleting(false);
     }
   }
 
@@ -169,8 +190,27 @@ export default function DocumentView() {
                 {isSending ? "Sending…" : document.sentAt ? "Resend" : "Send by email"}
               </button>
             )}
+            {document.status === "DRAFT" && (
+              <button
+                type="button"
+                onClick={() => {
+                  setDeleteConfirmText("");
+                  setDeleteError(null);
+                  setIsDeleteModalOpen(true);
+                }}
+                className="rounded-lg border border-error px-4 py-2 font-sans text-sm font-semibold text-error transition-colors hover:bg-error-bg"
+              >
+                Delete
+              </button>
+            )}
           </div>
         </div>
+
+        {deleteError && (
+          <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
+            {deleteError}
+          </div>
+        )}
 
         {sendMessage && (
           <div className="rounded-lg bg-success-bg px-4 py-3 font-sans text-sm text-success" role="status">
@@ -243,6 +283,42 @@ export default function DocumentView() {
             className="rounded-lg bg-primary-500 px-4 py-2 font-sans text-sm font-semibold text-white hover:bg-primary-700"
           >
             Convert
+          </button>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        title="Delete document"
+      >
+        <p className="font-sans text-sm text-neutral-600">
+          This permanently deletes this draft. This cannot be undone.
+        </p>
+        <label htmlFor="deleteDocConfirmText" className="mt-4 block font-sans text-sm font-medium text-neutral-800">
+          Type <span className="font-semibold">{document.customer.name}</span> to confirm.
+        </label>
+        <input
+          id="deleteDocConfirmText"
+          value={deleteConfirmText}
+          onChange={(e) => setDeleteConfirmText(e.target.value)}
+          className="mt-2 w-full rounded-lg border border-neutral-200 bg-surface px-3.5 py-2 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+        />
+        <div className="mt-6 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={() => setIsDeleteModalOpen(false)}
+            className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={deleteConfirmText !== document.customer.name || isDeleting}
+            onClick={handleDelete}
+            className="rounded-lg bg-error px-4 py-2 font-sans text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isDeleting ? "Deleting…" : "Delete"}
           </button>
         </div>
       </Modal>

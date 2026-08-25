@@ -413,4 +413,88 @@ describe("DocumentView", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/couldn't send this document/i);
   });
+
+  it("requires typing the customer name before deleting a draft, then deletes and redirects to the list", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/documents/d1") && init?.method === "DELETE") {
+        return new Response(null, { status: 204 });
+      }
+      if (url.endsWith("/documents/d1")) {
+        return new Response(
+          JSON.stringify({
+            document: {
+              id: "d1",
+              number: null,
+              status: "DRAFT",
+              customer: { name: "Kigali Traders" },
+              lines: [],
+              subtotal: 0,
+              taxTotal: 0,
+              total: 0,
+            },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={["/documents/d1"]}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/documents/:id" element={<DocumentView />} />
+            <Route path="/documents" element={<div>documents list page</div>} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: /^delete$/i }));
+    const dialog = await screen.findByRole("dialog", { name: /delete document/i });
+    const confirmButton = within(dialog).getByRole("button", { name: /^delete$/i });
+    expect(confirmButton).toBeDisabled();
+
+    await user.type(within(dialog).getByLabelText(/type/i), "Kigali Traders");
+    expect(confirmButton).toBeEnabled();
+
+    await user.click(confirmButton);
+
+    expect(await screen.findByText("documents list page")).toBeInTheDocument();
+  });
+
+  it("does not show a delete option for a finalized document", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async () =>
+      new Response(
+        JSON.stringify({
+          document: {
+            id: "d1",
+            number: "INV-0001",
+            status: "FINALIZED",
+            customer: { name: "Kigali Traders" },
+            lines: [],
+            subtotal: 0,
+            taxTotal: 0,
+            total: 0,
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/documents/d1"]}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/documents/:id" element={<DocumentView />} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("INV-0001");
+    expect(screen.queryByRole("button", { name: /^delete$/i })).not.toBeInTheDocument();
+  });
 });

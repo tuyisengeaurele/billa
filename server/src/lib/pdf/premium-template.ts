@@ -56,13 +56,13 @@ table.items tbody td.r { text-align: right; font-weight: 600; color: #1a1a2e; }
 .notes-lbl { font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent); margin-bottom: 3px; }
 .notes-val { font-size: 12px; color: #444; line-height: 1.5; }
 
-.ft { background: var(--dark); padding: 18px 36px; display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; }
-.ft-bank { font-size: 11px; color: rgba(255, 255, 255, 0.7); line-height: 1.75; }
-.ft-bank strong { display: block; font-size: 12px; color: #fff; margin-bottom: 2px; }
+.ft { border-top: 2px solid var(--dark); padding: 18px 36px; display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; }
+.ft-bank { font-size: 11px; color: #6b7280; line-height: 1.75; }
+.ft-bank strong { display: block; font-size: 9.5px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
 .ft-sig { text-align: right; }
-.sig-name { border-top: 1px solid rgba(255, 255, 255, 0.3); margin-top: 32px; padding-top: 7px; font-size: 12px; font-weight: 600; color: #fff; white-space: nowrap; }
-.sig-title { font-size: 10.5px; color: rgba(255, 255, 255, 0.6); margin-top: 2px; }
-.sig-company { font-size: 10.5px; color: rgba(255, 255, 255, 0.5); margin-top: 1px; }
+.sig-name { border-top: 1px solid #d1d5db; margin-top: 32px; padding-top: 7px; font-size: 12px; font-weight: 700; color: #1a1a2e; white-space: nowrap; }
+.sig-title { font-size: 10.5px; color: #6b7280; margin-top: 2px; }
+.sig-company { font-size: 10.5px; color: #9ca3af; margin-top: 1px; }
 
 .disclaimer { background: #f8f8f8; border-top: 1px solid #eee; padding: 9px 36px; font-size: 10px; color: #999; text-align: center; line-height: 1.5; }
 
