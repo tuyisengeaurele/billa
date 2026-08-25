@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { AdminLayout } from "../../components/admin/AdminLayout";
 import { Modal } from "../../components/Modal";
 import { useAuth } from "../../context/AuthContext";
@@ -30,6 +30,7 @@ interface UserDetailResponse {
 export default function AdminUserDetail() {
   const { id } = useParams();
   const { user: currentUser } = useAuth();
+  const navigate = useNavigate();
   const [detail, setDetail] = useState<UserDetailResponse | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +39,7 @@ export default function AdminUserDetail() {
   const [isExtendingTrial, setIsExtendingTrial] = useState(false);
   const [isSuspendModalOpen, setIsSuspendModalOpen] = useState(false);
   const [isSuspending, setIsSuspending] = useState(false);
+  const [isImpersonating, setIsImpersonating] = useState(false);
 
   useEffect(() => {
     apiRequest<UserDetailResponse>(`/admin/users/${id}`)
@@ -95,6 +97,19 @@ export default function AdminUserDetail() {
       setError("Couldn't suspend the account. Try again.");
     } finally {
       setIsSuspending(false);
+    }
+  }
+
+  async function impersonate() {
+    if (!detail) return;
+    setError(null);
+    setIsImpersonating(true);
+    try {
+      await apiRequest(`/admin/users/${id}/impersonate`, { method: "POST" });
+      navigate("/dashboard");
+    } catch {
+      setError("Couldn't start impersonation. Try again.");
+      setIsImpersonating(false);
     }
   }
 
@@ -210,6 +225,16 @@ export default function AdminUserDetail() {
                 Suspend
               </button>
             )}
+
+            <button
+              type="button"
+              disabled={isSelf || isImpersonating}
+              onClick={impersonate}
+              title={isSelf ? "You can't impersonate yourself" : undefined}
+              className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isImpersonating ? "Entering…" : "Impersonate"}
+            </button>
           </div>
 
           {detail.user.suspendedAt && (

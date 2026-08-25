@@ -36,6 +36,7 @@ interface AuthContextValue {
   user: User | null;
   business: Business | null;
   isLoading: boolean;
+  impersonating: boolean;
   login: (email: string, password: string) => Promise<Business | TwoFactorRequired>;
   register: (email: string, password: string, businessName: string) => Promise<Business>;
   loginWithGoogle: () => Promise<Business | TwoFactorRequired>;
@@ -43,6 +44,7 @@ interface AuthContextValue {
   completeTwoFactorChallenge: (challengeId: string, code: string) => Promise<Business>;
   resetPassword: (email: string) => Promise<void>;
   logout: () => Promise<void>;
+  stopImpersonating: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -58,16 +60,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [business, setBusiness] = useState<Business | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [impersonating, setImpersonating] = useState(false);
 
   useEffect(() => {
-    apiRequest<{ user: User; business: Business }>("/auth/me")
+    apiRequest<{ user: User; business: Business; impersonating: boolean }>("/auth/me")
       .then((data) => {
         setUser(data.user);
         setBusiness(data.business);
+        setImpersonating(data.impersonating);
       })
       .catch(() => {
         setUser(null);
         setBusiness(null);
+        setImpersonating(false);
       })
       .finally(() => setIsLoading(false));
   }, []);
@@ -78,6 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (isTwoFactorRequired(data)) return data;
     setUser(data.user);
     setBusiness(data.business);
+    setImpersonating(false);
     return data.business;
   }
 
@@ -87,6 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (isTwoFactorRequired(data)) throw new Error("unexpected_two_factor_challenge");
     setUser(data.user);
     setBusiness(data.business);
+    setImpersonating(false);
     return data.business;
   }
 
@@ -96,6 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (isTwoFactorRequired(data)) return data;
     setUser(data.user);
     setBusiness(data.business);
+    setImpersonating(false);
     return data.business;
   }
 
@@ -105,6 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (isTwoFactorRequired(data)) throw new Error("unexpected_two_factor_challenge");
     setUser(data.user);
     setBusiness(data.business);
+    setImpersonating(false);
     return data.business;
   }
 
@@ -115,6 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     setUser(data.user);
     setBusiness(data.business);
+    setImpersonating(false);
     return data.business;
   }
 
@@ -127,6 +137,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await apiRequest("/auth/logout", { method: "POST" });
     setUser(null);
     setBusiness(null);
+    setImpersonating(false);
+  }
+
+  async function stopImpersonating() {
+    const data = await apiRequest<{ user: User; business: Business }>("/auth/impersonate/stop", {
+      method: "POST",
+    });
+    setUser(data.user);
+    setBusiness(data.business);
+    setImpersonating(false);
   }
 
   return (
@@ -135,6 +155,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         business,
         isLoading,
+        impersonating,
         login,
         register,
         loginWithGoogle,
@@ -142,6 +163,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         completeTwoFactorChallenge,
         resetPassword,
         logout,
+        stopImpersonating,
       }}
     >
       {children}

@@ -15,6 +15,7 @@ function renderPage(userId = "u2") {
       <AuthProvider>
         <Routes>
           <Route path="/admin/users/:id" element={<AdminUserDetail />} />
+          <Route path="/dashboard" element={<div>dashboard page</div>} />
         </Routes>
       </AuthProvider>
     </MemoryRouter>,
@@ -303,6 +304,84 @@ describe("AdminUserDetail", () => {
     renderPage("u1");
 
     expect(await screen.findByRole("button", { name: /^suspend$/i })).toBeDisabled();
+  });
+
+  it("starts impersonation and enters the app when the button is clicked", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/auth/me")) {
+        return new Response(
+          JSON.stringify({ user: { id: "u1", email: "admin@example.com", isAdmin: true }, business: { id: "b1", name: "Admin Co" } }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/admin/users/u2/impersonate") && init?.method === "POST") {
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      }
+      if (url.endsWith("/admin/users/u2")) {
+        return new Response(
+          JSON.stringify({
+            user: {
+              id: "u2",
+              email: "owner@example.com",
+              isAdmin: false,
+              suspendedAt: null,
+              trialEndsAt: "2026-09-01T00:00:00.000Z",
+              currentPeriodEnd: null,
+              plan: null,
+              createdAt: "2026-08-01T00:00:00.000Z",
+            },
+            ownedBusinesses: [],
+            memberBusinesses: [],
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: /^impersonate$/i }));
+
+    expect(await screen.findByText("dashboard page")).toBeInTheDocument();
+  });
+
+  it("disables the impersonate button when viewing your own account", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.endsWith("/auth/me")) {
+        return new Response(
+          JSON.stringify({ user: { id: "u1", email: "admin@example.com", isAdmin: true }, business: { id: "b1", name: "Admin Co" } }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/admin/users/u1")) {
+        return new Response(
+          JSON.stringify({
+            user: {
+              id: "u1",
+              email: "admin@example.com",
+              isAdmin: true,
+              suspendedAt: null,
+              trialEndsAt: "2026-09-01T00:00:00.000Z",
+              currentPeriodEnd: null,
+              plan: null,
+              createdAt: "2026-08-01T00:00:00.000Z",
+            },
+            ownedBusinesses: [],
+            memberBusinesses: [],
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    renderPage("u1");
+
+    expect(await screen.findByRole("button", { name: /^impersonate$/i })).toBeDisabled();
   });
 
   it("shows a not-found message for an unknown user", async () => {

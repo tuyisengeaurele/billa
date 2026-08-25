@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -20,6 +20,48 @@ function renderAppLayout() {
 describe("AppLayout", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it("shows the impersonation banner and returns to admin on click", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      if (url.includes("/auth/impersonate/stop")) {
+        return new Response(
+          JSON.stringify({
+            user: { id: "admin1", email: "admin@example.com" },
+            business: { id: "b2", name: "Admin Co" },
+          }),
+          { status: 200 },
+        );
+      }
+      if (url.includes("/auth/me")) {
+        return new Response(
+          JSON.stringify({
+            user: { id: "u1", email: "owner@example.com" },
+            business: { id: "b1", name: "Kigali Traders" },
+            impersonating: true,
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+    const user = userEvent.setup();
+    renderAppLayout();
+
+    expect(await screen.findByText(/viewing as owner@example.com/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /return to admin/i }));
+
+    await waitFor(() => expect(screen.queryByText(/viewing as/i)).not.toBeInTheDocument());
+  });
+
+  it("doesn't show the impersonation banner for a normal session", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 401 }));
+    renderAppLayout();
+
+    await screen.findByText("page content");
+    expect(screen.queryByText(/viewing as/i)).not.toBeInTheDocument();
   });
 
   it("renders nav links and children", async () => {
