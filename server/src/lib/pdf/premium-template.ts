@@ -18,11 +18,15 @@ body { background: #eef0f4; padding: 10mm 0; }
 .business-name { font-family: "Fraunces", serif; font-size: 17px; font-weight: 700; }
 .doc-title-block { text-align: right; }
 .doc-title { font-family: "Fraunces", serif; font-size: 22px; font-weight: 700; text-align: right; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); }
-.doc-number { color: #6b7280; margin-top: 1mm; }
+.doc-number { color: #6b7280; margin-top: 1mm; font-weight: 600; }
+.doc-dates { margin-top: 2mm; font-size: 10px; color: #6b7280; }
 .content { padding: 0 14mm; }
-.meta-row { display: flex; gap: 6mm; margin: 8mm 0; }
-.meta-box { flex: 1; border: 1px solid #d1d5db; border-radius: 2mm; padding: 4mm; }
-.meta-box-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; color: #6b7280; margin-bottom: 2mm; font-weight: 700; }
+.meta-row { display: flex; margin: 8mm 0; border: 1px solid #d1d5db; border-radius: 2mm; overflow: hidden; }
+.meta-box { flex: 1; padding: 4mm; }
+.meta-box + .meta-box { border-left: 1px solid #d1d5db; }
+.meta-box-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--accent); margin-bottom: 2mm; font-weight: 700; }
+.meta-row-item { display: flex; gap: 2mm; padding: 0.5mm 0; }
+.meta-row-item-label { color: #9ca3af; min-width: 22mm; }
 th { text-align: left; font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; padding: 3mm; background: var(--dark); color: #ffffff; }
 th.idx, td.idx { width: 9mm; }
 td { padding: 3mm; border-bottom: 1px solid #f3f4f6; }
@@ -64,21 +68,31 @@ export function renderPremiumHtml(data: PdfRenderData): string {
         <div class="doc-title-block">
           <div class="doc-title">${data.typeLabel}</div>
           <div class="doc-number">${data.number ?? "DRAFT"}</div>
+          <div class="doc-dates">
+            <div>Issued: ${data.issueDate}</div>
+            ${data.dueDateLabel && data.dueDate ? `<div>${data.dueDateLabel}: ${data.dueDate}</div>` : ""}
+          </div>
           <div style="margin-top:2mm">${renderStatusPill(data.status)}</div>
         </div>
       </div>
       <div class="content">
         <div class="meta-row">
           <div class="meta-box">
-            <div class="meta-box-label">${data.partyLabel}</div>
-            <div>${data.customer.name}</div>
-            ${data.customer.address ? `<div>${data.customer.address}</div>` : ""}
+            <div class="meta-box-label">From (Seller)</div>
+            <div class="meta-row-item"><span class="meta-row-item-label">Company:</span><span>${data.business.name}</span></div>
+            ${data.business.tin ? `<div class="meta-row-item"><span class="meta-row-item-label">TIN:</span><span>${data.business.tin}</span></div>` : ""}
+            ${data.business.bankName ? `<div class="meta-row-item"><span class="meta-row-item-label">Bank:</span><span>${data.business.bankName}</span></div>` : ""}
+            ${data.business.bankAccountNumber ? `<div class="meta-row-item"><span class="meta-row-item-label">Acc. no:</span><span>${data.business.bankAccountNumber}</span></div>` : ""}
+            ${data.business.phone ? `<div class="meta-row-item"><span class="meta-row-item-label">Tel:</span><span>${data.business.phone}</span></div>` : ""}
+            ${data.business.email ? `<div class="meta-row-item"><span class="meta-row-item-label">Email:</span><span>${data.business.email}</span></div>` : ""}
           </div>
           <div class="meta-box">
-            <div class="meta-box-label">Document details</div>
-            <div>No: ${data.number ?? "DRAFT"}</div>
-            <div>Issued: ${data.issueDate}</div>
-            ${data.dueDateLabel && data.dueDate ? `<div>${data.dueDateLabel}: ${data.dueDate}</div>` : ""}
+            <div class="meta-box-label">${data.partyLabel} (Buyer)</div>
+            <div class="meta-row-item"><span class="meta-row-item-label">Name:</span><span>${data.customer.name}</span></div>
+            ${data.customer.tin ? `<div class="meta-row-item"><span class="meta-row-item-label">TIN:</span><span>${data.customer.tin}</span></div>` : ""}
+            ${data.customer.phone ? `<div class="meta-row-item"><span class="meta-row-item-label">Contact:</span><span>${data.customer.phone}</span></div>` : ""}
+            ${data.customer.address ? `<div class="meta-row-item"><span class="meta-row-item-label">Location:</span><span>${data.customer.address}</span></div>` : ""}
+            <div class="meta-row-item"><span class="meta-row-item-label">Currency:</span><span>RWF (Rwandan Franc)</span></div>
           </div>
         </div>
         <table>
@@ -89,7 +103,7 @@ export function renderPremiumHtml(data: PdfRenderData): string {
               <th class="num">Qty</th>
               <th class="num">Unit price</th>
               <th class="num">Tax</th>
-              <th class="num">Amount</th>
+              <th class="num">Total</th>
             </tr>
           </thead>
           <tbody>${linesHtml}</tbody>
@@ -102,7 +116,7 @@ export function renderPremiumHtml(data: PdfRenderData): string {
                 totalFormatted: data.totalFormatted,
                 dark,
               })}</div>
-        ${data.amountInWordsFormatted ? renderAmountInWordsBox(data.amountInWordsFormatted) : ""}`
+        ${data.amountInWordsFormatted ? renderAmountInWordsBox(`${data.amountInWordsFormatted} (${data.totalFormatted})`) : ""}`
             : ""
         }
         ${data.notes ? `<div class="notes">${data.notes}</div>` : ""}

@@ -154,4 +154,34 @@ describe("renderPremiumHtml", () => {
     const html = renderPremiumHtml(makeData());
     expect(html).toContain("issued by Kigali Traders");
   });
+
+  it("shows a From (Seller) / To (Buyer) panel with the seller's own details", () => {
+    const html = renderPremiumHtml(
+      makeData({
+        business: { ...makeData().business, bankName: "Bank of Kigali", bankAccountNumber: "000123456789" },
+        customer: { name: "Acme Ltd", tin: "999", address: "KN 1 Rd", phone: "+250788111222", email: null },
+      }),
+    );
+    expect(html).toContain("From (Seller)");
+    expect(html).toContain("Bill to (Buyer)");
+    expect(html).toContain("Bank:");
+    expect(html).toContain("Bank of Kigali");
+    expect(html).toContain("Acc. no:");
+    expect(html).toContain("000123456789");
+    expect(html).toContain("KN 1 Rd");
+    expect(html).toContain("+250788111222");
+    expect(html).toContain("Currency:");
+    expect(html).toContain("RWF (Rwandan Franc)");
+  });
+
+  it("omits seller bank rows from the panel when there are no bank details", () => {
+    const html = renderPremiumHtml(makeData());
+    expect(html).not.toContain("Bank:");
+    expect(html).not.toContain("Acc. no:");
+  });
+
+  it("restates the total numerically alongside the amount in words", () => {
+    const html = renderPremiumHtml(makeData());
+    expect(html).toContain("Seventeen Thousand Seven Hundred Rwandan Francs Only (17,700 RWF)");
+  });
 });

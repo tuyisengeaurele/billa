@@ -326,7 +326,7 @@ export default function BusinessSettings() {
           <section className="rounded-xl border border-neutral-200 bg-surface p-6">
             <h2 className="font-display text-base font-semibold text-neutral-900">Brand color</h2>
             <p className="mt-1 font-sans text-sm text-neutral-500">
-              Used for totals, headings, and the sidebar accent template on every document you send.
+              Used for document titles, table headers, and totals on every document you send.
             </p>
             <div className="mt-4 flex flex-wrap items-center gap-3">
               {COLOR_PRESETS.map((color) => (
