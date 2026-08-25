@@ -16,7 +16,11 @@ interface BusinessProfile {
   address: string | null;
   rraEbmNumber: string | null;
   defaultTemplate: DocumentTemplate;
+  primaryColor: string | null;
 }
+
+const DEFAULT_BRAND_COLOR = "#27272a";
+const COLOR_PRESETS = ["#C2185B", "#2563EB", "#0D9488", "#7C3AED", "#D97706", "#059669", "#27272a"];
 
 const TEMPLATE_OPTIONS: { value: DocumentTemplate; label: string; description: string }[] = [
   { value: "MINIMAL", label: "Minimal", description: "Quiet, a lot of white space." },
@@ -59,6 +63,7 @@ export default function BusinessSettings() {
       const payload: Record<string, string | null> = {
         defaultTemplate: profile.defaultTemplate,
         name: profile.name.trim(),
+        primaryColor: profile.primaryColor,
       };
       for (const field of TEXT_FIELDS) {
         if (field.id === "name") continue;
@@ -149,6 +154,42 @@ export default function BusinessSettings() {
                   onChange={(e) => setProfile({ ...profile, [field.id]: e.target.value })}
                 />
               ))}
+            </div>
+          </section>
+
+          <section className="rounded-xl border border-neutral-200 bg-surface p-6">
+            <h2 className="font-display text-base font-semibold text-neutral-900">Brand color</h2>
+            <p className="mt-1 font-sans text-sm text-neutral-500">
+              Used for totals, headings, and the sidebar accent template on every document you send.
+            </p>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              {COLOR_PRESETS.map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  aria-label={`Use ${color}`}
+                  onClick={() => setProfile({ ...profile, primaryColor: color })}
+                  className={`h-8 w-8 rounded-full border-2 transition-transform hover:scale-110 ${
+                    (profile.primaryColor ?? DEFAULT_BRAND_COLOR).toUpperCase() === color.toUpperCase()
+                      ? "border-neutral-900"
+                      : "border-transparent"
+                  }`}
+                  style={{ backgroundColor: color }}
+                />
+              ))}
+              <label htmlFor="primaryColor" className="flex items-center gap-2">
+                <input
+                  id="primaryColor"
+                  type="color"
+                  aria-label="Custom brand color"
+                  value={profile.primaryColor ?? DEFAULT_BRAND_COLOR}
+                  onChange={(e) => setProfile({ ...profile, primaryColor: e.target.value })}
+                  className="h-8 w-8 cursor-pointer rounded-full border border-neutral-200 bg-transparent p-0"
+                />
+                <span className="font-sans text-sm text-neutral-600">
+                  {(profile.primaryColor ?? DEFAULT_BRAND_COLOR).toUpperCase()}
+                </span>
+              </label>
             </div>
           </section>
 

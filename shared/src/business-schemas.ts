@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { DOCUMENT_TYPES, DOCUMENT_TEMPLATES } from "./document-types.js";
 
+const hexColorPattern = /^#[0-9A-Fa-f]{6}$/;
+
 export const businessProfileSchema = z
   .object({
     name: z.string().trim().min(1).optional(),
@@ -11,6 +13,7 @@ export const businessProfileSchema = z
     address: z.string().trim().min(1).nullable().optional(),
     rraEbmNumber: z.string().trim().min(1).nullable().optional(),
     defaultTemplate: z.enum(DOCUMENT_TEMPLATES).optional(),
+    primaryColor: z.string().regex(hexColorPattern, "Enter a valid hex color").nullable().optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "at least one field is required",

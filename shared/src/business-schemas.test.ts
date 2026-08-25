@@ -32,6 +32,21 @@ describe("businessProfileSchema", () => {
     expect(result.success).toBe(false);
   });
 
+  it("accepts a valid hex primaryColor", () => {
+    const result = businessProfileSchema.safeParse({ primaryColor: "#C2185B" });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts null primaryColor to reset to the default", () => {
+    const result = businessProfileSchema.safeParse({ primaryColor: null });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an invalid primaryColor", () => {
+    const result = businessProfileSchema.safeParse({ primaryColor: "not-a-color" });
+    expect(result.success).toBe(false);
+  });
+
   it("accepts a valid defaultTemplate", () => {
     const result = businessProfileSchema.safeParse({ defaultTemplate: "FORMAL" });
     expect(result.success).toBe(true);

@@ -172,6 +172,59 @@ describe("BusinessSettings", () => {
     await waitFor(() => expect(patchBody).toMatchObject({ tin: null, industry: "Retail" }));
   });
 
+  it("sets the brand color from a preset swatch and submits it", async () => {
+    let patchBody: unknown = null;
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/business/sequences")) {
+        return new Response(
+          JSON.stringify({
+            sequences: [
+              { type: "INVOICE", prefix: "INV-", nextNumber: 1 },
+              { type: "PROFORMA", prefix: "PRO-", nextNumber: 1 },
+              { type: "DELIVERY_NOTE", prefix: "DN-", nextNumber: 1 },
+              { type: "QUOTE", prefix: "QTE-", nextNumber: 1 },
+              { type: "RECEIPT", prefix: "RCT-", nextNumber: 1 },
+            ],
+          }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/business") && init?.method === "PATCH") {
+        patchBody = JSON.parse(init.body as string);
+        return new Response(JSON.stringify({ business: {} }), { status: 200 });
+      }
+      if (url.endsWith("/business") || url.endsWith("/auth/me")) {
+        return new Response(
+          JSON.stringify({
+            business: {
+              name: "Kigali Traders",
+              tin: null,
+              industry: null,
+              phone: null,
+              email: null,
+              address: null,
+              rraEbmNumber: null,
+              defaultTemplate: "MINIMAL",
+              primaryColor: null,
+            },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByDisplayValue("Kigali Traders");
+    await user.click(screen.getByRole("button", { name: "Use #2563EB" }));
+    await user.click(screen.getByRole("button", { name: /^save$/i }));
+
+    await waitFor(() => expect(patchBody).toMatchObject({ primaryColor: "#2563EB" }));
+  });
+
   it("shows an error message when the business profile fails to load", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async (input) => {
       const url = urlOf(input);

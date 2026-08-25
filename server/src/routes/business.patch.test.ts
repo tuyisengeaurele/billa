@@ -45,6 +45,25 @@ describe("PATCH /business", () => {
     expect(res.body.business.tin).toBeNull();
   });
 
+  it("sets a manual brand color independent of logo extraction", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+
+    const res = await request(app).patch("/business").set("Cookie", cookies).send({ primaryColor: "#2563EB" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.business.primaryColor).toBe("#2563EB");
+  });
+
+  it("rejects an invalid primaryColor with 400", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+
+    const res = await request(app).patch("/business").set("Cookie", cookies).send({ primaryColor: "blue" });
+
+    expect(res.status).toBe(400);
+  });
+
   it("rejects an invalid email with 400", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app);
