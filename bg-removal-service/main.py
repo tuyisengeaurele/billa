@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request, Response
 from rembg import remove, new_session
 
-# rembg's own default model (bria-rmbg-2.0) is CC BY-NC 4.0 — non-commercial,
+# rembg's own default model (bria-rmbg-2.0) is CC BY-NC 4.0, non-commercial,
 # requires a paid BRIA license for commercial use. u2net is Apache 2.0,
 # free for commercial use. Load it once at startup rather than per-request.
 session = new_session("u2net")

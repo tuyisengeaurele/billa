@@ -24,7 +24,7 @@ const GROUPS: FaqGroup[] = [
       {
         question: "Can I change what my documents look like?",
         answer:
-          "Yes. Settings has three templates to choose from: Minimal, Formal, and Sidebar accent. Your choice applies to every document you generate.",
+          "Yes. Settings has two templates to choose from: Minimal and Premium. Your choice applies to every document you generate, and Premium also shows your bank details and an authorized signatory when you've added them.",
       },
       {
         question: "Can I use it for more than one business?",
@@ -55,6 +55,11 @@ const GROUPS: FaqGroup[] = [
         answer:
           "Not yet. You can add your business's own EBM number so it appears on your invoices, but Billa doesn't connect to RRA's EBM system directly.",
       },
+      {
+        question: "Can a delivery note or receipt link to an invoice?",
+        answer:
+          "Yes. When creating a delivery note, you can optionally pick the invoice it's fulfilling, which fills in the same line items to start from. A receipt requires picking the invoice it's paying, since a receipt on its own isn't a valid record without one.",
+      },
     ],
   },
   {
@@ -62,16 +67,17 @@ const GROUPS: FaqGroup[] = [
     items: [
       {
         question: "What happens after my trial ends?",
-        answer: `You can still view and download everything you've already created. To create new documents, subscribe for ${formatRwf(PLAN_PRICES.MONTHLY)} a month or ${formatRwf(PLAN_PRICES.ANNUAL)} a year.`,
+        answer: `You can still view and download everything you've already created. Creating new documents will need an active subscription (planned at ${formatRwf(PLAN_PRICES.MONTHLY)} a month or ${formatRwf(PLAN_PRICES.ANNUAL)} a year) once paid plans go live.`,
       },
       {
         question: "How do I pay?",
-        answer: "By Mobile Money or card, through Flutterwave.",
+        answer:
+          "Paid subscriptions aren't open yet. Every account gets full access during the 14-day trial, and we'll announce payment options (Mobile Money and card) once they're live.",
       },
       {
-        question: "Does my subscription renew automatically?",
+        question: "Will my subscription renew automatically once payments are live?",
         answer:
-          "No. Each payment covers one billing period. When it ends, you choose whether to pay for another one, there's no automatic recurring charge.",
+          "No. Each payment will cover one billing period. When it ends, you choose whether to pay for another one; there's no automatic recurring charge.",
       },
     ],
   },
@@ -84,7 +90,8 @@ const GROUPS: FaqGroup[] = [
       },
       {
         question: "Can I get my data deleted?",
-        answer: "Yes, contact us and we'll remove your account and its data.",
+        answer:
+          "Yes. Go to Settings and use \"Delete my account\" in the Danger zone to remove your account and its data yourself, or contact us and we'll do it for you.",
       },
     ],
   },

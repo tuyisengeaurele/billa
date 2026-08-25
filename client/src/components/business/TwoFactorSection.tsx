@@ -108,7 +108,7 @@ export function TwoFactorSection() {
       {backupCodes && (
         <div className="mt-4 rounded-lg bg-success-bg px-4 py-3 font-sans text-sm text-success">
           <p className="font-medium">
-            Two-factor authentication is on. Save these backup codes somewhere safe — you won't see them again:
+            Two-factor authentication is on. Save these backup codes somewhere safe. You won't see them again:
           </p>
           <p className="mt-2 font-mono text-sm tracking-wide">{backupCodes.join("  ")}</p>
           <button

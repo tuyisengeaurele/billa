@@ -56,8 +56,8 @@ describe("POST /admin/users/:id/impersonate", () => {
 
   it("blocks stacking impersonation on top of a non-admin target with 403 (requireAdmin gate)", async () => {
     // While impersonating a non-admin, req.auth.userId is the target's id, so adminRouter's
-    // router-level requireAdmin gate rejects any further /admin/* call — including a second
-    // impersonate attempt — before the route's own already-impersonating check runs. That gate
+    // router-level requireAdmin gate rejects any further /admin/* call, including a second
+    // impersonate attempt, before the route's own already-impersonating check runs. That gate
     // is the actual anti-stacking protection for the common case; the route's 409 check only
     // matters if the impersonated target happens to be an admin themselves.
     const app = createApp();

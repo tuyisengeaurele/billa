@@ -177,7 +177,7 @@ export default function DocumentForm() {
 
   async function handleSelectInvoice(invoiceId: string) {
     setReferencedDocumentId(invoiceId);
-    if (type !== "DELIVERY_NOTE" || !invoiceId) return;
+    if (!invoiceId) return;
     try {
       const data = await apiRequest<{ document: DocumentResponse }>(`/documents/${invoiceId}`);
       setValue(
@@ -355,11 +355,11 @@ export default function DocumentForm() {
                     className="rounded-lg border border-neutral-200 bg-surface px-3.5 py-2.5 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
                   >
                     <option value="">
-                      {type === "RECEIPT" ? "Choose an invoice…" : "None — not tied to an invoice"}
+                      {type === "RECEIPT" ? "Choose an invoice…" : "None (not tied to an invoice)"}
                     </option>
                     {invoiceOptions.map((invoice) => (
                       <option key={invoice.id} value={invoice.id}>
-                        {invoice.number ?? "Draft"} — {invoice.customer.name}
+                        {invoice.number ?? "Draft"} · {invoice.customer.name}
                       </option>
                     ))}
                   </select>

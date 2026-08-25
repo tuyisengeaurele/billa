@@ -33,7 +33,7 @@ const FAQS = [
   },
   {
     question: "What happens after my trial ends?",
-    answer: `You can still view and download everything you've already created. To create new documents, subscribe for ${formatRwf(PLAN_PRICES.MONTHLY)} a month or ${formatRwf(PLAN_PRICES.ANNUAL)} a year.`,
+    answer: `You can still view and download everything you've already created. Creating new documents will need an active subscription (planned at ${formatRwf(PLAN_PRICES.MONTHLY)} a month or ${formatRwf(PLAN_PRICES.ANNUAL)} a year) once paid plans go live.`,
   },
   {
     question: "Can I use it for more than one business?",
@@ -41,7 +41,8 @@ const FAQS = [
   },
   {
     question: "How do I pay?",
-    answer: "By Mobile Money or card.",
+    answer:
+      "Paid subscriptions aren't open yet. Every account gets full access during the 14-day trial, and we'll announce payment options once they're live.",
   },
 ];
 
@@ -242,7 +243,7 @@ export default function Landing() {
           Simple pricing
         </motion.h2>
         <p className="mx-auto mt-3 max-w-md text-center font-sans text-sm text-neutral-500">
-          Every plan includes a 14-day free trial before you pay anything.
+          Every account gets a 14-day free trial, full access, no card required. Paid billing is launching soon.
         </p>
         <div className="mt-12 grid grid-cols-1 gap-8 sm:grid-cols-2">
           <motion.div

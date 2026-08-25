@@ -442,6 +442,51 @@ describe("DocumentForm", () => {
     expect(screen.getByText(/subtotal: 65,000 rwf/i)).toBeInTheDocument();
   });
 
+  it("also prefills lines for a receipt when an invoice is chosen", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.includes("/documents?type=INVOICE")) {
+        return new Response(
+          JSON.stringify({
+            results: [{ id: "inv1", number: "INV-0001", customer: { name: "Acme Ltd" } }],
+            total: 1,
+            page: 1,
+            pageSize: 100,
+          }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/documents/inv1")) {
+        return new Response(
+          JSON.stringify({
+            document: {
+              id: "inv1",
+              type: "INVOICE",
+              customerId: "c1",
+              customer: { name: "Acme Ltd" },
+              issueDate: "2026-08-19T00:00:00.000Z",
+              dueDate: null,
+              notes: null,
+              lines: [
+                { id: "l1", itemId: null, description: "Cement", quantity: "5.00", unitPrice: 13000, taxRate: "18.00" },
+              ],
+            },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderNewForType("RECEIPT");
+
+    const select = await screen.findByLabelText(/invoice/i);
+    await user.selectOptions(select, "inv1");
+
+    expect(await screen.findByDisplayValue("Cement")).toBeInTheDocument();
+  });
+
   it("allows saving a delivery note with no invoice chosen", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async () =>
       new Response(JSON.stringify({ results: [], total: 0, page: 1, pageSize: 100 }), { status: 200 }),
