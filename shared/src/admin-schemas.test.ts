@@ -5,6 +5,7 @@ import {
   adminUserListQuerySchema,
   extendTrialSchema,
   postAnnouncementSchema,
+  renameBusinessSchema,
 } from "./admin-schemas.js";
 
 describe("adminAuditLogQuerySchema", () => {
@@ -72,5 +73,19 @@ describe("postAnnouncementSchema", () => {
 
   it("rejects a message over 500 characters", () => {
     expect(postAnnouncementSchema.safeParse({ message: "a".repeat(501) }).success).toBe(false);
+  });
+});
+
+describe("renameBusinessSchema", () => {
+  it("accepts a non-empty name and trims it", () => {
+    expect(renameBusinessSchema.parse({ name: "  Musanze Traders  " }).name).toBe("Musanze Traders");
+  });
+
+  it("rejects an empty name", () => {
+    expect(renameBusinessSchema.safeParse({ name: "   " }).success).toBe(false);
+  });
+
+  it("rejects a name over 200 characters", () => {
+    expect(renameBusinessSchema.safeParse({ name: "a".repeat(201) }).success).toBe(false);
   });
 });
