@@ -87,6 +87,24 @@ describe("TwoFactorSection", () => {
     expect(await screen.findByRole("button", { name: /^copied$/i })).toBeInTheDocument();
   });
 
+  it("falls back to the legacy copy method when the Clipboard API is blocked", async () => {
+    vi.spyOn(navigator.clipboard, "writeText").mockRejectedValue(new Error("blocked"));
+    const execCommandSpy = vi.fn().mockReturnValue(true);
+    document.execCommand = execCommandSpy;
+    const user = userEvent.setup();
+    renderSection({ user: { id: "u1", email: "owner@example.com", totpEnabled: false } });
+
+    await user.click(await screen.findByRole("button", { name: /set up two-factor authentication/i }));
+    await user.type(await screen.findByLabelText(/enter the 6-digit code/i), "654321");
+    await user.click(screen.getByRole("button", { name: /^confirm$/i }));
+    await screen.findByText(/AAAA111111\s+BBBB222222/);
+
+    await user.click(screen.getByRole("button", { name: /copy all codes/i }));
+
+    expect(execCommandSpy).toHaveBeenCalledWith("copy");
+    expect(await screen.findByRole("button", { name: /^copied$/i })).toBeInTheDocument();
+  });
+
   it("shows an error and stays on setup when the confirm code is wrong", async () => {
     const user = userEvent.setup();
     renderSection({ user: { id: "u1", email: "owner@example.com", totpEnabled: false } });
