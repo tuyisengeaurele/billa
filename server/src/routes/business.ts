@@ -1,18 +1,20 @@
 import { Router } from "express";
 import multer from "multer";
-import type { DocumentType as PrismaDocumentType } from "@prisma/client";
+import type { DocumentType as PrismaDocumentType, Prisma } from "@prisma/client";
 import {
+  activityListQuerySchema,
   businessProfileSchema,
   confirmLogoSchema,
   createInviteSchema,
   logoUrlSchema,
   updateSequencesSchema,
 } from "@billa/shared";
-import type { CreateInviteInput } from "@billa/shared";
+import type { ActivityListQuery, CreateInviteInput } from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/require-auth.js";
 import { requireOwner } from "../middleware/require-owner.js";
 import { validateBody } from "../middleware/validate.js";
+import { validateQuery } from "../middleware/validate-query.js";
 import { mergeSequences } from "../lib/document-sequences.js";
 import { detectAllowedImageType } from "../lib/file-sniff.js";
 import { getStorage } from "../lib/storage.js";
@@ -316,4 +318,27 @@ businessRouter.delete("/invites/:id", requireOwner, async (req, res) => {
     return;
   }
   res.json({ ok: true });
+});
+
+businessRouter.get("/activity", validateQuery(activityListQuerySchema), async (req, res) => {
+  const query = req.listQuery as ActivityListQuery;
+  const businessId = req.auth!.businessId;
+
+  const where: Prisma.ActivityLogEntryWhereInput = {
+    businessId,
+    ...(query.actorUserId ? { actorUserId: query.actorUserId } : {}),
+  };
+
+  const [results, total] = await Promise.all([
+    prisma.activityLogEntry.findMany({
+      where,
+      orderBy: { createdAt: query.sortOrder },
+      skip: (query.page - 1) * query.pageSize,
+      take: query.pageSize,
+      include: { actor: { select: { id: true, email: true } } },
+    }),
+    prisma.activityLogEntry.count({ where }),
+  ]);
+
+  res.json({ results, total, page: query.page, pageSize: query.pageSize });
 });
