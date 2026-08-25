@@ -162,6 +162,91 @@ describe("DELETE /business/invites/:id", () => {
   });
 });
 
+describe("GET /business/invites", () => {
+  it("includes a working link for each pending invite", async () => {
+    const app = createApp();
+    const { cookies } = await registerAndGetCookies(app, "owner@example.com", "Kigali Traders");
+    await request(app).post("/business/invites").set("Cookie", cookies).send({ email: "friend@example.com" });
+
+    const res = await request(app).get("/business/invites").set("Cookie", cookies);
+
+    expect(res.body.invites[0].link).toContain("/invite/");
+  });
+});
+
+describe("POST /business/invites/:id/resend", () => {
+  it("extends the expiry, re-sends the email, and returns the link", async () => {
+    const app = createApp();
+    const { cookies } = await registerAndGetCookies(app, "owner@example.com", "Kigali Traders");
+    const createRes = await request(app).post("/business/invites").set("Cookie", cookies).send({
+      email: "friend@example.com",
+    });
+    const original = await prisma.businessInvite.findUniqueOrThrow({ where: { id: createRes.body.invite.id } });
+    await prisma.businessInvite.update({ where: { id: original.id }, data: { expiresAt: new Date(Date.now() + 1000) } });
+    const sendSpy = vi.spyOn(resendModule, "sendEmail").mockResolvedValue();
+
+    const res = await request(app).post(`/business/invites/${original.id}/resend`).set("Cookie", cookies);
+
+    expect(res.status).toBe(200);
+    expect(res.body.link).toContain("/invite/");
+    expect(sendSpy).toHaveBeenCalledWith(expect.objectContaining({ to: "friend@example.com" }));
+    const updated = await prisma.businessInvite.findUniqueOrThrow({ where: { id: original.id } });
+    expect(updated.expiresAt.getTime()).toBeGreaterThan(original.expiresAt.getTime());
+  });
+
+  it("returns 404 for an unknown invite", async () => {
+    const app = createApp();
+    const { cookies } = await registerAndGetCookies(app, "owner@example.com", "Kigali Traders");
+
+    const res = await request(app).post("/business/invites/nonexistent/resend").set("Cookie", cookies);
+
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 404 for an already-accepted invite", async () => {
+    const app = createApp();
+    const { cookies: ownerCookies } = await registerAndGetCookies(app, "owner@example.com", "Kigali Traders");
+    const createRes = await request(app).post("/business/invites").set("Cookie", ownerCookies).send({
+      email: "friend@example.com",
+    });
+    const token = (createRes.body.link as string).split("/invite/")[1];
+    const { cookies: inviteeCookies } = await registerAndGetCookies(app, "friend@example.com", "Friend's Own Biz");
+    await request(app).post(`/invites/${token}/accept`).set("Cookie", inviteeCookies);
+
+    const res = await request(app)
+      .post(`/business/invites/${createRes.body.invite.id}/resend`)
+      .set("Cookie", ownerCookies);
+
+    expect(res.status).toBe(404);
+  });
+
+  it("blocks a member from resending an invite", async () => {
+    const app = createApp();
+    const { cookies: ownerCookies } = await registerAndGetCookies(app, "owner@example.com", "Kigali Traders");
+    const ownerRes = await request(app).get("/auth/me").set("Cookie", ownerCookies);
+    const createRes = await request(app).post("/business/invites").set("Cookie", ownerCookies).send({
+      email: "friend@example.com",
+    });
+    const { cookies: memberOwnCookies, userId: memberId } = await registerAndGetCookies(
+      app,
+      "member@example.com",
+      "Member's Own Biz",
+    );
+    await prisma.businessMember.create({ data: { businessId: ownerRes.body.business.id, userId: memberId } });
+    const switchRes = await request(app)
+      .post("/auth/switch-business")
+      .set("Cookie", memberOwnCookies)
+      .send({ businessId: ownerRes.body.business.id });
+    const memberCookies = switchRes.headers["set-cookie"] as unknown as string[];
+
+    const res = await request(app)
+      .post(`/business/invites/${createRes.body.invite.id}/resend`)
+      .set("Cookie", memberCookies);
+
+    expect(res.status).toBe(403);
+  });
+});
+
 describe("invite accept flow", () => {
   it("shows invite preview details without requiring auth", async () => {
     const app = createApp();

@@ -27,6 +27,18 @@ import { logActivity } from "../lib/activity-log.js";
 
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
+async function sendInviteEmail(businessName: string, email: string, link: string): Promise<void> {
+  try {
+    await sendEmail({
+      to: email,
+      subject: `You've been invited to join ${businessName} on Billa`,
+      html: `<p>You've been invited to join <strong>${businessName}</strong> on Billa.</p><p><a href="${link}">Accept the invite</a></p>`,
+    });
+  } catch {
+    // The invite is already saved; the owner can still share the link manually.
+  }
+}
+
 export const businessRouter = Router();
 
 businessRouter.use(requireAuth);
@@ -255,12 +267,19 @@ businessRouter.delete("/members/:userId", requireOwner, async (req, res) => {
 });
 
 businessRouter.get("/invites", requireOwner, async (req, res) => {
+  const clientOrigin = process.env.CLIENT_ORIGIN ?? "http://localhost:5173";
   const invites = await prisma.businessInvite.findMany({
     where: { businessId: req.auth!.businessId, acceptedAt: null },
     orderBy: { createdAt: "asc" },
   });
   res.json({
-    invites: invites.map((i) => ({ id: i.id, email: i.email, expiresAt: i.expiresAt, createdAt: i.createdAt })),
+    invites: invites.map((i) => ({
+      id: i.id,
+      email: i.email,
+      expiresAt: i.expiresAt,
+      createdAt: i.createdAt,
+      link: `${clientOrigin}/invite/${i.token}`,
+    })),
   });
 });
 
@@ -296,15 +315,7 @@ businessRouter.post("/invites", requireOwner, validateBody(createInviteSchema), 
 
   const clientOrigin = process.env.CLIENT_ORIGIN ?? "http://localhost:5173";
   const link = `${clientOrigin}/invite/${invite.token}`;
-  try {
-    await sendEmail({
-      to: email,
-      subject: `You've been invited to join ${business.name} on Billa`,
-      html: `<p>You've been invited to join <strong>${business.name}</strong> on Billa.</p><p><a href="${link}">Accept the invite</a></p>`,
-    });
-  } catch {
-    // The invite is already saved; the owner can still share the link manually.
-  }
+  await sendInviteEmail(business.name, email, link);
 
   res.status(201).json({ invite: { id: invite.id, email: invite.email, expiresAt: invite.expiresAt }, link });
 });
@@ -318,6 +329,29 @@ businessRouter.delete("/invites/:id", requireOwner, async (req, res) => {
     return;
   }
   res.json({ ok: true });
+});
+
+businessRouter.post("/invites/:id/resend", requireOwner, async (req, res) => {
+  const businessId = req.auth!.businessId;
+  const invite = await prisma.businessInvite.findFirst({
+    where: { id: req.params.id, businessId, acceptedAt: null },
+  });
+  if (!invite) {
+    res.status(404).json({ error: "not_found" });
+    return;
+  }
+
+  const business = await prisma.business.findUniqueOrThrow({ where: { id: businessId } });
+  const updated = await prisma.businessInvite.update({
+    where: { id: invite.id },
+    data: { expiresAt: new Date(Date.now() + INVITE_TTL_MS) },
+  });
+
+  const clientOrigin = process.env.CLIENT_ORIGIN ?? "http://localhost:5173";
+  const link = `${clientOrigin}/invite/${updated.token}`;
+  await sendInviteEmail(business.name, updated.email, link);
+
+  res.json({ invite: { id: updated.id, email: updated.email, expiresAt: updated.expiresAt }, link });
 });
 
 businessRouter.get("/activity", validateQuery(activityListQuerySchema), async (req, res) => {
