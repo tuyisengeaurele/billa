@@ -8,7 +8,6 @@ import * as resendModule from "../lib/resend.js";
 beforeAll(() => {
   process.env.JWT_ACCESS_SECRET ??= "test-secret";
   process.env.JWT_REFRESH_TTL ??= "30d";
-  process.env.ADMIN_EMAILS = "admin@example.com";
 });
 
 beforeEach(resetDb);
@@ -105,6 +104,7 @@ describe("GET /contact", () => {
   it("lists messages for an admin user", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app, "admin@example.com");
+    await prisma.user.update({ where: { email: "admin@example.com" }, data: { isAdmin: true } });
     await prisma.contactMessage.create({
       data: { name: "Aline", email: "aline@example.com", message: "Need help with templates please." },
     });

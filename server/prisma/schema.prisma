@@ -89,6 +89,8 @@ model User {
   totpEnabled     Boolean  @default(false)
   totpBackupCodes String[] @default([])
 
+  isAdmin Boolean @default(false)
+
   businesses          Business[]
   refreshTokens       RefreshToken[]
   payments            Payment[]

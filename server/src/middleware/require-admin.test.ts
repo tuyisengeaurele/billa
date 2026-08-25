@@ -18,46 +18,32 @@ function testApp(userId: string) {
   return app;
 }
 
-async function createUser(email: string) {
+async function createUser(email: string, isAdmin: boolean) {
   const user = await prisma.user.create({
-    data: { email, firebaseUid: crypto.randomUUID(), trialEndsAt: new Date() },
+    data: { email, firebaseUid: crypto.randomUUID(), trialEndsAt: new Date(), isAdmin },
   });
   return user.id;
 }
 
 describe("requireAdmin", () => {
-  it("allows a user whose email is on the admin allowlist", async () => {
-    process.env.ADMIN_EMAILS = "admin@example.com";
-    const userId = await createUser("admin@example.com");
+  it("allows a user with isAdmin set", async () => {
+    const userId = await createUser("admin@example.com", true);
 
     const res = await request(testApp(userId)).get("/probe");
 
     expect(res.status).toBe(200);
   });
 
-  it("matches the allowlist case-insensitively", async () => {
-    process.env.ADMIN_EMAILS = "Admin@Example.com";
-    const userId = await createUser("admin@example.com");
-
-    const res = await request(testApp(userId)).get("/probe");
-
-    expect(res.status).toBe(200);
-  });
-
-  it("blocks a user whose email isn't on the allowlist", async () => {
-    process.env.ADMIN_EMAILS = "admin@example.com";
-    const userId = await createUser("someone-else@example.com");
+  it("blocks a user without isAdmin set", async () => {
+    const userId = await createUser("someone-else@example.com", false);
 
     const res = await request(testApp(userId)).get("/probe");
 
     expect(res.status).toBe(403);
   });
 
-  it("blocks everyone when no allowlist is configured", async () => {
-    delete process.env.ADMIN_EMAILS;
-    const userId = await createUser("admin@example.com");
-
-    const res = await request(testApp(userId)).get("/probe");
+  it("blocks a request for a user that no longer exists", async () => {
+    const res = await request(testApp("nonexistent-user-id")).get("/probe");
 
     expect(res.status).toBe(403);
   });

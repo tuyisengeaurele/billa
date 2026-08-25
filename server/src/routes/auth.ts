@@ -73,7 +73,7 @@ authRouter.post("/session", authRateLimit, validateBody(sessionSchema), async (r
 
     await issueSession(res, existing.id, businessId);
     res.json({
-      user: { id: existing.id, email: existing.email, totpEnabled: existing.totpEnabled },
+      user: { id: existing.id, email: existing.email, totpEnabled: existing.totpEnabled, isAdmin: existing.isAdmin },
       business: { id: business.id, name: business.name, onboardingCompletedAt: business.onboardingCompletedAt },
     });
     return;
@@ -99,7 +99,7 @@ authRouter.post("/session", authRateLimit, validateBody(sessionSchema), async (r
 
   await issueSession(res, user.id, business.id);
   res.status(201).json({
-    user: { id: user.id, email: user.email, totpEnabled: user.totpEnabled },
+    user: { id: user.id, email: user.email, totpEnabled: user.totpEnabled, isAdmin: user.isAdmin },
     business: { id: business.id, name: business.name, onboardingCompletedAt: business.onboardingCompletedAt },
   });
 });
@@ -116,7 +116,7 @@ authRouter.get("/me", requireAuth, async (req, res) => {
     return;
   }
   res.json({
-    user: { id: user.id, email: user.email, totpEnabled: user.totpEnabled },
+    user: { id: user.id, email: user.email, totpEnabled: user.totpEnabled, isAdmin: user.isAdmin },
     business: { id: business.id, name: business.name, onboardingCompletedAt: business.onboardingCompletedAt },
   });
 });
@@ -273,7 +273,7 @@ authRouter.post("/2fa/challenge", authRateLimit, validateBody(twoFactorChallenge
   const business = await prisma.business.findUniqueOrThrow({ where: { id: challenge.businessId } });
   await issueSession(res, user.id, challenge.businessId);
   res.json({
-    user: { id: user.id, email: user.email, totpEnabled: user.totpEnabled },
+    user: { id: user.id, email: user.email, totpEnabled: user.totpEnabled, isAdmin: user.isAdmin },
     business: { id: business.id, name: business.name, onboardingCompletedAt: business.onboardingCompletedAt },
   });
 });

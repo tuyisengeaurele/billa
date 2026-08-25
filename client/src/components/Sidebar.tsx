@@ -110,6 +110,14 @@ function ActivityIcon() {
   );
 }
 
+function AdminIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3 4 6.5V11c0 4.9 3.3 9.2 8 10.5 4.7-1.3 8-5.6 8-10.5V6.5L12 3Z" />
+    </svg>
+  );
+}
+
 function SettingsIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -134,7 +142,7 @@ function LogoutIcon() {
 }
 
 export function Sidebar({ billingBanner, onNavigate }: SidebarProps) {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const { pathname, search } = useLocation();
   const active = (to: string) => isLinkActive(pathname, search, to);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
@@ -187,6 +195,11 @@ export function Sidebar({ billingBanner, onNavigate }: SidebarProps) {
           <SidebarLink to="/settings" isActive={pathname === "/settings"} onNavigate={onNavigate} icon={<SettingsIcon />}>
             Settings
           </SidebarLink>
+          {user?.isAdmin && (
+            <SidebarLink to="/admin" isActive={pathname.startsWith("/admin")} onNavigate={onNavigate} icon={<AdminIcon />}>
+              Admin
+            </SidebarLink>
+          )}
         </div>
       </nav>
 

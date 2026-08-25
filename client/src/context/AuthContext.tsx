@@ -12,6 +12,7 @@ interface User {
   id: string;
   email: string;
   totpEnabled: boolean;
+  isAdmin: boolean;
 }
 
 interface Business {
