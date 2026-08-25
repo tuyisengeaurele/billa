@@ -21,7 +21,7 @@ import { validateBody } from "../middleware/validate.js";
 import { validateQuery } from "../middleware/validate-query.js";
 import { logAdminAction } from "../lib/admin-audit-log.js";
 import { toCsv } from "../lib/csv.js";
-import { deleteBusinessCascade } from "../lib/delete-business.js";
+import { deleteBusinessCascade, deleteUserCascade } from "../lib/delete-business.js";
 import { issueSession } from "../lib/session.js";
 
 export const adminRouter = Router();
@@ -141,18 +141,8 @@ adminRouter.delete("/users/:id", async (req, res) => {
     return;
   }
 
-  const ownedBusinesses = await prisma.business.findMany({ where: { ownerId: id }, select: { id: true } });
-
   await prisma.$transaction(async (tx) => {
-    for (const business of ownedBusinesses) {
-      await deleteBusinessCascade(tx, business.id);
-    }
-    await tx.businessMember.deleteMany({ where: { userId: id } });
-    await tx.activityLogEntry.deleteMany({ where: { actorUserId: id } });
-    await tx.refreshToken.deleteMany({ where: { userId: id } });
-    await tx.twoFactorChallenge.deleteMany({ where: { userId: id } });
-    await tx.payment.deleteMany({ where: { userId: id } });
-    await tx.user.delete({ where: { id } });
+    await deleteUserCascade(tx, id);
   });
 
   await logAdminAction({

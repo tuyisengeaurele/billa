@@ -13,3 +13,16 @@ export async function deleteBusinessCascade(tx: TransactionClient, businessId: s
   await tx.activityLogEntry.deleteMany({ where: { businessId } });
   await tx.business.delete({ where: { id: businessId } });
 }
+
+export async function deleteUserCascade(tx: TransactionClient, userId: string): Promise<void> {
+  const ownedBusinesses = await tx.business.findMany({ where: { ownerId: userId }, select: { id: true } });
+  for (const business of ownedBusinesses) {
+    await deleteBusinessCascade(tx, business.id);
+  }
+  await tx.businessMember.deleteMany({ where: { userId } });
+  await tx.activityLogEntry.deleteMany({ where: { actorUserId: userId } });
+  await tx.refreshToken.deleteMany({ where: { userId } });
+  await tx.twoFactorChallenge.deleteMany({ where: { userId } });
+  await tx.payment.deleteMany({ where: { userId } });
+  await tx.user.delete({ where: { id: userId } });
+}

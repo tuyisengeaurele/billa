@@ -1,6 +1,6 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../context/AuthContext";
 import BusinessSettings from "./BusinessSettings";
@@ -295,6 +295,63 @@ describe("BusinessSettings", () => {
 
     expect(await screen.findByRole("button", { name: /replace logo/i })).toBeInTheDocument();
     expect(screen.getByAltText(/your business logo/i)).toBeInTheDocument();
+  });
+
+  it("requires typing your email before delete is enabled, then deletes the account and redirects to login", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/business/sequences")) {
+        return new Response(JSON.stringify({ sequences: [] }), { status: 200 });
+      }
+      if (url.endsWith("/auth/me") && init?.method === "DELETE") {
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      }
+      if (url.endsWith("/business") || url.endsWith("/auth/me")) {
+        return new Response(
+          JSON.stringify({
+            business: {
+              ownerId: "u1",
+              name: "Kigali Traders",
+              tin: null,
+              industry: null,
+              phone: null,
+              email: null,
+              address: null,
+              rraEbmNumber: null,
+              defaultTemplate: "FORMAL",
+              logoUrl: null,
+            },
+            user: { id: "u1", email: "owner@example.com" },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={["/settings"]}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/settings" element={<BusinessSettings />} />
+            <Route path="/login" element={<div>login page</div>} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: /delete my account/i }));
+    const dialog = await screen.findByRole("dialog", { name: /delete account/i });
+    const confirmButton = within(dialog).getByRole("button", { name: /^delete account$/i });
+    expect(confirmButton).toBeDisabled();
+
+    await user.type(within(dialog).getByLabelText(/type/i), "owner@example.com");
+    expect(confirmButton).toBeEnabled();
+
+    await user.click(confirmButton);
+
+    expect(await screen.findByText("login page")).toBeInTheDocument();
   });
 
   it("shows an error message when the business profile fails to load", async () => {

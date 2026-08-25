@@ -4,8 +4,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider, useAuth } from "./AuthContext";
 
 function TestConsumer() {
-  const { user, business, isLoading, impersonating, completeTwoFactorChallenge, stopImpersonating, refreshAuth } =
-    useAuth();
+  const {
+    user,
+    business,
+    isLoading,
+    impersonating,
+    completeTwoFactorChallenge,
+    stopImpersonating,
+    refreshAuth,
+    deleteAccount,
+  } = useAuth();
   if (isLoading) return <div>loading</div>;
   if (!user) {
     return (
@@ -21,6 +29,7 @@ function TestConsumer() {
       {impersonating && <span>impersonating</span>}
       <button onClick={() => stopImpersonating()}>Return to admin</button>
       <button onClick={() => refreshAuth()}>Refresh</button>
+      <button onClick={() => deleteAccount()}>Delete account</button>
     </div>
   );
 }
@@ -155,6 +164,36 @@ describe("AuthProvider", () => {
       expect(screen.getByText("authenticated as owner@example.com (Kigali Traders)")).toBeInTheDocument(),
     );
     expect(screen.getByText("impersonating")).toBeInTheDocument();
+  });
+
+  it("deleteAccount calls the delete endpoint and clears the session", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      if (url.includes("/auth/me") && init?.method === "DELETE") {
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      }
+      return new Response(
+        JSON.stringify({
+          user: { id: "u1", email: "owner@example.com" },
+          business: { id: "b1", name: "Kigali Traders" },
+        }),
+        { status: 200 },
+      );
+    });
+
+    render(
+      <AuthProvider>
+        <TestConsumer />
+      </AuthProvider>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText("authenticated as owner@example.com (Kigali Traders)")).toBeInTheDocument(),
+    );
+    await user.click(screen.getByText("Delete account"));
+
+    await waitFor(() => expect(screen.getByText("unauthenticated")).toBeInTheDocument());
   });
 
   it("completeTwoFactorChallenge signs the user in on a correct code", async () => {

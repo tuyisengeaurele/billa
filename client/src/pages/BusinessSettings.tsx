@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import type { DocumentTemplate } from "@billa/shared";
 import { AppLayout } from "../components/AppLayout";
 import { FormField } from "../components/FormField";
 import { Button } from "../components/Button";
+import { Modal } from "../components/Modal";
 import { LogoStep } from "../components/onboarding/LogoStep";
 import { API_BASE_URL, apiRequest, ApiError } from "../lib/apiClient";
 import { useAuth } from "../context/AuthContext";
@@ -49,12 +51,17 @@ const CONTACT_FIELD_IDS: (keyof BusinessProfile)[] = ["phone", "email", "address
 const TAX_FIELD_IDS: (keyof BusinessProfile)[] = ["rraEbmNumber"];
 
 export default function BusinessSettings() {
-  const { user } = useAuth();
+  const { user, deleteAccount } = useAuth();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<BusinessProfile | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [isEditingLogo, setIsEditingLogo] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   function loadProfile() {
     return apiRequest<{ business: BusinessProfile }>("/business")
@@ -69,6 +76,22 @@ export default function BusinessSettings() {
   function handleLogoComplete() {
     setIsEditingLogo(false);
     loadProfile();
+  }
+
+  async function handleDeleteAccount() {
+    setDeleteError(null);
+    setIsDeletingAccount(true);
+    try {
+      await deleteAccount();
+      navigate("/login");
+    } catch (err) {
+      setDeleteError(
+        err instanceof ApiError && err.status === 409
+          ? "Can't delete an account with an admin action history."
+          : "Couldn't delete your account. Try again.",
+      );
+      setIsDeletingAccount(false);
+    }
   }
 
   async function handleSubmit(event: React.FormEvent) {
@@ -309,7 +332,70 @@ export default function BusinessSettings() {
         <TwoFactorSection />
 
         <BillingSection />
+
+        <section className="rounded-xl border border-error/30 bg-surface p-6">
+          <h2 className="font-display text-base font-semibold text-neutral-900">Danger zone</h2>
+          <p className="mt-1 font-sans text-sm text-neutral-600">
+            {isOwner
+              ? `Permanently delete your account and ${profile.name}, including all documents, customers, and items. This cannot be undone.`
+              : "Permanently delete your account. You'll be removed from this business. This cannot be undone."}
+          </p>
+          {deleteError && (
+            <div className="mt-3 rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
+              {deleteError}
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => setIsDeleteModalOpen(true)}
+            className="mt-4 rounded-lg border border-error px-4 py-2 font-sans text-sm font-semibold text-error transition-colors hover:bg-error-bg"
+          >
+            Delete my account
+          </button>
+        </section>
       </div>
+
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setDeleteConfirmText("");
+        }}
+        title="Delete account"
+      >
+        <p className="font-sans text-sm text-neutral-600">
+          This permanently deletes your account{isOwner ? ` and ${profile.name}` : ""}. This cannot be undone.
+        </p>
+        <label htmlFor="deleteAccountConfirmText" className="mt-4 block font-sans text-sm font-medium text-neutral-800">
+          Type <span className="font-semibold">{user?.email}</span> to confirm.
+        </label>
+        <input
+          id="deleteAccountConfirmText"
+          value={deleteConfirmText}
+          onChange={(e) => setDeleteConfirmText(e.target.value)}
+          className="mt-2 w-full rounded-lg border border-neutral-200 bg-surface px-3.5 py-2 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+        />
+        <div className="mt-6 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              setIsDeleteModalOpen(false);
+              setDeleteConfirmText("");
+            }}
+            className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 transition-colors hover:bg-neutral-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={deleteConfirmText !== user?.email || isDeletingAccount}
+            onClick={handleDeleteAccount}
+            className="rounded-lg bg-error px-4 py-2 font-sans text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isDeletingAccount ? "Deleting…" : "Delete account"}
+          </button>
+        </div>
+      </Modal>
     </AppLayout>
   );
 }

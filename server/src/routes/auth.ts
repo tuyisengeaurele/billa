@@ -22,6 +22,7 @@ import { issueSession } from "../lib/session.js";
 import { generateBackupCodes, generateTotpSetup, hashBackupCode, verifyTotpToken } from "../lib/totp.js";
 import { hasBusinessAccess } from "../lib/business-access.js";
 import { logAdminAction } from "../lib/admin-audit-log.js";
+import { deleteUserCascade } from "../lib/delete-business.js";
 import { validateBody } from "../middleware/validate.js";
 import { authRateLimit } from "../middleware/auth-rate-limit.js";
 import { requireAuth } from "../middleware/require-auth.js";
@@ -126,6 +127,26 @@ authRouter.get("/me", requireAuth, async (req, res) => {
     business: { id: business.id, name: business.name, onboardingCompletedAt: business.onboardingCompletedAt },
     impersonating: Boolean(req.auth!.impersonatedBy),
   });
+});
+
+authRouter.delete("/me", requireAuth, async (req, res) => {
+  const userId = req.auth!.userId;
+
+  const [adminActionCount, announcementCount] = await Promise.all([
+    prisma.adminAuditLogEntry.count({ where: { adminUserId: userId } }),
+    prisma.announcement.count({ where: { createdById: userId } }),
+  ]);
+  if (adminActionCount > 0 || announcementCount > 0) {
+    res.status(409).json({ error: "has_admin_history" });
+    return;
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await deleteUserCascade(tx, userId);
+  });
+
+  clearAuthCookies(res);
+  res.json({ ok: true });
 });
 
 authRouter.post("/impersonate/stop", requireAuth, async (req, res) => {

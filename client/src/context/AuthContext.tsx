@@ -46,6 +46,7 @@ interface AuthContextValue {
   logout: () => Promise<void>;
   stopImpersonating: () => Promise<void>;
   refreshAuth: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -152,6 +153,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setImpersonating(false);
   }
 
+  async function deleteAccount() {
+    await apiRequest("/auth/me", { method: "DELETE" });
+    try {
+      await signOutFirebase();
+    } catch {
+      // Not fatal: our own session is already gone either way.
+    }
+    setUser(null);
+    setBusiness(null);
+    setImpersonating(false);
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -168,6 +181,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout,
         stopImpersonating,
         refreshAuth,
+        deleteAccount,
       }}
     >
       {children}
