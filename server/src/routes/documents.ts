@@ -14,6 +14,7 @@ import { renderDocumentPdf } from "../lib/pdf/render-document-pdf.js";
 import { sendDocumentEmail } from "../lib/resend.js";
 import { addInterval, generateDueRecurringDocuments } from "../lib/recurring-documents.js";
 import { sendOverdueReminders } from "../lib/overdue-reminders.js";
+import { logActivity } from "../lib/activity-log.js";
 
 export const documentsRouter = Router();
 
@@ -120,6 +121,15 @@ documentsRouter.post("/", validateBody(documentSchema), async (req, res) => {
       },
     },
     include: DOCUMENT_INCLUDE,
+  });
+
+  await logActivity({
+    businessId,
+    actorUserId: req.auth!.userId,
+    action: "DOCUMENT_CREATED",
+    entityType: "Document",
+    entityId: document.id,
+    metadata: { type: document.type },
   });
 
   res.status(201).json({ document });
@@ -324,6 +334,15 @@ documentsRouter.post("/:id/finalize", async (req, res) => {
     });
   });
 
+  await logActivity({
+    businessId,
+    actorUserId: req.auth!.userId,
+    action: "DOCUMENT_FINALIZED",
+    entityType: "Document",
+    entityId: finalized.id,
+    metadata: { number: finalized.number, type: finalized.type },
+  });
+
   res.json({ document: finalized });
 });
 
@@ -410,6 +429,15 @@ documentsRouter.delete("/:id", async (req, res) => {
     prisma.documentLine.deleteMany({ where: { documentId: id } }),
     prisma.document.delete({ where: { id } }),
   ]);
+
+  await logActivity({
+    businessId,
+    actorUserId: req.auth!.userId,
+    action: "DOCUMENT_DELETED",
+    entityType: "Document",
+    entityId: existing.id,
+    metadata: { type: existing.type },
+  });
 
   res.status(204).send();
 });
