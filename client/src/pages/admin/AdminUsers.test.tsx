@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { AuthProvider } from "../../context/AuthContext";
 import AdminUsers from "./AdminUsers";
 
 function urlOf(input: RequestInfo | URL): string {
@@ -38,7 +39,9 @@ describe("AdminUsers", () => {
 
     render(
       <MemoryRouter>
-        <AdminUsers />
+        <AuthProvider>
+          <AdminUsers />
+        </AuthProvider>
       </MemoryRouter>,
     );
 
@@ -56,7 +59,9 @@ describe("AdminUsers", () => {
     const user = userEvent.setup();
     render(
       <MemoryRouter>
-        <AdminUsers />
+        <AuthProvider>
+          <AdminUsers />
+        </AuthProvider>
       </MemoryRouter>,
     );
     await screen.findByText(/no users found/i);

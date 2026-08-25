@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { AuthProvider } from "../../context/AuthContext";
 import AdminSystemHealth from "./AdminSystemHealth";
 
 describe("AdminSystemHealth", () => {
@@ -36,7 +37,9 @@ describe("AdminSystemHealth", () => {
 
     render(
       <MemoryRouter>
-        <AdminSystemHealth />
+        <AuthProvider>
+          <AdminSystemHealth />
+        </AuthProvider>
       </MemoryRouter>,
     );
 
@@ -54,7 +57,9 @@ describe("AdminSystemHealth", () => {
 
     render(
       <MemoryRouter>
-        <AdminSystemHealth />
+        <AuthProvider>
+          <AdminSystemHealth />
+        </AuthProvider>
       </MemoryRouter>,
     );
 
@@ -66,7 +71,9 @@ describe("AdminSystemHealth", () => {
 
     render(
       <MemoryRouter>
-        <AdminSystemHealth />
+        <AuthProvider>
+          <AdminSystemHealth />
+        </AuthProvider>
       </MemoryRouter>,
     );
 

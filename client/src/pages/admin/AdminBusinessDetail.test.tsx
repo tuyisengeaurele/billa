@@ -1,14 +1,17 @@
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { AuthProvider } from "../../context/AuthContext";
 import AdminBusinessDetail from "./AdminBusinessDetail";
 
 function renderPage(businessId = "biz1") {
   return render(
     <MemoryRouter initialEntries={[`/admin/businesses/${businessId}`]}>
-      <Routes>
-        <Route path="/admin/businesses/:id" element={<AdminBusinessDetail />} />
-      </Routes>
+      <AuthProvider>
+        <Routes>
+          <Route path="/admin/businesses/:id" element={<AdminBusinessDetail />} />
+        </Routes>
+      </AuthProvider>
     </MemoryRouter>,
   );
 }

@@ -54,10 +54,20 @@ export function SystemHealthIcon() {
   );
 }
 
-export function BackIcon() {
+export function LogoutIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15 18l-6-6 6-6" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16 17l5-5-5-5" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M21 12H9" />
+    </svg>
+  );
+}
+
+export function MenuIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
     </svg>
   );
 }

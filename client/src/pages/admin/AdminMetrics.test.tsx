@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { AuthProvider } from "../../context/AuthContext";
 import AdminMetrics from "./AdminMetrics";
 
 describe("AdminMetrics", () => {
@@ -31,7 +32,9 @@ describe("AdminMetrics", () => {
 
     render(
       <MemoryRouter>
-        <AdminMetrics />
+        <AuthProvider>
+          <AdminMetrics />
+        </AuthProvider>
       </MemoryRouter>,
     );
 
@@ -48,7 +51,9 @@ describe("AdminMetrics", () => {
 
     render(
       <MemoryRouter>
-        <AdminMetrics />
+        <AuthProvider>
+          <AdminMetrics />
+        </AuthProvider>
       </MemoryRouter>,
     );
 
