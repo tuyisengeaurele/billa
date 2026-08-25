@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { apiRequest, ApiError } from "../../lib/apiClient";
+import { copyToClipboard } from "../../lib/clipboard";
 import { Button } from "../Button";
 import { FormField } from "../FormField";
 
@@ -66,37 +67,10 @@ export function TwoFactorSection() {
     }
   }
 
-  function legacyCopy(text: string): boolean {
-    const textarea = document.createElement("textarea");
-    textarea.value = text;
-    textarea.style.position = "fixed";
-    textarea.style.opacity = "0";
-    document.body.appendChild(textarea);
-    textarea.focus();
-    textarea.select();
-    let succeeded = false;
-    try {
-      succeeded = document.execCommand("copy");
-    } catch {
-      succeeded = false;
-    }
-    document.body.removeChild(textarea);
-    return succeeded;
-  }
-
   async function copyBackupCodes() {
     if (!backupCodes) return;
-    const text = backupCodes.join("\n");
-    try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(text);
-        setCodesCopied(true);
-        return;
-      }
-    } catch {
-      // Some browsers block the async Clipboard API; fall back below.
-    }
-    if (legacyCopy(text)) {
+    const succeeded = await copyToClipboard(backupCodes.join("\n"));
+    if (succeeded) {
       setCodesCopied(true);
     } else {
       setError("Couldn't copy the codes. Select and copy them manually instead.");
