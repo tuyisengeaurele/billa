@@ -102,6 +102,14 @@ function ItemsIcon() {
   );
 }
 
+function ActivityIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 12h4l3 8 4-16 3 8h4" />
+    </svg>
+  );
+}
+
 function SettingsIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -169,6 +177,9 @@ export function Sidebar({ billingBanner, onNavigate }: SidebarProps) {
           </SidebarLink>
           <SidebarLink to="/items" isActive={pathname === "/items"} onNavigate={onNavigate} icon={<ItemsIcon />}>
             Items
+          </SidebarLink>
+          <SidebarLink to="/activity" isActive={pathname === "/activity"} onNavigate={onNavigate} icon={<ActivityIcon />}>
+            Activity
           </SidebarLink>
         </div>
 

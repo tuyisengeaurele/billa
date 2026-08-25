@@ -23,6 +23,7 @@ const Contact = lazy(() => import("./pages/Contact"));
 const AdminMessages = lazy(() => import("./pages/AdminMessages"));
 const PublicDocumentView = lazy(() => import("./pages/PublicDocumentView"));
 const AcceptInvite = lazy(() => import("./pages/AcceptInvite"));
+const Activity = lazy(() => import("./pages/Activity"));
 
 export default function App() {
   return (
@@ -42,6 +43,7 @@ export default function App() {
               <Route element={<ProtectedRoute />}>
                 <Route path="/onboarding" element={<Onboarding />} />
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/activity" element={<Activity />} />
                 <Route path="/customers" element={<Customers />} />
                 <Route path="/items" element={<Items />} />
                 <Route path="/documents" element={<Documents />} />
