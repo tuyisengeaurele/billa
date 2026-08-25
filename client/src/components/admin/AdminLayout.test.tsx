@@ -14,6 +14,7 @@ describe("AdminLayout", () => {
     );
 
     expect(screen.getByRole("link", { name: "Metrics" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "System health" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Users" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Businesses" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Audit log" })).toBeInTheDocument();

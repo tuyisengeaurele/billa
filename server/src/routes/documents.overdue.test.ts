@@ -5,6 +5,7 @@ import { prisma } from "../lib/prisma.js";
 import { resetDb } from "../test/db.js";
 import * as renderDocumentPdfModule from "../lib/pdf/render-document-pdf.js";
 import * as resendModule from "../lib/resend.js";
+import * as overdueRemindersModule from "../lib/overdue-reminders.js";
 
 beforeAll(() => {
   process.env.JWT_ACCESS_SECRET ??= "test-secret";
@@ -61,5 +62,31 @@ describe("POST /documents/overdue/send-reminders", () => {
   it("returns 401 without a session", async () => {
     const res = await request(createApp()).post("/documents/overdue/send-reminders");
     expect(res.status).toBe(401);
+  });
+
+  it("records a successful JobRunLog row", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+
+    await request(app).post("/documents/overdue/send-reminders").set("Cookie", cookies);
+
+    const rows = await prisma.jobRunLog.findMany({ where: { jobName: "overdue-reminders" } });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ succeeded: true, resultCount: 0 });
+  });
+
+  it("records a failed JobRunLog row and responds 500 when the job throws", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    vi.spyOn(overdueRemindersModule, "sendOverdueReminders").mockRejectedValue(new Error("boom"));
+
+    const res = await request(app).post("/documents/overdue/send-reminders").set("Cookie", cookies);
+
+    expect(res.status).toBe(500);
+    const rows = await prisma.jobRunLog.findMany({ where: { jobName: "overdue-reminders" } });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ succeeded: false, errorMessage: "boom" });
+
+    vi.restoreAllMocks();
   });
 });

@@ -11,6 +11,7 @@ const NAV_LINKS = [
   { to: "/admin/businesses", label: "Businesses" },
   { to: "/admin/messages", label: "Messages" },
   { to: "/admin/audit-log", label: "Audit log" },
+  { to: "/admin/system-health", label: "System health" },
 ];
 
 export function AdminLayout({ children }: AdminLayoutProps) {

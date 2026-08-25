@@ -15,6 +15,7 @@ import { sendDocumentEmail } from "../lib/resend.js";
 import { addInterval, generateDueRecurringDocuments } from "../lib/recurring-documents.js";
 import { sendOverdueReminders } from "../lib/overdue-reminders.js";
 import { logActivity } from "../lib/activity-log.js";
+import { recordJobRun } from "../lib/job-run-log.js";
 
 export const documentsRouter = Router();
 
@@ -40,13 +41,31 @@ function recurrenceFields(body: DocumentInput) {
 }
 
 documentsRouter.post("/recurring/generate-due", async (req, res) => {
-  const generated = await generateDueRecurringDocuments(req.auth!.businessId);
-  res.json({ generated });
+  try {
+    const generated = await generateDueRecurringDocuments(req.auth!.businessId);
+    await recordJobRun("recurring-documents", { succeeded: true, resultCount: generated.length });
+    res.json({ generated });
+  } catch (err) {
+    await recordJobRun("recurring-documents", {
+      succeeded: false,
+      errorMessage: err instanceof Error ? err.message : "Unknown error",
+    });
+    res.status(500).json({ error: "job_failed" });
+  }
 });
 
 documentsRouter.post("/overdue/send-reminders", async (req, res) => {
-  const sent = await sendOverdueReminders(req.auth!.businessId);
-  res.json({ sent });
+  try {
+    const sent = await sendOverdueReminders(req.auth!.businessId);
+    await recordJobRun("overdue-reminders", { succeeded: true, resultCount: sent.length });
+    res.json({ sent });
+  } catch (err) {
+    await recordJobRun("overdue-reminders", {
+      succeeded: false,
+      errorMessage: err instanceof Error ? err.message : "Unknown error",
+    });
+    res.status(500).json({ error: "job_failed" });
+  }
 });
 
 documentsRouter.get("/", validateQuery(documentListQuerySchema), async (req, res) => {

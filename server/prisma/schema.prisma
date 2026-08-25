@@ -161,6 +161,17 @@ model AdminAuditLogEntry {
   @@index([adminUserId])
 }
 
+model JobRunLog {
+  id           String   @id @default(cuid())
+  jobName      String
+  ranAt        DateTime @default(now())
+  succeeded    Boolean
+  resultCount  Int?
+  errorMessage String?
+
+  @@index([jobName, ranAt])
+}
+
 model TwoFactorChallenge {
   id         String   @id @default(cuid())
   userId     String

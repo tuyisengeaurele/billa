@@ -1,8 +1,9 @@
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 import { createApp } from "../app.js";
 import { prisma } from "../lib/prisma.js";
 import { resetDb } from "../test/db.js";
+import * as recurringDocumentsModule from "../lib/recurring-documents.js";
 
 beforeAll(() => {
   process.env.JWT_ACCESS_SECRET ??= "test-secret";
@@ -57,5 +58,31 @@ describe("POST /documents/recurring/generate-due", () => {
   it("returns 401 without a session", async () => {
     const res = await request(createApp()).post("/documents/recurring/generate-due");
     expect(res.status).toBe(401);
+  });
+
+  it("records a successful JobRunLog row", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+
+    await request(app).post("/documents/recurring/generate-due").set("Cookie", cookies);
+
+    const rows = await prisma.jobRunLog.findMany({ where: { jobName: "recurring-documents" } });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ succeeded: true, resultCount: 0 });
+  });
+
+  it("records a failed JobRunLog row and responds 500 when the job throws", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    vi.spyOn(recurringDocumentsModule, "generateDueRecurringDocuments").mockRejectedValue(new Error("boom"));
+
+    const res = await request(app).post("/documents/recurring/generate-due").set("Cookie", cookies);
+
+    expect(res.status).toBe(500);
+    const rows = await prisma.jobRunLog.findMany({ where: { jobName: "recurring-documents" } });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ succeeded: false, errorMessage: "boom" });
+
+    vi.restoreAllMocks();
   });
 });
