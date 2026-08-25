@@ -27,6 +27,12 @@ interface UserDetailResponse {
   memberBusinesses: BusinessRef[];
 }
 
+interface SessionRow {
+  id: string;
+  createdAt: string;
+  expiresAt: string;
+}
+
 export default function AdminUserDetail() {
   const { id } = useParams();
   const { user: currentUser, refreshAuth } = useAuth();
@@ -40,6 +46,8 @@ export default function AdminUserDetail() {
   const [isSuspendModalOpen, setIsSuspendModalOpen] = useState(false);
   const [isSuspending, setIsSuspending] = useState(false);
   const [isImpersonating, setIsImpersonating] = useState(false);
+  const [sessions, setSessions] = useState<SessionRow[] | null>(null);
+  const [revokingSessionId, setRevokingSessionId] = useState<string | null>(null);
 
   useEffect(() => {
     apiRequest<UserDetailResponse>(`/admin/users/${id}`)
@@ -50,6 +58,27 @@ export default function AdminUserDetail() {
         }
       });
   }, [id]);
+
+  function loadSessions() {
+    apiRequest<{ results: SessionRow[] }>(`/admin/users/${id}/sessions`)
+      .then((data) => setSessions(data.results))
+      .catch(() => setSessions([]));
+  }
+
+  useEffect(loadSessions, [id]);
+
+  async function revokeSession(sessionId: string) {
+    setError(null);
+    setRevokingSessionId(sessionId);
+    try {
+      await apiRequest(`/admin/users/${id}/sessions/${sessionId}/revoke`, { method: "POST" });
+      loadSessions();
+    } catch {
+      setError("Couldn't revoke the session. Try again.");
+    } finally {
+      setRevokingSessionId(null);
+    }
+  }
 
   async function toggleAdmin() {
     if (!detail) return;
@@ -246,6 +275,41 @@ export default function AdminUserDetail() {
             <p className="mt-3 font-sans text-sm text-error">
               Suspended since {new Date(detail.user.suspendedAt).toLocaleDateString()}.
             </p>
+          )}
+        </section>
+
+        <section className="rounded-xl border border-neutral-200 bg-surface p-6">
+          <h2 className="font-display text-base font-semibold text-neutral-900">Active sessions</h2>
+          {sessions === null ? (
+            <div className="mt-4 flex flex-col gap-2" aria-label="Loading sessions">
+              {[0, 1].map((i) => (
+                <div key={i} className="h-10 animate-pulse rounded-lg bg-neutral-100" />
+              ))}
+            </div>
+          ) : sessions.length === 0 ? (
+            <p className="mt-2 font-sans text-sm text-neutral-600">No active sessions.</p>
+          ) : (
+            <ul className="mt-2 flex flex-col gap-2">
+              {sessions.map((s) => (
+                <li
+                  key={s.id}
+                  className="flex items-center justify-between gap-4 rounded-lg border border-neutral-200 px-4 py-2.5"
+                >
+                  <div className="font-sans text-sm text-neutral-600">
+                    Signed in {new Date(s.createdAt).toLocaleString()} · expires{" "}
+                    {new Date(s.expiresAt).toLocaleDateString()}
+                  </div>
+                  <button
+                    type="button"
+                    disabled={revokingSessionId === s.id}
+                    onClick={() => revokeSession(s.id)}
+                    className="shrink-0 rounded-lg border border-neutral-200 px-3 py-1.5 font-sans text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {revokingSessionId === s.id ? "Revoking…" : "Revoke"}
+                  </button>
+                </li>
+              ))}
+            </ul>
           )}
         </section>
 

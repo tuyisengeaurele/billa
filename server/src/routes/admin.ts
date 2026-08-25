@@ -222,6 +222,40 @@ adminRouter.post("/users/:id/reinstate", async (req, res) => {
   res.json({ ok: true });
 });
 
+adminRouter.get("/users/:id/sessions", async (req, res) => {
+  const { id } = req.params;
+
+  const results = await prisma.refreshToken.findMany({
+    where: { userId: id, revokedAt: null, expiresAt: { gt: new Date() } },
+    select: { id: true, createdAt: true, expiresAt: true },
+    orderBy: { createdAt: "desc" },
+  });
+
+  res.json({ results });
+});
+
+adminRouter.post("/users/:id/sessions/:sessionId/revoke", async (req, res) => {
+  const { id, sessionId } = req.params;
+
+  const session = await prisma.refreshToken.findUnique({ where: { id: sessionId } });
+  if (!session || session.userId !== id) {
+    res.status(404).json({ error: "not_found" });
+    return;
+  }
+
+  await prisma.refreshToken.update({ where: { id: sessionId }, data: { revokedAt: new Date() } });
+
+  await logAdminAction({
+    adminUserId: req.auth!.userId,
+    action: "SESSION_REVOKED",
+    targetType: "User",
+    targetId: id,
+    metadata: { sessionId },
+  });
+
+  res.json({ ok: true });
+});
+
 adminRouter.post("/users/:id/impersonate", async (req, res) => {
   const { id } = req.params;
 

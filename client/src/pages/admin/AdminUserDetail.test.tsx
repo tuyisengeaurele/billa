@@ -384,6 +384,61 @@ describe("AdminUserDetail", () => {
     expect(await screen.findByRole("button", { name: /^impersonate$/i })).toBeDisabled();
   });
 
+  it("lists active sessions with a revoke button and revokes one when clicked", async () => {
+    let revoked = false;
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/auth/me")) {
+        return new Response(
+          JSON.stringify({ user: { id: "u1", email: "admin@example.com", isAdmin: true }, business: { id: "b1", name: "Admin Co" } }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/admin/users/u2/sessions/sess1/revoke") && init?.method === "POST") {
+        revoked = true;
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      }
+      if (url.endsWith("/admin/users/u2/sessions")) {
+        return new Response(
+          JSON.stringify({
+            results: revoked
+              ? []
+              : [{ id: "sess1", createdAt: "2026-08-20T00:00:00.000Z", expiresAt: "2026-09-19T00:00:00.000Z" }],
+          }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/admin/users/u2")) {
+        return new Response(
+          JSON.stringify({
+            user: {
+              id: "u2",
+              email: "owner@example.com",
+              isAdmin: false,
+              suspendedAt: null,
+              trialEndsAt: "2026-09-01T00:00:00.000Z",
+              currentPeriodEnd: null,
+              plan: null,
+              createdAt: "2026-08-01T00:00:00.000Z",
+            },
+            ownedBusinesses: [],
+            memberBusinesses: [],
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: /^revoke$/i }));
+
+    expect(screen.queryByRole("button", { name: /^revoke$/i })).not.toBeInTheDocument();
+    expect(await screen.findByText(/no active sessions/i)).toBeInTheDocument();
+  });
+
   it("shows a not-found message for an unknown user", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async (input) => {
       const url = urlOf(input);
