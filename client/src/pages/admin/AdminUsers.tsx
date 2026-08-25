@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { AdminLayout } from "../../components/admin/AdminLayout";
+import { AdminPagination } from "../../components/admin/AdminPagination";
 import { usePaginatedList } from "../../lib/usePaginatedList";
 
 interface AdminUserRow {
@@ -46,7 +47,9 @@ export default function AdminUsers() {
               ))}
             </div>
           ) : list.results.length === 0 ? (
-            <p className="mt-4 font-sans text-sm text-neutral-600">No users found.</p>
+            <div className="mt-4 flex flex-col items-center gap-3 rounded-xl border border-dashed border-neutral-200 py-16 text-center">
+              <p className="font-sans text-sm text-neutral-600">No users found.</p>
+            </div>
           ) : (
             <table className="mt-4 w-full border-collapse font-sans text-sm">
               <thead>
@@ -60,9 +63,12 @@ export default function AdminUsers() {
               </thead>
               <tbody>
                 {list.results.map((user) => (
-                  <tr key={user.id} className="border-b border-neutral-100 hover:bg-neutral-50">
+                  <tr key={user.id} className="border-b border-neutral-100 transition-colors hover:bg-neutral-50">
                     <td className="py-3">
-                      <Link to={`/admin/users/${user.id}`} className="font-medium text-primary-500 hover:underline">
+                      <Link
+                        to={`/admin/users/${user.id}`}
+                        className="font-medium text-primary-500 transition-colors hover:text-primary-700 hover:underline"
+                      >
                         {user.email}
                       </Link>
                     </td>
@@ -77,29 +83,12 @@ export default function AdminUsers() {
           )}
 
           {!list.isLoading && list.results.length > 0 && (
-            <div className="mt-4 flex items-center justify-between font-sans text-sm text-neutral-600">
-              <span>
-                Page {list.page} of {totalPages}
-              </span>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  disabled={list.page <= 1}
-                  onClick={() => list.setPage(list.page - 1)}
-                  className="disabled:opacity-40"
-                >
-                  Previous
-                </button>
-                <button
-                  type="button"
-                  disabled={list.page >= totalPages}
-                  onClick={() => list.setPage(list.page + 1)}
-                  className="disabled:opacity-40"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
+            <AdminPagination
+              page={list.page}
+              totalPages={totalPages}
+              onPrevious={() => list.setPage(list.page - 1)}
+              onNext={() => list.setPage(list.page + 1)}
+            />
           )}
         </div>
       </div>

@@ -139,7 +139,11 @@ export default function AdminUserDetail() {
   if (!detail) {
     return (
       <AdminLayout>
-        <p className="font-sans text-sm text-neutral-600">Loading…</p>
+        <div className="flex flex-col gap-6" aria-label="Loading user">
+          <div className="h-8 w-64 animate-pulse rounded-lg bg-neutral-100" />
+          <div className="h-48 animate-pulse rounded-xl bg-neutral-100" />
+          <div className="h-24 animate-pulse rounded-xl bg-neutral-100" />
+        </div>
       </AdminLayout>
     );
   }
@@ -189,7 +193,7 @@ export default function AdminUserDetail() {
               type="button"
               disabled={isExtendingTrial}
               onClick={extendTrial}
-              className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 transition-colors hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isExtendingTrial ? "Extending…" : "Extend trial"}
             </button>
@@ -201,7 +205,7 @@ export default function AdminUserDetail() {
               disabled={isSelf || isTogglingAdmin}
               onClick={toggleAdmin}
               title={isSelf ? "You can't change your own admin status" : undefined}
-              className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 transition-colors hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isTogglingAdmin ? "Saving…" : detail.user.isAdmin ? "Revoke admin" : "Grant admin"}
             </button>
@@ -211,7 +215,7 @@ export default function AdminUserDetail() {
                 type="button"
                 disabled={isSuspending}
                 onClick={reinstate}
-                className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 transition-colors hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isSuspending ? "Saving…" : "Reinstate"}
               </button>
@@ -221,7 +225,7 @@ export default function AdminUserDetail() {
                 disabled={isSelf}
                 onClick={() => setIsSuspendModalOpen(true)}
                 title={isSelf ? "You can't suspend your own account" : undefined}
-                className="rounded-lg border border-error px-4 py-2 font-sans text-sm font-semibold text-error hover:bg-error-bg disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-lg border border-error px-4 py-2 font-sans text-sm font-semibold text-error transition-colors hover:bg-error-bg disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Suspend
               </button>
@@ -232,7 +236,7 @@ export default function AdminUserDetail() {
               disabled={isSelf || isImpersonating}
               onClick={impersonate}
               title={isSelf ? "You can't impersonate yourself" : undefined}
-              className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 transition-colors hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isImpersonating ? "Entering…" : "Impersonate"}
             </button>
@@ -276,7 +280,10 @@ export default function AdminUserDetail() {
             <ul className="mt-2 flex flex-col gap-1">
               {detail.ownedBusinesses.map((b) => (
                 <li key={b.id}>
-                  <Link to={`/admin/businesses/${b.id}`} className="font-sans text-sm text-primary-500 hover:underline">
+                  <Link
+                    to={`/admin/businesses/${b.id}`}
+                    className="font-sans text-sm text-primary-500 transition-colors hover:text-primary-700 hover:underline"
+                  >
                     {b.name}
                   </Link>
                 </li>
@@ -293,7 +300,10 @@ export default function AdminUserDetail() {
             <ul className="mt-2 flex flex-col gap-1">
               {detail.memberBusinesses.map((b) => (
                 <li key={b.id}>
-                  <Link to={`/admin/businesses/${b.id}`} className="font-sans text-sm text-primary-500 hover:underline">
+                  <Link
+                    to={`/admin/businesses/${b.id}`}
+                    className="font-sans text-sm text-primary-500 transition-colors hover:text-primary-700 hover:underline"
+                  >
                     {b.name}
                   </Link>
                 </li>

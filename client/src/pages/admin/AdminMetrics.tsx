@@ -86,7 +86,10 @@ export default function AdminMetrics() {
           <>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
               {TILES.map((tile) => (
-                <div key={tile.key} className="rounded-xl border border-neutral-200 bg-surface p-4">
+                <div
+                  key={tile.key}
+                  className="rounded-xl border border-neutral-200 bg-surface p-4 transition-shadow hover:shadow-sm"
+                >
                   <p className="font-sans text-xs font-medium uppercase tracking-wide text-neutral-500">
                     {tile.label}
                   </p>

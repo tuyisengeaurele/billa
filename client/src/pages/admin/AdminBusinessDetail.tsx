@@ -45,7 +45,11 @@ export default function AdminBusinessDetail() {
   if (!business) {
     return (
       <AdminLayout>
-        <p className="font-sans text-sm text-neutral-600">Loading…</p>
+        <div className="flex flex-col gap-6" aria-label="Loading business">
+          <div className="h-8 w-64 animate-pulse rounded-lg bg-neutral-100" />
+          <div className="h-32 animate-pulse rounded-xl bg-neutral-100" />
+          <div className="h-24 animate-pulse rounded-xl bg-neutral-100" />
+        </div>
       </AdminLayout>
     );
   }
@@ -60,7 +64,10 @@ export default function AdminBusinessDetail() {
           <dl className="mt-4 grid grid-cols-2 gap-3 font-sans text-sm">
             <dt className="text-neutral-500">Owner</dt>
             <dd className="text-neutral-900">
-              <Link to={`/admin/users/${business.owner.id}`} className="text-primary-500 hover:underline">
+              <Link
+                to={`/admin/users/${business.owner.id}`}
+                className="text-primary-500 transition-colors hover:text-primary-700 hover:underline"
+              >
                 {business.owner.email}
               </Link>
             </dd>
@@ -81,7 +88,10 @@ export default function AdminBusinessDetail() {
             <ul className="mt-2 flex flex-col gap-1">
               {business.members.map((m) => (
                 <li key={m.id}>
-                  <Link to={`/admin/users/${m.id}`} className="font-sans text-sm text-primary-500 hover:underline">
+                  <Link
+                    to={`/admin/users/${m.id}`}
+                    className="font-sans text-sm text-primary-500 transition-colors hover:text-primary-700 hover:underline"
+                  >
                     {m.email}
                   </Link>
                 </li>

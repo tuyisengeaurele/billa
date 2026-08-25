@@ -1,4 +1,5 @@
 import { AdminLayout } from "../../components/admin/AdminLayout";
+import { AdminPagination } from "../../components/admin/AdminPagination";
 import { usePaginatedList } from "../../lib/usePaginatedList";
 
 interface AuditLogRow {
@@ -35,7 +36,9 @@ export default function AdminAuditLog() {
               ))}
             </div>
           ) : list.results.length === 0 ? (
-            <p className="font-sans text-sm text-neutral-600">No admin actions logged yet.</p>
+            <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-neutral-200 py-16 text-center">
+              <p className="font-sans text-sm text-neutral-600">No admin actions logged yet.</p>
+            </div>
           ) : (
             <table className="w-full border-collapse font-sans text-sm">
               <thead>
@@ -48,7 +51,7 @@ export default function AdminAuditLog() {
               </thead>
               <tbody>
                 {list.results.map((entry) => (
-                  <tr key={entry.id} className="border-b border-neutral-100">
+                  <tr key={entry.id} className="border-b border-neutral-100 transition-colors hover:bg-neutral-50">
                     <td className="py-3 text-neutral-900">{entry.admin.email}</td>
                     <td className="py-3 text-neutral-600">{entry.action}</td>
                     <td className="py-3 text-neutral-600">
@@ -62,29 +65,12 @@ export default function AdminAuditLog() {
           )}
 
           {!list.isLoading && list.results.length > 0 && (
-            <div className="mt-4 flex items-center justify-between font-sans text-sm text-neutral-600">
-              <span>
-                Page {list.page} of {totalPages}
-              </span>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  disabled={list.page <= 1}
-                  onClick={() => list.setPage(list.page - 1)}
-                  className="disabled:opacity-40"
-                >
-                  Previous
-                </button>
-                <button
-                  type="button"
-                  disabled={list.page >= totalPages}
-                  onClick={() => list.setPage(list.page + 1)}
-                  className="disabled:opacity-40"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
+            <AdminPagination
+              page={list.page}
+              totalPages={totalPages}
+              onPrevious={() => list.setPage(list.page - 1)}
+              onNext={() => list.setPage(list.page + 1)}
+            />
           )}
         </div>
       </div>

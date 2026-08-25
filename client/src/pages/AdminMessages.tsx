@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { AdminLayout } from "../components/admin/AdminLayout";
+import { AdminPagination } from "../components/admin/AdminPagination";
 import { apiRequest, ApiError } from "../lib/apiClient";
 
 interface ContactMessageRow {
@@ -80,7 +81,10 @@ export default function AdminMessages() {
             <>
               <div className="flex flex-col gap-4">
                 {data.results.map((row) => (
-                  <div key={row.id} className="rounded-lg border border-neutral-200 p-4">
+                  <div
+                    key={row.id}
+                    className="rounded-lg border border-neutral-200 p-4 transition-colors hover:bg-neutral-50"
+                  >
                     <div className="flex items-center justify-between gap-4">
                       <p className="font-sans text-sm font-semibold text-neutral-900">
                         {row.name} <span className="font-normal text-neutral-500">({row.email})</span>
@@ -94,24 +98,12 @@ export default function AdminMessages() {
                 ))}
               </div>
 
-              <div className="mt-4 flex items-center justify-between font-sans text-sm text-neutral-600">
-                <span>
-                  Page {page} of {totalPages}
-                </span>
-                <div className="flex gap-2">
-                  <button type="button" disabled={page <= 1} onClick={() => setPage(page - 1)} className="disabled:opacity-40">
-                    Previous
-                  </button>
-                  <button
-                    type="button"
-                    disabled={page >= totalPages}
-                    onClick={() => setPage(page + 1)}
-                    className="disabled:opacity-40"
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
+              <AdminPagination
+                page={page}
+                totalPages={totalPages}
+                onPrevious={() => setPage(page - 1)}
+                onNext={() => setPage(page + 1)}
+              />
             </>
           )}
         </div>

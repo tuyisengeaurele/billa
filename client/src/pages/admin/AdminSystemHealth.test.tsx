@@ -42,7 +42,8 @@ describe("AdminSystemHealth", () => {
 
     expect(await screen.findByText("recurring-documents")).toBeInTheDocument();
     expect(screen.getByText("overdue-reminders")).toBeInTheDocument();
-    expect(screen.getByText(/database: connected/i)).toBeInTheDocument();
+    expect(screen.getByText(/database:/i)).toBeInTheDocument();
+    expect(screen.getByText("Connected")).toBeInTheDocument();
     expect(screen.getByText("SMTP timeout")).toBeInTheDocument();
   });
 
