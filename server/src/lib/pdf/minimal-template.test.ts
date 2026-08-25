@@ -12,6 +12,11 @@ function makeData(overrides: Partial<PdfRenderData> = {}): PdfRenderData {
       email: "hi@kigali.rw",
       rraEbmNumber: "EBM-1",
       accentColor: "#C2185B",
+      darkColor: "#111111",
+      bankName: null,
+      bankAccountNumber: null,
+      signatoryName: null,
+      signatoryTitle: null,
       logoDataUri: null,
     },
     customer: { name: "Acme Ltd", tin: null, address: null, phone: null, email: null },
@@ -101,5 +106,25 @@ describe("renderMinimalHtml", () => {
     expect(html).not.toContain("Subtotal");
     expect(html).toContain("Dispatched by");
     expect(html).toContain("Received by");
+  });
+
+  it("shows payment instructions with the bank details when set", () => {
+    const html = renderMinimalHtml(
+      makeData({
+        business: { ...makeData().business, bankName: "Bank of Kigali", bankAccountNumber: "000123456789" },
+      }),
+    );
+    expect(html).toContain("Payment instructions");
+    expect(html).toContain("Bank of Kigali");
+  });
+
+  it("shows the signatory's name and title when set", () => {
+    const html = renderMinimalHtml(
+      makeData({
+        business: { ...makeData().business, signatoryName: "Jane Doe", signatoryTitle: "Managing Director" },
+      }),
+    );
+    expect(html).toContain("Jane Doe");
+    expect(html).toContain("Managing Director");
   });
 });

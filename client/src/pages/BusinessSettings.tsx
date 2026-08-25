@@ -22,6 +22,10 @@ interface BusinessProfile {
   email: string | null;
   address: string | null;
   rraEbmNumber: string | null;
+  bankName: string | null;
+  bankAccountNumber: string | null;
+  signatoryName: string | null;
+  signatoryTitle: string | null;
   defaultTemplate: DocumentTemplate;
   primaryColor: string | null;
   logoUrl: string | null;
@@ -32,8 +36,7 @@ const COLOR_PRESETS = ["#C2185B", "#2563EB", "#0D9488", "#7C3AED", "#D97706", "#
 
 const TEMPLATE_OPTIONS: { value: DocumentTemplate; label: string; description: string }[] = [
   { value: "MINIMAL", label: "Minimal", description: "Quiet, a lot of white space." },
-  { value: "FORMAL", label: "Formal", description: "The traditional printed-invoice feel." },
-  { value: "SIDEBAR_ACCENT", label: "Sidebar accent", description: "A bold colored sidebar carries your branding." },
+  { value: "PREMIUM", label: "Premium", description: "A polished, full-color invoice layout with payment details." },
 ];
 
 const TEXT_FIELDS: { id: keyof BusinessProfile; label: string; type: "text" | "tel" | "email" }[] = [
@@ -43,11 +46,21 @@ const TEXT_FIELDS: { id: keyof BusinessProfile; label: string; type: "text" | "t
   { id: "email", label: "Business email", type: "email" },
   { id: "address", label: "Address", type: "text" },
   { id: "rraEbmNumber", label: "RRA EBM number", type: "text" },
+  { id: "bankName", label: "Bank name", type: "text" },
+  { id: "bankAccountNumber", label: "Bank account number", type: "text" },
+  { id: "signatoryName", label: "Signatory name", type: "text" },
+  { id: "signatoryTitle", label: "Signatory title", type: "text" },
 ];
 
 const IDENTITY_FIELD_IDS: (keyof BusinessProfile)[] = ["tin", "industry"];
 const CONTACT_FIELD_IDS: (keyof BusinessProfile)[] = ["phone", "email", "address"];
 const TAX_FIELD_IDS: (keyof BusinessProfile)[] = ["rraEbmNumber"];
+const PAYMENT_FIELD_IDS: (keyof BusinessProfile)[] = [
+  "bankName",
+  "bankAccountNumber",
+  "signatoryName",
+  "signatoryTitle",
+];
 
 export default function BusinessSettings() {
   const { user, isLoading: isAuthLoading, deleteAccount } = useAuth();
@@ -238,6 +251,26 @@ export default function BusinessSettings() {
             <h2 className="font-display text-base font-semibold text-neutral-900">Tax and compliance</h2>
             <div className="mt-4 flex flex-col gap-5">
               {TEXT_FIELDS.filter((field) => TAX_FIELD_IDS.includes(field.id)).map((field) => (
+                <FormField
+                  key={field.id}
+                  id={field.id}
+                  label={field.label}
+                  type={field.type}
+                  disabled={!isOwner}
+                  value={profile[field.id] ?? ""}
+                  onChange={(e) => setProfile({ ...profile, [field.id]: e.target.value })}
+                />
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-xl border border-neutral-200 bg-surface p-6">
+            <h2 className="font-display text-base font-semibold text-neutral-900">Payment details</h2>
+            <p className="mt-1 font-sans text-sm text-neutral-500">
+              Shown as payment instructions and a signature block on your documents.
+            </p>
+            <div className="mt-4 flex flex-col gap-5">
+              {TEXT_FIELDS.filter((field) => PAYMENT_FIELD_IDS.includes(field.id)).map((field) => (
                 <FormField
                   key={field.id}
                   id={field.id}

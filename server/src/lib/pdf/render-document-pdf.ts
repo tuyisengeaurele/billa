@@ -1,7 +1,6 @@
 import type { DocumentTemplate } from "@prisma/client";
 import { renderMinimalHtml } from "./minimal-template.js";
-import { renderFormalHtml } from "./formal-template.js";
-import { renderSidebarAccentHtml } from "./sidebar-accent-template.js";
+import { renderPremiumHtml } from "./premium-template.js";
 import { renderHtmlToPdfBuffer } from "./browser.js";
 import type { PdfRenderData } from "./render-data.js";
 
@@ -9,10 +8,8 @@ export function renderDocumentToHtml(template: DocumentTemplate, data: PdfRender
   switch (template) {
     case "MINIMAL":
       return renderMinimalHtml(data);
-    case "FORMAL":
-      return renderFormalHtml(data);
-    case "SIDEBAR_ACCENT":
-      return renderSidebarAccentHtml(data);
+    case "PREMIUM":
+      return renderPremiumHtml(data);
   }
 }
 

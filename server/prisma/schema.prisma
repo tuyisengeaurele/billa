@@ -21,8 +21,7 @@ enum DocumentStatus {
 
 enum DocumentTemplate {
   MINIMAL
-  FORMAL
-  SIDEBAR_ACCENT
+  PREMIUM
 }
 
 enum RecurrenceInterval {
@@ -56,6 +55,10 @@ model Business {
   primaryColor     String?
   accentColors     Json?
   rraEbmNumber     String?
+  bankName         String?
+  bankAccountNumber String?
+  signatoryName    String?
+  signatoryTitle   String?
   defaultTemplate  DocumentTemplate  @default(MINIMAL)
   onboardingCompletedAt DateTime?
   createdAt        DateTime          @default(now())

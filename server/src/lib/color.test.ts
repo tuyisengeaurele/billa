@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { contrastRatio, darkenUntilContrast } from "./color.js";
+import { contrastRatio, darkenUntilContrast, pickStructuralDark } from "./color.js";
 
 describe("contrastRatio", () => {
   it("returns 21 for black on white (max contrast)", () => {
@@ -27,5 +27,27 @@ describe("darkenUntilContrast", () => {
     const before = contrastRatio("#000000", "#FFFFFF");
     const result = darkenUntilContrast("#000000", 3);
     expect(result.ratio).toBeCloseTo(before, 5);
+  });
+});
+
+describe("pickStructuralDark", () => {
+  it("picks the darkest of the logo-extracted accent colors over the primary", () => {
+    // primary is a bright pink; one of the extracted accents is a navy the logo also contains
+    const result = pickStructuralDark("#C2185B", ["#F5A9C6", "#0D2A4A"]);
+    expect(result.toUpperCase()).toBe("#0D2A4A");
+  });
+
+  it("falls back to darkening the primary color when there are no accent colors", () => {
+    const result = pickStructuralDark("#F9A8D4", []);
+    expect(contrastRatio(result, "#FFFFFF")).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("still darkens the chosen candidate further if it doesn't yet contrast enough with white", () => {
+    const result = pickStructuralDark("#C2185B", ["#E8A0BE"]);
+    expect(contrastRatio(result, "#FFFFFF")).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("leaves an already-dark primary color close to itself when there are no accents", () => {
+    expect(pickStructuralDark("#1A1A2E", [])).toBe("#1A1A2E");
   });
 });

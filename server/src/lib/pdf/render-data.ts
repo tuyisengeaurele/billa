@@ -1,5 +1,6 @@
 import type { Business, Customer, Document, DocumentLine, DocumentType } from "@prisma/client";
 import { amountInWordsRwf, formatRwf, getDueDateLabel, getPartyLabel } from "@billa/shared";
+import { pickStructuralDark } from "../color.js";
 import { escapeHtml } from "./escape-html.js";
 import { readLogoDataUri } from "./logo.js";
 
@@ -30,6 +31,11 @@ export interface PdfRenderData {
     email: string | null;
     rraEbmNumber: string | null;
     accentColor: string;
+    darkColor: string;
+    bankName: string | null;
+    bankAccountNumber: string | null;
+    signatoryName: string | null;
+    signatoryTitle: string | null;
     logoDataUri: string | null;
   };
   customer: {
@@ -67,6 +73,10 @@ export async function buildPdfRenderData(
 ): Promise<PdfRenderData> {
   const logoDataUri = await readLogoDataUri(business.logoUrl, business.id);
   const showTotals = document.type !== "DELIVERY_NOTE";
+  const accentColor = business.primaryColor ?? DEFAULT_ACCENT;
+  const accentColors = Array.isArray(business.accentColors)
+    ? business.accentColors.filter((c): c is string => typeof c === "string")
+    : [];
 
   return {
     business: {
@@ -76,7 +86,12 @@ export async function buildPdfRenderData(
       phone: escapeNullable(business.phone),
       email: escapeNullable(business.email),
       rraEbmNumber: escapeNullable(business.rraEbmNumber),
-      accentColor: business.primaryColor ?? DEFAULT_ACCENT,
+      accentColor,
+      darkColor: pickStructuralDark(accentColor, accentColors),
+      bankName: escapeNullable(business.bankName),
+      bankAccountNumber: escapeNullable(business.bankAccountNumber),
+      signatoryName: escapeNullable(business.signatoryName),
+      signatoryTitle: escapeNullable(business.signatoryTitle),
       logoDataUri,
     },
     customer: {

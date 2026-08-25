@@ -73,6 +73,14 @@ export function hslToRgb(h: number, s: number, l: number): [number, number, numb
   return [(r1 + m) * 255, (g1 + m) * 255, (b1 + m) * 255];
 }
 
+export function pickStructuralDark(primaryColor: string, accentColors: string[]): string {
+  const candidates = [primaryColor, ...accentColors];
+  const darkest = candidates.reduce((best, candidate) =>
+    contrastRatio(candidate, "#FFFFFF") > contrastRatio(best, "#FFFFFF") ? candidate : best,
+  );
+  return darkenUntilContrast(darkest, 4.5, "#FFFFFF").hex;
+}
+
 export function darkenUntilContrast(
   hex: string,
   minRatio: number,

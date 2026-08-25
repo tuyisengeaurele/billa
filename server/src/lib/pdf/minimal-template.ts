@@ -1,5 +1,12 @@
 import { htmlDocumentShell } from "./html-shell.js";
-import { accentDark, PREMIUM_STYLES, renderAmountInWordsBox, renderFooterBar, renderStatusPill, renderTotalsBox } from "./premium-parts.js";
+import {
+  buildSignatures,
+  PREMIUM_STYLES,
+  renderAmountInWordsBox,
+  renderFooterBar,
+  renderStatusPill,
+  renderTotalsBox,
+} from "./premium-parts.js";
 import type { PdfRenderData } from "./render-data.js";
 
 const STYLES = `
@@ -25,7 +32,7 @@ ${PREMIUM_STYLES}
 `;
 
 export function renderMinimalHtml(data: PdfRenderData): string {
-  const dark = accentDark(data.business.accentColor);
+  const dark = data.business.darkColor;
 
   const linesHtml = data.lines
     .map(
@@ -85,7 +92,13 @@ export function renderMinimalHtml(data: PdfRenderData): string {
           : ""
       }
       ${data.notes ? `<div class="notes">${data.notes}</div>` : ""}
-      ${renderFooterBar(data.business, dark, data.showTotals ? ["Authorized signature"] : ["Dispatched by", "Received by"])}
+      ${renderFooterBar({
+        business: data.business,
+        dark,
+        documentNumber: data.number ?? "DRAFT",
+        showPaymentInstructions: data.showTotals,
+        signatures: buildSignatures(data.business, data.showTotals),
+      })}
     </div>
   `;
 

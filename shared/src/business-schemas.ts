@@ -12,6 +12,10 @@ export const businessProfileSchema = z
     email: z.string().email().nullable().optional(),
     address: z.string().trim().min(1).nullable().optional(),
     rraEbmNumber: z.string().trim().min(1).nullable().optional(),
+    bankName: z.string().trim().min(1).nullable().optional(),
+    bankAccountNumber: z.string().trim().min(1).nullable().optional(),
+    signatoryName: z.string().trim().min(1).nullable().optional(),
+    signatoryTitle: z.string().trim().min(1).nullable().optional(),
     defaultTemplate: z.enum(DOCUMENT_TEMPLATES).optional(),
     primaryColor: z.string().regex(hexColorPattern, "Enter a valid hex color").nullable().optional(),
   })

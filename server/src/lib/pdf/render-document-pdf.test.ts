@@ -12,6 +12,11 @@ function makeData(overrides: Partial<PdfRenderData> = {}): PdfRenderData {
       email: null,
       rraEbmNumber: null,
       accentColor: "#C2185B",
+      darkColor: "#111111",
+      bankName: null,
+      bankAccountNumber: null,
+      signatoryName: null,
+      signatoryTitle: null,
       logoDataUri: null,
     },
     customer: { name: "Acme Ltd", tin: null, address: null, phone: null, email: null },
@@ -39,13 +44,8 @@ describe("renderDocumentToHtml", () => {
     expect(html).toContain("Kigali Traders");
   });
 
-  it("dispatches to the formal template", () => {
-    const html = renderDocumentToHtml("FORMAL", makeData());
+  it("dispatches to the premium template", () => {
+    const html = renderDocumentToHtml("PREMIUM", makeData());
     expect(html).toContain("letterhead");
-  });
-
-  it("dispatches to the sidebar accent template", () => {
-    const html = renderDocumentToHtml("SIDEBAR_ACCENT", makeData());
-    expect(html).toContain("sidebar");
   });
 });

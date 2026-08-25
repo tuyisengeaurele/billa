@@ -18,6 +18,10 @@ function makeBusiness(overrides: Partial<Business> = {}): Business {
     primaryColor: "#C2185B",
     accentColors: null,
     rraEbmNumber: "EBM-1",
+    bankName: null,
+    bankAccountNumber: null,
+    signatoryName: null,
+    signatoryTitle: null,
     defaultTemplate: "MINIMAL",
     onboardingCompletedAt: null,
     ownerId: "u1",
@@ -146,5 +150,42 @@ describe("buildPdfRenderData", () => {
     const data = await buildPdfRenderData(makeDocument({ type: "DELIVERY_NOTE" }), makeBusiness());
     expect(data.showTotals).toBe(false);
     expect(data.amountInWordsFormatted).toBeNull();
+  });
+
+  it("passes through bank and signatory details, escaped", async () => {
+    const data = await buildPdfRenderData(
+      makeDocument(),
+      makeBusiness({
+        bankName: "Bank of Kigali",
+        bankAccountNumber: "000123456789",
+        signatoryName: "Jane <Doe>",
+        signatoryTitle: "Managing Director",
+      }),
+    );
+    expect(data.business.bankName).toBe("Bank of Kigali");
+    expect(data.business.bankAccountNumber).toBe("000123456789");
+    expect(data.business.signatoryName).toBe("Jane &lt;Doe&gt;");
+    expect(data.business.signatoryTitle).toBe("Managing Director");
+  });
+
+  it("leaves bank and signatory details null when unset", async () => {
+    const data = await buildPdfRenderData(makeDocument(), makeBusiness());
+    expect(data.business.bankName).toBeNull();
+    expect(data.business.bankAccountNumber).toBeNull();
+    expect(data.business.signatoryName).toBeNull();
+    expect(data.business.signatoryTitle).toBeNull();
+  });
+
+  it("picks a structural dark color from the logo-extracted accent colors", async () => {
+    const data = await buildPdfRenderData(
+      makeDocument(),
+      makeBusiness({ primaryColor: "#C2185B", accentColors: ["#F5A9C6", "#0D2A4A"] }),
+    );
+    expect(data.business.darkColor).toBe("#0D2A4A");
+  });
+
+  it("falls back to darkening the primary color when there are no accent colors", async () => {
+    const data = await buildPdfRenderData(makeDocument(), makeBusiness({ primaryColor: "#F9A8D4", accentColors: null }));
+    expect(data.business.darkColor).not.toBe("#F9A8D4");
   });
 });

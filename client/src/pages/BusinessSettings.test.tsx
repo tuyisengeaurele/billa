@@ -52,7 +52,7 @@ describe("BusinessSettings", () => {
               email: null,
               address: null,
               rraEbmNumber: null,
-              defaultTemplate: "FORMAL",
+              defaultTemplate: "PREMIUM",
             },
           }),
           { status: 200 },
@@ -64,7 +64,7 @@ describe("BusinessSettings", () => {
     renderPage();
 
     expect(await screen.findByText("Kigali Traders")).toBeInTheDocument();
-    expect(await screen.findByLabelText("Formal")).toBeChecked();
+    expect(await screen.findByLabelText("Premium")).toBeChecked();
   });
 
   it("submits changed fields and the selected template", async () => {
@@ -113,10 +113,10 @@ describe("BusinessSettings", () => {
     renderPage();
 
     await screen.findByText("Kigali Traders");
-    await user.click(screen.getByLabelText("Sidebar accent"));
+    await user.click(screen.getByLabelText("Premium"));
     await user.click(screen.getByRole("button", { name: /^save$/i }));
 
-    await waitFor(() => expect(patchBody).toMatchObject({ defaultTemplate: "SIDEBAR_ACCENT" }));
+    await waitFor(() => expect(patchBody).toMatchObject({ defaultTemplate: "PREMIUM" }));
   });
 
   it("sends null for a field cleared to blank, and the trimmed value for one that's set", async () => {
@@ -170,6 +170,61 @@ describe("BusinessSettings", () => {
     await user.click(screen.getByRole("button", { name: /^save$/i }));
 
     await waitFor(() => expect(patchBody).toMatchObject({ tin: null, industry: "Retail" }));
+  });
+
+  it("shows and saves bank and signatory details", async () => {
+    let patchBody: unknown = null;
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/business/sequences")) {
+        return new Response(JSON.stringify({ sequences: [] }), { status: 200 });
+      }
+      if (url.endsWith("/business") && init?.method === "PATCH") {
+        patchBody = JSON.parse(init.body as string);
+        return new Response(JSON.stringify({ business: {} }), { status: 200 });
+      }
+      if (url.endsWith("/business") || url.endsWith("/auth/me")) {
+        return new Response(
+          JSON.stringify({
+            business: {
+              name: "Kigali Traders",
+              tin: null,
+              industry: null,
+              phone: null,
+              email: null,
+              address: null,
+              rraEbmNumber: null,
+              bankName: null,
+              bankAccountNumber: null,
+              signatoryName: null,
+              signatoryTitle: null,
+              defaultTemplate: "MINIMAL",
+            },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText("Kigali Traders");
+    await user.type(screen.getByLabelText("Bank name"), "Bank of Kigali");
+    await user.type(screen.getByLabelText("Bank account number"), "000123456789");
+    await user.type(screen.getByLabelText("Signatory name"), "Jane Doe");
+    await user.type(screen.getByLabelText("Signatory title"), "Managing Director");
+    await user.click(screen.getByRole("button", { name: /^save$/i }));
+
+    await waitFor(() =>
+      expect(patchBody).toMatchObject({
+        bankName: "Bank of Kigali",
+        bankAccountNumber: "000123456789",
+        signatoryName: "Jane Doe",
+        signatoryTitle: "Managing Director",
+      }),
+    );
   });
 
   it("sets the brand color from a preset swatch and submits it", async () => {
@@ -243,7 +298,7 @@ describe("BusinessSettings", () => {
               email: null,
               address: null,
               rraEbmNumber: null,
-              defaultTemplate: "FORMAL",
+              defaultTemplate: "PREMIUM",
               logoUrl: null,
             },
             user: { id: "u1" },
@@ -280,7 +335,7 @@ describe("BusinessSettings", () => {
               email: null,
               address: null,
               rraEbmNumber: null,
-              defaultTemplate: "FORMAL",
+              defaultTemplate: "PREMIUM",
               logoUrl: "/uploads/logo.png",
             },
             user: { id: "u1" },
@@ -321,7 +376,7 @@ describe("BusinessSettings", () => {
               email: null,
               address: null,
               rraEbmNumber: null,
-              defaultTemplate: "FORMAL",
+              defaultTemplate: "PREMIUM",
               logoUrl: null,
             },
             user: { id: "u1", email: "owner@example.com" },
@@ -371,7 +426,7 @@ describe("BusinessSettings", () => {
               email: null,
               address: null,
               rraEbmNumber: null,
-              defaultTemplate: "FORMAL",
+              defaultTemplate: "PREMIUM",
               logoUrl: null,
             },
             user: { id: "u1", email: "owner@example.com" },
