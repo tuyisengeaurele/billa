@@ -46,6 +46,6 @@ describe("renderDocumentToHtml", () => {
 
   it("dispatches to the premium template", () => {
     const html = renderDocumentToHtml("PREMIUM", makeData());
-    expect(html).toContain("letterhead");
+    expect(html).toContain("From (Seller)");
   });
 });

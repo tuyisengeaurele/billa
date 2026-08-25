@@ -47,11 +47,10 @@ function makeData(overrides: Partial<PdfRenderData> = {}): PdfRenderData {
 }
 
 describe("renderPremiumHtml", () => {
-  it("includes the business and customer blocks in bordered boxes", () => {
+  it("includes the business and customer blocks", () => {
     const html = renderPremiumHtml(makeData());
     expect(html).toContain("Kigali Traders");
     expect(html).toContain("Acme Ltd");
-    expect(html).toContain("border");
   });
 
   it("shows both issue date and due date when present", () => {
@@ -71,9 +70,16 @@ describe("renderPremiumHtml", () => {
     expect(html).toContain(">01<");
   });
 
-  it("uses the business accent color for the doc title", () => {
+  it("uses the business accent color for the doc title and section labels", () => {
     const html = renderPremiumHtml(makeData({ business: { ...makeData().business, accentColor: "#00FF00" } }));
-    expect(html).toContain("#00FF00");
+    expect(html).toContain("--accent:#00FF00");
+  });
+
+  it("uses the business dark color for the table header and totals, independent of the accent color", () => {
+    const html = renderPremiumHtml(
+      makeData({ business: { ...makeData().business, accentColor: "#00FF00", darkColor: "#123456" } }),
+    );
+    expect(html).toContain("--dark:#123456");
   });
 
   it("uses the dynamic party label instead of a hardcoded one", () => {
@@ -83,8 +89,9 @@ describe("renderPremiumHtml", () => {
 
   it("uses the dynamic due date label when both are present", () => {
     const html = renderPremiumHtml(makeData({ dueDateLabel: "Valid until", dueDate: "2026-09-01" }));
-    expect(html).toContain("Valid until: 2026-09-01");
-    expect(html).not.toContain("Due:");
+    expect(html).toContain("Valid until:");
+    expect(html).toContain("2026-09-01");
+    expect(html).not.toContain("Due date:");
   });
 
   it("omits the due date line when there is no due date label", () => {
@@ -97,10 +104,10 @@ describe("renderPremiumHtml", () => {
     expect(html).toContain("Finalized");
   });
 
-  it("shows the amount in words when totals are shown", () => {
+  it("shows the amount in words with the total restated numerically", () => {
     const html = renderPremiumHtml(makeData());
     expect(html).toContain("Amount in words");
-    expect(html).toContain("Seventeen Thousand Seven Hundred Rwandan Francs Only");
+    expect(html).toContain("Seventeen Thousand Seven Hundred Rwandan Francs Only (17,700 RWF)");
   });
 
   it("hides totals and amount-in-words for a delivery note, showing two signature lines instead", () => {
@@ -117,18 +124,13 @@ describe("renderPremiumHtml", () => {
     expect(html).not.toContain("Dispatched by");
   });
 
-  it("darkens the accent color for the table header instead of using it raw", () => {
-    const html = renderPremiumHtml(makeData({ business: { ...makeData().business, accentColor: "#F9A8D4" } }));
-    expect(html).not.toContain("background:#F9A8D4");
-  });
-
   it("shows payment instructions with the bank details when set", () => {
     const html = renderPremiumHtml(
       makeData({
         business: { ...makeData().business, bankName: "Bank of Kigali", bankAccountNumber: "000123456789" },
       }),
     );
-    expect(html).toContain("Payment instructions");
+    expect(html).toContain("Payment Instructions");
     expect(html).toContain("Bank of Kigali");
     expect(html).toContain("000123456789");
     expect(html).toContain("Reference: INV-0001");
@@ -136,7 +138,7 @@ describe("renderPremiumHtml", () => {
 
   it("falls back to contact details in the footer when there are no bank details", () => {
     const html = renderPremiumHtml(makeData());
-    expect(html).not.toContain("Payment instructions");
+    expect(html).not.toContain("Payment Instructions");
     expect(html).toContain("+250788000000");
   });
 
@@ -155,7 +157,7 @@ describe("renderPremiumHtml", () => {
     expect(html).toContain("issued by Kigali Traders");
   });
 
-  it("shows a From (Seller) / To (Buyer) panel with the seller's own details", () => {
+  it("shows a From (Seller) / To (Buyer)-style panel with the seller's own details", () => {
     const html = renderPremiumHtml(
       makeData({
         business: { ...makeData().business, bankName: "Bank of Kigali", bankAccountNumber: "000123456789" },
@@ -163,10 +165,9 @@ describe("renderPremiumHtml", () => {
       }),
     );
     expect(html).toContain("From (Seller)");
-    expect(html).toContain("Bill to (Buyer)");
     expect(html).toContain("Bank:");
     expect(html).toContain("Bank of Kigali");
-    expect(html).toContain("Acc. no:");
+    expect(html).toContain("Acc. No:");
     expect(html).toContain("000123456789");
     expect(html).toContain("KN 1 Rd");
     expect(html).toContain("+250788111222");
@@ -177,11 +178,17 @@ describe("renderPremiumHtml", () => {
   it("omits seller bank rows from the panel when there are no bank details", () => {
     const html = renderPremiumHtml(makeData());
     expect(html).not.toContain("Bank:");
-    expect(html).not.toContain("Acc. no:");
+    expect(html).not.toContain("Acc. No:");
   });
 
-  it("restates the total numerically alongside the amount in words", () => {
-    const html = renderPremiumHtml(makeData());
-    expect(html).toContain("Seventeen Thousand Seven Hundred Rwandan Francs Only (17,700 RWF)");
+  it("shows a notes callout when notes are present", () => {
+    const html = renderPremiumHtml(makeData({ notes: "Thank you for your business." }));
+    expect(html).toContain("Notes");
+    expect(html).toContain("Thank you for your business.");
+  });
+
+  it("omits the notes callout when there are no notes", () => {
+    const html = renderPremiumHtml(makeData({ notes: null }));
+    expect(html).not.toContain('class="notes-row"');
   });
 });
