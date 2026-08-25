@@ -85,4 +85,101 @@ describe("TeamSection", () => {
 
     expect(await screen.findByText(/only the business owner can manage/i)).toBeInTheDocument();
   });
+
+  it("copies a pending invite's link", async () => {
+    const writeText = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue(undefined);
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/auth/me")) {
+        return new Response("{}", { status: 401 });
+      }
+      if (url.endsWith("/business/members")) {
+        return new Response(
+          JSON.stringify({ members: [{ id: "u1", email: "owner@example.com", role: "owner", joinedAt: "2026-01-01" }] }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/business/invites") && (!init || init.method === undefined || init.method === "GET")) {
+        return new Response(
+          JSON.stringify({
+            invites: [
+              {
+                id: "inv1",
+                email: "friend@example.com",
+                expiresAt: "2026-02-01",
+                createdAt: "2026-01-01",
+                link: "http://localhost:5173/invite/tok123",
+              },
+            ],
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    render(
+      <AuthProvider>
+        <TeamSection />
+      </AuthProvider>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: /copy link/i }));
+
+    expect(writeText).toHaveBeenCalledWith("http://localhost:5173/invite/tok123");
+    expect(await screen.findByRole("button", { name: /^copied$/i })).toBeInTheDocument();
+  });
+
+  it("resends a pending invite", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/auth/me")) {
+        return new Response("{}", { status: 401 });
+      }
+      if (url.endsWith("/business/members")) {
+        return new Response(
+          JSON.stringify({ members: [{ id: "u1", email: "owner@example.com", role: "owner", joinedAt: "2026-01-01" }] }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/business/invites") && (!init || init.method === undefined || init.method === "GET")) {
+        return new Response(
+          JSON.stringify({
+            invites: [
+              {
+                id: "inv1",
+                email: "friend@example.com",
+                expiresAt: "2026-02-01",
+                createdAt: "2026-01-01",
+                link: "http://localhost:5173/invite/tok123",
+              },
+            ],
+          }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/business/invites/inv1/resend") && init?.method === "POST") {
+        return new Response(
+          JSON.stringify({
+            invite: { id: "inv1", email: "friend@example.com", expiresAt: "2026-03-01" },
+            link: "http://localhost:5173/invite/tok123",
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    render(
+      <AuthProvider>
+        <TeamSection />
+      </AuthProvider>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: /^resend$/i }));
+
+    expect(await screen.findByText(/invite sent/i)).toBeInTheDocument();
+  });
 });

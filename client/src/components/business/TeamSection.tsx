@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { apiRequest, ApiError } from "../../lib/apiClient";
+import { copyToClipboard } from "../../lib/clipboard";
 import { Button } from "../Button";
 import { FormField } from "../FormField";
 
@@ -15,6 +16,7 @@ interface Invite {
   email: string;
   expiresAt: string;
   createdAt: string;
+  link: string;
 }
 
 export function TeamSection() {
@@ -26,6 +28,8 @@ export function TeamSection() {
   const [isInviting, setIsInviting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successLink, setSuccessLink] = useState<string | null>(null);
+  const [copiedInviteId, setCopiedInviteId] = useState<string | null>(null);
+  const [resendingId, setResendingId] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -77,6 +81,32 @@ export function TeamSection() {
       setMembers((prev) => prev?.filter((m) => m.id !== id) ?? null);
     } catch {
       setError("Couldn't remove that member. Try again.");
+    }
+  }
+
+  async function copyInviteLink(invite: Invite) {
+    setError(null);
+    const succeeded = await copyToClipboard(invite.link);
+    if (succeeded) {
+      setCopiedInviteId(invite.id);
+    } else {
+      setError("Couldn't copy the link. Select and copy it manually instead.");
+    }
+  }
+
+  async function resendInvite(id: string) {
+    setError(null);
+    setResendingId(id);
+    try {
+      const data = await apiRequest<{ invite: Invite; link: string }>(`/business/invites/${id}/resend`, {
+        method: "POST",
+      });
+      setInvites((prev) => prev?.map((i) => (i.id === id ? { ...data.invite, link: data.link } : i)) ?? null);
+      setSuccessLink(data.link);
+    } catch {
+      setError("Couldn't resend the invite. Try again.");
+    } finally {
+      setResendingId(null);
     }
   }
 
@@ -171,13 +201,30 @@ export function TeamSection() {
                 className="flex items-center justify-between rounded-lg border border-neutral-200 px-3.5 py-2.5"
               >
                 <span className="font-sans text-sm text-neutral-900">{invite.email}</span>
-                <button
-                  type="button"
-                  onClick={() => revokeInvite(invite.id)}
-                  className="font-sans text-sm text-error hover:underline"
-                >
-                  Revoke
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => copyInviteLink(invite)}
+                    className="font-sans text-sm text-primary-500 hover:underline"
+                  >
+                    {copiedInviteId === invite.id ? "Copied" : "Copy link"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={resendingId === invite.id}
+                    onClick={() => resendInvite(invite.id)}
+                    className="font-sans text-sm text-primary-500 hover:underline disabled:opacity-50"
+                  >
+                    {resendingId === invite.id ? "Resending…" : "Resend"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => revokeInvite(invite.id)}
+                    className="font-sans text-sm text-error hover:underline"
+                  >
+                    Revoke
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
