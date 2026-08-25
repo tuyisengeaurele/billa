@@ -32,6 +32,17 @@ enum RecurrenceInterval {
   ANNUALLY
 }
 
+enum ActivityAction {
+  DOCUMENT_CREATED
+  DOCUMENT_FINALIZED
+  DOCUMENT_DELETED
+  CUSTOMER_CREATED
+  CUSTOMER_DEACTIVATED
+  MEMBER_INVITED
+  MEMBER_JOINED
+  MEMBER_REMOVED
+}
+
 model Business {
   id               String            @id @default(cuid())
   ownerId          String
@@ -55,8 +66,9 @@ model Business {
   items     Item[]
   documents Document[]
   sequences DocumentSequence[]
-  members   BusinessMember[]
-  invites   BusinessInvite[]
+  members     BusinessMember[]
+  invites     BusinessInvite[]
+  activityLog ActivityLogEntry[]
 
   @@index([ownerId])
 }
@@ -82,6 +94,7 @@ model User {
   payments            Payment[]
   twoFactorChallenges TwoFactorChallenge[]
   memberships         BusinessMember[]
+  activityLog         ActivityLogEntry[]
 }
 
 model BusinessMember {
@@ -110,6 +123,23 @@ model BusinessInvite {
 
   @@index([businessId])
   @@index([email])
+}
+
+model ActivityLogEntry {
+  id          String         @id @default(cuid())
+  businessId  String
+  actorUserId String
+  action      ActivityAction
+  entityType  String
+  entityId    String
+  metadata    Json?
+  createdAt   DateTime       @default(now())
+
+  business Business @relation(fields: [businessId], references: [id])
+  actor    User     @relation(fields: [actorUserId], references: [id])
+
+  @@index([businessId, createdAt])
+  @@index([actorUserId])
 }
 
 model TwoFactorChallenge {
