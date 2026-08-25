@@ -25,6 +25,14 @@ describe("AdminMetrics", () => {
             { date: "2026-08-10", count: 1 },
             { date: "2026-08-22", count: 3 },
           ],
+          dailyDocuments30d: [
+            { date: "2026-08-10", count: 2 },
+            { date: "2026-08-22", count: 1 },
+          ],
+          planDistribution: [
+            { plan: "NONE", count: 4 },
+            { plan: "MONTHLY", count: 1 },
+          ],
         }),
         { status: 200 },
       ),
@@ -44,6 +52,9 @@ describe("AdminMetrics", () => {
     expect(screen.getByText("Signups (7d)")).toBeInTheDocument();
     expect(screen.getByText("3")).toBeInTheDocument();
     expect(screen.getByText("Paying accounts")).toBeInTheDocument();
+    expect(screen.getByText("Signups, last 30 days")).toBeInTheDocument();
+    expect(screen.getByText("Documents, last 30 days")).toBeInTheDocument();
+    expect(screen.getByText("Plan distribution")).toBeInTheDocument();
   });
 
   it("shows an error message when the request fails", async () => {

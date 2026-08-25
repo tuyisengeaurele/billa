@@ -48,6 +48,9 @@ export default function AdminUserDetail() {
   const [isImpersonating, setIsImpersonating] = useState(false);
   const [sessions, setSessions] = useState<SessionRow[] | null>(null);
   const [revokingSessionId, setRevokingSessionId] = useState<string | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     apiRequest<UserDetailResponse>(`/admin/users/${id}`)
@@ -140,6 +143,23 @@ export default function AdminUserDetail() {
     } catch {
       setError("Couldn't start impersonation. Try again.");
       setIsImpersonating(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!detail) return;
+    setError(null);
+    setIsDeleting(true);
+    try {
+      await apiRequest(`/admin/users/${id}`, { method: "DELETE" });
+      navigate("/admin/users");
+    } catch (err) {
+      setError(
+        err instanceof ApiError && err.status === 409
+          ? "Can't delete an account with an admin action history."
+          : "Couldn't delete the account. Try again.",
+      );
+      setIsDeleting(false);
     }
   }
 
@@ -312,6 +332,67 @@ export default function AdminUserDetail() {
             </ul>
           )}
         </section>
+
+        <section className="rounded-xl border border-error/30 bg-surface p-6">
+          <h2 className="font-display text-base font-semibold text-neutral-900">Danger zone</h2>
+          <p className="mt-1 font-sans text-sm text-neutral-600">
+            Permanently delete this account. If they own any businesses, those are deleted too, along with all
+            documents, customers, and items. This cannot be undone.
+          </p>
+          <button
+            type="button"
+            disabled={isSelf}
+            onClick={() => setIsDeleteModalOpen(true)}
+            title={isSelf ? "You can't delete your own account" : undefined}
+            className="mt-4 rounded-lg border border-error px-4 py-2 font-sans text-sm font-semibold text-error transition-colors hover:bg-error-bg disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Delete account
+          </button>
+        </section>
+
+        <Modal
+          isOpen={isDeleteModalOpen}
+          onClose={() => {
+            setIsDeleteModalOpen(false);
+            setDeleteConfirmText("");
+          }}
+          title="Delete account"
+        >
+          <p className="font-sans text-sm text-neutral-600">
+            This permanently deletes <strong>{detail.user.email}</strong>
+            {detail.ownedBusinesses.length > 0 ? " and every business they own, with all its data" : ""}. This cannot
+            be undone.
+          </p>
+          <label htmlFor="deleteUserConfirmText" className="mt-4 block font-sans text-sm font-medium text-neutral-800">
+            Type <span className="font-semibold">{detail.user.email}</span> to confirm.
+          </label>
+          <input
+            id="deleteUserConfirmText"
+            value={deleteConfirmText}
+            onChange={(e) => setDeleteConfirmText(e.target.value)}
+            className="mt-2 w-full rounded-lg border border-neutral-200 bg-surface px-3.5 py-2 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+          />
+          <div className="mt-6 flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setIsDeleteModalOpen(false);
+                setDeleteConfirmText("");
+              }}
+              className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 transition-colors hover:bg-neutral-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={deleteConfirmText !== detail.user.email || isDeleting}
+              onClick={handleDelete}
+              className="rounded-lg bg-error px-4 py-2 font-sans text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isDeleting ? "Deleting…" : "Delete account"}
+            </button>
+          </div>
+        </Modal>
 
         <Modal isOpen={isSuspendModalOpen} onClose={() => setIsSuspendModalOpen(false)} title="Suspend account">
           <p className="font-sans text-sm text-neutral-600">

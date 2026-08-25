@@ -21,6 +21,7 @@ import { validateBody } from "../middleware/validate.js";
 import { validateQuery } from "../middleware/validate-query.js";
 import { logAdminAction } from "../lib/admin-audit-log.js";
 import { toCsv } from "../lib/csv.js";
+import { deleteBusinessCascade } from "../lib/delete-business.js";
 import { issueSession } from "../lib/session.js";
 
 export const adminRouter = Router();
@@ -115,6 +116,54 @@ adminRouter.get("/users/:id", async (req, res) => {
     ownedBusinesses,
     memberBusinesses: memberships.map((m) => m.business),
   });
+});
+
+adminRouter.delete("/users/:id", async (req, res) => {
+  const { id } = req.params;
+
+  if (id === req.auth!.userId) {
+    res.status(400).json({ error: "cannot_delete_self" });
+    return;
+  }
+
+  const user = await prisma.user.findUnique({ where: { id } });
+  if (!user) {
+    res.status(404).json({ error: "not_found" });
+    return;
+  }
+
+  const [adminActionCount, announcementCount] = await Promise.all([
+    prisma.adminAuditLogEntry.count({ where: { adminUserId: id } }),
+    prisma.announcement.count({ where: { createdById: id } }),
+  ]);
+  if (adminActionCount > 0 || announcementCount > 0) {
+    res.status(409).json({ error: "has_admin_history" });
+    return;
+  }
+
+  const ownedBusinesses = await prisma.business.findMany({ where: { ownerId: id }, select: { id: true } });
+
+  await prisma.$transaction(async (tx) => {
+    for (const business of ownedBusinesses) {
+      await deleteBusinessCascade(tx, business.id);
+    }
+    await tx.businessMember.deleteMany({ where: { userId: id } });
+    await tx.activityLogEntry.deleteMany({ where: { actorUserId: id } });
+    await tx.refreshToken.deleteMany({ where: { userId: id } });
+    await tx.twoFactorChallenge.deleteMany({ where: { userId: id } });
+    await tx.payment.deleteMany({ where: { userId: id } });
+    await tx.user.delete({ where: { id } });
+  });
+
+  await logAdminAction({
+    adminUserId: req.auth!.userId,
+    action: "USER_DELETED",
+    targetType: "User",
+    targetId: id,
+    metadata: { email: user.email },
+  });
+
+  res.json({ ok: true });
 });
 
 adminRouter.post("/users/:id/toggle-admin", async (req, res) => {
@@ -311,6 +360,8 @@ adminRouter.get("/metrics", async (_req, res) => {
     documents7d,
     documents30d,
     dailySignups30d,
+    dailyDocuments30d,
+    planGroups,
   ] = await Promise.all([
     prisma.user.count(),
     prisma.business.count(),
@@ -327,7 +378,20 @@ adminRouter.get("/metrics", async (_req, res) => {
       GROUP BY date_trunc('day', "createdAt")
       ORDER BY date ASC
     `,
+    prisma.$queryRaw<{ date: Date; count: bigint }[]>`
+      SELECT date_trunc('day', "createdAt") AS date, COUNT(*) AS count
+      FROM "Document"
+      WHERE "createdAt" >= ${thirtyDaysAgo}
+      GROUP BY date_trunc('day', "createdAt")
+      ORDER BY date ASC
+    `,
+    prisma.user.groupBy({ by: ["plan"], _count: { _all: true } }),
   ]);
+
+  const planDistribution = planGroups.map((g) => ({
+    plan: g.plan ?? "NONE",
+    count: g._count._all,
+  }));
 
   res.json({
     totalUsers,
@@ -342,6 +406,11 @@ adminRouter.get("/metrics", async (_req, res) => {
       date: row.date.toISOString().slice(0, 10),
       count: Number(row.count),
     })),
+    dailyDocuments30d: dailyDocuments30d.map((row) => ({
+      date: row.date.toISOString().slice(0, 10),
+      count: Number(row.count),
+    })),
+    planDistribution,
   });
 });
 
@@ -513,4 +582,28 @@ adminRouter.get("/businesses/:id", async (req, res) => {
       customerCount: business._count.customers,
     },
   });
+});
+
+adminRouter.delete("/businesses/:id", async (req, res) => {
+  const { id } = req.params;
+
+  const business = await prisma.business.findUnique({ where: { id } });
+  if (!business) {
+    res.status(404).json({ error: "not_found" });
+    return;
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await deleteBusinessCascade(tx, id);
+  });
+
+  await logAdminAction({
+    adminUserId: req.auth!.userId,
+    action: "BUSINESS_DELETED",
+    targetType: "Business",
+    targetId: id,
+    metadata: { name: business.name },
+  });
+
+  res.json({ ok: true });
 });

@@ -85,6 +85,20 @@ describe("GET /admin/metrics", () => {
       0,
     );
     expect(totalFromSparkline).toBe(4);
+
+    expect(Array.isArray(res.body.dailyDocuments30d)).toBe(true);
+    const totalDocuments = res.body.dailyDocuments30d.reduce(
+      (sum: number, row: { count: number }) => sum + row.count,
+      0,
+    );
+    expect(totalDocuments).toBe(2);
+
+    expect(res.body.planDistribution).toEqual(
+      expect.arrayContaining([
+        { plan: "NONE", count: 4 },
+        { plan: "MONTHLY", count: 1 },
+      ]),
+    );
   });
 
   it("returns 403 for a non-admin", async () => {

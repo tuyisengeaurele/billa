@@ -16,6 +16,7 @@ function renderPage(userId = "u2") {
         <Routes>
           <Route path="/admin/users/:id" element={<AdminUserDetail />} />
           <Route path="/dashboard" element={<div>dashboard page</div>} />
+          <Route path="/admin/users" element={<div>users list page</div>} />
         </Routes>
       </AuthProvider>
     </MemoryRouter>,
@@ -437,6 +438,92 @@ describe("AdminUserDetail", () => {
 
     expect(screen.queryByRole("button", { name: /^revoke$/i })).not.toBeInTheDocument();
     expect(await screen.findByText(/no active sessions/i)).toBeInTheDocument();
+  });
+
+  it("requires typing the user's email before delete is enabled, then deletes and redirects", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/auth/me")) {
+        return new Response(
+          JSON.stringify({ user: { id: "u1", email: "admin@example.com", isAdmin: true }, business: { id: "b1", name: "Admin Co" } }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/admin/users/u2") && init?.method === "DELETE") {
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      }
+      if (url.endsWith("/admin/users/u2")) {
+        return new Response(
+          JSON.stringify({
+            user: {
+              id: "u2",
+              email: "owner@example.com",
+              isAdmin: false,
+              suspendedAt: null,
+              trialEndsAt: "2026-09-01T00:00:00.000Z",
+              currentPeriodEnd: null,
+              plan: null,
+              createdAt: "2026-08-01T00:00:00.000Z",
+            },
+            ownedBusinesses: [],
+            memberBusinesses: [],
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: /delete account/i }));
+    const dialog = await screen.findByRole("dialog", { name: /delete account/i });
+    const confirmButton = within(dialog).getByRole("button", { name: /^delete account$/i });
+    expect(confirmButton).toBeDisabled();
+
+    await user.type(within(dialog).getByLabelText(/type/i), "owner@example.com");
+    expect(confirmButton).toBeEnabled();
+
+    await user.click(confirmButton);
+
+    expect(await screen.findByText("users list page")).toBeInTheDocument();
+  });
+
+  it("disables the delete account button when viewing your own account", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.endsWith("/auth/me")) {
+        return new Response(
+          JSON.stringify({ user: { id: "u1", email: "admin@example.com", isAdmin: true }, business: { id: "b1", name: "Admin Co" } }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/admin/users/u1")) {
+        return new Response(
+          JSON.stringify({
+            user: {
+              id: "u1",
+              email: "admin@example.com",
+              isAdmin: true,
+              suspendedAt: null,
+              trialEndsAt: "2026-09-01T00:00:00.000Z",
+              currentPeriodEnd: null,
+              plan: null,
+              createdAt: "2026-08-01T00:00:00.000Z",
+            },
+            ownedBusinesses: [],
+            memberBusinesses: [],
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    renderPage("u1");
+
+    expect(await screen.findByRole("button", { name: /delete account/i })).toBeDisabled();
   });
 
   it("shows a not-found message for an unknown user", async () => {
