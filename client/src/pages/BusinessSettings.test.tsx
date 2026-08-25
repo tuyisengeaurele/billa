@@ -225,6 +225,78 @@ describe("BusinessSettings", () => {
     await waitFor(() => expect(patchBody).toMatchObject({ primaryColor: "#2563EB" }));
   });
 
+  it("shows an Add logo option when the business has no logo yet, and reveals the uploader", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.endsWith("/business/sequences")) {
+        return new Response(JSON.stringify({ sequences: [] }), { status: 200 });
+      }
+      if (url.endsWith("/business") || url.endsWith("/auth/me")) {
+        return new Response(
+          JSON.stringify({
+            business: {
+              ownerId: "u1",
+              name: "Kigali Traders",
+              tin: null,
+              industry: null,
+              phone: null,
+              email: null,
+              address: null,
+              rraEbmNumber: null,
+              defaultTemplate: "FORMAL",
+              logoUrl: null,
+            },
+            user: { id: "u1" },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: /add a logo/i }));
+
+    expect(await screen.findByText(/click to upload your logo/i)).toBeInTheDocument();
+  });
+
+  it("shows the current logo with a Replace option when one is already set", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.endsWith("/business/sequences")) {
+        return new Response(JSON.stringify({ sequences: [] }), { status: 200 });
+      }
+      if (url.endsWith("/business") || url.endsWith("/auth/me")) {
+        return new Response(
+          JSON.stringify({
+            business: {
+              ownerId: "u1",
+              name: "Kigali Traders",
+              tin: null,
+              industry: null,
+              phone: null,
+              email: null,
+              address: null,
+              rraEbmNumber: null,
+              defaultTemplate: "FORMAL",
+              logoUrl: "/uploads/logo.png",
+            },
+            user: { id: "u1" },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    renderPage();
+
+    expect(await screen.findByRole("button", { name: /replace logo/i })).toBeInTheDocument();
+    expect(screen.getByAltText(/your business logo/i)).toBeInTheDocument();
+  });
+
   it("shows an error message when the business profile fails to load", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async (input) => {
       const url = urlOf(input);

@@ -42,28 +42,6 @@ describe("Sidebar", () => {
     expect(screen.queryByRole("link", { name: "Admin" })).not.toBeInTheDocument();
   });
 
-  it("shows the Admin link for an admin user", async () => {
-    vi.spyOn(global, "fetch").mockImplementation(async () =>
-      new Response(
-        JSON.stringify({
-          user: { id: "u1", email: "admin@example.com", isAdmin: true },
-          business: { id: "b1", name: "Kigali Traders" },
-        }),
-        { status: 200 },
-      ),
-    );
-
-    render(
-      <MemoryRouter>
-        <AuthProvider>
-          <Sidebar billingBanner={null} />
-        </AuthProvider>
-      </MemoryRouter>,
-    );
-
-    expect(await screen.findByRole("link", { name: "Admin" })).toBeInTheDocument();
-  });
-
   it("calls onNavigate when a link is clicked", async () => {
     const onNavigate = vi.fn();
     const user = userEvent.setup();

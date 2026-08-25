@@ -3,7 +3,8 @@ import type { DocumentTemplate } from "@billa/shared";
 import { AppLayout } from "../components/AppLayout";
 import { FormField } from "../components/FormField";
 import { Button } from "../components/Button";
-import { apiRequest, ApiError } from "../lib/apiClient";
+import { LogoStep } from "../components/onboarding/LogoStep";
+import { API_BASE_URL, apiRequest, ApiError } from "../lib/apiClient";
 import { useAuth } from "../context/AuthContext";
 import { SequenceEditor } from "../components/business/SequenceEditor";
 import { BillingSection } from "../components/business/BillingSection";
@@ -21,6 +22,7 @@ interface BusinessProfile {
   rraEbmNumber: string | null;
   defaultTemplate: DocumentTemplate;
   primaryColor: string | null;
+  logoUrl: string | null;
 }
 
 const DEFAULT_BRAND_COLOR = "#27272a";
@@ -52,12 +54,22 @@ export default function BusinessSettings() {
   const [apiError, setApiError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [loadError, setLoadError] = useState(false);
+  const [isEditingLogo, setIsEditingLogo] = useState(false);
 
-  useEffect(() => {
-    apiRequest<{ business: BusinessProfile }>("/business")
+  function loadProfile() {
+    return apiRequest<{ business: BusinessProfile }>("/business")
       .then((data) => setProfile(data.business))
       .catch(() => setLoadError(true));
+  }
+
+  useEffect(() => {
+    loadProfile();
   }, []);
+
+  function handleLogoComplete() {
+    setIsEditingLogo(false);
+    loadProfile();
+  }
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -171,6 +183,45 @@ export default function BusinessSettings() {
                 />
               ))}
             </div>
+          </section>
+
+          <section className="rounded-xl border border-neutral-200 bg-surface p-6">
+            <h2 className="font-display text-base font-semibold text-neutral-900">Logo</h2>
+            {!isOwner ? (
+              <p className="mt-2 font-sans text-sm text-neutral-600">Only the business owner can change the logo.</p>
+            ) : isEditingLogo ? (
+              <div className="mt-4">
+                <LogoStep onComplete={handleLogoComplete} />
+              </div>
+            ) : profile.logoUrl ? (
+              <div className="mt-4 flex items-center gap-4">
+                <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-neutral-200 bg-neutral-50 p-2">
+                  <img
+                    src={`${API_BASE_URL}${profile.logoUrl}`}
+                    alt="Your business logo"
+                    className="h-full w-full object-contain"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsEditingLogo(true)}
+                  className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 transition-colors hover:bg-neutral-50"
+                >
+                  Replace logo
+                </button>
+              </div>
+            ) : (
+              <div className="mt-4 flex flex-col items-start gap-3">
+                <p className="font-sans text-sm text-neutral-600">No logo yet.</p>
+                <button
+                  type="button"
+                  onClick={() => setIsEditingLogo(true)}
+                  className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 transition-colors hover:bg-neutral-50"
+                >
+                  Add a logo
+                </button>
+              </div>
+            )}
           </section>
 
           <section className="rounded-xl border border-neutral-200 bg-surface p-6">
