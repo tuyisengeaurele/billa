@@ -22,6 +22,7 @@ const HelpCenter = lazy(() => import("./pages/HelpCenter"));
 const Contact = lazy(() => import("./pages/Contact"));
 const AdminMessages = lazy(() => import("./pages/AdminMessages"));
 const PublicDocumentView = lazy(() => import("./pages/PublicDocumentView"));
+const AcceptInvite = lazy(() => import("./pages/AcceptInvite"));
 
 export default function App() {
   return (
@@ -37,6 +38,7 @@ export default function App() {
               <Route path="/help" element={<HelpCenter />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/view/:token" element={<PublicDocumentView />} />
+              <Route path="/invite/:token" element={<AcceptInvite />} />
               <Route element={<ProtectedRoute />}>
                 <Route path="/onboarding" element={<Onboarding />} />
                 <Route path="/dashboard" element={<Dashboard />} />

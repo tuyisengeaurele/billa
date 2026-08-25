@@ -4,11 +4,14 @@ import { AppLayout } from "../components/AppLayout";
 import { FormField } from "../components/FormField";
 import { Button } from "../components/Button";
 import { apiRequest, ApiError } from "../lib/apiClient";
+import { useAuth } from "../context/AuthContext";
 import { SequenceEditor } from "../components/business/SequenceEditor";
 import { BillingSection } from "../components/business/BillingSection";
 import { TwoFactorSection } from "../components/business/TwoFactorSection";
+import { TeamSection } from "../components/business/TeamSection";
 
 interface BusinessProfile {
+  ownerId: string;
   name: string;
   tin: string | null;
   industry: string | null;
@@ -44,6 +47,7 @@ const CONTACT_FIELD_IDS: (keyof BusinessProfile)[] = ["phone", "email", "address
 const TAX_FIELD_IDS: (keyof BusinessProfile)[] = ["rraEbmNumber"];
 
 export default function BusinessSettings() {
+  const { user } = useAuth();
   const [profile, setProfile] = useState<BusinessProfile | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -98,6 +102,8 @@ export default function BusinessSettings() {
     );
   }
 
+  const isOwner = profile.ownerId === user?.id;
+
   return (
     <AppLayout>
       <div className="mx-auto flex max-w-2xl flex-col gap-6">
@@ -106,6 +112,12 @@ export default function BusinessSettings() {
         {apiError && (
           <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
             {apiError}
+          </div>
+        )}
+
+        {!isOwner && (
+          <div className="rounded-lg bg-neutral-100 px-4 py-3 font-sans text-sm text-neutral-600">
+            Only the business owner can change these settings.
           </div>
         )}
 
@@ -119,6 +131,7 @@ export default function BusinessSettings() {
                   id={field.id}
                   label={field.label}
                   type={field.type}
+                  disabled={!isOwner}
                   value={profile[field.id] ?? ""}
                   onChange={(e) => setProfile({ ...profile, [field.id]: e.target.value })}
                 />
@@ -135,6 +148,7 @@ export default function BusinessSettings() {
                   id={field.id}
                   label={field.label}
                   type={field.type}
+                  disabled={!isOwner}
                   value={profile[field.id] ?? ""}
                   onChange={(e) => setProfile({ ...profile, [field.id]: e.target.value })}
                 />
@@ -151,6 +165,7 @@ export default function BusinessSettings() {
                   id={field.id}
                   label={field.label}
                   type={field.type}
+                  disabled={!isOwner}
                   value={profile[field.id] ?? ""}
                   onChange={(e) => setProfile({ ...profile, [field.id]: e.target.value })}
                 />
@@ -168,9 +183,10 @@ export default function BusinessSettings() {
                 <button
                   key={color}
                   type="button"
+                  disabled={!isOwner}
                   aria-label={`Use ${color}`}
                   onClick={() => setProfile({ ...profile, primaryColor: color })}
-                  className={`h-8 w-8 rounded-full border-2 transition-transform hover:scale-110 ${
+                  className={`h-8 w-8 rounded-full border-2 transition-transform hover:scale-110 disabled:cursor-not-allowed disabled:hover:scale-100 ${
                     (profile.primaryColor ?? DEFAULT_BRAND_COLOR).toUpperCase() === color.toUpperCase()
                       ? "border-neutral-900"
                       : "border-transparent"
@@ -182,10 +198,11 @@ export default function BusinessSettings() {
                 <input
                   id="primaryColor"
                   type="color"
+                  disabled={!isOwner}
                   aria-label="Custom brand color"
                   value={profile.primaryColor ?? DEFAULT_BRAND_COLOR}
                   onChange={(e) => setProfile({ ...profile, primaryColor: e.target.value })}
-                  className="h-8 w-8 cursor-pointer rounded-full border border-neutral-200 bg-transparent p-0"
+                  className="h-8 w-8 cursor-pointer rounded-full border border-neutral-200 bg-transparent p-0 disabled:cursor-not-allowed"
                 />
                 <span className="font-sans text-sm text-neutral-600">
                   {(profile.primaryColor ?? DEFAULT_BRAND_COLOR).toUpperCase()}
@@ -212,6 +229,7 @@ export default function BusinessSettings() {
                     id={`template-${option.value}`}
                     name="defaultTemplate"
                     value={option.value}
+                    disabled={!isOwner}
                     aria-label={option.label}
                     checked={profile.defaultTemplate === option.value}
                     onChange={() => setProfile({ ...profile, defaultTemplate: option.value })}
@@ -226,12 +244,16 @@ export default function BusinessSettings() {
             </div>
           </section>
 
-          <Button type="submit" isLoading={isSaving}>
-            Save
-          </Button>
+          {isOwner && (
+            <Button type="submit" isLoading={isSaving}>
+              Save
+            </Button>
+          )}
         </form>
 
         <SequenceEditor />
+
+        <TeamSection />
 
         <TwoFactorSection />
 

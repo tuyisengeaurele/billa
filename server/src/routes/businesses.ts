@@ -11,11 +11,20 @@ export const businessesRouter = Router();
 businessesRouter.use(requireAuth);
 
 businessesRouter.get("/", async (req, res) => {
-  const businesses = await prisma.business.findMany({
-    where: { ownerId: req.auth!.userId },
-    orderBy: { createdAt: "asc" },
-    select: { id: true, name: true },
-  });
+  const userId = req.auth!.userId;
+  const [owned, memberships] = await Promise.all([
+    prisma.business.findMany({
+      where: { ownerId: userId },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, name: true },
+    }),
+    prisma.businessMember.findMany({
+      where: { userId },
+      orderBy: { createdAt: "asc" },
+      include: { business: { select: { id: true, name: true } } },
+    }),
+  ]);
+  const businesses = [...owned, ...memberships.map((m) => m.business)];
   res.json({ businesses });
 });
 

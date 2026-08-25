@@ -250,6 +250,63 @@ describe("BusinessSettings", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(/couldn't load your business settings/i);
   });
 
+  it("disables settings fields and hides Save for a member who isn't the owner", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.endsWith("/business/sequences")) {
+        return new Response(
+          JSON.stringify({
+            sequences: [
+              { type: "INVOICE", prefix: "INV-", nextNumber: 1 },
+              { type: "PROFORMA", prefix: "PRO-", nextNumber: 1 },
+              { type: "DELIVERY_NOTE", prefix: "DN-", nextNumber: 1 },
+              { type: "QUOTE", prefix: "QTE-", nextNumber: 1 },
+              { type: "RECEIPT", prefix: "RCT-", nextNumber: 1 },
+            ],
+          }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/auth/me")) {
+        return new Response(
+          JSON.stringify({
+            user: { id: "member-1", email: "member@example.com" },
+            business: { id: "b1", name: "Kigali Traders" },
+          }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/business")) {
+        return new Response(
+          JSON.stringify({
+            business: {
+              ownerId: "owner-1",
+              name: "Kigali Traders",
+              tin: null,
+              industry: null,
+              phone: null,
+              email: null,
+              address: null,
+              rraEbmNumber: null,
+              defaultTemplate: "MINIMAL",
+            },
+          }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/business/members") || url.endsWith("/business/invites")) {
+        return new Response(JSON.stringify({ error: "not_owner" }), { status: 403 });
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    renderPage();
+
+    expect(await screen.findByDisplayValue("Kigali Traders")).toBeDisabled();
+    expect(screen.queryByRole("button", { name: /^save$/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/only the business owner can change these settings/i)).toBeInTheDocument();
+  });
+
   it("shows an error message when document numbering fails to load", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async (input) => {
       const url = urlOf(input);

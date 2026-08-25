@@ -48,6 +48,22 @@ describe("GET /businesses", () => {
     const res = await request(createApp()).get("/businesses");
     expect(res.status).toBe(401);
   });
+
+  it("includes businesses the caller is a member of, alongside owned ones", async () => {
+    const app = createApp();
+    const { cookies, userId } = await registerAndGetCookies(app);
+    const ownerRes = await request(app).post("/auth/session").send({
+      idToken: JSON.stringify({ uid: "other-owner@example.com", email: "other-owner@example.com" }),
+      businessName: "Other Co",
+    });
+    await prisma.businessMember.create({
+      data: { businessId: ownerRes.body.business.id, userId },
+    });
+
+    const res = await request(app).get("/businesses").set("Cookie", cookies);
+
+    expect(res.body.businesses.map((b: { name: string }) => b.name)).toEqual(["Kigali Traders", "Other Co"]);
+  });
 });
 
 describe("POST /businesses", () => {

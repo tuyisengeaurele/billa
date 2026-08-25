@@ -20,6 +20,7 @@ import { ttlToMs } from "../lib/ttl.js";
 import { clearAuthCookies, setAccessTokenCookie, setRefreshTokenCookie } from "../lib/cookies.js";
 import { issueSession } from "../lib/session.js";
 import { generateBackupCodes, generateTotpSetup, hashBackupCode, verifyTotpToken } from "../lib/totp.js";
+import { hasBusinessAccess } from "../lib/business-access.js";
 import { validateBody } from "../middleware/validate.js";
 import { authRateLimit } from "../middleware/auth-rate-limit.js";
 import { requireAuth } from "../middleware/require-auth.js";
@@ -119,11 +120,11 @@ authRouter.get("/me", requireAuth, async (req, res) => {
 
 authRouter.post("/switch-business", requireAuth, validateBody(switchBusinessSchema), async (req, res) => {
   const { businessId } = req.body as SwitchBusinessInput;
-  const business = await prisma.business.findUnique({ where: { id: businessId } });
-  if (!business || business.ownerId !== req.auth!.userId) {
-    res.status(403).json({ error: "not_owner" });
+  if (!(await hasBusinessAccess(req.auth!.userId, businessId))) {
+    res.status(403).json({ error: "no_access" });
     return;
   }
+  const business = await prisma.business.findUniqueOrThrow({ where: { id: businessId } });
   await prisma.user.update({ where: { id: req.auth!.userId }, data: { lastActiveBusinessId: businessId } });
   await issueSession(res, req.auth!.userId, businessId);
   res.json({ business: { id: business.id, name: business.name, onboardingCompletedAt: business.onboardingCompletedAt } });

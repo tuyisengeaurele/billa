@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createBusinessSchema, switchBusinessSchema } from "./multi-business-schemas.js";
+import { createBusinessSchema, createInviteSchema, switchBusinessSchema } from "./multi-business-schemas.js";
 
 describe("switchBusinessSchema", () => {
   it("accepts a non-empty businessId", () => {
@@ -18,5 +18,15 @@ describe("createBusinessSchema", () => {
 
   it("rejects an empty name", () => {
     expect(createBusinessSchema.safeParse({ name: "" }).success).toBe(false);
+  });
+});
+
+describe("createInviteSchema", () => {
+  it("accepts a valid email", () => {
+    expect(createInviteSchema.safeParse({ email: "team@example.com" }).success).toBe(true);
+  });
+
+  it("rejects an invalid email", () => {
+    expect(createInviteSchema.safeParse({ email: "not-an-email" }).success).toBe(false);
   });
 });

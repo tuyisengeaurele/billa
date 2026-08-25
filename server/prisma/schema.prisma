@@ -55,6 +55,8 @@ model Business {
   items     Item[]
   documents Document[]
   sequences DocumentSequence[]
+  members   BusinessMember[]
+  invites   BusinessInvite[]
 
   @@index([ownerId])
 }
@@ -79,6 +81,35 @@ model User {
   refreshTokens       RefreshToken[]
   payments            Payment[]
   twoFactorChallenges TwoFactorChallenge[]
+  memberships         BusinessMember[]
+}
+
+model BusinessMember {
+  id         String   @id @default(cuid())
+  businessId String
+  userId     String
+  createdAt  DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
+
+  @@unique([businessId, userId])
+  @@index([userId])
+}
+
+model BusinessInvite {
+  id         String    @id @default(cuid())
+  businessId String
+  email      String
+  token      String    @unique @default(cuid())
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  business Business @relation(fields: [businessId], references: [id])
+
+  @@index([businessId])
+  @@index([email])
 }
 
 model TwoFactorChallenge {
