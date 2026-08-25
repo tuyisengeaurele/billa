@@ -139,6 +139,48 @@ describe("AdminUserDetail", () => {
     expect(await screen.findByRole("button", { name: /revoke admin/i })).toBeDisabled();
   });
 
+  it("extends the trial when the button is clicked", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/auth/me")) {
+        return new Response(
+          JSON.stringify({ user: { id: "u1", email: "admin@example.com", isAdmin: true }, business: { id: "b1", name: "Admin Co" } }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/admin/users/u2/extend-trial") && init?.method === "POST") {
+        return new Response(JSON.stringify({ trialEndsAt: "2026-10-01T00:00:00.000Z" }), { status: 200 });
+      }
+      if (url.endsWith("/admin/users/u2")) {
+        return new Response(
+          JSON.stringify({
+            user: {
+              id: "u2",
+              email: "owner@example.com",
+              isAdmin: false,
+              trialEndsAt: "2026-09-01T00:00:00.000Z",
+              currentPeriodEnd: null,
+              plan: null,
+              createdAt: "2026-08-01T00:00:00.000Z",
+            },
+            ownedBusinesses: [],
+            memberBusinesses: [],
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText("owner@example.com");
+    await user.click(screen.getByRole("button", { name: /extend trial/i }));
+
+    expect(await screen.findByText(new Date("2026-10-01T00:00:00.000Z").toLocaleDateString())).toBeInTheDocument();
+  });
+
   it("shows a not-found message for an unknown user", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async (input) => {
       const url = urlOf(input);

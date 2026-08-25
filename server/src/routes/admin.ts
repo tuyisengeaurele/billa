@@ -1,10 +1,16 @@
 import { Router } from "express";
 import type { Prisma } from "@prisma/client";
-import { adminAuditLogQuerySchema, adminBusinessListQuerySchema, adminUserListQuerySchema } from "@billa/shared";
-import type { AdminAuditLogQuery, AdminBusinessListQuery, AdminUserListQuery } from "@billa/shared";
+import {
+  adminAuditLogQuerySchema,
+  adminBusinessListQuerySchema,
+  adminUserListQuerySchema,
+  extendTrialSchema,
+} from "@billa/shared";
+import type { AdminAuditLogQuery, AdminBusinessListQuery, AdminUserListQuery, ExtendTrialInput } from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/require-auth.js";
 import { requireAdmin } from "../middleware/require-admin.js";
+import { validateBody } from "../middleware/validate.js";
 import { validateQuery } from "../middleware/validate-query.js";
 import { logAdminAction } from "../lib/admin-audit-log.js";
 
@@ -109,6 +115,31 @@ adminRouter.post("/users/:id/toggle-admin", async (req, res) => {
   });
 
   res.json({ user: { id: updated.id, isAdmin: updated.isAdmin } });
+});
+
+adminRouter.post("/users/:id/extend-trial", validateBody(extendTrialSchema), async (req, res) => {
+  const { id } = req.params;
+  const { days } = req.body as ExtendTrialInput;
+
+  const user = await prisma.user.findUnique({ where: { id } });
+  if (!user) {
+    res.status(404).json({ error: "not_found" });
+    return;
+  }
+
+  const base = user.trialEndsAt > new Date() ? user.trialEndsAt : new Date();
+  const newTrialEndsAt = new Date(base.getTime() + days * 24 * 60 * 60 * 1000);
+  await prisma.user.update({ where: { id }, data: { trialEndsAt: newTrialEndsAt } });
+
+  await logAdminAction({
+    adminUserId: req.auth!.userId,
+    action: "TRIAL_EXTENDED",
+    targetType: "User",
+    targetId: id,
+    metadata: { days, newTrialEndsAt: newTrialEndsAt.toISOString() },
+  });
+
+  res.json({ trialEndsAt: newTrialEndsAt });
 });
 
 adminRouter.get("/businesses", validateQuery(adminBusinessListQuerySchema), async (req, res) => {

@@ -25,3 +25,8 @@ export const adminBusinessListQuerySchema = z.object({
   pageSize: z.coerce.number().int().positive().max(100).optional().default(20),
 });
 export type AdminBusinessListQuery = z.infer<typeof adminBusinessListQuerySchema>;
+
+export const extendTrialSchema = z.object({
+  days: z.number().int().positive().max(365),
+});
+export type ExtendTrialInput = z.infer<typeof extendTrialSchema>;

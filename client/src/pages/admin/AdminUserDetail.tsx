@@ -32,6 +32,8 @@ export default function AdminUserDetail() {
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isTogglingAdmin, setIsTogglingAdmin] = useState(false);
+  const [extendDays, setExtendDays] = useState("14");
+  const [isExtendingTrial, setIsExtendingTrial] = useState(false);
 
   useEffect(() => {
     apiRequest<UserDetailResponse>(`/admin/users/${id}`)
@@ -56,6 +58,24 @@ export default function AdminUserDetail() {
       setError("Couldn't change admin status. Try again.");
     } finally {
       setIsTogglingAdmin(false);
+    }
+  }
+
+  async function extendTrial() {
+    if (!detail) return;
+    const days = Number(extendDays);
+    setError(null);
+    setIsExtendingTrial(true);
+    try {
+      const data = await apiRequest<{ trialEndsAt: string }>(`/admin/users/${id}/extend-trial`, {
+        method: "POST",
+        body: { days },
+      });
+      setDetail({ ...detail, user: { ...detail.user, trialEndsAt: data.trialEndsAt } });
+    } catch {
+      setError("Couldn't extend the trial. Try again.");
+    } finally {
+      setIsExtendingTrial(false);
     }
   }
 
@@ -100,6 +120,31 @@ export default function AdminUserDetail() {
             <dt className="text-neutral-500">Joined</dt>
             <dd className="text-neutral-900">{new Date(detail.user.createdAt).toLocaleDateString()}</dd>
           </dl>
+
+          <div className="mt-4 flex items-end gap-3">
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="extendDays" className="font-sans text-sm font-medium text-neutral-800">
+                Extend trial by (days)
+              </label>
+              <input
+                id="extendDays"
+                type="number"
+                min={1}
+                max={365}
+                value={extendDays}
+                onChange={(e) => setExtendDays(e.target.value)}
+                className="w-28 rounded-lg border border-neutral-200 bg-surface px-3.5 py-2 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+              />
+            </div>
+            <button
+              type="button"
+              disabled={isExtendingTrial}
+              onClick={extendTrial}
+              className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isExtendingTrial ? "Extending…" : "Extend trial"}
+            </button>
+          </div>
 
           <button
             type="button"

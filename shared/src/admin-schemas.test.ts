@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { adminAuditLogQuerySchema, adminBusinessListQuerySchema, adminUserListQuerySchema } from "./admin-schemas.js";
+import {
+  adminAuditLogQuerySchema,
+  adminBusinessListQuerySchema,
+  adminUserListQuerySchema,
+  extendTrialSchema,
+} from "./admin-schemas.js";
 
 describe("adminAuditLogQuerySchema", () => {
   it("defaults page, pageSize, sortBy, and sortOrder", () => {
@@ -35,5 +40,20 @@ describe("adminBusinessListQuerySchema", () => {
 
   it("accepts sortBy name", () => {
     expect(adminBusinessListQuerySchema.parse({ sortBy: "name" }).sortBy).toBe("name");
+  });
+});
+
+describe("extendTrialSchema", () => {
+  it("accepts a positive number of days", () => {
+    expect(extendTrialSchema.safeParse({ days: 14 }).success).toBe(true);
+  });
+
+  it("rejects zero or negative days", () => {
+    expect(extendTrialSchema.safeParse({ days: 0 }).success).toBe(false);
+    expect(extendTrialSchema.safeParse({ days: -5 }).success).toBe(false);
+  });
+
+  it("rejects more than 365 days", () => {
+    expect(extendTrialSchema.safeParse({ days: 366 }).success).toBe(false);
   });
 });
