@@ -71,6 +71,22 @@ describe("TwoFactorSection", () => {
     await waitFor(() => expect(screen.getByText(/AAAA111111\s+BBBB222222/)).toBeInTheDocument());
   });
 
+  it("copies the backup codes to the clipboard", async () => {
+    const writeText = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    renderSection({ user: { id: "u1", email: "owner@example.com", totpEnabled: false } });
+
+    await user.click(await screen.findByRole("button", { name: /set up two-factor authentication/i }));
+    await user.type(await screen.findByLabelText(/enter the 6-digit code/i), "654321");
+    await user.click(screen.getByRole("button", { name: /^confirm$/i }));
+    await screen.findByText(/AAAA111111\s+BBBB222222/);
+
+    await user.click(screen.getByRole("button", { name: /copy all codes/i }));
+
+    expect(writeText).toHaveBeenCalledWith("AAAA111111\nBBBB222222");
+    expect(await screen.findByRole("button", { name: /^copied$/i })).toBeInTheDocument();
+  });
+
   it("shows an error and stays on setup when the confirm code is wrong", async () => {
     const user = userEvent.setup();
     renderSection({ user: { id: "u1", email: "owner@example.com", totpEnabled: false } });

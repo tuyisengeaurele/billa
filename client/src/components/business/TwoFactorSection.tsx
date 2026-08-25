@@ -21,6 +21,7 @@ export function TwoFactorSection() {
   const [isConfirming, setIsConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [enabledOverride, setEnabledOverride] = useState<boolean | null>(null);
+  const [codesCopied, setCodesCopied] = useState(false);
   const totpEnabled = enabledOverride ?? user?.totpEnabled ?? false;
 
   if (isLoading) {
@@ -54,6 +55,7 @@ export function TwoFactorSection() {
         body: { code: confirmCode.trim() },
       });
       setBackupCodes(data.backupCodes);
+      setCodesCopied(false);
       setEnabledOverride(true);
       setSetup(null);
       setConfirmCode("");
@@ -61,6 +63,16 @@ export function TwoFactorSection() {
       setError("That code didn't match. Try again.");
     } finally {
       setIsConfirming(false);
+    }
+  }
+
+  async function copyBackupCodes() {
+    if (!backupCodes) return;
+    try {
+      await navigator.clipboard.writeText(backupCodes.join("\n"));
+      setCodesCopied(true);
+    } catch {
+      setError("Couldn't copy the codes. Select and copy them manually instead.");
     }
   }
 
@@ -94,8 +106,17 @@ export function TwoFactorSection() {
 
       {backupCodes && (
         <div className="mt-4 rounded-lg bg-success-bg px-4 py-3 font-sans text-sm text-success">
-          <p className="font-medium">Two-factor authentication is on. Save these backup codes somewhere safe:</p>
+          <p className="font-medium">
+            Two-factor authentication is on. Save these backup codes somewhere safe — you won't see them again:
+          </p>
           <p className="mt-2 font-mono text-sm tracking-wide">{backupCodes.join("  ")}</p>
+          <button
+            type="button"
+            onClick={copyBackupCodes}
+            className="mt-2 font-sans text-sm font-medium text-success underline hover:no-underline"
+          >
+            {codesCopied ? "Copied" : "Copy all codes"}
+          </button>
           <p className="mt-2">Each code works once, if you lose access to your authenticator app.</p>
         </div>
       )}
