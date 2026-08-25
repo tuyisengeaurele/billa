@@ -1,5 +1,6 @@
 import { contrastRatio } from "../color.js";
 import { htmlDocumentShell } from "./html-shell.js";
+import { accentDark, PREMIUM_STYLES, renderAmountInWordsBox, renderFooterBar, renderStatusPill, renderTotalsBox } from "./premium-parts.js";
 import type { PdfRenderData } from "./render-data.js";
 
 function pickSidebarTextColor(accentColor: string): string {
@@ -16,21 +17,23 @@ body { display: flex; min-height: 297mm; }
 .logo { height: 12mm; margin-bottom: 6mm; }
 .sidebar-name { font-family: "Fraunces", serif; font-size: 15px; font-weight: 700; margin-bottom: 8mm; }
 .sidebar-section { margin-bottom: 8mm; }
-.sidebar-label { font-size: 8px; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7; margin-bottom: 2mm; }
-.doc-title { font-family: "Fraunces", serif; font-size: 18px; font-weight: 700; margin-bottom: 8mm; }
-.party-label { color: #9ca3af; text-transform: uppercase; font-size: 9px; letter-spacing: 0.05em; margin-bottom: 2mm; }
-th { text-align: left; font-weight: 500; color: #6b7280; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; padding-bottom: 2mm; border-bottom: 1px solid #e5e7eb; }
-td { padding: 3mm 0; border-bottom: 1px solid #f3f4f6; }
+.sidebar-label { font-size: 8px; text-transform: uppercase; letter-spacing: 0.12em; opacity: 0.75; margin-bottom: 2mm; font-weight: 700; }
+.doc-title { font-family: "Fraunces", serif; font-size: 19px; font-weight: 700; margin-bottom: 3mm; color: var(--accent); text-transform: uppercase; letter-spacing: 0.06em; }
+.party-label { color: #6b7280; text-transform: uppercase; font-size: 9px; letter-spacing: 0.12em; font-weight: 700; margin-bottom: 2mm; }
+th { text-align: left; font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; padding: 3mm; background: var(--dark); color: #ffffff; }
+td { padding: 3mm; border: 1px solid #e5e7eb; border-top: none; }
 td.num, th.num { text-align: right; }
 .totals { display: flex; justify-content: flex-end; margin-top: 6mm; }
-.totals-box { width: 60mm; }
-.totals-row { display: flex; justify-content: space-between; padding: 1mm 0; color: #4b5563; }
-.totals-row.total { font-weight: 700; font-size: 13px; color: #111827; border-top: 1px solid #e5e7eb; margin-top: 2mm; padding-top: 2mm; }
+.totals-box { width: 60mm; border: 1px solid #d1d5db; border-radius: 2mm; overflow: hidden; }
+.totals-row { display: flex; justify-content: space-between; padding: 2mm 4mm; }
+.totals-row.total { font-weight: 700; font-size: 13px; color: #ffffff; }
 .notes { margin-top: 10mm; color: #6b7280; font-size: 10px; }
+${PREMIUM_STYLES}
 `;
 
 export function renderSidebarAccentHtml(data: PdfRenderData): string {
   const textColor = pickSidebarTextColor(data.business.accentColor);
+  const dark = accentDark(data.business.accentColor);
 
   const linesHtml = data.lines
     .map(
@@ -61,10 +64,10 @@ export function renderSidebarAccentHtml(data: PdfRenderData): string {
         <div>${data.number ?? "DRAFT"}</div>
         <div>${data.issueDate}</div>
         ${data.dueDateLabel && data.dueDate ? `<div>${data.dueDateLabel} ${data.dueDate}</div>` : ""}
-        <div>${data.status}</div>
+        <div style="margin-top:2mm">${renderStatusPill(data.status)}</div>
       </div>
     </div>
-    <div class="main">
+    <div class="main" style="--accent:${data.business.accentColor}; --dark:${dark}">
       <div class="doc-title">${data.typeLabel}</div>
       <div class="party-label">${data.partyLabel}</div>
       <div>${data.customer.name}</div>
@@ -81,14 +84,19 @@ export function renderSidebarAccentHtml(data: PdfRenderData): string {
         </thead>
         <tbody>${linesHtml}</tbody>
       </table>
-      <div class="totals">
-        <div class="totals-box">
-          <div class="totals-row"><span>Subtotal</span><span>${data.subtotalFormatted}</span></div>
-          <div class="totals-row"><span>Tax</span><span>${data.taxTotalFormatted}</span></div>
-          <div class="totals-row total"><span>Total</span><span>${data.totalFormatted}</span></div>
-        </div>
-      </div>
+      ${
+        data.showTotals
+          ? `<div class="totals">${renderTotalsBox({
+              subtotalFormatted: data.subtotalFormatted,
+              taxTotalFormatted: data.taxTotalFormatted,
+              totalFormatted: data.totalFormatted,
+              dark,
+            })}</div>
+      ${data.amountInWordsFormatted ? renderAmountInWordsBox(data.amountInWordsFormatted) : ""}`
+          : ""
+      }
       ${data.notes ? `<div class="notes">${data.notes}</div>` : ""}
+      ${renderFooterBar(data.business, dark, data.showTotals ? ["Authorized signature"] : ["Dispatched by", "Received by"])}
     </div>
   `;
 

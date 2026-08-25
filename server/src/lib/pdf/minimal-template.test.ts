@@ -35,6 +35,8 @@ function makeData(overrides: Partial<PdfRenderData> = {}): PdfRenderData {
     subtotalFormatted: "15,000 RWF",
     taxTotalFormatted: "2,700 RWF",
     totalFormatted: "17,700 RWF",
+    showTotals: true,
+    amountInWordsFormatted: "Seventeen Thousand Seven Hundred Rwandan Francs Only",
     ...overrides,
   };
 }
@@ -80,5 +82,24 @@ describe("renderMinimalHtml", () => {
     const html = renderMinimalHtml(makeData({ partyLabel: "Deliver to" }));
     expect(html).toContain("Deliver to");
     expect(html).not.toContain("Bill to");
+  });
+
+  it("shows a status pill", () => {
+    const html = renderMinimalHtml(makeData({ status: "DRAFT" }));
+    expect(html).toContain("Draft");
+  });
+
+  it("shows the amount in words when totals are shown", () => {
+    const html = renderMinimalHtml(makeData());
+    expect(html).toContain("Amount in words");
+    expect(html).toContain("Seventeen Thousand Seven Hundred Rwandan Francs Only");
+  });
+
+  it("hides totals and amount-in-words for a delivery note, showing two signature lines instead", () => {
+    const html = renderMinimalHtml(makeData({ showTotals: false, amountInWordsFormatted: null }));
+    expect(html).not.toContain("Amount in words");
+    expect(html).not.toContain("Subtotal");
+    expect(html).toContain("Dispatched by");
+    expect(html).toContain("Received by");
   });
 });

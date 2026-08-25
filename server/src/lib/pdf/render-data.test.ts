@@ -135,4 +135,16 @@ describe("buildPdfRenderData", () => {
     expect(data.dueDateLabel).toBe("Valid until");
     expect(data.partyLabel).toBe("Bill to");
   });
+
+  it("spells out the total in words for an invoice", async () => {
+    const data = await buildPdfRenderData(makeDocument(), makeBusiness());
+    expect(data.showTotals).toBe(true);
+    expect(data.amountInWordsFormatted).toBe("Seventeen Thousand Seven Hundred Rwandan Francs Only");
+  });
+
+  it("hides totals and amount-in-words for a delivery note", async () => {
+    const data = await buildPdfRenderData(makeDocument({ type: "DELIVERY_NOTE" }), makeBusiness());
+    expect(data.showTotals).toBe(false);
+    expect(data.amountInWordsFormatted).toBeNull();
+  });
 });

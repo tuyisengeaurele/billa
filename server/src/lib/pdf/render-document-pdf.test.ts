@@ -27,6 +27,8 @@ function makeData(overrides: Partial<PdfRenderData> = {}): PdfRenderData {
     subtotalFormatted: "0 RWF",
     taxTotalFormatted: "0 RWF",
     totalFormatted: "0 RWF",
+    showTotals: true,
+    amountInWordsFormatted: "Zero Rwandan Francs Only",
     ...overrides,
   };
 }

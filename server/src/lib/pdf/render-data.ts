@@ -1,5 +1,5 @@
 import type { Business, Customer, Document, DocumentLine, DocumentType } from "@prisma/client";
-import { formatRwf, getDueDateLabel, getPartyLabel } from "@billa/shared";
+import { amountInWordsRwf, formatRwf, getDueDateLabel, getPartyLabel } from "@billa/shared";
 import { escapeHtml } from "./escape-html.js";
 import { readLogoDataUri } from "./logo.js";
 
@@ -51,6 +51,8 @@ export interface PdfRenderData {
   subtotalFormatted: string;
   taxTotalFormatted: string;
   totalFormatted: string;
+  showTotals: boolean;
+  amountInWordsFormatted: string | null;
 }
 
 type DocumentWithRelations = Document & { lines: DocumentLine[]; customer: Customer };
@@ -64,6 +66,7 @@ export async function buildPdfRenderData(
   business: Business,
 ): Promise<PdfRenderData> {
   const logoDataUri = await readLogoDataUri(business.logoUrl, business.id);
+  const showTotals = document.type !== "DELIVERY_NOTE";
 
   return {
     business: {
@@ -103,5 +106,7 @@ export async function buildPdfRenderData(
     subtotalFormatted: formatRwf(document.subtotal),
     taxTotalFormatted: formatRwf(document.taxTotal),
     totalFormatted: formatRwf(document.total),
+    showTotals,
+    amountInWordsFormatted: showTotals ? amountInWordsRwf(Number(document.total)) : null,
   };
 }

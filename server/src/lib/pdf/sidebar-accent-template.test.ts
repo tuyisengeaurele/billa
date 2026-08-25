@@ -35,6 +35,8 @@ function makeData(overrides: Partial<PdfRenderData> = {}): PdfRenderData {
     subtotalFormatted: "15,000 RWF",
     taxTotalFormatted: "2,700 RWF",
     totalFormatted: "17,700 RWF",
+    showTotals: true,
+    amountInWordsFormatted: "Seventeen Thousand Seven Hundred Rwandan Francs Only",
     ...overrides,
   };
 }
@@ -84,5 +86,24 @@ describe("renderSidebarAccentHtml", () => {
   it("omits the due date line when there is no due date label", () => {
     const html = renderSidebarAccentHtml(makeData({ dueDateLabel: null, dueDate: null }));
     expect(html).not.toMatch(/Due date |Valid until /);
+  });
+
+  it("shows a status pill", () => {
+    const html = renderSidebarAccentHtml(makeData({ status: "FINALIZED" }));
+    expect(html).toContain("Finalized");
+  });
+
+  it("shows the amount in words when totals are shown", () => {
+    const html = renderSidebarAccentHtml(makeData());
+    expect(html).toContain("Amount in words");
+    expect(html).toContain("Seventeen Thousand Seven Hundred Rwandan Francs Only");
+  });
+
+  it("hides totals and amount-in-words for a delivery note, showing two signature lines instead", () => {
+    const html = renderSidebarAccentHtml(makeData({ showTotals: false, amountInWordsFormatted: null }));
+    expect(html).not.toContain("Amount in words");
+    expect(html).not.toContain("Subtotal");
+    expect(html).toContain("Dispatched by");
+    expect(html).toContain("Received by");
   });
 });

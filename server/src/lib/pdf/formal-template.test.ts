@@ -35,6 +35,8 @@ function makeData(overrides: Partial<PdfRenderData> = {}): PdfRenderData {
     subtotalFormatted: "15,000 RWF",
     taxTotalFormatted: "2,700 RWF",
     totalFormatted: "17,700 RWF",
+    showTotals: true,
+    amountInWordsFormatted: "Seventeen Thousand Seven Hundred Rwandan Francs Only",
     ...overrides,
   };
 }
@@ -85,5 +87,35 @@ describe("renderFormalHtml", () => {
   it("omits the due date line when there is no due date label", () => {
     const html = renderFormalHtml(makeData({ dueDateLabel: null, dueDate: null }));
     expect(html).not.toMatch(/Due date:|Valid until:/);
+  });
+
+  it("shows a status pill", () => {
+    const html = renderFormalHtml(makeData({ status: "FINALIZED" }));
+    expect(html).toContain("Finalized");
+  });
+
+  it("shows the amount in words when totals are shown", () => {
+    const html = renderFormalHtml(makeData());
+    expect(html).toContain("Amount in words");
+    expect(html).toContain("Seventeen Thousand Seven Hundred Rwandan Francs Only");
+  });
+
+  it("hides totals and amount-in-words for a delivery note, showing two signature lines instead", () => {
+    const html = renderFormalHtml(makeData({ showTotals: false, amountInWordsFormatted: null }));
+    expect(html).not.toContain("Amount in words");
+    expect(html).not.toContain("Subtotal");
+    expect(html).toContain("Dispatched by");
+    expect(html).toContain("Received by");
+  });
+
+  it("shows one signature line when totals are shown", () => {
+    const html = renderFormalHtml(makeData());
+    expect(html).toContain("Authorized signature");
+    expect(html).not.toContain("Dispatched by");
+  });
+
+  it("darkens the accent color for the table header instead of using it raw", () => {
+    const html = renderFormalHtml(makeData({ business: { ...makeData().business, accentColor: "#F9A8D4" } }));
+    expect(html).not.toContain("background:#F9A8D4");
   });
 });
