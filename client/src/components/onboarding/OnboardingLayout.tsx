@@ -33,7 +33,7 @@ export function OnboardingLayout({ stepLabel, onSkipAll, children }: OnboardingL
             Skip onboarding
           </button>
         </div>
-        <div className="rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm">{children}</div>
+        <div className="rounded-2xl border border-neutral-200 bg-surface p-8 shadow-sm">{children}</div>
       </motion.div>
     </div>
   );

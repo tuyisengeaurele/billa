@@ -27,7 +27,7 @@ export function DocumentPreviewCard({
   className = "",
 }: DocumentPreviewCardProps) {
   return (
-    <div className={`w-72 shrink-0 rounded-2xl border border-neutral-200 bg-white p-6 shadow-xl sm:w-80 ${className}`}>
+    <div className={`w-72 shrink-0 rounded-2xl border border-neutral-200 bg-surface p-6 shadow-xl sm:w-80 ${className}`}>
       <div className="flex items-start justify-between gap-3 border-b border-neutral-100 pb-4">
         <div className="flex items-center gap-2">
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-500">
