@@ -63,7 +63,7 @@ describe("BusinessSettings", () => {
 
     renderPage();
 
-    expect(await screen.findByDisplayValue("Kigali Traders")).toBeInTheDocument();
+    expect(await screen.findByText("Kigali Traders")).toBeInTheDocument();
     expect(await screen.findByLabelText("Formal")).toBeChecked();
   });
 
@@ -112,7 +112,7 @@ describe("BusinessSettings", () => {
     const user = userEvent.setup();
     renderPage();
 
-    await screen.findByDisplayValue("Kigali Traders");
+    await screen.findByText("Kigali Traders");
     await user.click(screen.getByLabelText("Sidebar accent"));
     await user.click(screen.getByRole("button", { name: /^save$/i }));
 
@@ -218,7 +218,7 @@ describe("BusinessSettings", () => {
     const user = userEvent.setup();
     renderPage();
 
-    await screen.findByDisplayValue("Kigali Traders");
+    await screen.findByText("Kigali Traders");
     await user.click(screen.getByRole("button", { name: "Use #2563EB" }));
     await user.click(screen.getByRole("button", { name: /^save$/i }));
 
@@ -295,6 +295,59 @@ describe("BusinessSettings", () => {
 
     expect(await screen.findByRole("button", { name: /replace logo/i })).toBeInTheDocument();
     expect(screen.getByAltText(/your business logo/i)).toBeInTheDocument();
+  });
+
+  it("requires typing the current name before rename is enabled, then renames the business", async () => {
+    let currentName = "Kigali Traders";
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/business/sequences")) {
+        return new Response(JSON.stringify({ sequences: [] }), { status: 200 });
+      }
+      if (url.endsWith("/business") && init?.method === "PATCH") {
+        const body = JSON.parse((init.body as string) ?? "{}");
+        currentName = body.name;
+        return new Response(JSON.stringify({ business: {} }), { status: 200 });
+      }
+      if (url.endsWith("/business") || url.endsWith("/auth/me")) {
+        return new Response(
+          JSON.stringify({
+            business: {
+              ownerId: "u1",
+              name: currentName,
+              tin: null,
+              industry: null,
+              phone: null,
+              email: null,
+              address: null,
+              rraEbmNumber: null,
+              defaultTemplate: "FORMAL",
+              logoUrl: null,
+            },
+            user: { id: "u1", email: "owner@example.com" },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: /^rename$/i }));
+    const dialog = await screen.findByRole("dialog", { name: /rename business/i });
+    const confirmButton = within(dialog).getByRole("button", { name: /^rename$/i });
+    expect(confirmButton).toBeDisabled();
+
+    await user.clear(within(dialog).getByLabelText(/new business name/i));
+    await user.type(within(dialog).getByLabelText(/new business name/i), "Musanze Traders");
+    await user.type(within(dialog).getByLabelText(/type/i), "Kigali Traders");
+    expect(confirmButton).toBeEnabled();
+
+    await user.click(confirmButton);
+
+    expect(await screen.findByText("Musanze Traders")).toBeInTheDocument();
   });
 
   it("requires typing your email before delete is enabled, then deletes the account and redirects to login", async () => {
@@ -431,7 +484,9 @@ describe("BusinessSettings", () => {
 
     renderPage();
 
-    expect(await screen.findByDisplayValue("Kigali Traders")).toBeDisabled();
+    await screen.findByText("Kigali Traders");
+    expect(screen.getByLabelText("TIN")).toBeDisabled();
+    expect(screen.queryByRole("button", { name: /^rename$/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^save$/i })).not.toBeInTheDocument();
     expect(screen.getByText(/only the business owner can change these settings/i)).toBeInTheDocument();
   });

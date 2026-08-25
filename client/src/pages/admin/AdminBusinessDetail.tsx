@@ -29,6 +29,10 @@ export default function AdminBusinessDetail() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [renameConfirmText, setRenameConfirmText] = useState("");
+  const [isRenaming, setIsRenaming] = useState(false);
 
   useEffect(() => {
     apiRequest<{ business: BusinessDetail }>(`/admin/businesses/${id}`)
@@ -39,6 +43,31 @@ export default function AdminBusinessDetail() {
         }
       });
   }, [id]);
+
+  function openRenameModal() {
+    if (!business) return;
+    setNewName(business.name);
+    setRenameConfirmText("");
+    setIsRenameModalOpen(true);
+  }
+
+  async function handleRename() {
+    if (!business) return;
+    setError(null);
+    setIsRenaming(true);
+    try {
+      const data = await apiRequest<{ business: { name: string } }>(`/admin/businesses/${id}`, {
+        method: "PATCH",
+        body: { name: newName.trim() },
+      });
+      setBusiness({ ...business, name: data.business.name });
+      setIsRenameModalOpen(false);
+    } catch {
+      setError("Couldn't rename the business. Try again.");
+    } finally {
+      setIsRenaming(false);
+    }
+  }
 
   async function handleDelete() {
     if (!business) return;
@@ -103,6 +132,13 @@ export default function AdminBusinessDetail() {
             <dt className="text-neutral-500">Created</dt>
             <dd className="text-neutral-900">{new Date(business.createdAt).toLocaleDateString()}</dd>
           </dl>
+          <button
+            type="button"
+            onClick={openRenameModal}
+            className="mt-4 rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 transition-colors hover:bg-neutral-50"
+          >
+            Rename business
+          </button>
         </section>
 
         <section className="rounded-xl border border-neutral-200 bg-surface p-6">
@@ -139,6 +175,48 @@ export default function AdminBusinessDetail() {
           </button>
         </section>
       </div>
+
+      <Modal
+        isOpen={isRenameModalOpen}
+        onClose={() => setIsRenameModalOpen(false)}
+        title="Rename business"
+      >
+        <label htmlFor="newBusinessName" className="block font-sans text-sm font-medium text-neutral-800">
+          New business name
+        </label>
+        <input
+          id="newBusinessName"
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          className="mt-2 w-full rounded-lg border border-neutral-200 bg-surface px-3.5 py-2 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+        />
+        <label htmlFor="renameConfirmText" className="mt-4 block font-sans text-sm font-medium text-neutral-800">
+          Type <span className="font-semibold">{business.name}</span> to confirm.
+        </label>
+        <input
+          id="renameConfirmText"
+          value={renameConfirmText}
+          onChange={(e) => setRenameConfirmText(e.target.value)}
+          className="mt-2 w-full rounded-lg border border-neutral-200 bg-surface px-3.5 py-2 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+        />
+        <div className="mt-6 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={() => setIsRenameModalOpen(false)}
+            className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 transition-colors hover:bg-neutral-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={renameConfirmText !== business.name || !newName.trim() || isRenaming}
+            onClick={handleRename}
+            className="rounded-lg bg-primary-500 px-4 py-2 font-sans text-sm font-semibold text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isRenaming ? "Renaming…" : "Rename"}
+          </button>
+        </div>
+      </Modal>
 
       <Modal
         isOpen={isDeleteModalOpen}

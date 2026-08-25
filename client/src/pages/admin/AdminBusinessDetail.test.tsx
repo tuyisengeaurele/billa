@@ -93,6 +93,52 @@ describe("AdminBusinessDetail", () => {
     expect(await screen.findByText("businesses list page")).toBeInTheDocument();
   });
 
+  it("requires typing the current name before rename is enabled, then renames and updates the page", async () => {
+    let currentName = "Kigali Traders";
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/admin/businesses/biz1") && init?.method === "PATCH") {
+        const body = JSON.parse((init.body as string) ?? "{}");
+        currentName = body.name;
+        return new Response(JSON.stringify({ business: { id: "biz1", name: currentName } }), { status: 200 });
+      }
+      if (url.endsWith("/admin/businesses/biz1")) {
+        return new Response(
+          JSON.stringify({
+            business: {
+              id: "biz1",
+              name: currentName,
+              createdAt: "2026-08-01T00:00:00.000Z",
+              owner: { id: "u1", email: "owner@example.com" },
+              members: [],
+              documentCount: 3,
+              customerCount: 2,
+            },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: /rename business/i }));
+    const dialog = await screen.findByRole("dialog", { name: /rename business/i });
+    const confirmButton = within(dialog).getByRole("button", { name: /^rename$/i });
+    expect(confirmButton).toBeDisabled();
+
+    await user.clear(within(dialog).getByLabelText(/new business name/i));
+    await user.type(within(dialog).getByLabelText(/new business name/i), "Musanze Traders");
+    await user.type(within(dialog).getByLabelText(/type/i), "Kigali Traders");
+    expect(confirmButton).toBeEnabled();
+
+    await user.click(confirmButton);
+
+    expect(await screen.findByText("Musanze Traders")).toBeInTheDocument();
+  });
+
   it("shows a not-found message for an unknown business", async () => {
     vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 404 }));
 

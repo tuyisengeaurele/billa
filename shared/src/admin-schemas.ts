@@ -35,3 +35,8 @@ export const postAnnouncementSchema = z.object({
   message: z.string().trim().min(1, "Enter a message").max(500, "Keep it under 500 characters"),
 });
 export type PostAnnouncementInput = z.infer<typeof postAnnouncementSchema>;
+
+export const renameBusinessSchema = z.object({
+  name: z.string().trim().min(1, "Enter a business name").max(200, "Keep it under 200 characters"),
+});
+export type RenameBusinessInput = z.infer<typeof renameBusinessSchema>;

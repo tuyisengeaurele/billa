@@ -37,7 +37,6 @@ const TEMPLATE_OPTIONS: { value: DocumentTemplate; label: string; description: s
 ];
 
 const TEXT_FIELDS: { id: keyof BusinessProfile; label: string; type: "text" | "tel" | "email" }[] = [
-  { id: "name", label: "Business name", type: "text" },
   { id: "tin", label: "TIN", type: "text" },
   { id: "industry", label: "Industry", type: "text" },
   { id: "phone", label: "Phone", type: "tel" },
@@ -46,12 +45,12 @@ const TEXT_FIELDS: { id: keyof BusinessProfile; label: string; type: "text" | "t
   { id: "rraEbmNumber", label: "RRA EBM number", type: "text" },
 ];
 
-const IDENTITY_FIELD_IDS: (keyof BusinessProfile)[] = ["name", "tin", "industry"];
+const IDENTITY_FIELD_IDS: (keyof BusinessProfile)[] = ["tin", "industry"];
 const CONTACT_FIELD_IDS: (keyof BusinessProfile)[] = ["phone", "email", "address"];
 const TAX_FIELD_IDS: (keyof BusinessProfile)[] = ["rraEbmNumber"];
 
 export default function BusinessSettings() {
-  const { user, deleteAccount } = useAuth();
+  const { user, isLoading: isAuthLoading, deleteAccount } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<BusinessProfile | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
@@ -62,6 +61,11 @@ export default function BusinessSettings() {
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+  const [newBusinessName, setNewBusinessName] = useState("");
+  const [renameConfirmText, setRenameConfirmText] = useState("");
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameError, setRenameError] = useState<string | null>(null);
 
   function loadProfile() {
     return apiRequest<{ business: BusinessProfile }>("/business")
@@ -76,6 +80,30 @@ export default function BusinessSettings() {
   function handleLogoComplete() {
     setIsEditingLogo(false);
     loadProfile();
+  }
+
+  function openRenameModal() {
+    if (!profile) return;
+    setNewBusinessName(profile.name);
+    setRenameConfirmText("");
+    setRenameError(null);
+    setIsRenameModalOpen(true);
+  }
+
+  async function handleRenameBusiness() {
+    if (!profile) return;
+    const trimmed = newBusinessName.trim();
+    setRenameError(null);
+    setIsRenaming(true);
+    try {
+      await apiRequest("/business", { method: "PATCH", body: { name: trimmed } });
+      setProfile({ ...profile, name: trimmed });
+      setIsRenameModalOpen(false);
+    } catch {
+      setRenameError("Couldn't rename your business. Try again.");
+    } finally {
+      setIsRenaming(false);
+    }
   }
 
   async function handleDeleteAccount() {
@@ -102,11 +130,9 @@ export default function BusinessSettings() {
     try {
       const payload: Record<string, string | null> = {
         defaultTemplate: profile.defaultTemplate,
-        name: profile.name.trim(),
         primaryColor: profile.primaryColor,
       };
       for (const field of TEXT_FIELDS) {
-        if (field.id === "name") continue;
         const value = profile[field.id];
         const trimmed = typeof value === "string" ? value.trim() : "";
         payload[field.id] = trimmed.length > 0 ? trimmed : null;
@@ -129,7 +155,7 @@ export default function BusinessSettings() {
     );
   }
 
-  if (!profile) {
+  if (!profile || isAuthLoading) {
     return (
       <AppLayout>
         <p className="font-sans text-sm text-neutral-600">Loading…</p>
@@ -159,6 +185,23 @@ export default function BusinessSettings() {
         <form onSubmit={handleSubmit} className="flex flex-col gap-6">
           <section className="rounded-xl border border-neutral-200 bg-surface p-6">
             <h2 className="font-display text-base font-semibold text-neutral-900">Business identity</h2>
+            <div className="mt-4 flex items-center justify-between gap-4 rounded-lg border border-neutral-200 px-4 py-3">
+              <div>
+                <p className="font-sans text-xs font-medium uppercase tracking-wide text-neutral-500">
+                  Business name
+                </p>
+                <p className="mt-0.5 font-sans text-sm text-neutral-900">{profile.name}</p>
+              </div>
+              {isOwner && (
+                <button
+                  type="button"
+                  onClick={openRenameModal}
+                  className="shrink-0 rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 transition-colors hover:bg-neutral-50"
+                >
+                  Rename
+                </button>
+              )}
+            </div>
             <div className="mt-4 flex flex-col gap-5">
               {TEXT_FIELDS.filter((field) => IDENTITY_FIELD_IDS.includes(field.id)).map((field) => (
                 <FormField
@@ -354,6 +397,49 @@ export default function BusinessSettings() {
           </button>
         </section>
       </div>
+
+      <Modal isOpen={isRenameModalOpen} onClose={() => setIsRenameModalOpen(false)} title="Rename business">
+        {renameError && (
+          <div className="mb-4 rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
+            {renameError}
+          </div>
+        )}
+        <label htmlFor="newBusinessName" className="block font-sans text-sm font-medium text-neutral-800">
+          New business name
+        </label>
+        <input
+          id="newBusinessName"
+          value={newBusinessName}
+          onChange={(e) => setNewBusinessName(e.target.value)}
+          className="mt-2 w-full rounded-lg border border-neutral-200 bg-surface px-3.5 py-2 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+        />
+        <label htmlFor="renameConfirmText" className="mt-4 block font-sans text-sm font-medium text-neutral-800">
+          Type <span className="font-semibold">{profile.name}</span> to confirm.
+        </label>
+        <input
+          id="renameConfirmText"
+          value={renameConfirmText}
+          onChange={(e) => setRenameConfirmText(e.target.value)}
+          className="mt-2 w-full rounded-lg border border-neutral-200 bg-surface px-3.5 py-2 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+        />
+        <div className="mt-6 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={() => setIsRenameModalOpen(false)}
+            className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 transition-colors hover:bg-neutral-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={renameConfirmText !== profile.name || !newBusinessName.trim() || isRenaming}
+            onClick={handleRenameBusiness}
+            className="rounded-lg bg-primary-500 px-4 py-2 font-sans text-sm font-semibold text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isRenaming ? "Renaming…" : "Rename"}
+          </button>
+        </div>
+      </Modal>
 
       <Modal
         isOpen={isDeleteModalOpen}

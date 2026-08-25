@@ -6,6 +6,7 @@ import {
   adminUserListQuerySchema,
   extendTrialSchema,
   postAnnouncementSchema,
+  renameBusinessSchema,
 } from "@billa/shared";
 import type {
   AdminAuditLogQuery,
@@ -13,6 +14,7 @@ import type {
   AdminUserListQuery,
   ExtendTrialInput,
   PostAnnouncementInput,
+  RenameBusinessInput,
 } from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/require-auth.js";
@@ -572,6 +574,29 @@ adminRouter.get("/businesses/:id", async (req, res) => {
       customerCount: business._count.customers,
     },
   });
+});
+
+adminRouter.patch("/businesses/:id", validateBody(renameBusinessSchema), async (req, res) => {
+  const { id } = req.params;
+  const { name } = req.body as RenameBusinessInput;
+
+  const business = await prisma.business.findUnique({ where: { id } });
+  if (!business) {
+    res.status(404).json({ error: "not_found" });
+    return;
+  }
+
+  const updated = await prisma.business.update({ where: { id }, data: { name } });
+
+  await logAdminAction({
+    adminUserId: req.auth!.userId,
+    action: "BUSINESS_RENAMED",
+    targetType: "Business",
+    targetId: id,
+    metadata: { from: business.name, to: name },
+  });
+
+  res.json({ business: updated });
 });
 
 adminRouter.delete("/businesses/:id", async (req, res) => {
