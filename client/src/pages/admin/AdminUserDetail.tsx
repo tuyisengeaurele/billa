@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { AdminLayout } from "../../components/admin/AdminLayout";
+import { Modal } from "../../components/Modal";
 import { useAuth } from "../../context/AuthContext";
 import { apiRequest, ApiError } from "../../lib/apiClient";
 
@@ -8,6 +9,7 @@ interface AdminUser {
   id: string;
   email: string;
   isAdmin: boolean;
+  suspendedAt: string | null;
   trialEndsAt: string;
   currentPeriodEnd: string | null;
   plan: string | null;
@@ -34,6 +36,8 @@ export default function AdminUserDetail() {
   const [isTogglingAdmin, setIsTogglingAdmin] = useState(false);
   const [extendDays, setExtendDays] = useState("14");
   const [isExtendingTrial, setIsExtendingTrial] = useState(false);
+  const [isSuspendModalOpen, setIsSuspendModalOpen] = useState(false);
+  const [isSuspending, setIsSuspending] = useState(false);
 
   useEffect(() => {
     apiRequest<UserDetailResponse>(`/admin/users/${id}`)
@@ -76,6 +80,35 @@ export default function AdminUserDetail() {
       setError("Couldn't extend the trial. Try again.");
     } finally {
       setIsExtendingTrial(false);
+    }
+  }
+
+  async function confirmSuspend() {
+    if (!detail) return;
+    setError(null);
+    setIsSuspending(true);
+    try {
+      await apiRequest(`/admin/users/${id}/suspend`, { method: "POST" });
+      setDetail({ ...detail, user: { ...detail.user, suspendedAt: new Date().toISOString() } });
+      setIsSuspendModalOpen(false);
+    } catch {
+      setError("Couldn't suspend the account. Try again.");
+    } finally {
+      setIsSuspending(false);
+    }
+  }
+
+  async function reinstate() {
+    if (!detail) return;
+    setError(null);
+    setIsSuspending(true);
+    try {
+      await apiRequest(`/admin/users/${id}/reinstate`, { method: "POST" });
+      setDetail({ ...detail, user: { ...detail.user, suspendedAt: null } });
+    } catch {
+      setError("Couldn't reinstate the account. Try again.");
+    } finally {
+      setIsSuspending(false);
     }
   }
 
@@ -146,16 +179,68 @@ export default function AdminUserDetail() {
             </button>
           </div>
 
-          <button
-            type="button"
-            disabled={isSelf || isTogglingAdmin}
-            onClick={toggleAdmin}
-            title={isSelf ? "You can't change your own admin status" : undefined}
-            className="mt-4 rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isTogglingAdmin ? "Saving…" : detail.user.isAdmin ? "Revoke admin" : "Grant admin"}
-          </button>
+          <div className="mt-4 flex gap-3">
+            <button
+              type="button"
+              disabled={isSelf || isTogglingAdmin}
+              onClick={toggleAdmin}
+              title={isSelf ? "You can't change your own admin status" : undefined}
+              className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isTogglingAdmin ? "Saving…" : detail.user.isAdmin ? "Revoke admin" : "Grant admin"}
+            </button>
+
+            {detail.user.suspendedAt ? (
+              <button
+                type="button"
+                disabled={isSuspending}
+                onClick={reinstate}
+                className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isSuspending ? "Saving…" : "Reinstate"}
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={isSelf}
+                onClick={() => setIsSuspendModalOpen(true)}
+                title={isSelf ? "You can't suspend your own account" : undefined}
+                className="rounded-lg border border-error px-4 py-2 font-sans text-sm font-semibold text-error hover:bg-error-bg disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Suspend
+              </button>
+            )}
+          </div>
+
+          {detail.user.suspendedAt && (
+            <p className="mt-3 font-sans text-sm text-error">
+              Suspended since {new Date(detail.user.suspendedAt).toLocaleDateString()}.
+            </p>
+          )}
         </section>
+
+        <Modal isOpen={isSuspendModalOpen} onClose={() => setIsSuspendModalOpen(false)} title="Suspend account">
+          <p className="font-sans text-sm text-neutral-600">
+            Suspend {detail.user.email}? They'll be signed out and unable to log back in until reinstated.
+          </p>
+          <div className="mt-6 flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => setIsSuspendModalOpen(false)}
+              className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={isSuspending}
+              onClick={confirmSuspend}
+              className="rounded-lg bg-error px-4 py-2 font-sans text-sm font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isSuspending ? "Suspending…" : "Suspend"}
+            </button>
+          </div>
+        </Modal>
 
         <section className="rounded-xl border border-neutral-200 bg-surface p-6">
           <h2 className="font-display text-base font-semibold text-neutral-900">Owned businesses</h2>

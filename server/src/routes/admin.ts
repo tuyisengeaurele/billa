@@ -39,6 +39,7 @@ const USER_LIST_SELECT = {
   id: true,
   email: true,
   isAdmin: true,
+  suspendedAt: true,
   trialEndsAt: true,
   currentPeriodEnd: true,
   plan: true,
@@ -140,6 +141,59 @@ adminRouter.post("/users/:id/extend-trial", validateBody(extendTrialSchema), asy
   });
 
   res.json({ trialEndsAt: newTrialEndsAt });
+});
+
+adminRouter.post("/users/:id/suspend", async (req, res) => {
+  const { id } = req.params;
+
+  if (id === req.auth!.userId) {
+    res.status(400).json({ error: "cannot_modify_self" });
+    return;
+  }
+
+  const user = await prisma.user.findUnique({ where: { id } });
+  if (!user) {
+    res.status(404).json({ error: "not_found" });
+    return;
+  }
+
+  await prisma.user.update({ where: { id }, data: { suspendedAt: new Date() } });
+  await prisma.refreshToken.updateMany({
+    where: { userId: id, revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
+
+  await logAdminAction({
+    adminUserId: req.auth!.userId,
+    action: "ACCOUNT_SUSPENDED",
+    targetType: "User",
+    targetId: id,
+    metadata: { email: user.email },
+  });
+
+  res.json({ ok: true });
+});
+
+adminRouter.post("/users/:id/reinstate", async (req, res) => {
+  const { id } = req.params;
+
+  const user = await prisma.user.findUnique({ where: { id } });
+  if (!user) {
+    res.status(404).json({ error: "not_found" });
+    return;
+  }
+
+  await prisma.user.update({ where: { id }, data: { suspendedAt: null } });
+
+  await logAdminAction({
+    adminUserId: req.auth!.userId,
+    action: "ACCOUNT_REINSTATED",
+    targetType: "User",
+    targetId: id,
+    metadata: { email: user.email },
+  });
+
+  res.json({ ok: true });
 });
 
 adminRouter.get("/businesses", validateQuery(adminBusinessListQuerySchema), async (req, res) => {

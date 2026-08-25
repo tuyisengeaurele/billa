@@ -46,6 +46,11 @@ authRouter.post("/session", authRateLimit, validateBody(sessionSchema), async (r
 
   const existing = await prisma.user.findUnique({ where: { firebaseUid: firebaseUser.uid } });
   if (existing) {
+    if (existing.suspendedAt) {
+      res.status(403).json({ error: "account_suspended" });
+      return;
+    }
+
     let businessId = existing.lastActiveBusinessId;
     if (businessId && !(await hasBusinessAccess(existing.id, businessId))) {
       businessId = null;

@@ -89,7 +89,8 @@ model User {
   totpEnabled     Boolean  @default(false)
   totpBackupCodes String[] @default([])
 
-  isAdmin Boolean @default(false)
+  isAdmin     Boolean   @default(false)
+  suspendedAt DateTime?
 
   businesses          Business[]
   refreshTokens       RefreshToken[]

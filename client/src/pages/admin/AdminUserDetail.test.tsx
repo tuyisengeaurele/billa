@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -179,6 +179,130 @@ describe("AdminUserDetail", () => {
     await user.click(screen.getByRole("button", { name: /extend trial/i }));
 
     expect(await screen.findByText(new Date("2026-10-01T00:00:00.000Z").toLocaleDateString())).toBeInTheDocument();
+  });
+
+  it("suspends the account after confirming in the modal", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/auth/me")) {
+        return new Response(
+          JSON.stringify({ user: { id: "u1", email: "admin@example.com", isAdmin: true }, business: { id: "b1", name: "Admin Co" } }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/admin/users/u2/suspend") && init?.method === "POST") {
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      }
+      if (url.endsWith("/admin/users/u2")) {
+        return new Response(
+          JSON.stringify({
+            user: {
+              id: "u2",
+              email: "owner@example.com",
+              isAdmin: false,
+              suspendedAt: null,
+              trialEndsAt: "2026-09-01T00:00:00.000Z",
+              currentPeriodEnd: null,
+              plan: null,
+              createdAt: "2026-08-01T00:00:00.000Z",
+            },
+            ownedBusinesses: [],
+            memberBusinesses: [],
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: /^suspend$/i }));
+    const dialog = await screen.findByRole("dialog", { name: /suspend account/i });
+    await user.click(within(dialog).getByRole("button", { name: /^suspend$/i }));
+
+    expect(await screen.findByRole("button", { name: /^reinstate$/i })).toBeInTheDocument();
+    expect(screen.getByText(/suspended since/i)).toBeInTheDocument();
+  });
+
+  it("reinstates a suspended account", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/auth/me")) {
+        return new Response(
+          JSON.stringify({ user: { id: "u1", email: "admin@example.com", isAdmin: true }, business: { id: "b1", name: "Admin Co" } }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/admin/users/u2/reinstate") && init?.method === "POST") {
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      }
+      if (url.endsWith("/admin/users/u2")) {
+        return new Response(
+          JSON.stringify({
+            user: {
+              id: "u2",
+              email: "owner@example.com",
+              isAdmin: false,
+              suspendedAt: "2026-08-20T00:00:00.000Z",
+              trialEndsAt: "2026-09-01T00:00:00.000Z",
+              currentPeriodEnd: null,
+              plan: null,
+              createdAt: "2026-08-01T00:00:00.000Z",
+            },
+            ownedBusinesses: [],
+            memberBusinesses: [],
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: /^reinstate$/i }));
+
+    expect(await screen.findByRole("button", { name: /^suspend$/i })).toBeInTheDocument();
+    expect(screen.queryByText(/suspended since/i)).not.toBeInTheDocument();
+  });
+
+  it("disables the suspend button when viewing your own account", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.endsWith("/auth/me")) {
+        return new Response(
+          JSON.stringify({ user: { id: "u1", email: "admin@example.com", isAdmin: true }, business: { id: "b1", name: "Admin Co" } }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/admin/users/u1")) {
+        return new Response(
+          JSON.stringify({
+            user: {
+              id: "u1",
+              email: "admin@example.com",
+              isAdmin: true,
+              suspendedAt: null,
+              trialEndsAt: "2026-09-01T00:00:00.000Z",
+              currentPeriodEnd: null,
+              plan: null,
+              createdAt: "2026-08-01T00:00:00.000Z",
+            },
+            ownedBusinesses: [],
+            memberBusinesses: [],
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    renderPage("u1");
+
+    expect(await screen.findByRole("button", { name: /^suspend$/i })).toBeDisabled();
   });
 
   it("shows a not-found message for an unknown user", async () => {
