@@ -27,7 +27,34 @@ const DOCUMENT_INCLUDE = {
   customer: { select: { name: true, email: true } },
   convertedFrom: { select: { id: true, number: true, type: true } },
   convertedTo: { select: { id: true, number: true, type: true } },
+  referencedDocument: { select: { id: true, number: true, type: true } },
 };
+
+type ReferencedDocumentResult =
+  | { ok: true; referencedDocumentId: string | null }
+  | { ok: false; error: string };
+
+async function resolveReferencedDocument(
+  businessId: string,
+  referencedDocumentId: string | null | undefined,
+): Promise<ReferencedDocumentResult> {
+  if (!referencedDocumentId) {
+    return { ok: true, referencedDocumentId: null };
+  }
+
+  const referenced = await prisma.document.findFirst({ where: { id: referencedDocumentId, businessId } });
+  if (!referenced) {
+    return { ok: false, error: "referenced_document_not_found" };
+  }
+  if (referenced.type !== "INVOICE") {
+    return { ok: false, error: "referenced_document_not_an_invoice" };
+  }
+  if (referenced.status !== "FINALIZED") {
+    return { ok: false, error: "referenced_document_not_finalized" };
+  }
+
+  return { ok: true, referencedDocumentId };
+}
 
 function recurrenceFields(body: DocumentInput) {
   if (!body.recurrence) {
@@ -75,6 +102,7 @@ documentsRouter.get("/", validateQuery(documentListQuerySchema), async (req, res
   const where: Prisma.DocumentWhereInput = {
     businessId,
     ...(query.type && query.type.length > 0 ? { type: { in: query.type } } : {}),
+    ...(query.status ? { status: query.status } : {}),
     ...(query.dateFrom || query.dateTo
       ? {
           issueDate: {
@@ -110,6 +138,13 @@ documentsRouter.get("/", validateQuery(documentListQuerySchema), async (req, res
 documentsRouter.post("/", validateBody(documentSchema), async (req, res) => {
   const businessId = req.auth!.businessId;
   const body = req.body as DocumentInput;
+
+  const referenced = await resolveReferencedDocument(businessId, body.referencedDocumentId);
+  if (!referenced.ok) {
+    res.status(400).json({ error: referenced.error });
+    return;
+  }
+
   const business = await prisma.business.findUnique({ where: { id: businessId } });
   const totals = calculateDocumentTotals(body.lines);
 
@@ -126,6 +161,7 @@ documentsRouter.post("/", validateBody(documentSchema), async (req, res) => {
       subtotal: totals.subtotal,
       taxTotal: totals.taxTotal,
       total: totals.total,
+      referencedDocumentId: referenced.referencedDocumentId,
       ...recurrenceFields(body),
       lines: {
         create: body.lines.map((line, index) => ({
@@ -276,6 +312,12 @@ documentsRouter.patch("/:id", validateBody(documentSchema), async (req, res) => 
     return;
   }
 
+  const referenced = await resolveReferencedDocument(businessId, body.referencedDocumentId);
+  if (!referenced.ok) {
+    res.status(400).json({ error: referenced.error });
+    return;
+  }
+
   const totals = calculateDocumentTotals(body.lines);
 
   const document = await prisma.$transaction(async (tx) => {
@@ -291,6 +333,7 @@ documentsRouter.patch("/:id", validateBody(documentSchema), async (req, res) => 
         subtotal: totals.subtotal,
         taxTotal: totals.taxTotal,
         total: totals.total,
+        referencedDocumentId: referenced.referencedDocumentId,
         ...recurrenceFields(body),
         lines: {
           create: body.lines.map((line, index) => ({

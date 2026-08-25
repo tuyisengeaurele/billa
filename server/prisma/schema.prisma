@@ -289,6 +289,10 @@ model Document {
   convertedFrom   Document? @relation("DocumentConversion", fields: [convertedFromId], references: [id])
   convertedTo     Document? @relation("DocumentConversion")
 
+  referencedDocumentId String?
+  referencedDocument   Document?  @relation("DocumentReference", fields: [referencedDocumentId], references: [id])
+  referencingDocuments Document[] @relation("DocumentReference")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -299,6 +303,7 @@ model Document {
   @@unique([businessId, type, number])
   @@index([businessId])
   @@index([nextRecurrenceAt])
+  @@index([referencedDocumentId])
 }
 
 model DocumentLine {

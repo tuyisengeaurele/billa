@@ -64,10 +64,19 @@ interface DocumentResponse {
   notes: string | null;
   lines: DocumentLineResponse[];
   convertedFrom: { id: string; number: string | null } | null;
+  referencedDocument: { id: string; number: string | null } | null;
   type: DocumentType;
   recurrenceInterval: RecurrenceInterval | null;
   recurrenceEndDate: string | null;
 }
+
+interface InvoiceOption {
+  id: string;
+  number: string | null;
+  customer: { name: string };
+}
+
+const REFERENCEABLE_TYPES: DocumentType[] = ["DELIVERY_NOTE", "RECEIPT"];
 
 function calculateLiveTotals(lines: { quantity?: number; unitPrice?: number; taxRate?: number }[]) {
   let subtotal = 0;
@@ -96,7 +105,11 @@ export default function DocumentForm() {
   const [isLoaded, setIsLoaded] = useState(!isEditing);
   const [loadError, setLoadError] = useState(false);
   const [convertedFrom, setConvertedFrom] = useState<{ id: string; number: string | null } | null>(null);
+  const [referencedDocument, setReferencedDocument] = useState<{ id: string; number: string | null } | null>(null);
+  const [invoiceOptions, setInvoiceOptions] = useState<InvoiceOption[]>([]);
+  const [referencedDocumentId, setReferencedDocumentId] = useState("");
   const [isFinalizeConfirmOpen, setIsFinalizeConfirmOpen] = useState(false);
+  const canReference = REFERENCEABLE_TYPES.includes(type);
 
   const {
     register,
@@ -148,10 +161,39 @@ export default function DocumentForm() {
           recurrenceEndDate: doc.recurrenceEndDate ? doc.recurrenceEndDate.slice(0, 10) : "",
         });
         setConvertedFrom(doc.convertedFrom ?? null);
+        setReferencedDocument(doc.referencedDocument ?? null);
+        setReferencedDocumentId(doc.referencedDocument?.id ?? "");
         setIsLoaded(true);
       })
       .catch(() => setLoadError(true));
   }, [id, isEditing, reset]);
+
+  useEffect(() => {
+    if (!canReference) return;
+    apiRequest<{ results: InvoiceOption[] }>("/documents?type=INVOICE&status=FINALIZED&pageSize=100")
+      .then((data) => setInvoiceOptions(data.results))
+      .catch(() => setInvoiceOptions([]));
+  }, [canReference]);
+
+  async function handleSelectInvoice(invoiceId: string) {
+    setReferencedDocumentId(invoiceId);
+    if (type !== "DELIVERY_NOTE" || !invoiceId) return;
+    try {
+      const data = await apiRequest<{ document: DocumentResponse }>(`/documents/${invoiceId}`);
+      setValue(
+        "lines",
+        data.document.lines.map((line) => ({
+          itemId: line.itemId ?? undefined,
+          description: line.description,
+          quantity: Number(line.quantity),
+          unitPrice: line.unitPrice,
+          taxRate: Number(line.taxRate),
+        })),
+      );
+    } catch {
+      // Keep the current lines if the invoice's own lines can't be fetched.
+    }
+  }
 
   const totals = calculateLiveTotals(watchedLines ?? []);
 
@@ -160,6 +202,10 @@ export default function DocumentForm() {
   }
 
   async function saveDraft(data: DocumentFormInput) {
+    if (type === "RECEIPT" && !referencedDocumentId) {
+      setApiError("Choose the invoice this receipt is for.");
+      return;
+    }
     setApiError(null);
     setIsSaving(true);
     try {
@@ -170,6 +216,7 @@ export default function DocumentForm() {
         dueDate: data.dueDate.trim() || undefined,
         notes: data.notes.trim() || undefined,
         lines: data.lines,
+        referencedDocumentId: canReference ? referencedDocumentId || undefined : undefined,
         recurrence: data.recurrenceEnabled
           ? {
               interval: data.recurrenceInterval as RecurrenceInterval,
@@ -252,6 +299,15 @@ export default function DocumentForm() {
           </Link>
         )}
 
+        {referencedDocument && (
+          <Link
+            to={`/documents/${referencedDocument.id}`}
+            className="font-sans text-sm text-primary-500 hover:text-primary-700"
+          >
+            For invoice {referencedDocument.number ?? "Draft"}
+          </Link>
+        )}
+
         {apiError && (
           <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
             {apiError}
@@ -287,6 +343,28 @@ export default function DocumentForm() {
                 />
               )}
               <FormField id="notes" label="Notes" type="text" error={errors.notes?.message} {...register("notes")} />
+              {canReference && (
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="referencedDocumentId" className="font-sans text-sm font-medium text-neutral-800">
+                    Invoice{type === "RECEIPT" ? "" : " (optional)"}
+                  </label>
+                  <select
+                    id="referencedDocumentId"
+                    value={referencedDocumentId}
+                    onChange={(e) => handleSelectInvoice(e.target.value)}
+                    className="rounded-lg border border-neutral-200 bg-surface px-3.5 py-2.5 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                  >
+                    <option value="">
+                      {type === "RECEIPT" ? "Choose an invoice…" : "None — not tied to an invoice"}
+                    </option>
+                    {invoiceOptions.map((invoice) => (
+                      <option key={invoice.id} value={invoice.id}>
+                        {invoice.number ?? "Draft"} — {invoice.customer.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
 
             <div className="mt-5 flex flex-col gap-3 border-t border-neutral-100 pt-4">

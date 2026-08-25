@@ -78,6 +78,59 @@ describe("documentSchema", () => {
       }).success,
     ).toBe(false);
   });
+
+  it("requires a referencedDocumentId for a receipt", () => {
+    const result = documentSchema.safeParse({
+      type: "RECEIPT",
+      customerId: "c1",
+      issueDate: "2026-08-19",
+      lines: [],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts a receipt with a referencedDocumentId", () => {
+    const result = documentSchema.safeParse({
+      type: "RECEIPT",
+      customerId: "c1",
+      issueDate: "2026-08-19",
+      lines: [],
+      referencedDocumentId: "inv1",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("allows a delivery note with no referencedDocumentId", () => {
+    const result = documentSchema.safeParse({
+      type: "DELIVERY_NOTE",
+      customerId: "c1",
+      issueDate: "2026-08-19",
+      lines: [],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("allows a delivery note with a referencedDocumentId", () => {
+    const result = documentSchema.safeParse({
+      type: "DELIVERY_NOTE",
+      customerId: "c1",
+      issueDate: "2026-08-19",
+      lines: [],
+      referencedDocumentId: "inv1",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a referencedDocumentId on a document type that can't reference one", () => {
+    const result = documentSchema.safeParse({
+      type: "INVOICE",
+      customerId: "c1",
+      issueDate: "2026-08-19",
+      lines: [],
+      referencedDocumentId: "inv1",
+    });
+    expect(result.success).toBe(false);
+  });
 });
 
 describe("documentListQuerySchema", () => {
@@ -107,5 +160,13 @@ describe("documentListQuerySchema", () => {
     const result = documentListQuerySchema.parse({ dateFrom: "2026-08-01", dateTo: "2026-08-31" });
     expect(result.dateFrom).toBe("2026-08-01");
     expect(result.dateTo).toBe("2026-08-31");
+  });
+
+  it("accepts a valid status filter", () => {
+    expect(documentListQuerySchema.parse({ status: "FINALIZED" }).status).toBe("FINALIZED");
+  });
+
+  it("rejects an invalid status filter", () => {
+    expect(documentListQuerySchema.safeParse({ status: "VOID" }).success).toBe(false);
   });
 });

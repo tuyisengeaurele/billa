@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { DOCUMENT_TYPES, RECURRENCE_INTERVALS, type DocumentType } from "./document-types.js";
+import { DOCUMENT_STATUSES, DOCUMENT_TYPES, RECURRENCE_INTERVALS, type DocumentType } from "./document-types.js";
 
 export const documentLineSchema = z.object({
   itemId: z.string().trim().min(1).optional(),
@@ -25,15 +25,27 @@ export const recurrenceSchema = z
   .optional();
 export type RecurrenceInput = z.infer<typeof recurrenceSchema>;
 
-export const documentSchema = z.object({
-  type: z.enum(DOCUMENT_TYPES),
-  customerId: z.string().trim().min(1, "Choose a customer"),
-  issueDate: z.string().trim().min(1, "Choose an issue date"),
-  dueDate: z.string().trim().min(1).optional(),
-  notes: z.string().trim().min(1).optional(),
-  lines: z.array(documentLineSchema),
-  recurrence: recurrenceSchema,
-});
+const REFERENCEABLE_TYPES: DocumentType[] = ["DELIVERY_NOTE", "RECEIPT"];
+
+export const documentSchema = z
+  .object({
+    type: z.enum(DOCUMENT_TYPES),
+    customerId: z.string().trim().min(1, "Choose a customer"),
+    issueDate: z.string().trim().min(1, "Choose an issue date"),
+    dueDate: z.string().trim().min(1).optional(),
+    notes: z.string().trim().min(1).optional(),
+    lines: z.array(documentLineSchema),
+    recurrence: recurrenceSchema,
+    referencedDocumentId: z.string().trim().min(1).nullable().optional(),
+  })
+  .refine((data) => data.type !== "RECEIPT" || Boolean(data.referencedDocumentId), {
+    message: "Choose the invoice this receipt is for",
+    path: ["referencedDocumentId"],
+  })
+  .refine((data) => REFERENCEABLE_TYPES.includes(data.type) || !data.referencedDocumentId, {
+    message: "Only delivery notes and receipts can reference another document",
+    path: ["referencedDocumentId"],
+  });
 export type DocumentInput = z.infer<typeof documentSchema>;
 
 export const documentListQuerySchema = z.object({
@@ -47,6 +59,7 @@ export const documentListQuerySchema = z.object({
       "Invalid document type",
     ),
   search: z.string().trim().optional(),
+  status: z.enum(DOCUMENT_STATUSES).optional(),
   dateFrom: z.string().trim().optional(),
   dateTo: z.string().trim().optional(),
   sortBy: z.enum(["issueDate", "total", "createdAt"]).optional().default("createdAt"),

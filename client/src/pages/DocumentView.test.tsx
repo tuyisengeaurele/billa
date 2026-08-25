@@ -279,6 +279,42 @@ describe("DocumentView", () => {
     expect(await screen.findByText(/converted from proforma pro-0001/i)).toBeInTheDocument();
   });
 
+  it("shows a For invoice link on a delivery note that references one", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(
+      async () =>
+        new Response(
+          JSON.stringify({
+            document: {
+              id: "d1",
+              type: "DELIVERY_NOTE",
+              number: "DN-0001",
+              status: "FINALIZED",
+              customer: { name: "Kigali Traders" },
+              lines: [],
+              subtotal: 0,
+              taxTotal: 0,
+              total: 0,
+              referencedDocument: { id: "inv1", number: "INV-0001" },
+            },
+          }),
+          { status: 200 },
+        ),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/documents/d1"]}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/documents/:id" element={<DocumentView />} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    const link = await screen.findByText(/for invoice inv-0001/i);
+    expect(link.closest("a")).toHaveAttribute("href", "/documents/inv1");
+  });
+
   it("shows an error message when the document fails to load", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async () => new Response("{}", { status: 500 }));
 

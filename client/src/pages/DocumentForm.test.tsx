@@ -396,6 +396,120 @@ describe("DocumentForm", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(/couldn't load this document/i);
   });
 
+  it("shows an invoice picker for a delivery note and prefills its lines when one is chosen", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.includes("/documents?type=INVOICE")) {
+        return new Response(
+          JSON.stringify({
+            results: [{ id: "inv1", number: "INV-0001", customer: { name: "Acme Ltd" } }],
+            total: 1,
+            page: 1,
+            pageSize: 100,
+          }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/documents/inv1")) {
+        return new Response(
+          JSON.stringify({
+            document: {
+              id: "inv1",
+              type: "INVOICE",
+              customerId: "c1",
+              customer: { name: "Acme Ltd" },
+              issueDate: "2026-08-19T00:00:00.000Z",
+              dueDate: null,
+              notes: null,
+              lines: [
+                { id: "l1", itemId: null, description: "Cement", quantity: "5.00", unitPrice: 13000, taxRate: "18.00" },
+              ],
+            },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderNewForType("DELIVERY_NOTE");
+
+    const select = await screen.findByLabelText(/invoice/i);
+    await user.selectOptions(select, "inv1");
+
+    expect(await screen.findByDisplayValue("Cement")).toBeInTheDocument();
+    expect(screen.getByText(/subtotal: 65,000 rwf/i)).toBeInTheDocument();
+  });
+
+  it("allows saving a delivery note with no invoice chosen", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async () =>
+      new Response(JSON.stringify({ results: [], total: 0, page: 1, pageSize: 100 }), { status: 200 }),
+    );
+
+    renderNewForType("DELIVERY_NOTE");
+
+    expect(await screen.findByLabelText(/invoice/i)).toHaveValue("");
+  });
+
+  it("requires choosing an invoice before saving a receipt", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.includes("/documents?type=INVOICE")) {
+        return new Response(JSON.stringify({ results: [], total: 0, page: 1, pageSize: 100 }), { status: 200 });
+      }
+      if (url.includes("/customers")) {
+        return new Response(
+          JSON.stringify({ results: [{ id: "c1", name: "Kigali Traders", phone: null }], total: 1, page: 1, pageSize: 10 }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderNewForType("RECEIPT");
+
+    await user.click(screen.getByRole("button", { name: /select a customer/i }));
+    await user.type(screen.getByLabelText("Search customers"), "Kigali");
+    await user.click(await screen.findByText("Kigali Traders"));
+    await user.click(screen.getByRole("button", { name: /save draft/i }));
+
+    expect(await screen.findByText(/choose the invoice/i)).toBeInTheDocument();
+  });
+
+  it("shows a For invoice link when editing a receipt that references one", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.includes("/documents?type=INVOICE")) {
+        return new Response(JSON.stringify({ results: [], total: 0, page: 1, pageSize: 100 }), { status: 200 });
+      }
+      if (url.endsWith("/documents/d1")) {
+        return new Response(
+          JSON.stringify({
+            document: {
+              id: "d1",
+              type: "RECEIPT",
+              customerId: "c1",
+              customer: { name: "Kigali Traders" },
+              issueDate: "2026-08-19T00:00:00.000Z",
+              dueDate: null,
+              notes: null,
+              lines: [],
+              referencedDocument: { id: "inv1", number: "INV-0001" },
+            },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    renderEdit("d1");
+
+    expect(await screen.findByText(/for invoice inv-0001/i)).toBeInTheDocument();
+  });
+
   it("shows a subscription message when saving is blocked by a lapsed trial", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
       const url = urlOf(input);

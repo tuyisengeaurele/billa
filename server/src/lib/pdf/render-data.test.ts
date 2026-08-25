@@ -55,6 +55,7 @@ function makeDocument(
     nextRecurrenceAt: null,
     lastReminderSentAt: null,
     convertedFromId: null,
+    referencedDocumentId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     customer: {

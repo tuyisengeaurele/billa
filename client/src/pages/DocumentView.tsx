@@ -33,6 +33,7 @@ interface DocumentDetail {
   total: number;
   convertedFrom: DocumentLink | null;
   convertedTo: DocumentLink | null;
+  referencedDocument: DocumentLink | null;
 }
 
 export default function DocumentView() {
@@ -234,6 +235,14 @@ export default function DocumentView() {
             className="-mt-4 font-sans text-sm text-primary-500 hover:text-primary-700"
           >
             Converted from proforma {document.convertedFrom.number ?? "Draft"}
+          </Link>
+        )}
+        {document.referencedDocument && (
+          <Link
+            to={`/documents/${document.referencedDocument.id}`}
+            className="-mt-4 font-sans text-sm text-primary-500 hover:text-primary-700"
+          >
+            For invoice {document.referencedDocument.number ?? "Draft"}
           </Link>
         )}
         <table className="w-full border-collapse font-sans text-sm">

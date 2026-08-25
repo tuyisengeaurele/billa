@@ -165,4 +165,21 @@ describe("GET /documents", () => {
     const res = await request(createApp()).get("/documents?type=INVOICE");
     expect(res.status).toBe(401);
   });
+
+  it("filters by status", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies);
+    const draftId = await createDocument(app, cookies, customerId);
+    const finalizedId = await createDocument(app, cookies, customerId);
+    await request(app).post(`/documents/${finalizedId}/finalize`).set("Cookie", cookies);
+
+    const finalizedRes = await request(app).get("/documents?status=FINALIZED").set("Cookie", cookies);
+    expect(finalizedRes.body.total).toBe(1);
+    expect(finalizedRes.body.results[0].id).toBe(finalizedId);
+
+    const draftRes = await request(app).get("/documents?status=DRAFT").set("Cookie", cookies);
+    expect(draftRes.body.total).toBe(1);
+    expect(draftRes.body.results[0].id).toBe(draftId);
+  });
 });
