@@ -47,6 +47,9 @@ authRouter.post("/session", authRateLimit, validateBody(sessionSchema), async (r
   const existing = await prisma.user.findUnique({ where: { firebaseUid: firebaseUser.uid } });
   if (existing) {
     let businessId = existing.lastActiveBusinessId;
+    if (businessId && !(await hasBusinessAccess(existing.id, businessId))) {
+      businessId = null;
+    }
     if (!businessId) {
       const firstBusiness = await prisma.business.findFirstOrThrow({
         where: { ownerId: existing.id },

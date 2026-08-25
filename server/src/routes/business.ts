@@ -21,6 +21,7 @@ import { removeBackground } from "../lib/rembg-client.js";
 import { ForbiddenUploadPathError, readUploadedFile } from "../lib/uploaded-file.js";
 import { extractPalette } from "../lib/palette.js";
 import { sendEmail } from "../lib/resend.js";
+import { logActivity } from "../lib/activity-log.js";
 
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -216,13 +217,38 @@ businessRouter.get("/members", requireOwner, async (req, res) => {
 });
 
 businessRouter.delete("/members/:userId", requireOwner, async (req, res) => {
-  const deleted = await prisma.businessMember.deleteMany({
-    where: { businessId: req.auth!.businessId, userId: req.params.userId },
+  const businessId = req.auth!.businessId;
+  const { userId } = req.params;
+
+  const removedUser = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true, lastActiveBusinessId: true },
   });
+
+  const deleted = await prisma.businessMember.deleteMany({ where: { businessId, userId } });
   if (deleted.count === 0) {
     res.status(404).json({ error: "not_found" });
     return;
   }
+
+  await prisma.refreshToken.updateMany({
+    where: { userId, businessId, revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
+
+  if (removedUser?.lastActiveBusinessId === businessId) {
+    await prisma.user.update({ where: { id: userId }, data: { lastActiveBusinessId: null } });
+  }
+
+  await logActivity({
+    businessId,
+    actorUserId: req.auth!.userId,
+    action: "MEMBER_REMOVED",
+    entityType: "BusinessMember",
+    entityId: userId,
+    metadata: removedUser ? { email: removedUser.email } : undefined,
+  });
+
   res.json({ ok: true });
 });
 
