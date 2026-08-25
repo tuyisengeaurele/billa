@@ -97,6 +97,7 @@ model User {
   twoFactorChallenges TwoFactorChallenge[]
   memberships         BusinessMember[]
   activityLog         ActivityLogEntry[]
+  adminAuditLog       AdminAuditLogEntry[]
 }
 
 model BusinessMember {
@@ -142,6 +143,21 @@ model ActivityLogEntry {
 
   @@index([businessId, createdAt])
   @@index([actorUserId])
+}
+
+model AdminAuditLogEntry {
+  id          String   @id @default(cuid())
+  adminUserId String
+  action      String
+  targetType  String
+  targetId    String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  admin User @relation(fields: [adminUserId], references: [id])
+
+  @@index([createdAt])
+  @@index([adminUserId])
 }
 
 model TwoFactorChallenge {
