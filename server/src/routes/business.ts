@@ -283,6 +283,15 @@ businessRouter.post("/invites", requireOwner, validateBody(createInviteSchema), 
     data: { businessId, email, expiresAt: new Date(Date.now() + INVITE_TTL_MS) },
   });
 
+  await logActivity({
+    businessId,
+    actorUserId: req.auth!.userId,
+    action: "MEMBER_INVITED",
+    entityType: "BusinessInvite",
+    entityId: invite.id,
+    metadata: { email: invite.email },
+  });
+
   const clientOrigin = process.env.CLIENT_ORIGIN ?? "http://localhost:5173";
   const link = `${clientOrigin}/invite/${invite.token}`;
   try {

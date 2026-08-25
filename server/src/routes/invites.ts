@@ -2,6 +2,7 @@ import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/require-auth.js";
 import { issueSession } from "../lib/session.js";
+import { logActivity } from "../lib/activity-log.js";
 
 export const invitesRouter = Router();
 
@@ -41,7 +42,7 @@ invitesRouter.post("/:token/accept", requireAuth, async (req, res) => {
     return;
   }
 
-  await prisma.$transaction([
+  const [membership] = await prisma.$transaction([
     prisma.businessMember.upsert({
       where: { businessId_userId: { businessId: invite.businessId, userId: user.id } },
       create: { businessId: invite.businessId, userId: user.id },
@@ -50,6 +51,15 @@ invitesRouter.post("/:token/accept", requireAuth, async (req, res) => {
     prisma.businessInvite.update({ where: { id: invite.id }, data: { acceptedAt: new Date() } }),
     prisma.user.update({ where: { id: user.id }, data: { lastActiveBusinessId: invite.businessId } }),
   ]);
+
+  await logActivity({
+    businessId: invite.businessId,
+    actorUserId: user.id,
+    action: "MEMBER_JOINED",
+    entityType: "BusinessMember",
+    entityId: membership.id,
+    metadata: { email: user.email },
+  });
 
   const business = await prisma.business.findUniqueOrThrow({ where: { id: invite.businessId } });
   await issueSession(res, user.id, invite.businessId);

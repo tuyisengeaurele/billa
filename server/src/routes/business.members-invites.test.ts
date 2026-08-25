@@ -87,6 +87,20 @@ describe("POST /business/invites", () => {
 
     expect(res.status).toBe(403);
   });
+
+  it("logs MEMBER_INVITED", async () => {
+    const app = createApp();
+    const { cookies } = await registerAndGetCookies(app, "owner@example.com", "Kigali Traders");
+    const ownerRes = await request(app).get("/auth/me").set("Cookie", cookies);
+
+    await request(app).post("/business/invites").set("Cookie", cookies).send({ email: "friend@example.com" });
+
+    const rows = await prisma.activityLogEntry.findMany({
+      where: { businessId: ownerRes.body.business.id, action: "MEMBER_INVITED" },
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].metadata).toMatchObject({ email: "friend@example.com" });
+  });
 });
 
 describe("GET /business/members", () => {
@@ -254,5 +268,24 @@ describe("invite accept flow", () => {
     const res = await request(app).post(`/invites/${token}/accept`).set("Cookie", inviteeCookies);
 
     expect(res.status).toBe(410);
+  });
+
+  it("logs MEMBER_JOINED on acceptance", async () => {
+    const app = createApp();
+    const { cookies: ownerCookies } = await registerAndGetCookies(app, "owner@example.com", "Kigali Traders");
+    const ownerRes = await request(app).get("/auth/me").set("Cookie", ownerCookies);
+    const createRes = await request(app).post("/business/invites").set("Cookie", ownerCookies).send({
+      email: "friend@example.com",
+    });
+    const token = (createRes.body.link as string).split("/invite/")[1];
+    const { cookies: inviteeCookies } = await registerAndGetCookies(app, "friend@example.com", "Friend's Own Biz");
+
+    await request(app).post(`/invites/${token}/accept`).set("Cookie", inviteeCookies);
+
+    const rows = await prisma.activityLogEntry.findMany({
+      where: { businessId: ownerRes.body.business.id, action: "MEMBER_JOINED" },
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].metadata).toMatchObject({ email: "friend@example.com" });
   });
 });

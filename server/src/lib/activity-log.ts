@@ -1,4 +1,4 @@
-import type { ActivityAction } from "@prisma/client";
+import type { ActivityAction, Prisma } from "@prisma/client";
 import { prisma } from "./prisma.js";
 
 export interface LogActivityInput {
@@ -18,7 +18,7 @@ export async function logActivity(input: LogActivityInput): Promise<void> {
       action: input.action,
       entityType: input.entityType,
       entityId: input.entityId,
-      metadata: input.metadata,
+      metadata: input.metadata as Prisma.InputJsonValue | undefined,
     },
   });
 }
