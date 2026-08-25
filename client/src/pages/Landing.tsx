@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { DOCUMENT_TYPES, formatRwf, PLAN_PRICES } from "@billa/shared";
 import { DocumentPreviewStack } from "../components/landing/DocumentPreviewStack";
 import { FaqItem } from "../components/FaqItem";
+import { ThemeToggle } from "../components/ThemeToggle";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
 
 const STEPS = [
@@ -51,8 +52,8 @@ const fadeUp = {
 
 export default function Landing() {
   return (
-    <div className="min-h-screen bg-white">
-      <header className="sticky top-0 z-30 border-b border-transparent bg-white/80 backdrop-blur-sm">
+    <div className="min-h-screen bg-page">
+      <header className="sticky top-0 z-30 border-b border-transparent bg-page/80 backdrop-blur-sm">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
           <button
             type="button"
@@ -76,6 +77,7 @@ export default function Landing() {
             </a>
           </nav>
           <div className="flex items-center gap-6">
+            <ThemeToggle />
             <Link to="/login" className="font-sans text-sm font-medium text-neutral-600 hover:text-neutral-900">
               Log in
             </Link>
@@ -325,7 +327,7 @@ export default function Landing() {
         </motion.div>
       </section>
 
-      <footer className="relative overflow-hidden border-t border-neutral-100 bg-white px-6 pb-10 pt-20">
+      <footer className="relative overflow-hidden border-t border-neutral-100 bg-page px-6 pb-10 pt-20">
         <div
           className="pointer-events-none absolute inset-0 -z-10"
           style={{ backgroundImage: "radial-gradient(circle at 50% 0%, rgba(194,24,91,0.06) 0, transparent 60%)" }}

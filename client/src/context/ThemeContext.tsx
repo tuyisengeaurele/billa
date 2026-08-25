@@ -26,6 +26,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, theme);
+    document.documentElement.dataset.theme = theme;
   }, [theme]);
 
   function toggleTheme() {

@@ -31,7 +31,7 @@ export default function Contact() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-page">
       <header className="border-b border-neutral-100">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-5">
           <Link to="/" className="flex items-center gap-3">

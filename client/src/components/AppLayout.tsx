@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { apiRequest } from "../lib/apiClient";
-import { useTheme } from "../context/ThemeContext";
 import { Sidebar } from "./Sidebar";
 
 interface AppLayoutProps {
@@ -9,7 +8,6 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
-  const { theme } = useTheme();
   const [billingBanner, setBillingBanner] = useState<string | null>(null);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
@@ -29,7 +27,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   }, []);
 
   return (
-    <div data-theme={theme} className="flex min-h-screen bg-page">
+    <div className="flex min-h-screen bg-page">
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-neutral-200 bg-surface lg:block">
         <Sidebar billingBanner={billingBanner} />
       </aside>

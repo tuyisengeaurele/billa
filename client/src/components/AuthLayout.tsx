@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import type { ReactNode } from "react";
+import { ThemeToggle } from "./ThemeToggle";
 
 interface AuthLayoutProps {
   eyebrow: string;
@@ -43,12 +44,15 @@ export function AuthLayout({ eyebrow, headline, tagline, children }: AuthLayoutP
           transition={{ duration: 0.6, delay: 0.15, ease: "easeOut" }}
           className="relative z-10"
         >
-          <p className="font-sans text-sm uppercase tracking-[0.2em] text-primary-100">{eyebrow}</p>
+          <p className="font-sans text-sm uppercase tracking-[0.2em] text-white/70">{eyebrow}</p>
           <h1 className="mt-4 font-display text-4xl font-semibold leading-tight text-white">{headline}</h1>
-          <p className="mt-4 max-w-sm font-sans text-base text-primary-100">{tagline}</p>
+          <p className="mt-4 max-w-sm font-sans text-base text-white/70">{tagline}</p>
         </motion.div>
       </div>
-      <div className="flex w-full flex-col justify-center bg-white px-6 py-12 lg:w-1/2 lg:px-16">
+      <div className="relative flex w-full flex-col justify-center bg-page px-6 py-12 lg:w-1/2 lg:px-16">
+        <div className="absolute right-6 top-6">
+          <ThemeToggle />
+        </div>
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
