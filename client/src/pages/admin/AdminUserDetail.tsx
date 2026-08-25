@@ -29,7 +29,7 @@ interface UserDetailResponse {
 
 export default function AdminUserDetail() {
   const { id } = useParams();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, refreshAuth } = useAuth();
   const navigate = useNavigate();
   const [detail, setDetail] = useState<UserDetailResponse | null>(null);
   const [notFound, setNotFound] = useState(false);
@@ -106,6 +106,7 @@ export default function AdminUserDetail() {
     setIsImpersonating(true);
     try {
       await apiRequest(`/admin/users/${id}/impersonate`, { method: "POST" });
+      await refreshAuth();
       navigate("/dashboard");
     } catch {
       setError("Couldn't start impersonation. Try again.");

@@ -45,6 +45,7 @@ interface AuthContextValue {
   resetPassword: (email: string) => Promise<void>;
   logout: () => Promise<void>;
   stopImpersonating: () => Promise<void>;
+  refreshAuth: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -62,19 +63,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [impersonating, setImpersonating] = useState(false);
 
+  async function refreshAuth() {
+    try {
+      const data = await apiRequest<{ user: User; business: Business; impersonating: boolean }>("/auth/me");
+      setUser(data.user);
+      setBusiness(data.business);
+      setImpersonating(data.impersonating);
+    } catch {
+      setUser(null);
+      setBusiness(null);
+      setImpersonating(false);
+    }
+  }
+
   useEffect(() => {
-    apiRequest<{ user: User; business: Business; impersonating: boolean }>("/auth/me")
-      .then((data) => {
-        setUser(data.user);
-        setBusiness(data.business);
-        setImpersonating(data.impersonating);
-      })
-      .catch(() => {
-        setUser(null);
-        setBusiness(null);
-        setImpersonating(false);
-      })
-      .finally(() => setIsLoading(false));
+    refreshAuth().finally(() => setIsLoading(false));
   }, []);
 
   async function login(email: string, password: string) {
@@ -164,6 +167,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         resetPassword,
         logout,
         stopImpersonating,
+        refreshAuth,
       }}
     >
       {children}
