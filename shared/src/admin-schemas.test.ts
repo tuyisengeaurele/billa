@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { adminAuditLogQuerySchema } from "./admin-schemas.js";
+import { adminAuditLogQuerySchema, adminBusinessListQuerySchema, adminUserListQuerySchema } from "./admin-schemas.js";
 
 describe("adminAuditLogQuerySchema", () => {
   it("defaults page, pageSize, sortBy, and sortOrder", () => {
@@ -9,5 +9,31 @@ describe("adminAuditLogQuerySchema", () => {
 
   it("rejects a pageSize over 100", () => {
     expect(adminAuditLogQuerySchema.safeParse({ pageSize: "101" }).success).toBe(false);
+  });
+});
+
+describe("adminUserListQuerySchema", () => {
+  it("defaults page, pageSize, sortBy, and sortOrder", () => {
+    const result = adminUserListQuerySchema.parse({});
+    expect(result).toMatchObject({ page: 1, pageSize: 20, sortBy: "createdAt", sortOrder: "desc" });
+  });
+
+  it("accepts a search term", () => {
+    expect(adminUserListQuerySchema.parse({ search: "acme" }).search).toBe("acme");
+  });
+
+  it("accepts sortBy email", () => {
+    expect(adminUserListQuerySchema.parse({ sortBy: "email" }).sortBy).toBe("email");
+  });
+});
+
+describe("adminBusinessListQuerySchema", () => {
+  it("defaults page, pageSize, sortBy, and sortOrder", () => {
+    const result = adminBusinessListQuerySchema.parse({});
+    expect(result).toMatchObject({ page: 1, pageSize: 20, sortBy: "createdAt", sortOrder: "desc" });
+  });
+
+  it("accepts sortBy name", () => {
+    expect(adminBusinessListQuerySchema.parse({ sortBy: "name" }).sortBy).toBe("name");
   });
 });

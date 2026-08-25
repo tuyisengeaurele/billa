@@ -1,8 +1,9 @@
 import { lazy, Suspense } from "react";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { AdminRoute } from "./components/AdminRoute";
 import { RootRoute } from "./components/RootRoute";
 
 const Login = lazy(() => import("./pages/Login"));
@@ -21,6 +22,11 @@ const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const HelpCenter = lazy(() => import("./pages/HelpCenter"));
 const Contact = lazy(() => import("./pages/Contact"));
 const AdminMessages = lazy(() => import("./pages/AdminMessages"));
+const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
+const AdminUserDetail = lazy(() => import("./pages/admin/AdminUserDetail"));
+const AdminBusinesses = lazy(() => import("./pages/admin/AdminBusinesses"));
+const AdminBusinessDetail = lazy(() => import("./pages/admin/AdminBusinessDetail"));
+const AdminAuditLog = lazy(() => import("./pages/admin/AdminAuditLog"));
 const PublicDocumentView = lazy(() => import("./pages/PublicDocumentView"));
 const AcceptInvite = lazy(() => import("./pages/AcceptInvite"));
 const Activity = lazy(() => import("./pages/Activity"));
@@ -52,7 +58,15 @@ export default function App() {
                 <Route path="/documents/:id" element={<DocumentView />} />
                 <Route path="/settings" element={<BusinessSettings />} />
                 <Route path="/billing/callback" element={<BillingCallback />} />
+              </Route>
+              <Route element={<AdminRoute />}>
+                <Route path="/admin" element={<Navigate to="/admin/users" replace />} />
                 <Route path="/admin/messages" element={<AdminMessages />} />
+                <Route path="/admin/users" element={<AdminUsers />} />
+                <Route path="/admin/users/:id" element={<AdminUserDetail />} />
+                <Route path="/admin/businesses" element={<AdminBusinesses />} />
+                <Route path="/admin/businesses/:id" element={<AdminBusinessDetail />} />
+                <Route path="/admin/audit-log" element={<AdminAuditLog />} />
               </Route>
               <Route path="/" element={<RootRoute />} />
             </Routes>

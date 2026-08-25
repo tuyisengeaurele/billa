@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AppLayout } from "../components/AppLayout";
+import { AdminLayout } from "../components/admin/AdminLayout";
 import { apiRequest, ApiError } from "../lib/apiClient";
 
 interface ContactMessageRow {
@@ -45,7 +45,7 @@ export default function AdminMessages() {
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
 
   return (
-    <AppLayout>
+    <AdminLayout>
       <div className="mx-auto flex max-w-4xl flex-col gap-6">
         <h1 className="font-display text-2xl font-semibold text-neutral-900">Contact messages</h1>
 
@@ -116,6 +116,6 @@ export default function AdminMessages() {
           )}
         </div>
       </div>
-    </AppLayout>
+    </AdminLayout>
   );
 }
