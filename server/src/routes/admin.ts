@@ -5,14 +5,22 @@ import {
   adminBusinessListQuerySchema,
   adminUserListQuerySchema,
   extendTrialSchema,
+  postAnnouncementSchema,
 } from "@billa/shared";
-import type { AdminAuditLogQuery, AdminBusinessListQuery, AdminUserListQuery, ExtendTrialInput } from "@billa/shared";
+import type {
+  AdminAuditLogQuery,
+  AdminBusinessListQuery,
+  AdminUserListQuery,
+  ExtendTrialInput,
+  PostAnnouncementInput,
+} from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/require-auth.js";
 import { requireAdmin } from "../middleware/require-admin.js";
 import { validateBody } from "../middleware/validate.js";
 import { validateQuery } from "../middleware/validate-query.js";
 import { logAdminAction } from "../lib/admin-audit-log.js";
+import { toCsv } from "../lib/csv.js";
 import { issueSession } from "../lib/session.js";
 
 export const adminRouter = Router();
@@ -66,6 +74,23 @@ adminRouter.get("/users", validateQuery(adminUserListQuerySchema), async (req, r
   ]);
 
   res.json({ results, total, page: query.page, pageSize: query.pageSize });
+});
+
+adminRouter.get("/users/export.csv", async (_req, res) => {
+  const users = await prisma.user.findMany({ orderBy: { createdAt: "desc" }, select: USER_LIST_SELECT });
+
+  const csv = toCsv(users, [
+    { key: "email", header: "Email" },
+    { key: "isAdmin", header: "Admin" },
+    { key: "suspendedAt", header: "Suspended" },
+    { key: "trialEndsAt", header: "Trial ends" },
+    { key: "plan", header: "Plan" },
+    { key: "createdAt", header: "Joined" },
+  ]);
+
+  res.setHeader("Content-Type", "text/csv");
+  res.setHeader("Content-Disposition", 'attachment; filename="users.csv"');
+  res.send(csv);
 });
 
 adminRouter.get("/users/:id", async (req, res) => {
@@ -314,6 +339,52 @@ adminRouter.get("/system-health", async (_req, res) => {
   });
 });
 
+adminRouter.post("/announcements", validateBody(postAnnouncementSchema), async (req, res) => {
+  const { message } = req.body as PostAnnouncementInput;
+
+  await prisma.announcement.updateMany({ where: { active: true }, data: { active: false } });
+  const announcement = await prisma.announcement.create({
+    data: { message, createdById: req.auth!.userId },
+  });
+
+  await logAdminAction({
+    adminUserId: req.auth!.userId,
+    action: "ANNOUNCEMENT_POSTED",
+    targetType: "Announcement",
+    targetId: announcement.id,
+    metadata: { message },
+  });
+
+  res.status(201).json({ announcement });
+});
+
+adminRouter.get("/announcements", async (_req, res) => {
+  const results = await prisma.announcement.findMany({ orderBy: { createdAt: "desc" }, take: 50 });
+  res.json({ results });
+});
+
+adminRouter.post("/announcements/:id/deactivate", async (req, res) => {
+  const { id } = req.params;
+
+  const announcement = await prisma.announcement.findUnique({ where: { id } });
+  if (!announcement) {
+    res.status(404).json({ error: "not_found" });
+    return;
+  }
+
+  await prisma.announcement.update({ where: { id }, data: { active: false } });
+
+  await logAdminAction({
+    adminUserId: req.auth!.userId,
+    action: "ANNOUNCEMENT_DEACTIVATED",
+    targetType: "Announcement",
+    targetId: id,
+    metadata: {},
+  });
+
+  res.json({ ok: true });
+});
+
 adminRouter.get("/businesses", validateQuery(adminBusinessListQuerySchema), async (req, res) => {
   const query = req.listQuery as AdminBusinessListQuery;
 
@@ -348,6 +419,37 @@ adminRouter.get("/businesses", validateQuery(adminBusinessListQuerySchema), asyn
     page: query.page,
     pageSize: query.pageSize,
   });
+});
+
+adminRouter.get("/businesses/export.csv", async (_req, res) => {
+  const rows = await prisma.business.findMany({
+    orderBy: { createdAt: "desc" },
+    include: {
+      owner: { select: { email: true } },
+      _count: { select: { members: true, documents: true } },
+    },
+  });
+
+  const csv = toCsv(
+    rows.map((b) => ({
+      name: b.name,
+      ownerEmail: b.owner.email,
+      memberCount: b._count.members,
+      documentCount: b._count.documents,
+      createdAt: b.createdAt,
+    })),
+    [
+      { key: "name", header: "Name" },
+      { key: "ownerEmail", header: "Owner" },
+      { key: "memberCount", header: "Members" },
+      { key: "documentCount", header: "Documents" },
+      { key: "createdAt", header: "Created" },
+    ],
+  );
+
+  res.setHeader("Content-Type", "text/csv");
+  res.setHeader("Content-Disposition", 'attachment; filename="businesses.csv"');
+  res.send(csv);
 });
 
 adminRouter.get("/businesses/:id", async (req, res) => {

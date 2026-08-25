@@ -71,4 +71,33 @@ describe("AdminUsers", () => {
     await new Promise((resolve) => setTimeout(resolve, 350));
     expect(lastUrl).toContain("search=acme");
   });
+
+  it("exports users to CSV when the export button is clicked", async () => {
+    if (!URL.createObjectURL) URL.createObjectURL = () => "";
+    if (!URL.revokeObjectURL) URL.revokeObjectURL = () => {};
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+
+    let exportRequested = false;
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.endsWith("/admin/users/export.csv")) {
+        exportRequested = true;
+        return new Response(new Blob(["Email\nowner@example.com"], { type: "text/csv" }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ results: [], total: 0, page: 1, pageSize: 20 }), { status: 200 });
+    });
+
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <AuthProvider>
+          <AdminUsers />
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: /export csv/i }));
+
+    await vi.waitFor(() => expect(exportRequested).toBe(true));
+  });
 });

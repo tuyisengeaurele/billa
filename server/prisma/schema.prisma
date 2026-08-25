@@ -99,6 +99,7 @@ model User {
   memberships         BusinessMember[]
   activityLog         ActivityLogEntry[]
   adminAuditLog       AdminAuditLogEntry[]
+  announcements       Announcement[]
 }
 
 model BusinessMember {
@@ -170,6 +171,18 @@ model JobRunLog {
   errorMessage String?
 
   @@index([jobName, ranAt])
+}
+
+model Announcement {
+  id          String   @id @default(cuid())
+  message     String
+  active      Boolean  @default(true)
+  createdById String
+  createdAt   DateTime @default(now())
+
+  createdBy User @relation(fields: [createdById], references: [id])
+
+  @@index([active])
 }
 
 model TwoFactorChallenge {

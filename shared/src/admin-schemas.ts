@@ -30,3 +30,8 @@ export const extendTrialSchema = z.object({
   days: z.number().int().positive().max(365),
 });
 export type ExtendTrialInput = z.infer<typeof extendTrialSchema>;
+
+export const postAnnouncementSchema = z.object({
+  message: z.string().trim().min(1, "Enter a message").max(500, "Keep it under 500 characters"),
+});
+export type PostAnnouncementInput = z.infer<typeof postAnnouncementSchema>;

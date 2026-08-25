@@ -30,6 +30,7 @@ describe("AdminSidebar", () => {
     expect(screen.getByRole("link", { name: /messages/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /audit log/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /system health/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /announcements/i })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /back to app/i })).not.toBeInTheDocument();
   });
 

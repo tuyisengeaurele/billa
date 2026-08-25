@@ -6,6 +6,7 @@ import { useAuth } from "../../context/AuthContext";
 import { Modal } from "../Modal";
 import { ThemeToggle } from "../ThemeToggle";
 import {
+  AnnouncementsIcon,
   AuditLogIcon,
   BusinessesIcon,
   LogoutIcon,
@@ -26,6 +27,7 @@ const NAV_LINKS = [
   { to: "/admin/messages", label: "Messages", icon: <MessagesIcon /> },
   { to: "/admin/audit-log", label: "Audit log", icon: <AuditLogIcon /> },
   { to: "/admin/system-health", label: "System health", icon: <SystemHealthIcon /> },
+  { to: "/admin/announcements", label: "Announcements", icon: <AnnouncementsIcon /> },
 ];
 
 function AdminSidebarLink({

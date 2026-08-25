@@ -4,6 +4,7 @@ import {
   adminBusinessListQuerySchema,
   adminUserListQuerySchema,
   extendTrialSchema,
+  postAnnouncementSchema,
 } from "./admin-schemas.js";
 
 describe("adminAuditLogQuerySchema", () => {
@@ -55,5 +56,21 @@ describe("extendTrialSchema", () => {
 
   it("rejects more than 365 days", () => {
     expect(extendTrialSchema.safeParse({ days: 366 }).success).toBe(false);
+  });
+});
+
+describe("postAnnouncementSchema", () => {
+  it("accepts a non-empty message and trims it", () => {
+    expect(postAnnouncementSchema.parse({ message: "  Scheduled maintenance tonight  " }).message).toBe(
+      "Scheduled maintenance tonight",
+    );
+  });
+
+  it("rejects an empty message", () => {
+    expect(postAnnouncementSchema.safeParse({ message: "   " }).success).toBe(false);
+  });
+
+  it("rejects a message over 500 characters", () => {
+    expect(postAnnouncementSchema.safeParse({ message: "a".repeat(501) }).success).toBe(false);
   });
 });

@@ -30,6 +30,7 @@ const AdminBusinessDetail = lazy(() => import("./pages/admin/AdminBusinessDetail
 const AdminAuditLog = lazy(() => import("./pages/admin/AdminAuditLog"));
 const AdminMetrics = lazy(() => import("./pages/admin/AdminMetrics"));
 const AdminSystemHealth = lazy(() => import("./pages/admin/AdminSystemHealth"));
+const AdminAnnouncements = lazy(() => import("./pages/admin/AdminAnnouncements"));
 const PublicDocumentView = lazy(() => import("./pages/PublicDocumentView"));
 const AcceptInvite = lazy(() => import("./pages/AcceptInvite"));
 const Activity = lazy(() => import("./pages/Activity"));
@@ -73,6 +74,7 @@ export default function App() {
                 <Route path="/admin/businesses/:id" element={<AdminBusinessDetail />} />
                 <Route path="/admin/audit-log" element={<AdminAuditLog />} />
                 <Route path="/admin/system-health" element={<AdminSystemHealth />} />
+                <Route path="/admin/announcements" element={<AdminAnnouncements />} />
               </Route>
               <Route path="/" element={<RootRoute />} />
             </Routes>

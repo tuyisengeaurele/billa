@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiRequest } from "../lib/apiClient";
 import { useAuth } from "../context/AuthContext";
+import { AnnouncementBanner } from "./AnnouncementBanner";
 import { Sidebar } from "./Sidebar";
 
 interface AppLayoutProps {
@@ -61,6 +62,8 @@ export function AppLayout({ children }: AppLayoutProps) {
           </button>
         </div>
       )}
+
+      <AnnouncementBanner />
 
       <div className="flex flex-1">
         <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-neutral-200 bg-surface lg:block">

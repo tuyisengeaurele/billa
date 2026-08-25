@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { AdminLayout } from "../../components/admin/AdminLayout";
 import { AdminPagination } from "../../components/admin/AdminPagination";
+import { downloadFile } from "../../lib/downloadFile";
 import { usePaginatedList } from "../../lib/usePaginatedList";
 
 interface AdminUserRow {
@@ -18,11 +20,41 @@ type SortBy = "createdAt" | "email";
 export default function AdminUsers() {
   const list = usePaginatedList<AdminUserRow, SortBy>({ resourcePath: "/admin/users", defaultSortBy: "createdAt" });
   const totalPages = Math.max(1, Math.ceil(list.total / list.pageSize));
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  async function handleExport() {
+    setExportError(null);
+    setIsExporting(true);
+    try {
+      await downloadFile("/admin/users/export.csv", "users.csv");
+    } catch {
+      setExportError("Couldn't export users. Try again.");
+    } finally {
+      setIsExporting(false);
+    }
+  }
 
   return (
     <AdminLayout>
       <div className="flex flex-col gap-6">
-        <h1 className="font-display text-2xl font-semibold text-neutral-900">Users</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="font-display text-2xl font-semibold text-neutral-900">Users</h1>
+          <button
+            type="button"
+            disabled={isExporting}
+            onClick={handleExport}
+            className="rounded-lg border border-neutral-200 px-3.5 py-1.5 font-sans text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isExporting ? "Exporting…" : "Export CSV"}
+          </button>
+        </div>
+
+        {exportError && (
+          <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
+            {exportError}
+          </div>
+        )}
 
         <div className="rounded-xl border border-neutral-200 bg-surface p-6">
           <input

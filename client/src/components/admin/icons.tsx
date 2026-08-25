@@ -54,6 +54,16 @@ export function SystemHealthIcon() {
   );
 }
 
+export function AnnouncementsIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 11v2a2 2 0 0 0 2 2h1l4 5v-8" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M10 8 20 4v16l-10-4" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 11h4V9H5a2 2 0 0 0-2 2Z" />
+    </svg>
+  );
+}
+
 export function LogoutIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
