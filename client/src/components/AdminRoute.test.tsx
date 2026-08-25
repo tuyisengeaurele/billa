@@ -10,6 +10,7 @@ function renderWithProviders(initialPath: string) {
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<div>login page</div>} />
+          <Route path="/admin/login" element={<div>admin login page</div>} />
           <Route path="/dashboard" element={<div>dashboard page</div>} />
           <Route element={<AdminRoute />}>
             <Route path="/admin/users" element={<div>admin users page</div>} />
@@ -25,12 +26,12 @@ describe("AdminRoute", () => {
     vi.restoreAllMocks();
   });
 
-  it("redirects to /login when unauthenticated", async () => {
+  it("redirects to /admin/login when unauthenticated", async () => {
     vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 401 }));
 
     renderWithProviders("/admin/users");
 
-    await waitFor(() => expect(screen.getByText("login page")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("admin login page")).toBeInTheDocument());
   });
 
   it("redirects a non-admin to /dashboard", async () => {
