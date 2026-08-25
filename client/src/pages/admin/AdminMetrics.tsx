@@ -15,6 +15,7 @@ import {
 import { AdminLayout } from "../../components/admin/AdminLayout";
 import { useTheme } from "../../context/ThemeContext";
 import { apiRequest } from "../../lib/apiClient";
+import { PLAN_CHART_COLORS, PLAN_LABELS, type PlanKey } from "../../lib/planColors";
 
 interface DailyPoint {
   date: string;
@@ -22,7 +23,7 @@ interface DailyPoint {
 }
 
 interface PlanCount {
-  plan: "NONE" | "MONTHLY" | "ANNUAL";
+  plan: PlanKey;
   count: number;
 }
 
@@ -50,18 +51,6 @@ const TILES: { key: keyof MetricsResponse; label: string }[] = [
   { key: "documents7d", label: "Documents (7d)" },
   { key: "documents30d", label: "Documents (30d)" },
 ];
-
-const PLAN_LABELS: Record<PlanCount["plan"], string> = {
-  NONE: "No plan / trial",
-  MONTHLY: "Monthly",
-  ANNUAL: "Annual",
-};
-
-const PLAN_COLORS: Record<PlanCount["plan"], string> = {
-  NONE: "#a1a1aa",
-  MONTHLY: "#c2185b",
-  ANNUAL: "#0d9488",
-};
 
 function DailyLineChart({
   data,
@@ -217,16 +206,16 @@ export default function AdminMetrics() {
                       paddingAngle={2}
                     >
                       {metrics.planDistribution.map((entry) => (
-                        <Cell key={entry.plan} fill={PLAN_COLORS[entry.plan]} />
+                        <Cell key={entry.plan} fill={PLAN_CHART_COLORS[entry.plan]} />
                       ))}
                     </Pie>
                     <Tooltip
-                      formatter={(value, _name, item) => [value, PLAN_LABELS[item.payload.plan as PlanCount["plan"]]]}
+                      formatter={(value, _name, item) => [value, PLAN_LABELS[item.payload.plan as PlanKey]]}
                       contentStyle={tooltipStyle}
                       labelStyle={tooltipLabelStyle}
                       itemStyle={tooltipItemStyle}
                     />
-                    <Legend formatter={(value) => PLAN_LABELS[value as PlanCount["plan"]]} />
+                    <Legend formatter={(value) => PLAN_LABELS[value as PlanKey]} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>

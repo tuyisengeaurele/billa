@@ -4,6 +4,7 @@ import { AdminLayout } from "../../components/admin/AdminLayout";
 import { Modal } from "../../components/Modal";
 import { useAuth } from "../../context/AuthContext";
 import { apiRequest, ApiError } from "../../lib/apiClient";
+import { PlanBadge, type PlanKey } from "../../lib/planColors";
 
 interface AdminUser {
   id: string;
@@ -218,7 +219,9 @@ export default function AdminUserDetail() {
             <dt className="text-neutral-500">Trial ends</dt>
             <dd className="text-neutral-900">{new Date(detail.user.trialEndsAt).toLocaleDateString()}</dd>
             <dt className="text-neutral-500">Plan</dt>
-            <dd className="text-neutral-900">{detail.user.plan ?? "None"}</dd>
+            <dd>
+              <PlanBadge plan={(detail.user.plan as PlanKey) ?? "NONE"} />
+            </dd>
             <dt className="text-neutral-500">Joined</dt>
             <dd className="text-neutral-900">{new Date(detail.user.createdAt).toLocaleDateString()}</dd>
           </dl>

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { AdminLayout } from "../../components/admin/AdminLayout";
 import { AdminPagination } from "../../components/admin/AdminPagination";
 import { downloadFile } from "../../lib/downloadFile";
+import { PlanBadge, PlanLegend, type PlanKey } from "../../lib/planColors";
 import { usePaginatedList } from "../../lib/usePaginatedList";
 
 interface AdminUserRow {
@@ -57,14 +58,17 @@ export default function AdminUsers() {
         )}
 
         <div className="rounded-xl border border-neutral-200 bg-surface p-6">
-          <input
-            type="text"
-            placeholder="Search by email"
-            aria-label="Search users"
-            value={list.search}
-            onChange={(event) => list.updateSearch(event.target.value)}
-            className="w-full max-w-xs rounded-lg border border-neutral-200 bg-surface px-3.5 py-2 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
-          />
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <input
+              type="text"
+              placeholder="Search by email"
+              aria-label="Search users"
+              value={list.search}
+              onChange={(event) => list.updateSearch(event.target.value)}
+              className="w-full max-w-xs rounded-lg border border-neutral-200 bg-surface px-3.5 py-2 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+            />
+            <PlanLegend />
+          </div>
 
           {list.error && (
             <div className="mt-4 rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
@@ -106,7 +110,9 @@ export default function AdminUsers() {
                     </td>
                     <td className="py-3 text-neutral-600">{user.isAdmin ? "Yes" : "-"}</td>
                     <td className="py-3 text-neutral-600">{new Date(user.trialEndsAt).toLocaleDateString()}</td>
-                    <td className="py-3 text-neutral-600">{user.plan ?? "-"}</td>
+                    <td className="py-3">
+                      <PlanBadge plan={(user.plan as PlanKey) ?? "NONE"} />
+                    </td>
                     <td className="py-3 text-neutral-600">{new Date(user.createdAt).toLocaleDateString()}</td>
                   </tr>
                 ))}

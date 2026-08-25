@@ -28,8 +28,17 @@ describe("AdminUsers", () => {
               plan: null,
               createdAt: "2026-08-01T00:00:00.000Z",
             },
+            {
+              id: "u2",
+              email: "paying@example.com",
+              isAdmin: false,
+              trialEndsAt: "2026-09-01T00:00:00.000Z",
+              currentPeriodEnd: null,
+              plan: "MONTHLY",
+              createdAt: "2026-08-01T00:00:00.000Z",
+            },
           ],
-          total: 1,
+          total: 2,
           page: 1,
           pageSize: 20,
         }),
@@ -47,6 +56,8 @@ describe("AdminUsers", () => {
 
     const link = await screen.findByRole("link", { name: "owner@example.com" });
     expect(link).toHaveAttribute("href", "/admin/users/u1");
+    expect(screen.getAllByText("Trial")).toHaveLength(2); // one badge, one legend entry
+    expect(screen.getAllByText("Monthly")).toHaveLength(2); // one badge, one legend entry
   });
 
   it("searches by email, re-fetching with the search param", async () => {
