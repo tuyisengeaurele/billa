@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 export interface AccessTokenPayload {
   userId: string;
   businessId: string;
+  impersonatedBy?: string;
 }
 
 function accessTokenSecret(): string {

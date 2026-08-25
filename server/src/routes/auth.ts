@@ -21,6 +21,7 @@ import { clearAuthCookies, setAccessTokenCookie, setRefreshTokenCookie } from ".
 import { issueSession } from "../lib/session.js";
 import { generateBackupCodes, generateTotpSetup, hashBackupCode, verifyTotpToken } from "../lib/totp.js";
 import { hasBusinessAccess } from "../lib/business-access.js";
+import { logAdminAction } from "../lib/admin-audit-log.js";
 import { validateBody } from "../middleware/validate.js";
 import { authRateLimit } from "../middleware/auth-rate-limit.js";
 import { requireAuth } from "../middleware/require-auth.js";
@@ -122,6 +123,41 @@ authRouter.get("/me", requireAuth, async (req, res) => {
   }
   res.json({
     user: { id: user.id, email: user.email, totpEnabled: user.totpEnabled, isAdmin: user.isAdmin },
+    business: { id: business.id, name: business.name, onboardingCompletedAt: business.onboardingCompletedAt },
+    impersonating: Boolean(req.auth!.impersonatedBy),
+  });
+});
+
+authRouter.post("/impersonate/stop", requireAuth, async (req, res) => {
+  const adminUserId = req.auth!.impersonatedBy;
+  if (!adminUserId) {
+    res.status(400).json({ error: "not_impersonating" });
+    return;
+  }
+
+  const admin = await prisma.user.findUniqueOrThrow({ where: { id: adminUserId } });
+  let businessId = admin.lastActiveBusinessId;
+  if (!businessId) {
+    const firstBusiness = await prisma.business.findFirstOrThrow({
+      where: { ownerId: admin.id },
+      orderBy: { createdAt: "asc" },
+    });
+    businessId = firstBusiness.id;
+  }
+  const business = await prisma.business.findUniqueOrThrow({ where: { id: businessId } });
+
+  await issueSession(res, admin.id, businessId);
+
+  await logAdminAction({
+    adminUserId: admin.id,
+    action: "IMPERSONATION_ENDED",
+    targetType: "User",
+    targetId: req.auth!.userId,
+    metadata: {},
+  });
+
+  res.json({
+    user: { id: admin.id, email: admin.email, totpEnabled: admin.totpEnabled, isAdmin: admin.isAdmin },
     business: { id: business.id, name: business.name, onboardingCompletedAt: business.onboardingCompletedAt },
   });
 });

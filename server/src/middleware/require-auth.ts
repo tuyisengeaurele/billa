@@ -4,7 +4,7 @@ import { verifyAccessToken } from "../lib/tokens.js";
 declare global {
   namespace Express {
     interface Request {
-      auth?: { userId: string; businessId: string };
+      auth?: { userId: string; businessId: string; impersonatedBy?: string };
     }
   }
 }

@@ -9,8 +9,8 @@ function refreshTtlMs(): number {
   return ttlToMs(process.env.JWT_REFRESH_TTL ?? "30d");
 }
 
-export async function issueSession(res: Response, userId: string, businessId: string) {
-  const accessToken = signAccessToken({ userId, businessId });
+export async function issueSession(res: Response, userId: string, businessId: string, impersonatedBy?: string) {
+  const accessToken = signAccessToken({ userId, businessId, impersonatedBy });
   const refreshToken = generateRefreshToken();
   const ttlMs = refreshTtlMs();
 
