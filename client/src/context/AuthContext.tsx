@@ -11,6 +11,7 @@ import {
 interface User {
   id: string;
   email: string;
+  totpEnabled: boolean;
 }
 
 interface Business {
@@ -19,14 +20,26 @@ interface Business {
   onboardingCompletedAt: string | null;
 }
 
+export interface TwoFactorRequired {
+  twoFactorRequired: true;
+  challengeId: string;
+}
+
+type SessionResult = { user: User; business: Business } | TwoFactorRequired;
+
+function isTwoFactorRequired(data: SessionResult): data is TwoFactorRequired {
+  return "twoFactorRequired" in data && data.twoFactorRequired === true;
+}
+
 interface AuthContextValue {
   user: User | null;
   business: Business | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<Business>;
+  login: (email: string, password: string) => Promise<Business | TwoFactorRequired>;
   register: (email: string, password: string, businessName: string) => Promise<Business>;
-  loginWithGoogle: () => Promise<Business>;
+  loginWithGoogle: () => Promise<Business | TwoFactorRequired>;
   registerWithGoogle: (businessName: string) => Promise<Business>;
+  completeTwoFactorChallenge: (challengeId: string, code: string) => Promise<Business>;
   resetPassword: (email: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -34,7 +47,7 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 async function exchangeSession(idToken: string, businessName?: string) {
-  return apiRequest<{ user: User; business: Business }>("/auth/session", {
+  return apiRequest<SessionResult>("/auth/session", {
     method: "POST",
     body: businessName ? { idToken, businessName } : { idToken },
   });
@@ -61,6 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function login(email: string, password: string) {
     const idToken = await signInWithEmail(email, password);
     const data = await exchangeSession(idToken);
+    if (isTwoFactorRequired(data)) return data;
     setUser(data.user);
     setBusiness(data.business);
     return data.business;
@@ -69,6 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function register(email: string, password: string, businessName: string) {
     const idToken = await signUpWithEmail(email, password);
     const data = await exchangeSession(idToken, businessName);
+    if (isTwoFactorRequired(data)) throw new Error("unexpected_two_factor_challenge");
     setUser(data.user);
     setBusiness(data.business);
     return data.business;
@@ -77,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function loginWithGoogle() {
     const idToken = await signInWithGoogleFirebase();
     const data = await exchangeSession(idToken);
+    if (isTwoFactorRequired(data)) return data;
     setUser(data.user);
     setBusiness(data.business);
     return data.business;
@@ -85,6 +101,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function registerWithGoogle(businessName: string) {
     const idToken = await signInWithGoogleFirebase();
     const data = await exchangeSession(idToken, businessName);
+    if (isTwoFactorRequired(data)) throw new Error("unexpected_two_factor_challenge");
+    setUser(data.user);
+    setBusiness(data.business);
+    return data.business;
+  }
+
+  async function completeTwoFactorChallenge(challengeId: string, code: string) {
+    const data = await apiRequest<{ user: User; business: Business }>("/auth/2fa/challenge", {
+      method: "POST",
+      body: { challengeId, code },
+    });
     setUser(data.user);
     setBusiness(data.business);
     return data.business;
@@ -103,7 +130,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, business, isLoading, login, register, loginWithGoogle, registerWithGoogle, resetPassword, logout }}
+      value={{
+        user,
+        business,
+        isLoading,
+        login,
+        register,
+        loginWithGoogle,
+        registerWithGoogle,
+        completeTwoFactorChallenge,
+        resetPassword,
+        logout,
+      }}
     >
       {children}
     </AuthContext.Provider>

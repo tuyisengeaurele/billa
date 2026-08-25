@@ -6,6 +6,7 @@ import { Button } from "../components/Button";
 import { apiRequest, ApiError } from "../lib/apiClient";
 import { SequenceEditor } from "../components/business/SequenceEditor";
 import { BillingSection } from "../components/business/BillingSection";
+import { TwoFactorSection } from "../components/business/TwoFactorSection";
 
 interface BusinessProfile {
   name: string;
@@ -231,6 +232,8 @@ export default function BusinessSettings() {
         </form>
 
         <SequenceEditor />
+
+        <TwoFactorSection />
 
         <BillingSection />
       </div>

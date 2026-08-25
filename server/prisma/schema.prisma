@@ -71,9 +71,26 @@ model User {
   createdAt            DateTime          @default(now())
   updatedAt            DateTime          @updatedAt
 
-  businesses    Business[]
-  refreshTokens RefreshToken[]
-  payments      Payment[]
+  totpSecret      String?
+  totpEnabled     Boolean  @default(false)
+  totpBackupCodes String[] @default([])
+
+  businesses          Business[]
+  refreshTokens       RefreshToken[]
+  payments            Payment[]
+  twoFactorChallenges TwoFactorChallenge[]
+}
+
+model TwoFactorChallenge {
+  id         String   @id @default(cuid())
+  userId     String
+  businessId String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
 }
 
 model RefreshToken {

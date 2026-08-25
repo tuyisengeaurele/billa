@@ -18,3 +18,22 @@ export const sessionSchema = z.object({
   businessName: z.string().trim().min(1).optional(),
 });
 export type SessionInput = z.infer<typeof sessionSchema>;
+
+export const totpCodeSchema = z.object({
+  code: z.string().trim().regex(/^[0-9]{6}$/, "Enter the 6-digit code"),
+});
+export type TotpCodeInput = z.infer<typeof totpCodeSchema>;
+
+// Accepts either a 6-digit TOTP code or a 10-character backup code.
+const flexibleCodeSchema = z.string().trim().min(6, "Enter your code").max(10, "Enter your code");
+
+export const twoFactorChallengeSchema = z.object({
+  challengeId: z.string().trim().min(1, "Missing challenge"),
+  code: flexibleCodeSchema,
+});
+export type TwoFactorChallengeInput = z.infer<typeof twoFactorChallengeSchema>;
+
+export const disableTwoFactorSchema = z.object({
+  code: flexibleCodeSchema,
+});
+export type DisableTwoFactorInput = z.infer<typeof disableTwoFactorSchema>;

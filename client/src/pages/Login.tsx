@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -19,11 +19,18 @@ type LoginFormInput = z.infer<typeof loginFormSchema>;
 
 const INVALID_CREDENTIAL_CODES = new Set(["auth/invalid-credential", "auth/wrong-password", "auth/user-not-found"]);
 
+function isTwoFactorRequired(result: unknown): result is { twoFactorRequired: true; challengeId: string } {
+  return typeof result === "object" && result !== null && "twoFactorRequired" in result;
+}
+
 export default function Login() {
-  const { login, loginWithGoogle, resetPassword } = useAuth();
+  const { login, loginWithGoogle, completeTwoFactorChallenge, resetPassword } = useAuth();
   const navigate = useNavigate();
   const [apiError, setApiError] = useState<string | null>(null);
   const [resetMessage, setResetMessage] = useState<string | null>(null);
+  const [challengeId, setChallengeId] = useState<string | null>(null);
+  const [twoFactorCode, setTwoFactorCode] = useState("");
+  const [isVerifying, setIsVerifying] = useState(false);
   const {
     register,
     handleSubmit,
@@ -35,8 +42,12 @@ export default function Login() {
     setApiError(null);
     setResetMessage(null);
     try {
-      const business = await login(data.email, data.password);
-      navigate(business.onboardingCompletedAt ? "/dashboard" : "/onboarding");
+      const result = await login(data.email, data.password);
+      if (isTwoFactorRequired(result)) {
+        setChallengeId(result.challengeId);
+        return;
+      }
+      navigate(result.onboardingCompletedAt ? "/dashboard" : "/onboarding");
     } catch (err) {
       const code = firebaseErrorCode(err);
       if (code && INVALID_CREDENTIAL_CODES.has(code)) {
@@ -51,14 +62,33 @@ export default function Login() {
     setApiError(null);
     setResetMessage(null);
     try {
-      const business = await loginWithGoogle();
-      navigate(business.onboardingCompletedAt ? "/dashboard" : "/onboarding");
+      const result = await loginWithGoogle();
+      if (isTwoFactorRequired(result)) {
+        setChallengeId(result.challengeId);
+        return;
+      }
+      navigate(result.onboardingCompletedAt ? "/dashboard" : "/onboarding");
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) {
         setApiError("No account found for that Google account. Create one instead?");
       } else if (firebaseErrorCode(err) !== "auth/popup-closed-by-user") {
         setApiError("Something went wrong. Try again.");
       }
+    }
+  }
+
+  async function handleTwoFactorSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!challengeId) return;
+    setApiError(null);
+    setIsVerifying(true);
+    try {
+      const business = await completeTwoFactorChallenge(challengeId, twoFactorCode.trim());
+      navigate(business.onboardingCompletedAt ? "/dashboard" : "/onboarding");
+    } catch {
+      setApiError("That code didn't work. Try again.");
+    } finally {
+      setIsVerifying(false);
     }
   }
 
@@ -75,6 +105,47 @@ export default function Login() {
       // Same message either way, so we don't reveal whether the email exists.
     }
     setResetMessage("Check your email for a link to reset your password.");
+  }
+
+  if (challengeId) {
+    return (
+      <AuthLayout eyebrow="Welcome back" headline="Back to business." tagline="Pick up where you left off">
+        <h2 className="font-display text-2xl font-semibold text-neutral-900">Enter your code</h2>
+        <p className="mt-2 font-sans text-sm text-neutral-600">
+          Open your authenticator app and enter the 6-digit code, or use a backup code.
+        </p>
+
+        <form onSubmit={handleTwoFactorSubmit} className="mt-6 flex flex-col gap-5" noValidate>
+          {apiError && (
+            <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
+              {apiError}
+            </div>
+          )}
+          <FormField
+            id="twoFactorCode"
+            label="Verification code"
+            type="text"
+            autoComplete="one-time-code"
+            value={twoFactorCode}
+            onChange={(e) => setTwoFactorCode(e.target.value)}
+          />
+          <Button type="submit" isLoading={isVerifying}>
+            Verify
+          </Button>
+          <button
+            type="button"
+            onClick={() => {
+              setChallengeId(null);
+              setTwoFactorCode("");
+              setApiError(null);
+            }}
+            className="self-start font-sans text-sm text-primary-500 hover:text-primary-700"
+          >
+            Back to login
+          </button>
+        </form>
+      </AuthLayout>
+    );
   }
 
   return (

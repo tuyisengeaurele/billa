@@ -1,15 +1,30 @@
 import { Router } from "express";
-import { sessionSchema, switchBusinessSchema } from "@billa/shared";
-import type { SessionInput, SwitchBusinessInput } from "@billa/shared";
+import {
+  disableTwoFactorSchema,
+  sessionSchema,
+  switchBusinessSchema,
+  totpCodeSchema,
+  twoFactorChallengeSchema,
+} from "@billa/shared";
+import type {
+  DisableTwoFactorInput,
+  SessionInput,
+  SwitchBusinessInput,
+  TotpCodeInput,
+  TwoFactorChallengeInput,
+} from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
 import { verifyFirebaseToken } from "../lib/firebase-admin.js";
 import { generateRefreshToken, hashRefreshToken, signAccessToken } from "../lib/tokens.js";
 import { ttlToMs } from "../lib/ttl.js";
 import { clearAuthCookies, setAccessTokenCookie, setRefreshTokenCookie } from "../lib/cookies.js";
 import { issueSession } from "../lib/session.js";
+import { generateBackupCodes, generateTotpSetup, hashBackupCode, verifyTotpToken } from "../lib/totp.js";
 import { validateBody } from "../middleware/validate.js";
 import { authRateLimit } from "../middleware/auth-rate-limit.js";
 import { requireAuth } from "../middleware/require-auth.js";
+
+const TWO_FACTOR_CHALLENGE_TTL_MS = 5 * 60 * 1000;
 
 export const authRouter = Router();
 
@@ -39,9 +54,22 @@ authRouter.post("/session", authRateLimit, validateBody(sessionSchema), async (r
       businessId = firstBusiness.id;
     }
     const business = await prisma.business.findUniqueOrThrow({ where: { id: businessId } });
+
+    if (existing.totpEnabled) {
+      const challenge = await prisma.twoFactorChallenge.create({
+        data: {
+          userId: existing.id,
+          businessId,
+          expiresAt: new Date(Date.now() + TWO_FACTOR_CHALLENGE_TTL_MS),
+        },
+      });
+      res.json({ twoFactorRequired: true, challengeId: challenge.id });
+      return;
+    }
+
     await issueSession(res, existing.id, businessId);
     res.json({
-      user: { id: existing.id, email: existing.email },
+      user: { id: existing.id, email: existing.email, totpEnabled: existing.totpEnabled },
       business: { id: business.id, name: business.name, onboardingCompletedAt: business.onboardingCompletedAt },
     });
     return;
@@ -67,7 +95,7 @@ authRouter.post("/session", authRateLimit, validateBody(sessionSchema), async (r
 
   await issueSession(res, user.id, business.id);
   res.status(201).json({
-    user: { id: user.id, email: user.email },
+    user: { id: user.id, email: user.email, totpEnabled: user.totpEnabled },
     business: { id: business.id, name: business.name, onboardingCompletedAt: business.onboardingCompletedAt },
   });
 });
@@ -84,7 +112,7 @@ authRouter.get("/me", requireAuth, async (req, res) => {
     return;
   }
   res.json({
-    user: { id: user.id, email: user.email },
+    user: { id: user.id, email: user.email, totpEnabled: user.totpEnabled },
     business: { id: business.id, name: business.name, onboardingCompletedAt: business.onboardingCompletedAt },
   });
 });
@@ -158,6 +186,92 @@ authRouter.post("/refresh", async (req, res) => {
   setAccessTokenCookie(res, accessToken);
   setRefreshTokenCookie(res, newRefreshToken, ttlMs);
   res.json({ ok: true });
+});
+
+authRouter.post("/2fa/setup", requireAuth, async (req, res) => {
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: req.auth!.userId } });
+  const setup = await generateTotpSetup(user.email);
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { totpSecret: setup.secret, totpEnabled: false },
+  });
+  res.json({ secret: setup.secret, otpauthUrl: setup.otpauthUrl, qrCodeDataUri: setup.qrCodeDataUri });
+});
+
+authRouter.post("/2fa/verify", requireAuth, validateBody(totpCodeSchema), async (req, res) => {
+  const { code } = req.body as TotpCodeInput;
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: req.auth!.userId } });
+
+  if (!user.totpSecret || !verifyTotpToken(code, user.totpSecret)) {
+    res.status(400).json({ error: "invalid_code" });
+    return;
+  }
+
+  const { plaintext, hashed } = generateBackupCodes();
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { totpEnabled: true, totpBackupCodes: hashed },
+  });
+  res.json({ backupCodes: plaintext });
+});
+
+authRouter.post("/2fa/disable", requireAuth, validateBody(disableTwoFactorSchema), async (req, res) => {
+  const { code } = req.body as DisableTwoFactorInput;
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: req.auth!.userId } });
+
+  if (!user.totpEnabled || !user.totpSecret) {
+    res.status(409).json({ error: "not_enabled" });
+    return;
+  }
+
+  const isValidTotp = verifyTotpToken(code, user.totpSecret);
+  const isValidBackup = user.totpBackupCodes.includes(hashBackupCode(code));
+  if (!isValidTotp && !isValidBackup) {
+    res.status(400).json({ error: "invalid_code" });
+    return;
+  }
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { totpEnabled: false, totpSecret: null, totpBackupCodes: [] },
+  });
+  res.json({ ok: true });
+});
+
+authRouter.post("/2fa/challenge", authRateLimit, validateBody(twoFactorChallengeSchema), async (req, res) => {
+  const { challengeId, code } = req.body as TwoFactorChallengeInput;
+
+  const challenge = await prisma.twoFactorChallenge.findUnique({ where: { id: challengeId } });
+  if (!challenge || challenge.expiresAt < new Date()) {
+    res.status(401).json({ error: "invalid_challenge" });
+    return;
+  }
+
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: challenge.userId } });
+  const isValidTotp = user.totpSecret ? verifyTotpToken(code, user.totpSecret) : false;
+  const codeHash = hashBackupCode(code);
+  const backupIndex = user.totpBackupCodes.indexOf(codeHash);
+  const isValidBackup = backupIndex !== -1;
+
+  if (!isValidTotp && !isValidBackup) {
+    res.status(401).json({ error: "invalid_code" });
+    return;
+  }
+
+  await prisma.twoFactorChallenge.delete({ where: { id: challengeId } });
+
+  if (isValidBackup) {
+    const remainingCodes = [...user.totpBackupCodes];
+    remainingCodes.splice(backupIndex, 1);
+    await prisma.user.update({ where: { id: user.id }, data: { totpBackupCodes: remainingCodes } });
+  }
+
+  const business = await prisma.business.findUniqueOrThrow({ where: { id: challenge.businessId } });
+  await issueSession(res, user.id, challenge.businessId);
+  res.json({
+    user: { id: user.id, email: user.email, totpEnabled: user.totpEnabled },
+    business: { id: business.id, name: business.name, onboardingCompletedAt: business.onboardingCompletedAt },
+  });
 });
 
 authRouter.post("/logout", async (req, res) => {
