@@ -13,6 +13,7 @@ describe("AdminLayout", () => {
       </MemoryRouter>,
     );
 
+    expect(screen.getByRole("link", { name: "Metrics" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Users" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Businesses" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Audit log" })).toBeInTheDocument();

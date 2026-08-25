@@ -237,6 +237,55 @@ adminRouter.post("/users/:id/impersonate", async (req, res) => {
   res.json({ ok: true });
 });
 
+adminRouter.get("/metrics", async (_req, res) => {
+  const now = new Date();
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+  const [
+    totalUsers,
+    totalBusinesses,
+    activeTrials,
+    payingAccounts,
+    signups7d,
+    signups30d,
+    documents7d,
+    documents30d,
+    dailySignups30d,
+  ] = await Promise.all([
+    prisma.user.count(),
+    prisma.business.count(),
+    prisma.user.count({ where: { trialEndsAt: { gt: now }, plan: null } }),
+    prisma.user.count({ where: { plan: { not: null } } }),
+    prisma.user.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
+    prisma.user.count({ where: { createdAt: { gte: thirtyDaysAgo } } }),
+    prisma.document.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
+    prisma.document.count({ where: { createdAt: { gte: thirtyDaysAgo } } }),
+    prisma.$queryRaw<{ date: Date; count: bigint }[]>`
+      SELECT date_trunc('day', "createdAt") AS date, COUNT(*) AS count
+      FROM "User"
+      WHERE "createdAt" >= ${thirtyDaysAgo}
+      GROUP BY date_trunc('day', "createdAt")
+      ORDER BY date ASC
+    `,
+  ]);
+
+  res.json({
+    totalUsers,
+    totalBusinesses,
+    activeTrials,
+    payingAccounts,
+    signups7d,
+    signups30d,
+    documents7d,
+    documents30d,
+    dailySignups30d: dailySignups30d.map((row) => ({
+      date: row.date.toISOString().slice(0, 10),
+      count: Number(row.count),
+    })),
+  });
+});
+
 adminRouter.get("/businesses", validateQuery(adminBusinessListQuerySchema), async (req, res) => {
   const query = req.listQuery as AdminBusinessListQuery;
 

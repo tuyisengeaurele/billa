@@ -6,6 +6,7 @@ interface AdminLayoutProps {
 }
 
 const NAV_LINKS = [
+  { to: "/admin/metrics", label: "Metrics" },
   { to: "/admin/users", label: "Users" },
   { to: "/admin/businesses", label: "Businesses" },
   { to: "/admin/messages", label: "Messages" },
