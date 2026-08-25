@@ -7,6 +7,7 @@ import { requireAuth } from "../middleware/require-auth.js";
 import { requireActiveSubscription } from "../middleware/require-active-subscription.js";
 import { validateBody } from "../middleware/validate.js";
 import { validateQuery } from "../middleware/validate-query.js";
+import { logActivity } from "../lib/activity-log.js";
 
 export const customersRouter = Router();
 
@@ -40,6 +41,16 @@ customersRouter.post("/", validateBody(customerSchema), async (req, res) => {
   const customer = await prisma.customer.create({
     data: { ...req.body, businessId: req.auth!.businessId },
   });
+
+  await logActivity({
+    businessId: req.auth!.businessId,
+    actorUserId: req.auth!.userId,
+    action: "CUSTOMER_CREATED",
+    entityType: "Customer",
+    entityId: customer.id,
+    metadata: { name: customer.name },
+  });
+
   res.status(201).json({ customer });
 });
 
@@ -58,5 +69,17 @@ customersRouter.patch("/:id", validateBody(customerUpdateSchema), async (req, re
   }
 
   const customer = await prisma.customer.findUnique({ where: { id } });
+
+  if (req.body.isActive === false) {
+    await logActivity({
+      businessId,
+      actorUserId: req.auth!.userId,
+      action: "CUSTOMER_DEACTIVATED",
+      entityType: "Customer",
+      entityId: id,
+      metadata: customer ? { name: customer.name } : undefined,
+    });
+  }
+
   res.json({ customer });
 });
