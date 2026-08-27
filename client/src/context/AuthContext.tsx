@@ -15,6 +15,7 @@ interface User {
   avatarUrl: string | null;
   totpEnabled: boolean;
   isAdmin: boolean;
+  productTourSeenAt: string | null;
 }
 
 interface Business {

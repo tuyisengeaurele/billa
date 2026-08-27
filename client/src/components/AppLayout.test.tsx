@@ -28,7 +28,7 @@ describe("AppLayout", () => {
       if (url.includes("/auth/impersonate/stop")) {
         return new Response(
           JSON.stringify({
-            user: { id: "admin1", email: "admin@example.com" },
+            user: { id: "admin1", email: "admin@example.com", productTourSeenAt: "2026-01-01T00:00:00.000Z" },
             business: { id: "b2", name: "Admin Co" },
           }),
           { status: 200 },
@@ -37,7 +37,7 @@ describe("AppLayout", () => {
       if (url.includes("/auth/me")) {
         return new Response(
           JSON.stringify({
-            user: { id: "u1", email: "owner@example.com" },
+            user: { id: "u1", email: "owner@example.com", productTourSeenAt: "2026-01-01T00:00:00.000Z" },
             business: { id: "b1", name: "Kigali Traders" },
             impersonating: true,
           }),

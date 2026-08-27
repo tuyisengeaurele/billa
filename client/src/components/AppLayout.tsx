@@ -6,6 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import { AnnouncementBanner } from "./AnnouncementBanner";
 import { IdleTimeoutModal } from "./IdleTimeoutModal";
 import { ImpersonationRequestModal } from "./ImpersonationRequestModal";
+import { ProductTourModal } from "./ProductTourModal";
 import { Sidebar } from "./Sidebar";
 
 interface AppLayoutProps {
@@ -50,6 +51,7 @@ export function AppLayout({ children }: AppLayoutProps) {
     <div className="flex min-h-screen flex-col bg-page">
       <ImpersonationRequestModal />
       <IdleTimeoutModal />
+      <ProductTourModal />
 
       {impersonating && (
         <div
