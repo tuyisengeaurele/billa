@@ -373,4 +373,24 @@ describe("invite accept flow", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].metadata).toMatchObject({ email: "friend@example.com" });
   });
+
+  it("notifies the owner in-app when a member joins", async () => {
+    const app = createApp();
+    const { cookies: ownerCookies, userId: ownerId } = await registerAndGetCookies(
+      app,
+      "owner@example.com",
+      "Kigali Traders",
+    );
+    const createRes = await request(app).post("/business/invites").set("Cookie", ownerCookies).send({
+      email: "friend@example.com",
+    });
+    const token = (createRes.body.link as string).split("/invite/")[1];
+    const { cookies: inviteeCookies } = await registerAndGetCookies(app, "friend@example.com", "Friend's Own Biz");
+
+    await request(app).post(`/invites/${token}/accept`).set("Cookie", inviteeCookies);
+
+    const notifications = await prisma.notification.findMany({ where: { userId: ownerId } });
+    expect(notifications).toHaveLength(1);
+    expect(notifications[0]).toMatchObject({ type: "MEMBER_JOINED", title: "friend@example.com joined your team" });
+  });
 });

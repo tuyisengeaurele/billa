@@ -3,6 +3,7 @@ import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/require-auth.js";
 import { issueSession } from "../lib/session.js";
 import { logActivity } from "../lib/activity-log.js";
+import { createNotification } from "../lib/notifications.js";
 
 export const invitesRouter = Router();
 
@@ -62,6 +63,14 @@ invitesRouter.post("/:token/accept", requireAuth, async (req, res) => {
   });
 
   const business = await prisma.business.findUniqueOrThrow({ where: { id: invite.businessId } });
+
+  await createNotification({
+    userId: business.ownerId,
+    type: "MEMBER_JOINED",
+    title: `${user.email} joined your team`,
+    link: "/settings",
+  });
+
   await issueSession(res, user.id, invite.businessId);
   res.json({
     business: { id: business.id, name: business.name, onboardingCompletedAt: business.onboardingCompletedAt },
