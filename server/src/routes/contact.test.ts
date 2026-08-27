@@ -84,6 +84,22 @@ describe("POST /contact", () => {
     delete process.env.CONTACT_NOTIFICATION_EMAIL;
     vi.restoreAllMocks();
   });
+
+  it("notifies every admin user in-app", async () => {
+    const app = createApp();
+    await registerAndGetCookies(app, "admin@example.com");
+    await prisma.user.update({ where: { email: "admin@example.com" }, data: { isAdmin: true } });
+
+    const res = await request(app)
+      .post("/contact")
+      .send({ name: "Aline", email: "aline@example.com", message: "I'd like help setting up my templates." });
+
+    expect(res.status).toBe(201);
+    const admin = await prisma.user.findUniqueOrThrow({ where: { email: "admin@example.com" } });
+    const notifications = await prisma.notification.findMany({ where: { userId: admin.id } });
+    expect(notifications).toHaveLength(1);
+    expect(notifications[0]).toMatchObject({ type: "CONTACT_MESSAGE_RECEIVED", title: "New message from Aline" });
+  });
 });
 
 describe("GET /contact", () => {

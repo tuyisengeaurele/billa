@@ -8,6 +8,7 @@ import { validateBody } from "../middleware/validate.js";
 import { validateQuery } from "../middleware/validate-query.js";
 import { contactRateLimit } from "../middleware/contact-rate-limit.js";
 import { sendEmail } from "../lib/resend.js";
+import { notifyAdmins } from "../lib/notifications.js";
 
 export const contactRouter = Router();
 
@@ -15,6 +16,13 @@ contactRouter.post("/", contactRateLimit, validateBody(contactMessageSchema), as
   const { name, email, message } = req.body as { name: string; email: string; message: string };
 
   await prisma.contactMessage.create({ data: { name, email, message } });
+
+  await notifyAdmins({
+    type: "CONTACT_MESSAGE_RECEIVED",
+    title: `New message from ${name}`,
+    body: message.slice(0, 140),
+    link: "/admin/messages",
+  });
 
   const notifyTo = process.env.CONTACT_NOTIFICATION_EMAIL;
   if (notifyTo) {
