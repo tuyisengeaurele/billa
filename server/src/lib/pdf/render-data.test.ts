@@ -58,6 +58,10 @@ function makeDocument(
     referencedDocumentId: null,
     declinedAt: null,
     customerReference: null,
+    amountPaid: 0,
+    paymentStatus: null,
+    writtenOffAt: null,
+    writeOffReason: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     customer: {

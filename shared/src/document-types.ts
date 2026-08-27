@@ -23,3 +23,9 @@ export type RecurrenceInterval = (typeof RECURRENCE_INTERVALS)[number];
 
 export const DISCOUNT_TYPES = ["PERCENT", "FLAT"] as const;
 export type DiscountType = (typeof DISCOUNT_TYPES)[number];
+
+export const PAYMENT_METHODS = ["CASH", "BANK_TRANSFER", "MOBILE_MONEY", "CHEQUE", "OTHER"] as const;
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+
+export const INVOICE_PAYMENT_STATUSES = ["UNPAID", "PARTIALLY_PAID", "PAID", "WRITTEN_OFF"] as const;
+export type InvoicePaymentStatus = (typeof INVOICE_PAYMENT_STATUSES)[number];

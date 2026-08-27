@@ -94,4 +94,30 @@ describe("POST /documents/:id/finalize", () => {
     const res = await request(createApp()).post("/documents/x/finalize");
     expect(res.status).toBe(401);
   });
+
+  it("recomputes the referenced invoice's payment status when finalizing a credit note against it", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies);
+    const invoiceId = await createDraft(app, cookies, customerId);
+    await request(app).post(`/documents/${invoiceId}/finalize`).set("Cookie", cookies);
+
+    const invoiceBefore = await request(app).get(`/documents/${invoiceId}`).set("Cookie", cookies);
+    expect(invoiceBefore.body.document.paymentStatus).toBe("UNPAID");
+
+    const creditNote = await request(app)
+      .post("/documents")
+      .set("Cookie", cookies)
+      .send({
+        type: "CREDIT_NOTE",
+        customerId,
+        issueDate: "2026-08-20",
+        lines: [{ description: "Printing", quantity: 1, unitPrice: 5000, taxRate: 18 }],
+        referencedDocumentId: invoiceId,
+      });
+    await request(app).post(`/documents/${creditNote.body.document.id}/finalize`).set("Cookie", cookies);
+
+    const invoiceAfter = await request(app).get(`/documents/${invoiceId}`).set("Cookie", cookies);
+    expect(invoiceAfter.body.document.paymentStatus).toBe("PAID");
+  });
 });

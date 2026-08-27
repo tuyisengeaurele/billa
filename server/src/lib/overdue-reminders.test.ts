@@ -39,7 +39,12 @@ async function setupBusiness(customerEmail: string | null = "customer@example.co
 async function createOverdueInvoice(
   businessId: string,
   customerId: string,
-  overrides: { dueDate: Date; lastReminderSentAt?: Date | null; status?: "DRAFT" | "FINALIZED" },
+  overrides: {
+    dueDate: Date;
+    lastReminderSentAt?: Date | null;
+    status?: "DRAFT" | "FINALIZED";
+    paymentStatus?: "UNPAID" | "PARTIALLY_PAID" | "PAID" | "WRITTEN_OFF" | null;
+  },
 ) {
   return prisma.document.create({
     data: {
@@ -52,6 +57,7 @@ async function createOverdueInvoice(
       issueDate: new Date("2026-01-01"),
       dueDate: overrides.dueDate,
       lastReminderSentAt: overrides.lastReminderSentAt ?? null,
+      paymentStatus: overrides.paymentStatus ?? null,
       subtotal: 5000,
       taxTotal: 900,
       total: 5900,
@@ -75,6 +81,42 @@ describe("sendOverdueReminders", () => {
     expect(sent).toHaveLength(1);
     expect(sent[0].sentTo).toBe("customer@example.com");
     expect(resendModule.sendDocumentEmail).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not remind about an invoice that's already been paid in full", async () => {
+    const { business, customer } = await setupBusiness("customer@example.com");
+    await createOverdueInvoice(business.id, customer.id, {
+      dueDate: new Date("2020-01-01"),
+      paymentStatus: "PAID",
+    });
+
+    const sent = await sendOverdueReminders(business.id);
+
+    expect(sent).toHaveLength(0);
+  });
+
+  it("does not remind about an invoice that's been written off", async () => {
+    const { business, customer } = await setupBusiness("customer@example.com");
+    await createOverdueInvoice(business.id, customer.id, {
+      dueDate: new Date("2020-01-01"),
+      paymentStatus: "WRITTEN_OFF",
+    });
+
+    const sent = await sendOverdueReminders(business.id);
+
+    expect(sent).toHaveLength(0);
+  });
+
+  it("still reminds about an invoice that's only partially paid", async () => {
+    const { business, customer } = await setupBusiness("customer@example.com");
+    await createOverdueInvoice(business.id, customer.id, {
+      dueDate: new Date("2020-01-01"),
+      paymentStatus: "PARTIALLY_PAID",
+    });
+
+    const sent = await sendOverdueReminders(business.id);
+
+    expect(sent).toHaveLength(1);
   });
 
   it("does not remind for an invoice that isn't overdue yet", async () => {

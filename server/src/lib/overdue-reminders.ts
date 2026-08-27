@@ -21,7 +21,12 @@ export async function sendOverdueReminders(businessId: string): Promise<SentRemi
       status: "FINALIZED",
       dueDate: { lt: now },
       customer: { email: { not: null } },
-      OR: [{ lastReminderSentAt: null }, { lastReminderSentAt: { lt: cooldownCutoff } }],
+      AND: [
+        { OR: [{ lastReminderSentAt: null }, { lastReminderSentAt: { lt: cooldownCutoff } }] },
+        // paymentStatus can be null for an invoice that hasn't had its status computed yet;
+        // notIn alone would silently exclude those rows (NULL NOT IN (...) is NULL, not true).
+        { OR: [{ paymentStatus: null }, { paymentStatus: { notIn: ["PAID", "WRITTEN_OFF"] } }] },
+      ],
     },
     include: { lines: { orderBy: { sortOrder: "asc" } }, customer: true },
   });

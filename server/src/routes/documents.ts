@@ -1,7 +1,7 @@
 import { Router } from "express";
 import type { Prisma } from "@prisma/client";
-import { documentListQuerySchema, documentSchema } from "@billa/shared";
-import type { DocumentInput, DocumentListQuery } from "@billa/shared";
+import { createPaymentSchema, documentListQuerySchema, documentSchema, voidPaymentSchema } from "@billa/shared";
+import type { CreatePaymentInput, DocumentInput, DocumentListQuery, VoidPaymentInput } from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/require-auth.js";
 import { requireActiveSubscription } from "../middleware/require-active-subscription.js";
@@ -18,6 +18,8 @@ import { logActivity } from "../lib/activity-log.js";
 import { recordJobRun } from "../lib/job-run-log.js";
 import { toCsv } from "../lib/csv.js";
 import { convertProformaToInvoice } from "../lib/convert-proforma.js";
+import { recomputeInvoicePaymentStatus } from "../lib/invoice-payment-status.js";
+import { finalizeDocumentById } from "../lib/finalize-document.js";
 
 export const documentsRouter = Router();
 
@@ -407,54 +409,170 @@ documentsRouter.post("/:id/finalize", async (req, res) => {
   const businessId = req.auth!.businessId;
   const { id } = req.params;
 
-  const document = await prisma.document.findFirst({ where: { id, businessId }, include: { lines: true } });
-  if (!document) {
-    res.status(404).json({ error: "not_found" });
+  const result = await finalizeDocumentById(businessId, id);
+  if (!result.ok) {
+    res.status(result.status).json({ error: result.error });
     return;
   }
-  if (document.status === "FINALIZED") {
-    res.status(409).json({ error: "already_finalized" });
-    return;
-  }
-  if (document.lines.length === 0) {
-    res.status(400).json({ error: "no_lines" });
-    return;
-  }
-
-  const finalized = await prisma.$transaction(async (tx) => {
-    const existingSequence = await tx.documentSequence.findUnique({
-      where: { businessId_type: { businessId, type: document.type } },
-    });
-
-    const assignedNumber = existingSequence ? existingSequence.nextNumber : 1;
-    const prefix = existingSequence ? existingSequence.prefix : DEFAULT_PREFIXES[document.type];
-
-    await tx.documentSequence.upsert({
-      where: { businessId_type: { businessId, type: document.type } },
-      create: { businessId, type: document.type, prefix, nextNumber: assignedNumber + 1 },
-      update: { nextNumber: assignedNumber + 1 },
-    });
-
-    return tx.document.update({
-      where: { id },
-      data: {
-        number: `${prefix}${String(assignedNumber).padStart(4, "0")}`,
-        status: "FINALIZED",
-      },
-      include: DOCUMENT_INCLUDE,
-    });
-  });
 
   await logActivity({
     businessId,
     actorUserId: req.auth!.userId,
     action: "DOCUMENT_FINALIZED",
     entityType: "Document",
-    entityId: finalized.id,
-    metadata: { number: finalized.number, type: finalized.type },
+    entityId: result.document.id,
+    metadata: { number: result.document.number, type: result.document.type },
   });
 
+  if (result.document.type === "INVOICE") {
+    await recomputeInvoicePaymentStatus(result.document.id);
+  }
+  if (result.document.type === "CREDIT_NOTE" && result.document.referencedDocumentId) {
+    await recomputeInvoicePaymentStatus(result.document.referencedDocumentId);
+  }
+
+  const finalized = await prisma.document.findUnique({ where: { id: result.document.id }, include: DOCUMENT_INCLUDE });
   res.json({ document: finalized });
+});
+
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  CASH: "Cash",
+  BANK_TRANSFER: "Bank transfer",
+  MOBILE_MONEY: "Mobile Money",
+  CHEQUE: "Cheque",
+  OTHER: "Other",
+};
+
+documentsRouter.post("/:id/payments", validateBody(createPaymentSchema), async (req, res) => {
+  const businessId = req.auth!.businessId;
+  const { id } = req.params;
+  const body = req.body as CreatePaymentInput;
+
+  const invoice = await prisma.document.findFirst({ where: { id, businessId } });
+  if (!invoice) {
+    res.status(404).json({ error: "not_found" });
+    return;
+  }
+  if (invoice.type !== "INVOICE") {
+    res.status(400).json({ error: "not_an_invoice" });
+    return;
+  }
+  if (invoice.status !== "FINALIZED") {
+    res.status(409).json({ error: "not_finalized" });
+    return;
+  }
+
+  const creditNotes = await prisma.document.findMany({
+    where: { referencedDocumentId: id, type: "CREDIT_NOTE", status: "FINALIZED" },
+  });
+  const creditedTotal = creditNotes.reduce((sum, doc) => sum + doc.total, 0);
+  const amountOwed = invoice.total - creditedTotal - invoice.amountPaid;
+
+  if (body.amount > amountOwed) {
+    res.status(400).json({ error: "amount_exceeds_owed" });
+    return;
+  }
+
+  const payment = await prisma.invoicePayment.create({
+    data: {
+      businessId,
+      documentId: id,
+      amount: body.amount,
+      method: body.method,
+      paidOn: new Date(body.paidOn),
+      notes: body.notes,
+      createdByUserId: req.auth!.userId,
+    },
+  });
+
+  let receiptDocumentId: string | null = null;
+  if (body.generateReceipt) {
+    const business = await prisma.business.findUnique({ where: { id: businessId } });
+    const totals = calculateDocumentTotals([{ quantity: 1, unitPrice: body.amount, taxRate: 0 }]);
+    const draftReceipt = await prisma.document.create({
+      data: {
+        businessId,
+        type: "RECEIPT",
+        status: "DRAFT",
+        template: business!.defaultTemplate,
+        customerId: invoice.customerId,
+        issueDate: new Date(body.paidOn),
+        referencedDocumentId: id,
+        subtotal: totals.subtotal,
+        taxTotal: totals.taxTotal,
+        total: totals.total,
+        lines: {
+          create: [
+            {
+              description: `Payment received (${PAYMENT_METHOD_LABELS[body.method] ?? body.method})`,
+              quantity: 1,
+              unitPrice: body.amount,
+              taxRate: 0,
+              lineTotal: totals.lines[0].lineTotal,
+              sortOrder: 0,
+            },
+          ],
+        },
+      },
+    });
+
+    const finalizedReceipt = await finalizeDocumentById(businessId, draftReceipt.id);
+    if (finalizedReceipt.ok) {
+      receiptDocumentId = finalizedReceipt.document.id;
+      await prisma.invoicePayment.update({ where: { id: payment.id }, data: { receiptDocumentId } });
+    }
+  }
+
+  await recomputeInvoicePaymentStatus(id);
+
+  const updatedInvoice = await prisma.document.findUnique({ where: { id }, include: DOCUMENT_INCLUDE });
+  res.status(201).json({ payment: { ...payment, receiptDocumentId }, document: updatedInvoice });
+});
+
+documentsRouter.post(
+  "/:id/payments/:paymentId/void",
+  validateBody(voidPaymentSchema),
+  async (req, res) => {
+    const businessId = req.auth!.businessId;
+    const { id, paymentId } = req.params;
+    const body = req.body as VoidPaymentInput;
+
+    const payment = await prisma.invoicePayment.findFirst({ where: { id: paymentId, documentId: id, businessId } });
+    if (!payment) {
+      res.status(404).json({ error: "not_found" });
+      return;
+    }
+    if (payment.voidedAt) {
+      res.status(409).json({ error: "already_voided" });
+      return;
+    }
+
+    await prisma.invoicePayment.update({
+      where: { id: paymentId },
+      data: { voidedAt: new Date(), voidReason: body.voidReason },
+    });
+    await recomputeInvoicePaymentStatus(id);
+
+    const updatedInvoice = await prisma.document.findUnique({ where: { id }, include: DOCUMENT_INCLUDE });
+    res.json({ document: updatedInvoice });
+  },
+);
+
+documentsRouter.get("/:id/payments", async (req, res) => {
+  const businessId = req.auth!.businessId;
+  const { id } = req.params;
+
+  const invoice = await prisma.document.findFirst({ where: { id, businessId } });
+  if (!invoice) {
+    res.status(404).json({ error: "not_found" });
+    return;
+  }
+
+  const payments = await prisma.invoicePayment.findMany({
+    where: { documentId: id },
+    orderBy: { paidOn: "desc" },
+  });
+  res.json({ payments });
 });
 
 documentsRouter.post("/:id/convert", async (req, res) => {

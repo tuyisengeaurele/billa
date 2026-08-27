@@ -12,3 +12,4 @@ export * from "./multi-business-schemas.js";
 export * from "./contact-schemas.js";
 export * from "./activity-schemas.js";
 export * from "./admin-schemas.js";
+export * from "./payment-schemas.js";

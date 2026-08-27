@@ -37,6 +37,21 @@ enum DiscountType {
   FLAT
 }
 
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  MOBILE_MONEY
+  CHEQUE
+  OTHER
+}
+
+enum InvoicePaymentStatus {
+  UNPAID
+  PARTIALLY_PAID
+  PAID
+  WRITTEN_OFF
+}
+
 enum ActivityAction {
   DOCUMENT_CREATED
   DOCUMENT_FINALIZED
@@ -49,35 +64,36 @@ enum ActivityAction {
 }
 
 model Business {
-  id               String            @id @default(cuid())
-  ownerId          String
-  name             String
-  tin              String?
-  industry         String?
-  phone            String?
-  email            String?
-  address          String?
-  logoUrl          String?
-  primaryColor     String?
-  accentColors     Json?
-  rraEbmNumber     String?
-  bankName         String?
-  bankAccountNumber String?
-  signatoryName    String?
-  signatoryTitle   String?
-  defaultTemplate  DocumentTemplate  @default(MINIMAL)
+  id                    String           @id @default(cuid())
+  ownerId               String
+  name                  String
+  tin                   String?
+  industry              String?
+  phone                 String?
+  email                 String?
+  address               String?
+  logoUrl               String?
+  primaryColor          String?
+  accentColors          Json?
+  rraEbmNumber          String?
+  bankName              String?
+  bankAccountNumber     String?
+  signatoryName         String?
+  signatoryTitle        String?
+  defaultTemplate       DocumentTemplate @default(MINIMAL)
   onboardingCompletedAt DateTime?
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
 
-  owner     User               @relation(fields: [ownerId], references: [id])
-  customers Customer[]
-  items     Item[]
-  documents Document[]
-  sequences DocumentSequence[]
-  members     BusinessMember[]
-  invites     BusinessInvite[]
-  activityLog ActivityLogEntry[]
+  owner           User               @relation(fields: [ownerId], references: [id])
+  customers       Customer[]
+  items           Item[]
+  documents       Document[]
+  sequences       DocumentSequence[]
+  members         BusinessMember[]
+  invites         BusinessInvite[]
+  activityLog     ActivityLogEntry[]
+  invoicePayments InvoicePayment[]
 
   @@index([ownerId])
 }
@@ -101,14 +117,15 @@ model User {
   isAdmin     Boolean   @default(false)
   suspendedAt DateTime?
 
-  businesses          Business[]
-  refreshTokens       RefreshToken[]
-  payments            Payment[]
-  twoFactorChallenges TwoFactorChallenge[]
-  memberships         BusinessMember[]
-  activityLog         ActivityLogEntry[]
-  adminAuditLog       AdminAuditLogEntry[]
-  announcements       Announcement[]
+  businesses             Business[]
+  refreshTokens          RefreshToken[]
+  payments               Payment[]
+  twoFactorChallenges    TwoFactorChallenge[]
+  memberships            BusinessMember[]
+  activityLog            ActivityLogEntry[]
+  adminAuditLog          AdminAuditLogEntry[]
+  announcements          Announcement[]
+  invoicePaymentsCreated InvoicePayment[]
 }
 
 model BusinessMember {
@@ -268,21 +285,21 @@ model DocumentSequence {
 }
 
 model Document {
-  id         String           @id @default(cuid())
-  businessId String
-  type       DocumentType
-  number     String?
-  status     DocumentStatus   @default(DRAFT)
-  template   DocumentTemplate
-  customerId String
-  issueDate  DateTime         @default(now())
-  dueDate    DateTime?
-  notes      String?
+  id                String           @id @default(cuid())
+  businessId        String
+  type              DocumentType
+  number            String?
+  status            DocumentStatus   @default(DRAFT)
+  template          DocumentTemplate
+  customerId        String
+  issueDate         DateTime         @default(now())
+  dueDate           DateTime?
+  notes             String?
   customerReference String?
-  subtotal   Int
-  taxTotal   Int
-  total      Int
-  sentAt     DateTime?
+  subtotal          Int
+  taxTotal          Int
+  total             Int
+  sentAt            DateTime?
 
   publicToken String @unique @default(dbgenerated("gen_random_uuid()::text"))
 
@@ -301,12 +318,19 @@ model Document {
   referencedDocument   Document?  @relation("DocumentReference", fields: [referencedDocumentId], references: [id])
   referencingDocuments Document[] @relation("DocumentReference")
 
+  amountPaid     Int                   @default(0)
+  paymentStatus  InvoicePaymentStatus?
+  writtenOffAt   DateTime?
+  writeOffReason String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  business Business       @relation(fields: [businessId], references: [id])
-  customer Customer       @relation(fields: [customerId], references: [id])
-  lines    DocumentLine[]
+  business          Business         @relation(fields: [businessId], references: [id])
+  customer          Customer         @relation(fields: [customerId], references: [id])
+  lines             DocumentLine[]
+  payments          InvoicePayment[] @relation("DocumentPayments")
+  paymentReceiptFor InvoicePayment?  @relation("PaymentReceipt")
 
   @@unique([businessId, type, number])
   @@index([businessId])
@@ -315,22 +339,47 @@ model Document {
 }
 
 model DocumentLine {
-  id          String  @id @default(cuid())
-  documentId  String
-  itemId      String?
-  description String
-  quantity    Decimal @db.Decimal(10, 2)
-  unitPrice   Int
-  taxRate     Decimal @db.Decimal(5, 2)
+  id            String        @id @default(cuid())
+  documentId    String
+  itemId        String?
+  description   String
+  quantity      Decimal       @db.Decimal(10, 2)
+  unitPrice     Int
+  taxRate       Decimal       @db.Decimal(5, 2)
   discountType  DiscountType?
-  discountValue Decimal? @db.Decimal(10, 2)
-  lineTotal   Int
-  sortOrder   Int
+  discountValue Decimal?      @db.Decimal(10, 2)
+  lineTotal     Int
+  sortOrder     Int
 
   document Document @relation(fields: [documentId], references: [id])
   item     Item?    @relation(fields: [itemId], references: [id])
 
   @@index([documentId])
+}
+
+model InvoicePayment {
+  id         String        @id @default(cuid())
+  businessId String
+  documentId String
+  amount     Int
+  method     PaymentMethod
+  paidOn     DateTime
+  notes      String?
+
+  receiptDocumentId String? @unique
+
+  voidedAt   DateTime?
+  voidReason String?
+
+  createdAt       DateTime @default(now())
+  createdByUserId String
+
+  business        Business  @relation(fields: [businessId], references: [id])
+  document        Document  @relation("DocumentPayments", fields: [documentId], references: [id])
+  receiptDocument Document? @relation("PaymentReceipt", fields: [receiptDocumentId], references: [id])
+  createdBy       User      @relation(fields: [createdByUserId], references: [id])
+
+  @@index([businessId, documentId])
 }
 
 enum SubscriptionPlan {
