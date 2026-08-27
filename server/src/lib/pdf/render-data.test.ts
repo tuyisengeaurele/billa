@@ -24,6 +24,7 @@ function makeBusiness(overrides: Partial<Business> = {}): Business {
     signatoryTitle: null,
     defaultTemplate: "MINIMAL",
     onboardingCompletedAt: null,
+    lastDigestSentAt: null,
     ownerId: "u1",
     createdAt: new Date(),
     updatedAt: new Date(),

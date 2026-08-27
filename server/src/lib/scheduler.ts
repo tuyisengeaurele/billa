@@ -1,6 +1,7 @@
 import { prisma } from "./prisma.js";
 import { generateDueRecurringDocuments } from "./recurring-documents.js";
 import { sendOverdueReminders } from "./overdue-reminders.js";
+import { sendOwnerPaymentDigestIfDue } from "./owner-digest.js";
 import { recordJobRun } from "./job-run-log.js";
 
 const RUN_INTERVAL_MS = 60 * 60 * 1000;
@@ -19,8 +20,10 @@ export async function runScheduledJobs(): Promise<void> {
 
   let recurringGenerated = 0;
   let remindersSent = 0;
+  let digestsSent = 0;
   let recurringFailed = false;
   let remindersFailed = false;
+  let digestsFailed = false;
 
   for (const { id: businessId } of businesses) {
     let active: boolean;
@@ -44,10 +47,18 @@ export async function runScheduledJobs(): Promise<void> {
     } catch {
       remindersFailed = true;
     }
+
+    try {
+      const digest = await sendOwnerPaymentDigestIfDue(businessId);
+      if (digest.sent) digestsSent += 1;
+    } catch {
+      digestsFailed = true;
+    }
   }
 
   await recordJobRun("recurring-documents", { succeeded: !recurringFailed, resultCount: recurringGenerated });
   await recordJobRun("overdue-reminders", { succeeded: !remindersFailed, resultCount: remindersSent });
+  await recordJobRun("owner-payment-digest", { succeeded: !digestsFailed, resultCount: digestsSent });
 }
 
 let started = false;

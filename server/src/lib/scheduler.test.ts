@@ -7,6 +7,7 @@ import * as recurringModule from "./recurring-documents.js";
 
 beforeEach(async () => {
   vi.spyOn(resendModule, "sendDocumentEmail").mockResolvedValue();
+  vi.spyOn(resendModule, "sendEmail").mockResolvedValue();
   await resetDb();
 });
 
@@ -141,5 +142,16 @@ describe("runScheduledJobs", () => {
     const jobNames = logs.map((l) => l.jobName);
     expect(jobNames).toContain("recurring-documents");
     expect(jobNames).toContain("overdue-reminders");
+    expect(jobNames).toContain("owner-payment-digest");
+  });
+
+  it("sends an owner payment digest for an active business", async () => {
+    const { business } = await createBusiness(ACTIVE);
+
+    await runScheduledJobs();
+
+    const updated = await prisma.business.findUniqueOrThrow({ where: { id: business.id } });
+    expect(updated.lastDigestSentAt).not.toBeNull();
+    expect(resendModule.sendEmail).toHaveBeenCalled();
   });
 });

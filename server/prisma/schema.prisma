@@ -82,6 +82,7 @@ model Business {
   signatoryTitle        String?
   defaultTemplate       DocumentTemplate @default(MINIMAL)
   onboardingCompletedAt DateTime?
+  lastDigestSentAt      DateTime?
   createdAt             DateTime         @default(now())
   updatedAt             DateTime         @updatedAt
 
