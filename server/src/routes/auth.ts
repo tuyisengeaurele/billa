@@ -32,6 +32,24 @@ const TWO_FACTOR_CHALLENGE_TTL_MS = 5 * 60 * 1000;
 
 export const authRouter = Router();
 
+function serializeUser(user: {
+  id: string;
+  email: string;
+  name: string | null;
+  avatarUrl: string | null;
+  totpEnabled: boolean;
+  isAdmin: boolean;
+}) {
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    avatarUrl: user.avatarUrl,
+    totpEnabled: user.totpEnabled,
+    isAdmin: user.isAdmin,
+  };
+}
+
 function refreshTtlMs(): number {
   return ttlToMs(process.env.JWT_REFRESH_TTL ?? "30d");
 }
@@ -81,7 +99,7 @@ authRouter.post("/session", authRateLimit, validateBody(sessionSchema), async (r
 
     await issueSession(res, existing.id, businessId);
     res.json({
-      user: { id: existing.id, email: existing.email, totpEnabled: existing.totpEnabled, isAdmin: existing.isAdmin },
+      user: serializeUser(existing),
       business: { id: business.id, name: business.name, onboardingCompletedAt: business.onboardingCompletedAt },
     });
     return;
@@ -107,7 +125,7 @@ authRouter.post("/session", authRateLimit, validateBody(sessionSchema), async (r
 
   await issueSession(res, user.id, business.id);
   res.status(201).json({
-    user: { id: user.id, email: user.email, totpEnabled: user.totpEnabled, isAdmin: user.isAdmin },
+    user: serializeUser(user),
     business: { id: business.id, name: business.name, onboardingCompletedAt: business.onboardingCompletedAt },
   });
 });
@@ -124,7 +142,7 @@ authRouter.get("/me", requireAuth, async (req, res) => {
     return;
   }
   res.json({
-    user: { id: user.id, email: user.email, totpEnabled: user.totpEnabled, isAdmin: user.isAdmin },
+    user: serializeUser(user),
     business: { id: business.id, name: business.name, onboardingCompletedAt: business.onboardingCompletedAt },
     impersonating: Boolean(req.auth!.impersonatedBy),
   });
@@ -191,7 +209,7 @@ authRouter.post("/impersonate/stop", requireAuth, async (req, res) => {
   }
 
   res.json({
-    user: { id: admin.id, email: admin.email, totpEnabled: admin.totpEnabled, isAdmin: admin.isAdmin },
+    user: serializeUser(admin),
     business: { id: business.id, name: business.name, onboardingCompletedAt: business.onboardingCompletedAt },
   });
 });
@@ -348,7 +366,7 @@ authRouter.post("/2fa/challenge", authRateLimit, validateBody(twoFactorChallenge
   const business = await prisma.business.findUniqueOrThrow({ where: { id: challenge.businessId } });
   await issueSession(res, user.id, challenge.businessId);
   res.json({
-    user: { id: user.id, email: user.email, totpEnabled: user.totpEnabled, isAdmin: user.isAdmin },
+    user: serializeUser(user),
     business: { id: business.id, name: business.name, onboardingCompletedAt: business.onboardingCompletedAt },
   });
 });
