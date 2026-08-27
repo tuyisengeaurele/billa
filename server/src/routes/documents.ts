@@ -1,7 +1,19 @@
 import { Router } from "express";
 import type { Prisma } from "@prisma/client";
-import { createPaymentSchema, documentListQuerySchema, documentSchema, voidPaymentSchema } from "@billa/shared";
-import type { CreatePaymentInput, DocumentInput, DocumentListQuery, VoidPaymentInput } from "@billa/shared";
+import {
+  createPaymentSchema,
+  documentListQuerySchema,
+  documentSchema,
+  voidPaymentSchema,
+  writeOffInvoiceSchema,
+} from "@billa/shared";
+import type {
+  CreatePaymentInput,
+  DocumentInput,
+  DocumentListQuery,
+  VoidPaymentInput,
+  WriteOffInvoiceInput,
+} from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/require-auth.js";
 import { requireActiveSubscription } from "../middleware/require-active-subscription.js";
@@ -573,6 +585,57 @@ documentsRouter.get("/:id/payments", async (req, res) => {
     orderBy: { paidOn: "desc" },
   });
   res.json({ payments });
+});
+
+documentsRouter.post("/:id/write-off", validateBody(writeOffInvoiceSchema), async (req, res) => {
+  const businessId = req.auth!.businessId;
+  const { id } = req.params;
+  const body = req.body as WriteOffInvoiceInput;
+
+  const invoice = await prisma.document.findFirst({ where: { id, businessId } });
+  if (!invoice) {
+    res.status(404).json({ error: "not_found" });
+    return;
+  }
+  if (invoice.type !== "INVOICE") {
+    res.status(400).json({ error: "not_an_invoice" });
+    return;
+  }
+  if (invoice.paymentStatus === "PAID") {
+    res.status(409).json({ error: "already_paid" });
+    return;
+  }
+
+  const updated = await prisma.document.update({
+    where: { id },
+    data: { paymentStatus: "WRITTEN_OFF", writtenOffAt: new Date(), writeOffReason: body.writeOffReason },
+    include: DOCUMENT_INCLUDE,
+  });
+  res.json({ document: updated });
+});
+
+documentsRouter.post("/:id/reactivate", async (req, res) => {
+  const businessId = req.auth!.businessId;
+  const { id } = req.params;
+
+  const invoice = await prisma.document.findFirst({ where: { id, businessId } });
+  if (!invoice) {
+    res.status(404).json({ error: "not_found" });
+    return;
+  }
+  if (invoice.paymentStatus !== "WRITTEN_OFF") {
+    res.status(409).json({ error: "not_written_off" });
+    return;
+  }
+
+  await prisma.document.update({
+    where: { id },
+    data: { writtenOffAt: null, writeOffReason: null, paymentStatus: null },
+  });
+  await recomputeInvoicePaymentStatus(id);
+
+  const updated = await prisma.document.findUnique({ where: { id }, include: DOCUMENT_INCLUDE });
+  res.json({ document: updated });
 });
 
 documentsRouter.post("/:id/convert", async (req, res) => {
