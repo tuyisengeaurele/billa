@@ -2,7 +2,7 @@
 
 ## Context
 
-After the payment tracking and Accounts Receivable design (`2026-08-27-payment-tracking-design.md`), the user asked for a wider brainstorm: what else reflects how a real business actually operates day to day, still inside the "documents plus AR tracking" boundary (no bookkeeping, no inventory, no direct RRA filing, no payment gateway). From that list, seven items were picked to build. This spec covers all seven, in the order they'll likely get built (see Sequencing at the end).
+After the payment tracking and Accounts Receivable design (`2026-08-27-payment-tracking-design.md`), the user asked for a wider brainstorm: what else reflects how a real business actually operates day to day, still inside the "documents plus AR tracking" boundary (no bookkeeping, no inventory, no direct RRA filing, no payment gateway). From that list, seven items were picked to build. This spec covers all seven, plus an eighth item found while reviewing them (see item 8), in the order they'll likely get built (see Sequencing at the end).
 
 ## 1. Quote accept/decline
 
@@ -71,12 +71,21 @@ No customer login, no password, no OTP. The token is the entire access control, 
 
 One-click download of everything (documents, customers, items) instead of the three separate CSV exports that exist today (`/documents/export.csv`, `/customers/export.csv`, `/items/export.csv`). New route `GET /export/all`, returning a single JSON file with three arrays (`documents`, `customers`, `items`), reusing the same query logic those three routes already have, just combined into one response instead of one route per resource. JSON, not a zip of the existing CSVs, so this adds no new dependency (no zip library needed) and stays a plain `res.json()` response the existing `downloadFile()` client helper already knows how to save. A "Export all data" button on the Settings page, near the existing danger-zone/account-deletion controls, framed as the data-portability counterpart to that section.
 
+## 8. Invoice reference dropdown filters by customer
+
+A gap found while reviewing this batch: today, `DocumentForm.tsx` loads every finalized invoice for the whole business into the reference dropdown (used by `DELIVERY_NOTE`, `RECEIPT`, and now `CREDIT_NOTE`), regardless of which customer is selected on the form. Worse, nothing on the server checks that the referenced invoice actually belongs to the same customer as the document referencing it, so today you can select "Acme Ltd" as the customer and still reference "Beta Corp's" invoice.
+
+**Client fix:** once a customer is selected, load only that customer's finalized invoices (`GET /documents?type=INVOICE&status=FINALIZED&customerId=...`, the `customerId` filter already exists on this endpoint). If the customer changes after an invoice was already chosen, clear the invoice selection, since it likely no longer applies. Before a customer is picked, the dropdown shows a disabled placeholder ("Choose a customer first") instead of an empty or unfiltered list.
+
+**Server fix (the real correctness issue, independent of the UI):** `resolveReferencedDocument` (`server/src/routes/documents.ts`) currently checks that the referenced document belongs to the same business, is type `INVOICE`, and is `FINALIZED`. Add a fourth check: the referenced invoice's `customerId` must equal the referencing document's own `customerId`, rejecting with a new `referenced_document_wrong_customer` error otherwise.
+
 ## Sequencing
 
 1. Payment tracking and Accounts Receivable (already spec'd, unblocks items 5 and 6 below).
 2. Quote accept/decline, customer PO field, VAT summary report, full data export: independent of payment tracking and of each other, can be built in any order.
 3. Owner payment digest, full client portal: depend on the `Payment` model existing.
 4. Line-item discounts: independent of the others, but the biggest single change in this batch (schema plus totals plus both PDF templates plus the form), worth its own dedicated pass rather than interleaving with the smaller items.
+5. Invoice reference dropdown filter and its server-side customer check (item 8): independent of everything else, small, and worth doing early since it's a real data-integrity gap in a feature that already shipped.
 
 ## Explicitly still out of scope
 
