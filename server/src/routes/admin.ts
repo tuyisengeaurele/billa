@@ -24,7 +24,6 @@ import { validateQuery } from "../middleware/validate-query.js";
 import { logAdminAction } from "../lib/admin-audit-log.js";
 import { toCsv } from "../lib/csv.js";
 import { deleteBusinessCascade, deleteUserCascade } from "../lib/delete-business.js";
-import { issueSession } from "../lib/session.js";
 
 export const adminRouter = Router();
 
@@ -292,46 +291,6 @@ adminRouter.post("/users/:id/sessions/:sessionId/revoke", async (req, res) => {
     targetType: "User",
     targetId: id,
     metadata: { sessionId },
-  });
-
-  res.json({ ok: true });
-});
-
-adminRouter.post("/users/:id/impersonate", async (req, res) => {
-  const { id } = req.params;
-
-  if (req.auth!.impersonatedBy) {
-    res.status(409).json({ error: "already_impersonating" });
-    return;
-  }
-  if (id === req.auth!.userId) {
-    res.status(400).json({ error: "cannot_impersonate_self" });
-    return;
-  }
-
-  const target = await prisma.user.findUnique({ where: { id } });
-  if (!target) {
-    res.status(404).json({ error: "not_found" });
-    return;
-  }
-
-  let businessId = target.lastActiveBusinessId;
-  if (!businessId) {
-    const firstBusiness = await prisma.business.findFirstOrThrow({
-      where: { ownerId: target.id },
-      orderBy: { createdAt: "asc" },
-    });
-    businessId = firstBusiness.id;
-  }
-
-  await issueSession(res, target.id, businessId, req.auth!.userId);
-
-  await logAdminAction({
-    adminUserId: req.auth!.userId,
-    action: "IMPERSONATION_STARTED",
-    targetType: "User",
-    targetId: target.id,
-    metadata: { email: target.email },
   });
 
   res.json({ ok: true });
