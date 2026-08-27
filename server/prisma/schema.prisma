@@ -61,6 +61,16 @@ enum ActivityAction {
   MEMBER_INVITED
   MEMBER_JOINED
   MEMBER_REMOVED
+  MEMBER_IMPERSONATION_STARTED
+  MEMBER_IMPERSONATION_ENDED
+}
+
+enum ImpersonationRequestStatus {
+  PENDING
+  APPROVED
+  DENIED
+  EXPIRED
+  OVERRIDDEN
 }
 
 model Business {
@@ -86,15 +96,16 @@ model Business {
   createdAt             DateTime         @default(now())
   updatedAt             DateTime         @updatedAt
 
-  owner           User               @relation(fields: [ownerId], references: [id])
-  customers       Customer[]
-  items           Item[]
-  documents       Document[]
-  sequences       DocumentSequence[]
-  members         BusinessMember[]
-  invites         BusinessInvite[]
-  activityLog     ActivityLogEntry[]
-  invoicePayments InvoicePayment[]
+  owner                 User                   @relation(fields: [ownerId], references: [id])
+  customers             Customer[]
+  items                 Item[]
+  documents             Document[]
+  sequences             DocumentSequence[]
+  members               BusinessMember[]
+  invites               BusinessInvite[]
+  activityLog           ActivityLogEntry[]
+  invoicePayments       InvoicePayment[]
+  impersonationRequests ImpersonationRequest[]
 
   @@index([ownerId])
 }
@@ -118,15 +129,17 @@ model User {
   isAdmin     Boolean   @default(false)
   suspendedAt DateTime?
 
-  businesses             Business[]
-  refreshTokens          RefreshToken[]
-  payments               Payment[]
-  twoFactorChallenges    TwoFactorChallenge[]
-  memberships            BusinessMember[]
-  activityLog            ActivityLogEntry[]
-  adminAuditLog          AdminAuditLogEntry[]
-  announcements          Announcement[]
-  invoicePaymentsCreated InvoicePayment[]
+  businesses                 Business[]
+  refreshTokens              RefreshToken[]
+  payments                   Payment[]
+  twoFactorChallenges        TwoFactorChallenge[]
+  memberships                BusinessMember[]
+  activityLog                ActivityLogEntry[]
+  adminAuditLog              AdminAuditLogEntry[]
+  announcements              Announcement[]
+  invoicePaymentsCreated     InvoicePayment[]
+  impersonationRequestsMade  ImpersonationRequest[] @relation("ImpersonationRequester")
+  impersonationRequestsForMe ImpersonationRequest[] @relation("ImpersonationTarget")
 }
 
 model BusinessMember {
@@ -222,6 +235,27 @@ model TwoFactorChallenge {
   user User @relation(fields: [userId], references: [id])
 
   @@index([userId])
+}
+
+model ImpersonationRequest {
+  id             String                     @id @default(cuid())
+  requesterId    String
+  targetUserId   String
+  businessId     String
+  reason         String?
+  status         ImpersonationRequestStatus @default(PENDING)
+  requestedAt    DateTime                   @default(now())
+  respondedAt    DateTime?
+  expiresAt      DateTime
+  redeemedAt     DateTime?
+  overrideReason String?
+
+  requester User     @relation("ImpersonationRequester", fields: [requesterId], references: [id])
+  target    User     @relation("ImpersonationTarget", fields: [targetUserId], references: [id])
+  business  Business @relation(fields: [businessId], references: [id])
+
+  @@index([targetUserId, status])
+  @@index([requesterId, status])
 }
 
 model RefreshToken {
