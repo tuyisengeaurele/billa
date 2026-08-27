@@ -307,7 +307,7 @@ describe("AdminUserDetail", () => {
     expect(await screen.findByRole("button", { name: /^suspend$/i })).toBeDisabled();
   });
 
-  it("starts impersonation and enters the app when the button is clicked", async () => {
+  it("requests, auto-approves, and enters the app when the button is clicked", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
       const url = urlOf(input);
       if (url.endsWith("/auth/me")) {
@@ -316,7 +316,13 @@ describe("AdminUserDetail", () => {
           { status: 200 },
         );
       }
-      if (url.endsWith("/admin/users/u2/impersonate") && init?.method === "POST") {
+      if (url.endsWith("/impersonation-requests") && init?.method === "POST") {
+        return new Response(JSON.stringify({ request: { id: "req1", status: "PENDING" } }), { status: 201 });
+      }
+      if (url.endsWith("/impersonation-requests/req1")) {
+        return new Response(JSON.stringify({ status: "APPROVED" }), { status: 200 });
+      }
+      if (url.endsWith("/impersonation-requests/req1/redeem") && init?.method === "POST") {
         return new Response(JSON.stringify({ ok: true }), { status: 200 });
       }
       if (url.endsWith("/admin/users/u2")) {
@@ -345,6 +351,59 @@ describe("AdminUserDetail", () => {
     renderPage();
 
     await user.click(await screen.findByRole("button", { name: /^impersonate$/i }));
+
+    expect(await screen.findByText("dashboard page")).toBeInTheDocument();
+  });
+
+  it("shows a denial and an override option once the request expires", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/auth/me")) {
+        return new Response(
+          JSON.stringify({ user: { id: "u1", email: "admin@example.com", isAdmin: true }, business: { id: "b1", name: "Admin Co" } }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/impersonation-requests") && init?.method === "POST") {
+        return new Response(JSON.stringify({ request: { id: "req1", status: "PENDING" } }), { status: 201 });
+      }
+      if (url.endsWith("/impersonation-requests/req1")) {
+        return new Response(JSON.stringify({ status: "EXPIRED" }), { status: 200 });
+      }
+      if (url.endsWith("/impersonation-requests/req1/override") && init?.method === "POST") {
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      }
+      if (url.endsWith("/admin/users/u2")) {
+        return new Response(
+          JSON.stringify({
+            user: {
+              id: "u2",
+              email: "owner@example.com",
+              isAdmin: false,
+              suspendedAt: null,
+              trialEndsAt: "2026-09-01T00:00:00.000Z",
+              currentPeriodEnd: null,
+              plan: null,
+              createdAt: "2026-08-01T00:00:00.000Z",
+            },
+            ownedBusinesses: [],
+            memberBusinesses: [],
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: /^impersonate$/i }));
+
+    expect(await screen.findByText(/expired without a response/i)).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText(/reason for overriding/i), "Customer locked out");
+    await user.click(screen.getByRole("button", { name: /override and enter/i }));
 
     expect(await screen.findByText("dashboard page")).toBeInTheDocument();
   });

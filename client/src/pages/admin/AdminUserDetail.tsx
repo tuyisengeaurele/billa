@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { AdminLayout } from "../../components/admin/AdminLayout";
 import { Modal } from "../../components/Modal";
 import { useAuth } from "../../context/AuthContext";
+import { useImpersonationRequest } from "../../hooks/useImpersonationRequest";
 import { apiRequest, ApiError } from "../../lib/apiClient";
 import { PlanBadge, type PlanKey } from "../../lib/planColors";
 
@@ -36,7 +37,7 @@ interface SessionRow {
 
 export default function AdminUserDetail() {
   const { id } = useParams();
-  const { user: currentUser, refreshAuth } = useAuth();
+  const { user: currentUser } = useAuth();
   const navigate = useNavigate();
   const [detail, setDetail] = useState<UserDetailResponse | null>(null);
   const [notFound, setNotFound] = useState(false);
@@ -46,7 +47,8 @@ export default function AdminUserDetail() {
   const [isExtendingTrial, setIsExtendingTrial] = useState(false);
   const [isSuspendModalOpen, setIsSuspendModalOpen] = useState(false);
   const [isSuspending, setIsSuspending] = useState(false);
-  const [isImpersonating, setIsImpersonating] = useState(false);
+  const impersonation = useImpersonationRequest();
+  const [overrideReason, setOverrideReason] = useState("");
   const [sessions, setSessions] = useState<SessionRow[] | null>(null);
   const [revokingSessionId, setRevokingSessionId] = useState<string | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -133,18 +135,15 @@ export default function AdminUserDetail() {
     }
   }
 
-  async function impersonate() {
+  function requestImpersonation() {
     if (!detail) return;
-    setError(null);
-    setIsImpersonating(true);
-    try {
-      await apiRequest(`/admin/users/${id}/impersonate`, { method: "POST" });
-      await refreshAuth();
-      navigate("/dashboard");
-    } catch {
-      setError("Couldn't start impersonation. Try again.");
-      setIsImpersonating(false);
-    }
+    impersonation.start(detail.user.id);
+  }
+
+  function submitOverride(event: FormEvent) {
+    event.preventDefault();
+    if (!overrideReason.trim()) return;
+    impersonation.override(overrideReason.trim());
   }
 
   async function handleDelete() {
@@ -285,14 +284,55 @@ export default function AdminUserDetail() {
 
             <button
               type="button"
-              disabled={isSelf || isImpersonating}
-              onClick={impersonate}
+              disabled={isSelf || impersonation.status === "pending" || impersonation.status === "redeeming"}
+              onClick={requestImpersonation}
               title={isSelf ? "You can't impersonate yourself" : undefined}
               className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 transition-colors hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isImpersonating ? "Entering…" : "Impersonate"}
+              {impersonation.status === "pending"
+                ? "Waiting for approval…"
+                : impersonation.status === "redeeming"
+                  ? "Entering…"
+                  : "Impersonate"}
             </button>
           </div>
+
+          {impersonation.status === "pending" && (
+            <p className="mt-3 font-sans text-sm text-neutral-600">
+              Asking {detail.user.email} for permission. This will time out in a couple of minutes if they don't
+              respond.
+            </p>
+          )}
+          {impersonation.status === "denied" && (
+            <p className="mt-3 font-sans text-sm text-error">{detail.user.email} denied the request.</p>
+          )}
+          {impersonation.status === "error" && impersonation.errorMessage && (
+            <p className="mt-3 font-sans text-sm text-error">{impersonation.errorMessage}</p>
+          )}
+          {impersonation.status === "expired" && (
+            <form onSubmit={submitOverride} className="mt-3 flex flex-col gap-2 rounded-lg bg-neutral-50 p-4">
+              <p className="font-sans text-sm text-neutral-700">
+                The request expired without a response. As an admin you can override this, but it's logged with a
+                reason.
+              </p>
+              <label htmlFor="overrideReason" className="font-sans text-sm font-medium text-neutral-800">
+                Reason for overriding
+              </label>
+              <input
+                id="overrideReason"
+                value={overrideReason}
+                onChange={(e) => setOverrideReason(e.target.value)}
+                className="rounded-lg border border-neutral-200 bg-surface px-3.5 py-2 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+              />
+              <button
+                type="submit"
+                disabled={!overrideReason.trim()}
+                className="self-start rounded-lg border border-error px-4 py-2 font-sans text-sm font-semibold text-error transition-colors hover:bg-error-bg disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Override and enter
+              </button>
+            </form>
+          )}
 
           {detail.user.suspendedAt && (
             <p className="mt-3 font-sans text-sm text-error">
