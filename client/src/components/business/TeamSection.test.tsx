@@ -1,11 +1,25 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../../context/AuthContext";
 import { TeamSection } from "./TeamSection";
 
 function urlOf(input: RequestInfo | URL): string {
   return typeof input === "string" ? input : input.toString();
+}
+
+function renderTeamSection() {
+  return render(
+    <MemoryRouter>
+      <AuthProvider>
+        <Routes>
+          <Route path="/" element={<TeamSection />} />
+          <Route path="/dashboard" element={<div>dashboard page</div>} />
+        </Routes>
+      </AuthProvider>
+    </MemoryRouter>,
+  );
 }
 
 describe("TeamSection", () => {
@@ -48,15 +62,12 @@ describe("TeamSection", () => {
     });
 
     const user = userEvent.setup();
-    render(
-      <AuthProvider>
-        <TeamSection />
-      </AuthProvider>,
-    );
+    renderTeamSection();
 
     expect(await screen.findByText("owner@example.com", { exact: false })).toBeInTheDocument();
     expect(screen.getByText("staff@example.com", { exact: false })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /remove/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^impersonate$/i })).toBeInTheDocument();
 
     await user.type(screen.getByLabelText(/invite by email/i), "new@example.com");
     await user.click(screen.getByRole("button", { name: /send invite/i }));
@@ -77,11 +88,7 @@ describe("TeamSection", () => {
       return new Response("{}", { status: 401 });
     });
 
-    render(
-      <AuthProvider>
-        <TeamSection />
-      </AuthProvider>,
-    );
+    renderTeamSection();
 
     expect(await screen.findByText(/only the business owner can manage/i)).toBeInTheDocument();
   });
@@ -119,11 +126,7 @@ describe("TeamSection", () => {
     });
 
     const user = userEvent.setup();
-    render(
-      <AuthProvider>
-        <TeamSection />
-      </AuthProvider>,
-    );
+    renderTeamSection();
 
     await user.click(await screen.findByRole("button", { name: /copy link/i }));
 
@@ -172,14 +175,87 @@ describe("TeamSection", () => {
     });
 
     const user = userEvent.setup();
-    render(
-      <AuthProvider>
-        <TeamSection />
-      </AuthProvider>,
-    );
+    renderTeamSection();
 
     await user.click(await screen.findByRole("button", { name: /^resend$/i }));
 
     expect(await screen.findByText(/invite sent/i)).toBeInTheDocument();
+  });
+
+  it("requests, auto-approves, and enters the app when a member is impersonated", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/auth/me")) {
+        return new Response("{}", { status: 401 });
+      }
+      if (url.endsWith("/business/members")) {
+        return new Response(
+          JSON.stringify({
+            members: [
+              { id: "u1", email: "owner@example.com", role: "owner", joinedAt: "2026-01-01" },
+              { id: "u2", email: "staff@example.com", role: "member", joinedAt: "2026-01-02" },
+            ],
+          }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/business/invites") && (!init || init.method === undefined || init.method === "GET")) {
+        return new Response(JSON.stringify({ invites: [] }), { status: 200 });
+      }
+      if (url.endsWith("/impersonation-requests") && init?.method === "POST") {
+        return new Response(JSON.stringify({ request: { id: "req1", status: "PENDING" } }), { status: 201 });
+      }
+      if (url.endsWith("/impersonation-requests/req1")) {
+        return new Response(JSON.stringify({ status: "APPROVED" }), { status: 200 });
+      }
+      if (url.endsWith("/impersonation-requests/req1/redeem") && init?.method === "POST") {
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderTeamSection();
+
+    await user.click(await screen.findByRole("button", { name: /^impersonate$/i }));
+
+    expect(await screen.findByText("dashboard page")).toBeInTheDocument();
+  });
+
+  it("shows a denial message when the member declines", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/auth/me")) {
+        return new Response("{}", { status: 401 });
+      }
+      if (url.endsWith("/business/members")) {
+        return new Response(
+          JSON.stringify({
+            members: [
+              { id: "u1", email: "owner@example.com", role: "owner", joinedAt: "2026-01-01" },
+              { id: "u2", email: "staff@example.com", role: "member", joinedAt: "2026-01-02" },
+            ],
+          }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/business/invites") && (!init || init.method === undefined || init.method === "GET")) {
+        return new Response(JSON.stringify({ invites: [] }), { status: 200 });
+      }
+      if (url.endsWith("/impersonation-requests") && init?.method === "POST") {
+        return new Response(JSON.stringify({ request: { id: "req1", status: "PENDING" } }), { status: 201 });
+      }
+      if (url.endsWith("/impersonation-requests/req1")) {
+        return new Response(JSON.stringify({ status: "DENIED" }), { status: 200 });
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderTeamSection();
+
+    await user.click(await screen.findByRole("button", { name: /^impersonate$/i }));
+
+    expect(await screen.findByText(/staff@example.com denied the request/i)).toBeInTheDocument();
   });
 });

@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { useImpersonationRequest } from "../../hooks/useImpersonationRequest";
 import { apiRequest, ApiError } from "../../lib/apiClient";
 import { copyToClipboard } from "../../lib/clipboard";
 import { Button } from "../Button";
@@ -30,6 +31,8 @@ export function TeamSection() {
   const [successLink, setSuccessLink] = useState<string | null>(null);
   const [copiedInviteId, setCopiedInviteId] = useState<string | null>(null);
   const [resendingId, setResendingId] = useState<string | null>(null);
+  const impersonation = useImpersonationRequest();
+  const [impersonatingMemberId, setImpersonatingMemberId] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -72,6 +75,11 @@ export function TeamSection() {
     } finally {
       setIsInviting(false);
     }
+  }
+
+  function requestImpersonation(memberId: string) {
+    setImpersonatingMemberId(memberId);
+    impersonation.start(memberId);
   }
 
   async function removeMember(id: string) {
@@ -169,26 +177,56 @@ export function TeamSection() {
       )}
 
       <ul className="mt-4 flex flex-col gap-2">
-        {members?.map((member) => (
-          <li
-            key={member.id}
-            className="flex items-center justify-between rounded-lg border border-neutral-200 px-3.5 py-2.5"
-          >
-            <span className="font-sans text-sm text-neutral-900">
-              {member.email}{" "}
-              <span className="text-neutral-400">· {member.role === "owner" ? "Owner" : "Member"}</span>
-            </span>
-            {member.role === "member" && (
-              <button
-                type="button"
-                onClick={() => removeMember(member.id)}
-                className="font-sans text-sm text-error hover:underline"
-              >
-                Remove
-              </button>
-            )}
-          </li>
-        ))}
+        {members?.map((member) => {
+          const isImpersonatingThisMember = impersonatingMemberId === member.id;
+          return (
+            <li
+              key={member.id}
+              className="flex flex-col gap-2 rounded-lg border border-neutral-200 px-3.5 py-2.5"
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-sans text-sm text-neutral-900">
+                  {member.email}{" "}
+                  <span className="text-neutral-400">· {member.role === "owner" ? "Owner" : "Member"}</span>
+                </span>
+                {member.role === "member" && (
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      disabled={isImpersonatingThisMember && (impersonation.status === "pending" || impersonation.status === "redeeming")}
+                      onClick={() => requestImpersonation(member.id)}
+                      className="font-sans text-sm text-primary-500 hover:underline disabled:opacity-50"
+                    >
+                      {isImpersonatingThisMember && impersonation.status === "pending"
+                        ? "Waiting for approval…"
+                        : isImpersonatingThisMember && impersonation.status === "redeeming"
+                          ? "Entering…"
+                          : "Impersonate"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeMember(member.id)}
+                      className="font-sans text-sm text-error hover:underline"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
+              </div>
+              {isImpersonatingThisMember && impersonation.status === "denied" && (
+                <p className="font-sans text-sm text-error">{member.email} denied the request.</p>
+              )}
+              {isImpersonatingThisMember && impersonation.status === "expired" && (
+                <p className="font-sans text-sm text-neutral-600">
+                  The request expired without a response. Ask them to be online and try again.
+                </p>
+              )}
+              {isImpersonatingThisMember && impersonation.status === "error" && impersonation.errorMessage && (
+                <p className="font-sans text-sm text-error">{impersonation.errorMessage}</p>
+              )}
+            </li>
+          );
+        })}
       </ul>
 
       {invites && invites.length > 0 && (
