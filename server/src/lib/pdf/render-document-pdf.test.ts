@@ -28,6 +28,7 @@ function makeData(overrides: Partial<PdfRenderData> = {}): PdfRenderData {
     issueDate: "2026-08-18",
     dueDate: null,
     notes: null,
+    customerReference: null,
     lines: [],
     subtotalFormatted: "0 RWF",
     taxTotalFormatted: "0 RWF",

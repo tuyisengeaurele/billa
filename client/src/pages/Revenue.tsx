@@ -28,6 +28,28 @@ interface RevenueSummary {
   topCustomers: TopCustomerRow[];
 }
 
+interface TaxRateRow {
+  rate: number;
+  taxableAmount: number;
+  taxAmount: number;
+}
+
+interface TaxSummary {
+  totalTaxInvoiced: number;
+  totalTaxCredited: number;
+  totalTaxCollected: number;
+  byRate: TaxRateRow[];
+}
+
+function startOfMonthIso(): string {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+}
+
+function todayIso(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
 function formatMonth(month: string): string {
   const [year, monthNum] = month.split("-");
   const date = new Date(Number(year), Number(monthNum) - 1, 1);
@@ -48,12 +70,23 @@ export default function Revenue() {
   };
   const [summary, setSummary] = useState<RevenueSummary | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const [taxSummary, setTaxSummary] = useState<TaxSummary | null>(null);
+  const [taxLoadError, setTaxLoadError] = useState(false);
+  const [taxFrom, setTaxFrom] = useState(startOfMonthIso());
+  const [taxTo, setTaxTo] = useState(todayIso());
 
   useEffect(() => {
     apiRequest<RevenueSummary>("/dashboard/revenue")
       .then(setSummary)
       .catch(() => setLoadError(true));
   }, []);
+
+  useEffect(() => {
+    setTaxLoadError(false);
+    apiRequest<TaxSummary>(`/reports/tax-summary?from=${taxFrom}&to=${taxTo}`)
+      .then(setTaxSummary)
+      .catch(() => setTaxLoadError(true));
+  }, [taxFrom, taxTo]);
 
   const hasRevenue = summary !== null && summary.invoicedYearToDate > 0;
 
@@ -154,6 +187,86 @@ export default function Revenue() {
             </div>
           </>
         )}
+
+        <div className="rounded-xl border border-neutral-200 bg-surface p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="font-sans text-sm font-semibold text-neutral-900">Tax summary</p>
+              <p className="mt-1 font-sans text-xs text-neutral-500">
+                Tax collected on finalized invoices, net of credit notes, for filing your own VAT return.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                aria-label="From date"
+                value={taxFrom}
+                onChange={(event) => setTaxFrom(event.target.value)}
+                className="rounded-lg border border-neutral-200 bg-surface px-3 py-2 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+              />
+              <span className="font-sans text-sm text-neutral-400">to</span>
+              <input
+                type="date"
+                aria-label="To date"
+                value={taxTo}
+                onChange={(event) => setTaxTo(event.target.value)}
+                className="rounded-lg border border-neutral-200 bg-surface px-3 py-2 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+              />
+            </div>
+          </div>
+
+          {taxLoadError && (
+            <div className="mt-4 rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
+              Couldn't load the tax summary. Try again.
+            </div>
+          )}
+
+          {taxSummary && !taxLoadError && (
+            <>
+              <div className="mt-4 grid grid-cols-3 gap-4">
+                <div>
+                  <p className="font-sans text-xs text-neutral-500">Tax invoiced</p>
+                  <p className="mt-1 font-display text-lg font-semibold text-neutral-900">
+                    {formatRwf(taxSummary.totalTaxInvoiced)}
+                  </p>
+                </div>
+                <div>
+                  <p className="font-sans text-xs text-neutral-500">Tax credited</p>
+                  <p className="mt-1 font-display text-lg font-semibold text-neutral-900">
+                    {formatRwf(taxSummary.totalTaxCredited)}
+                  </p>
+                </div>
+                <div>
+                  <p className="font-sans text-xs text-neutral-500">Tax collected</p>
+                  <p className="mt-1 font-display text-lg font-semibold text-primary-700">
+                    {formatRwf(taxSummary.totalTaxCollected)}
+                  </p>
+                </div>
+              </div>
+
+              {taxSummary.byRate.length > 0 && (
+                <table className="mt-4 w-full border-collapse font-sans text-sm">
+                  <thead>
+                    <tr className="border-b border-neutral-200 text-left text-neutral-500">
+                      <th className="py-2">Rate</th>
+                      <th className="py-2">Taxable amount</th>
+                      <th className="py-2">Tax</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {taxSummary.byRate.map((row) => (
+                      <tr key={row.rate} className="border-b border-neutral-100">
+                        <td className="py-2 text-neutral-900">{row.rate}%</td>
+                        <td className="py-2 text-neutral-600">{formatRwf(row.taxableAmount)}</td>
+                        <td className="py-2 text-neutral-600">{formatRwf(row.taxAmount)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </AppLayout>
   );

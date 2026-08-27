@@ -2,6 +2,8 @@ import type { Document, Prisma } from "@prisma/client";
 import { prisma } from "./prisma.js";
 import { calculateDocumentTotals } from "./document-totals.js";
 
+const CONVERTIBLE_TYPES = ["PROFORMA", "QUOTE"];
+
 export type ConvertProformaResult =
   | { ok: true; invoice: Document }
   | { ok: false; status: number; error: string };
@@ -16,11 +18,14 @@ export async function convertProformaToInvoice(
   if (!proforma) {
     return { ok: false, status: 404, error: "not_found" };
   }
-  if (proforma.type !== "PROFORMA") {
-    return { ok: false, status: 400, error: "not_a_proforma" };
+  if (!CONVERTIBLE_TYPES.includes(proforma.type)) {
+    return { ok: false, status: 400, error: "not_convertible" };
   }
   if (proforma.status !== "FINALIZED") {
     return { ok: false, status: 409, error: "not_finalized" };
+  }
+  if (proforma.declinedAt) {
+    return { ok: false, status: 409, error: "already_declined" };
   }
   if (proforma.convertedTo) {
     return { ok: false, status: 409, error: "already_converted" };
@@ -32,6 +37,8 @@ export async function convertProformaToInvoice(
       quantity: Number(line.quantity),
       unitPrice: line.unitPrice,
       taxRate: Number(line.taxRate),
+      discountType: line.discountType,
+      discountValue: line.discountValue ? Number(line.discountValue) : null,
     })),
   );
 
@@ -55,6 +62,8 @@ export async function convertProformaToInvoice(
           quantity: line.quantity,
           unitPrice: line.unitPrice,
           taxRate: line.taxRate,
+          discountType: line.discountType,
+          discountValue: line.discountValue,
           lineTotal: totals.lines[index].lineTotal,
           sortOrder: index,
         })),
@@ -63,4 +72,33 @@ export async function convertProformaToInvoice(
   });
 
   return { ok: true, invoice };
+}
+
+export type DeclineDocumentResult = { ok: true } | { ok: false; status: number; error: string };
+
+export async function declineDocument(
+  where: Prisma.DocumentWhereInput & { id: string },
+): Promise<DeclineDocumentResult> {
+  const document = await prisma.document.findFirst({
+    where,
+    include: { convertedTo: { select: { id: true } } },
+  });
+  if (!document) {
+    return { ok: false, status: 404, error: "not_found" };
+  }
+  if (!CONVERTIBLE_TYPES.includes(document.type)) {
+    return { ok: false, status: 400, error: "not_declinable" };
+  }
+  if (document.status !== "FINALIZED") {
+    return { ok: false, status: 409, error: "not_finalized" };
+  }
+  if (document.convertedTo) {
+    return { ok: false, status: 409, error: "already_converted" };
+  }
+  if (document.declinedAt) {
+    return { ok: false, status: 409, error: "already_declined" };
+  }
+
+  await prisma.document.update({ where: { id: document.id }, data: { declinedAt: new Date() } });
+  return { ok: true };
 }

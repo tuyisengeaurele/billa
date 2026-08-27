@@ -105,3 +105,48 @@ describe("GET /items/export.csv", () => {
     expect(res.status).toBe(401);
   });
 });
+
+describe("GET /export/all", () => {
+  it("returns the business's own documents, customers, and items in one response", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customer = await request(app).post("/customers").set("Cookie", cookies).send({ name: "Acme Ltd" });
+    await request(app)
+      .post("/documents")
+      .set("Cookie", cookies)
+      .send({
+        type: "INVOICE",
+        customerId: customer.body.customer.id,
+        issueDate: "2026-08-19",
+        lines: [{ description: "Cement", quantity: 5, unitPrice: 13000, taxRate: 18 }],
+      });
+    await request(app).post("/items").set("Cookie", cookies).send({ description: "Cement bag", unitPrice: 13000, unit: "bag" });
+
+    const res = await request(app).get("/export/all").set("Cookie", cookies);
+
+    expect(res.status).toBe(200);
+    expect(res.body.documents).toHaveLength(1);
+    expect(res.body.documents[0].customer).toBe("Acme Ltd");
+    expect(res.body.customers).toHaveLength(1);
+    expect(res.body.customers[0].name).toBe("Acme Ltd");
+    expect(res.body.items).toHaveLength(1);
+    expect(res.body.items[0].description).toBe("Cement bag");
+    expect(res.body.exportedAt).toBeTruthy();
+  });
+
+  it("does not include another business's data", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app, "owner@example.com");
+    const otherCookies = await registerAndGetCookies(app, "other@example.com");
+    await request(app).post("/customers").set("Cookie", otherCookies).send({ name: "Other Corp" });
+
+    const res = await request(app).get("/export/all").set("Cookie", cookies);
+
+    expect(res.body.customers).toHaveLength(0);
+  });
+
+  it("returns 401 without a session", async () => {
+    const res = await request(createApp()).get("/export/all");
+    expect(res.status).toBe(401);
+  });
+});

@@ -32,6 +32,11 @@ enum RecurrenceInterval {
   ANNUALLY
 }
 
+enum DiscountType {
+  PERCENT
+  FLAT
+}
+
 enum ActivityAction {
   DOCUMENT_CREATED
   DOCUMENT_FINALIZED
@@ -273,6 +278,7 @@ model Document {
   issueDate  DateTime         @default(now())
   dueDate    DateTime?
   notes      String?
+  customerReference String?
   subtotal   Int
   taxTotal   Int
   total      Int
@@ -289,6 +295,7 @@ model Document {
   convertedFromId String?   @unique
   convertedFrom   Document? @relation("DocumentConversion", fields: [convertedFromId], references: [id])
   convertedTo     Document? @relation("DocumentConversion")
+  declinedAt      DateTime?
 
   referencedDocumentId String?
   referencedDocument   Document?  @relation("DocumentReference", fields: [referencedDocumentId], references: [id])
@@ -315,6 +322,8 @@ model DocumentLine {
   quantity    Decimal @db.Decimal(10, 2)
   unitPrice   Int
   taxRate     Decimal @db.Decimal(5, 2)
+  discountType  DiscountType?
+  discountValue Decimal? @db.Decimal(10, 2)
   lineTotal   Int
   sortOrder   Int
 

@@ -4,9 +4,10 @@ import { downloadFile } from "../lib/downloadFile";
 interface ExportCsvButtonProps {
   path: string;
   filename: string;
+  label?: string;
 }
 
-export function ExportCsvButton({ path, filename }: ExportCsvButtonProps) {
+export function ExportCsvButton({ path, filename, label = "Export CSV" }: ExportCsvButtonProps) {
   const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,7 +31,7 @@ export function ExportCsvButton({ path, filename }: ExportCsvButtonProps) {
         onClick={handleExport}
         className="rounded-lg border border-neutral-200 px-3.5 py-1.5 font-sans text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {isExporting ? "Exporting…" : "Export CSV"}
+        {isExporting ? "Exporting…" : label}
       </button>
       {error && (
         <p className="font-sans text-xs text-error" role="alert">

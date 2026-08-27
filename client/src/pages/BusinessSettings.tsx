@@ -12,6 +12,7 @@ import { SequenceEditor } from "../components/business/SequenceEditor";
 import { BillingSection } from "../components/business/BillingSection";
 import { TwoFactorSection } from "../components/business/TwoFactorSection";
 import { TeamSection } from "../components/business/TeamSection";
+import { ExportCsvButton } from "../components/ExportCsvButton";
 
 interface BusinessProfile {
   ownerId: string;
@@ -408,6 +409,18 @@ export default function BusinessSettings() {
         <TwoFactorSection />
 
         <BillingSection />
+
+        <section className="rounded-xl border border-neutral-200 bg-surface p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-display text-base font-semibold text-neutral-900">Your data</h2>
+              <p className="mt-1 font-sans text-sm text-neutral-600">
+                Download every document, customer, and item as a single file.
+              </p>
+            </div>
+            <ExportCsvButton path="/export/all" filename="billa-export.json" label="Export all data" />
+          </div>
+        </section>
 
         <section className="rounded-xl border border-error/30 bg-surface p-6">
           <h2 className="font-display text-base font-semibold text-neutral-900">Danger zone</h2>

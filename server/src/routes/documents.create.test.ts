@@ -51,6 +51,52 @@ describe("POST /documents", () => {
     expect(res.body.document.lines).toHaveLength(2);
   });
 
+  it("applies a percentage line discount before tax", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies);
+
+    const res = await request(app)
+      .post("/documents")
+      .set("Cookie", cookies)
+      .send({
+        type: "INVOICE",
+        customerId,
+        issueDate: "2026-08-19",
+        lines: [
+          {
+            description: "Cement",
+            quantity: 1,
+            unitPrice: 10000,
+            taxRate: 18,
+            discountType: "PERCENT",
+            discountValue: 10,
+          },
+        ],
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.document.lines[0].discountType).toBe("PERCENT");
+    expect(Number(res.body.document.lines[0].discountValue)).toBe(10);
+    expect(res.body.document.subtotal).toBe(9000);
+    expect(res.body.document.taxTotal).toBe(1620);
+    expect(res.body.document.total).toBe(10620);
+  });
+
+  it("saves and returns a customerReference", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies);
+
+    const res = await request(app)
+      .post("/documents")
+      .set("Cookie", cookies)
+      .send({ type: "INVOICE", customerId, issueDate: "2026-08-19", lines: [], customerReference: "PO-4821" });
+
+    expect(res.status).toBe(201);
+    expect(res.body.document.customerReference).toBe("PO-4821");
+  });
+
   it("allows creating a draft with zero lines", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app);

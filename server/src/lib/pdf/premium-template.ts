@@ -80,7 +80,7 @@ export function renderPremiumHtml(data: PdfRenderData): string {
     .map(
       (line, i) => `<tr>
         <td>${String(i + 1).padStart(2, "0")}</td>
-        <td><div class="prod-name">${line.description}</div></td>
+        <td><div class="prod-name">${line.description}</div>${line.discountFormatted ? `<div style="font-size:10px;color:#6b7280">${line.discountFormatted}</div>` : ""}</td>
         <td class="r">${line.quantity}</td>
         <td class="r">${line.unitPriceFormatted}</td>
         <td class="r">${line.taxRateFormatted}</td>
@@ -148,6 +148,7 @@ export function renderPremiumHtml(data: PdfRenderData): string {
           <table class="doc-dates">
             <tr><td>Issued:</td><td>${data.issueDate}</td></tr>
             ${data.dueDateLabel && data.dueDate ? `<tr><td>${data.dueDateLabel}:</td><td>${data.dueDate}</td></tr>` : ""}
+            ${data.customerReference ? `<tr><td>Reference:</td><td>${data.customerReference}</td></tr>` : ""}
           </table>
           <div class="status-pill" style="background:${data.status === "FINALIZED" ? "#e6f4ea" : "#f3f4f6"}; color:${data.status === "FINALIZED" ? "#1e7d32" : "#6b7280"}">
             ${data.status === "FINALIZED" ? "Finalized" : "Draft"}

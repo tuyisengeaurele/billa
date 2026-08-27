@@ -18,8 +18,8 @@ async function registerAndGetCookies(app: ReturnType<typeof createApp>) {
   return res.headers["set-cookie"] as unknown as string[];
 }
 
-async function createCustomer(app: ReturnType<typeof createApp>, cookies: string[]) {
-  const res = await request(app).post("/customers").set("Cookie", cookies).send({ name: "Musanze Supplies" });
+async function createCustomer(app: ReturnType<typeof createApp>, cookies: string[], name = "Musanze Supplies") {
+  const res = await request(app).post("/customers").set("Cookie", cookies).send({ name });
   return res.body.customer.id as string;
 }
 
@@ -142,6 +142,28 @@ describe("referencedDocumentId on delivery notes and receipts", () => {
 
     expect(res.status).toBe(201);
     expect(res.body.document.referencedDocument.id).toBe(invoice.id);
+  });
+
+  it("rejects referencing an invoice that belongs to a different customer", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies);
+    const invoice = await createFinalizedInvoice(app, cookies, customerId);
+    const otherCustomerId = await createCustomer(app, cookies, "Other Customer Ltd");
+
+    const res = await request(app)
+      .post("/documents")
+      .set("Cookie", cookies)
+      .send({
+        type: "DELIVERY_NOTE",
+        customerId: otherCustomerId,
+        issueDate: "2026-08-20",
+        lines: [],
+        referencedDocumentId: invoice.id,
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("referenced_document_wrong_customer");
   });
 
   it("rejects referencing a document that isn't an invoice", async () => {

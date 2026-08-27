@@ -56,6 +56,8 @@ function makeDocument(
     lastReminderSentAt: null,
     convertedFromId: null,
     referencedDocumentId: null,
+    declinedAt: null,
+    customerReference: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     customer: {
@@ -79,6 +81,8 @@ function makeDocument(
         quantity: new Decimal("3.00"),
         unitPrice: 5000,
         taxRate: new Decimal("18.00"),
+        discountType: null,
+        discountValue: null,
         lineTotal: 15000,
         sortOrder: 0,
       },

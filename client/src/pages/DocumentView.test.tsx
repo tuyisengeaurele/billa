@@ -206,6 +206,87 @@ describe("DocumentView", () => {
     await waitFor(() => expect(screen.getByText("edit invoice page")).toBeInTheDocument());
   });
 
+  it("offers to convert a finalized quote to a draft invoice too", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.endsWith("/documents/d1")) {
+        return new Response(
+          JSON.stringify({
+            document: {
+              id: "d1",
+              type: "QUOTE",
+              number: "QUO-0001",
+              status: "FINALIZED",
+              customer: { name: "Kigali Traders" },
+              lines: [],
+              subtotal: 0,
+              taxTotal: 0,
+              total: 0,
+              convertedFrom: null,
+              convertedTo: null,
+              declinedAt: null,
+            },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/documents/d1"]}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/documents/:id" element={<DocumentView />} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("button", { name: /convert to invoice/i })).toBeInTheDocument();
+  });
+
+  it("shows a Declined by customer badge instead of the convert button once declined", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.endsWith("/documents/d1")) {
+        return new Response(
+          JSON.stringify({
+            document: {
+              id: "d1",
+              type: "PROFORMA",
+              number: "PRO-0001",
+              status: "FINALIZED",
+              customer: { name: "Kigali Traders" },
+              lines: [],
+              subtotal: 0,
+              taxTotal: 0,
+              total: 0,
+              convertedFrom: null,
+              convertedTo: null,
+              declinedAt: "2026-08-27T00:00:00.000Z",
+            },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/documents/d1"]}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/documents/:id" element={<DocumentView />} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText(/declined by customer/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /convert to invoice/i })).not.toBeInTheDocument();
+  });
+
   it("duplicates a document and navigates to editing the new draft", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
       const url = urlOf(input);

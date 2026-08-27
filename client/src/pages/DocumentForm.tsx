@@ -25,6 +25,11 @@ const lineFormSchema = z.object({
     .number({ invalid_type_error: "Enter a tax rate" })
     .min(0, "Tax rate can't be negative")
     .max(100, "Tax rate can't exceed 100%"),
+  discountType: z.union([z.literal(""), z.literal("PERCENT"), z.literal("FLAT")]).optional(),
+  discountValue: z.number().nonnegative("Discount can't be negative").optional(),
+}).refine((line) => line.discountType !== "PERCENT" || (line.discountValue ?? 0) <= 100, {
+  message: "A percentage discount can't exceed 100%",
+  path: ["discountValue"],
 });
 
 const documentFormSchema = z.object({
@@ -33,6 +38,7 @@ const documentFormSchema = z.object({
   issueDate: z.string().trim().min(1, "Choose an issue date"),
   dueDate: z.string().trim(),
   notes: z.string().trim(),
+  customerReference: z.string().trim(),
   lines: z.array(lineFormSchema),
   recurrenceEnabled: z.boolean(),
   recurrenceInterval: z.string(),
@@ -53,6 +59,8 @@ interface DocumentLineResponse {
   quantity: string | number;
   unitPrice: number;
   taxRate: string | number;
+  discountType: "PERCENT" | "FLAT" | null;
+  discountValue: string | number | null;
 }
 
 interface DocumentResponse {
@@ -62,6 +70,7 @@ interface DocumentResponse {
   issueDate: string;
   dueDate: string | null;
   notes: string | null;
+  customerReference: string | null;
   lines: DocumentLineResponse[];
   convertedFrom: { id: string; number: string | null } | null;
   referencedDocument: { id: string; number: string | null } | null;
@@ -79,11 +88,31 @@ interface InvoiceOption {
 const REFERENCEABLE_TYPES: DocumentType[] = ["DELIVERY_NOTE", "RECEIPT", "CREDIT_NOTE"];
 const REQUIRED_REFERENCE_TYPES: DocumentType[] = ["RECEIPT", "CREDIT_NOTE"];
 
-function calculateLiveTotals(lines: { quantity?: number; unitPrice?: number; taxRate?: number }[]) {
+interface LiveLine {
+  quantity?: number;
+  unitPrice?: number;
+  taxRate?: number;
+  discountType?: string;
+  discountValue?: number;
+}
+
+function calculateLineTotal(line: LiveLine): number {
+  const rawLineTotal = Math.round((line.quantity || 0) * (line.unitPrice || 0));
+  const rawDiscount =
+    line.discountType === "PERCENT"
+      ? Math.round(rawLineTotal * ((line.discountValue || 0) / 100))
+      : line.discountType === "FLAT"
+        ? Math.round(line.discountValue || 0)
+        : 0;
+  const discountAmount = Math.min(Math.max(rawDiscount, 0), rawLineTotal);
+  return rawLineTotal - discountAmount;
+}
+
+function calculateLiveTotals(lines: LiveLine[]) {
   let subtotal = 0;
   let taxTotal = 0;
   for (const line of lines) {
-    const lineTotal = Math.round((line.quantity || 0) * (line.unitPrice || 0));
+    const lineTotal = calculateLineTotal(line);
     const taxAmount = Math.round(lineTotal * ((line.taxRate || 0) / 100));
     subtotal += lineTotal;
     taxTotal += taxAmount;
@@ -129,6 +158,7 @@ export default function DocumentForm() {
       issueDate: new Date().toISOString().slice(0, 10),
       dueDate: "",
       notes: "",
+      customerReference: "",
       lines: [],
       recurrenceEnabled: false,
       recurrenceInterval: "MONTHLY",
@@ -138,6 +168,7 @@ export default function DocumentForm() {
 
   const { fields, append, remove } = useFieldArray({ control, name: "lines" });
   const watchedLines = watch("lines");
+  const watchedCustomerId = watch("customerId");
 
   useEffect(() => {
     if (!isEditing) return;
@@ -151,12 +182,15 @@ export default function DocumentForm() {
           issueDate: doc.issueDate.slice(0, 10),
           dueDate: doc.dueDate ? doc.dueDate.slice(0, 10) : "",
           notes: doc.notes ?? "",
+          customerReference: doc.customerReference ?? "",
           lines: doc.lines.map((line) => ({
             itemId: line.itemId ?? undefined,
             description: line.description,
             quantity: Number(line.quantity),
             unitPrice: line.unitPrice,
             taxRate: Number(line.taxRate),
+            discountType: line.discountType ?? "",
+            discountValue: line.discountValue !== null ? Number(line.discountValue) : 0,
           })),
           recurrenceEnabled: doc.recurrenceInterval !== null,
           recurrenceInterval: doc.recurrenceInterval ?? "MONTHLY",
@@ -171,11 +205,16 @@ export default function DocumentForm() {
   }, [id, isEditing, reset]);
 
   useEffect(() => {
-    if (!canReference) return;
-    apiRequest<{ results: InvoiceOption[] }>("/documents?type=INVOICE&status=FINALIZED&pageSize=100")
+    if (!canReference || !watchedCustomerId) {
+      setInvoiceOptions([]);
+      return;
+    }
+    apiRequest<{ results: InvoiceOption[] }>(
+      `/documents?type=INVOICE&status=FINALIZED&pageSize=100&customerId=${watchedCustomerId}`,
+    )
       .then((data) => setInvoiceOptions(data.results))
       .catch(() => setInvoiceOptions([]));
-  }, [canReference]);
+  }, [canReference, watchedCustomerId]);
 
   async function handleSelectInvoice(invoiceId: string) {
     setReferencedDocumentId(invoiceId);
@@ -190,6 +229,8 @@ export default function DocumentForm() {
           quantity: Number(line.quantity),
           unitPrice: line.unitPrice,
           taxRate: Number(line.taxRate),
+          discountType: line.discountType ?? "",
+          discountValue: line.discountValue !== null ? Number(line.discountValue) : 0,
         })),
       );
     } catch {
@@ -200,7 +241,7 @@ export default function DocumentForm() {
   const totals = calculateLiveTotals(watchedLines ?? []);
 
   function addLine() {
-    append({ description: "", quantity: 1, unitPrice: 0, taxRate: 18 });
+    append({ description: "", quantity: 1, unitPrice: 0, taxRate: 18, discountType: "", discountValue: 0 });
   }
 
   async function saveDraft(data: DocumentFormInput) {
@@ -217,7 +258,11 @@ export default function DocumentForm() {
         issueDate: data.issueDate,
         dueDate: data.dueDate.trim() || undefined,
         notes: data.notes.trim() || undefined,
-        lines: data.lines,
+        customerReference: data.customerReference.trim() || undefined,
+        lines: data.lines.map((line) => ({
+          ...line,
+          discountType: line.discountType || undefined,
+        })),
         referencedDocumentId: canReference ? referencedDocumentId || undefined : undefined,
         recurrence: data.recurrenceEnabled
           ? {
@@ -324,6 +369,10 @@ export default function DocumentForm() {
                 value={watch("customerName")}
                 error={errors.customerId?.message}
                 onSelect={(customer) => {
+                  if (canReference && customer.id !== watchedCustomerId) {
+                    setReferencedDocumentId("");
+                    setReferencedDocument(null);
+                  }
                   setValue("customerId", customer.id);
                   setValue("customerName", customer.name);
                 }}
@@ -345,6 +394,13 @@ export default function DocumentForm() {
                 />
               )}
               <FormField id="notes" label="Notes" type="text" error={errors.notes?.message} {...register("notes")} />
+              <FormField
+                id="customerReference"
+                label="Customer PO / reference (optional)"
+                type="text"
+                error={errors.customerReference?.message}
+                {...register("customerReference")}
+              />
               {canReference && (
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="referencedDocumentId" className="font-sans text-sm font-medium text-neutral-800">
@@ -353,15 +409,20 @@ export default function DocumentForm() {
                   <select
                     id="referencedDocumentId"
                     value={referencedDocumentId}
+                    disabled={!watchedCustomerId}
                     onChange={(e) => handleSelectInvoice(e.target.value)}
-                    className="rounded-lg border border-neutral-200 bg-surface px-3.5 py-2.5 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                    className="rounded-lg border border-neutral-200 bg-surface px-3.5 py-2.5 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <option value="">
-                      {referenceIsRequired ? "Choose an invoice…" : "None (not tied to an invoice)"}
+                      {!watchedCustomerId
+                        ? "Choose a customer first"
+                        : referenceIsRequired
+                          ? "Choose an invoice…"
+                          : "None (not tied to an invoice)"}
                     </option>
                     {invoiceOptions.map((invoice) => (
                       <option key={invoice.id} value={invoice.id}>
-                        {invoice.number ?? "Draft"} · {invoice.customer.name}
+                        {invoice.number ?? "Draft"}
                       </option>
                     ))}
                   </select>
@@ -432,7 +493,7 @@ export default function DocumentForm() {
                 <tbody>
                   {fields.map((field, index) => {
                     const line = watchedLines?.[index];
-                    const lineTotal = line ? Math.round((line.quantity || 0) * (line.unitPrice || 0)) : 0;
+                    const lineTotal = line ? calculateLineTotal(line) : 0;
                     return (
                       <tr key={field.id} className="border-b border-neutral-100">
                         <td className="py-2 align-top">
@@ -449,6 +510,30 @@ export default function DocumentForm() {
                               setValue(`lines.${index}.description`, text);
                             }}
                           />
+                          <div className="mt-1 flex items-center gap-1">
+                            <select
+                              aria-label="Discount type"
+                              className="rounded-lg border border-neutral-200 bg-surface px-1.5 py-1 font-sans text-xs text-neutral-500"
+                              {...register(`lines.${index}.discountType`)}
+                            >
+                              <option value="">No discount</option>
+                              <option value="PERCENT">% off</option>
+                              <option value="FLAT">RWF off</option>
+                            </select>
+                            {watch(`lines.${index}.discountType`) && (
+                              <input
+                                type="number"
+                                aria-label="Discount value"
+                                className="w-16 rounded-lg border border-neutral-200 bg-surface px-1.5 py-1 font-sans text-xs text-neutral-900"
+                                {...register(`lines.${index}.discountValue`, { valueAsNumber: true })}
+                              />
+                            )}
+                          </div>
+                          {errors.lines?.[index]?.discountValue?.message && (
+                            <p className="mt-0.5 font-sans text-xs text-error">
+                              {errors.lines[index]?.discountValue?.message}
+                            </p>
+                          )}
                         </td>
                         <td className="py-2 align-top">
                           <input

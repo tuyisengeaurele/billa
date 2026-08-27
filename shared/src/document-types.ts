@@ -20,3 +20,6 @@ export type DocumentTemplate = (typeof DOCUMENT_TEMPLATES)[number];
 
 export const RECURRENCE_INTERVALS = ["WEEKLY", "MONTHLY", "QUARTERLY", "ANNUALLY"] as const;
 export type RecurrenceInterval = (typeof RECURRENCE_INTERVALS)[number];
+
+export const DISCOUNT_TYPES = ["PERCENT", "FLAT"] as const;
+export type DiscountType = (typeof DISCOUNT_TYPES)[number];

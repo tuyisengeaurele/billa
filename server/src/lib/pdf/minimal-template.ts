@@ -37,7 +37,7 @@ export function renderMinimalHtml(data: PdfRenderData): string {
   const linesHtml = data.lines
     .map(
       (line) => `<tr>
-        <td>${line.description}</td>
+        <td>${line.description}${line.discountFormatted ? `<br/><span style="color:#9ca3af;font-size:9px">${line.discountFormatted}</span>` : ""}</td>
         <td class="num">${line.quantity}</td>
         <td class="num">${line.unitPriceFormatted}</td>
         <td class="num">${line.taxRateFormatted}</td>
@@ -57,6 +57,7 @@ export function renderMinimalHtml(data: PdfRenderData): string {
           <div class="doc-type">${data.typeLabel}</div>
           <div class="doc-number">${data.number ?? "DRAFT"}</div>
           <div class="doc-number">${data.issueDate}</div>
+          ${data.customerReference ? `<div class="doc-number">Ref: ${data.customerReference}</div>` : ""}
           <div style="margin-top:2mm">${renderStatusPill(data.status)}</div>
         </div>
       </div>

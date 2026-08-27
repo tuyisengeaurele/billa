@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../context/AuthContext";
@@ -31,11 +31,24 @@ function mockRevenue(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function mockFetch(revenue: unknown, revenueStatus = 200) {
+function mockTaxSummary(overrides: Record<string, unknown> = {}) {
+  return {
+    totalTaxInvoiced: 18000,
+    totalTaxCredited: 0,
+    totalTaxCollected: 18000,
+    byRate: [{ rate: 18, taxableAmount: 100000, taxAmount: 18000 }],
+    ...overrides,
+  };
+}
+
+function mockFetch(revenue: unknown, revenueStatus = 200, taxSummary: unknown = mockTaxSummary()) {
   vi.spyOn(global, "fetch").mockImplementation(async (input) => {
     const url = urlOf(input);
     if (url.includes("/dashboard/revenue")) {
       return new Response(JSON.stringify(revenue), { status: revenueStatus });
+    }
+    if (url.includes("/reports/tax-summary")) {
+      return new Response(JSON.stringify(taxSummary), { status: 200 });
     }
     if (url.includes("/auth/me")) {
       return new Response(
@@ -113,5 +126,37 @@ describe("Revenue", () => {
     renderPage();
 
     expect(await screen.findByText(/couldn't load revenue/i)).toBeInTheDocument();
+  });
+
+  it("shows the tax summary with a rate breakdown", async () => {
+    mockFetch(mockRevenue());
+
+    renderPage();
+
+    expect(await screen.findByText("18%")).toBeInTheDocument();
+    expect(screen.getAllByText(/18,000 rwf/i).length).toBeGreaterThan(0);
+  });
+
+  it("reloads the tax summary when the date range changes", async () => {
+    let lastTaxUrl = "";
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.includes("/dashboard/revenue")) {
+        return new Response(JSON.stringify(mockRevenue()), { status: 200 });
+      }
+      if (url.includes("/reports/tax-summary")) {
+        lastTaxUrl = url;
+        return new Response(JSON.stringify(mockTaxSummary()), { status: 200 });
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    renderPage();
+    await screen.findByText("18%");
+
+    fireEvent.change(screen.getByLabelText("From date"), { target: { value: "2026-01-01" } });
+
+    await screen.findByText("18%");
+    expect(lastTaxUrl).toContain("from=2026-01-01");
   });
 });

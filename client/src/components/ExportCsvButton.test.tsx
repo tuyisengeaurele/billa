@@ -26,6 +26,12 @@ describe("ExportCsvButton", () => {
     await waitFor(() => expect(requestedUrl).toContain("/customers/export.csv"));
   });
 
+  it("uses a custom label when provided", async () => {
+    render(<ExportCsvButton path="/export/all" filename="billa-export.json" label="Export all data" />);
+
+    expect(screen.getByRole("button", { name: "Export all data" })).toBeInTheDocument();
+  });
+
   it("shows an error message when the download fails", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async () => new Response("{}", { status: 500 }));
 

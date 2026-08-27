@@ -39,6 +39,7 @@ type ReferencedDocumentResult =
 async function resolveReferencedDocument(
   businessId: string,
   referencedDocumentId: string | null | undefined,
+  customerId: string,
 ): Promise<ReferencedDocumentResult> {
   if (!referencedDocumentId) {
     return { ok: true, referencedDocumentId: null };
@@ -53,6 +54,9 @@ async function resolveReferencedDocument(
   }
   if (referenced.status !== "FINALIZED") {
     return { ok: false, error: "referenced_document_not_finalized" };
+  }
+  if (referenced.customerId !== customerId) {
+    return { ok: false, error: "referenced_document_wrong_customer" };
   }
 
   return { ok: true, referencedDocumentId };
@@ -177,7 +181,7 @@ documentsRouter.post("/", validateBody(documentSchema), async (req, res) => {
   const businessId = req.auth!.businessId;
   const body = req.body as DocumentInput;
 
-  const referenced = await resolveReferencedDocument(businessId, body.referencedDocumentId);
+  const referenced = await resolveReferencedDocument(businessId, body.referencedDocumentId, body.customerId);
   if (!referenced.ok) {
     res.status(400).json({ error: referenced.error });
     return;
@@ -196,6 +200,7 @@ documentsRouter.post("/", validateBody(documentSchema), async (req, res) => {
       issueDate: new Date(body.issueDate),
       dueDate: body.dueDate ? new Date(body.dueDate) : null,
       notes: body.notes,
+      customerReference: body.customerReference,
       subtotal: totals.subtotal,
       taxTotal: totals.taxTotal,
       total: totals.total,
@@ -208,6 +213,8 @@ documentsRouter.post("/", validateBody(documentSchema), async (req, res) => {
           quantity: line.quantity,
           unitPrice: line.unitPrice,
           taxRate: line.taxRate,
+          discountType: line.discountType ?? null,
+          discountValue: line.discountValue ?? null,
           lineTotal: totals.lines[index].lineTotal,
           sortOrder: index,
         })),
@@ -351,7 +358,7 @@ documentsRouter.patch("/:id", validateBody(documentSchema), async (req, res) => 
     return;
   }
 
-  const referenced = await resolveReferencedDocument(businessId, body.referencedDocumentId);
+  const referenced = await resolveReferencedDocument(businessId, body.referencedDocumentId, body.customerId);
   if (!referenced.ok) {
     res.status(400).json({ error: referenced.error });
     return;
@@ -369,6 +376,7 @@ documentsRouter.patch("/:id", validateBody(documentSchema), async (req, res) => 
         issueDate: new Date(body.issueDate),
         dueDate: body.dueDate ? new Date(body.dueDate) : null,
         notes: body.notes,
+        customerReference: body.customerReference,
         subtotal: totals.subtotal,
         taxTotal: totals.taxTotal,
         total: totals.total,
@@ -381,6 +389,8 @@ documentsRouter.patch("/:id", validateBody(documentSchema), async (req, res) => 
             quantity: line.quantity,
             unitPrice: line.unitPrice,
             taxRate: line.taxRate,
+            discountType: line.discountType ?? null,
+            discountValue: line.discountValue ?? null,
             lineTotal: totals.lines[index].lineTotal,
             sortOrder: index,
           })),
@@ -480,6 +490,8 @@ documentsRouter.post("/:id/duplicate", async (req, res) => {
       quantity: Number(line.quantity),
       unitPrice: line.unitPrice,
       taxRate: Number(line.taxRate),
+      discountType: line.discountType,
+      discountValue: line.discountValue ? Number(line.discountValue) : null,
     })),
   );
 
@@ -492,6 +504,7 @@ documentsRouter.post("/:id/duplicate", async (req, res) => {
       customerId: source.customerId,
       issueDate: new Date(new Date().toISOString().slice(0, 10)),
       notes: source.notes,
+      customerReference: source.customerReference,
       subtotal: totals.subtotal,
       taxTotal: totals.taxTotal,
       total: totals.total,
@@ -503,6 +516,8 @@ documentsRouter.post("/:id/duplicate", async (req, res) => {
           quantity: line.quantity,
           unitPrice: line.unitPrice,
           taxRate: line.taxRate,
+          discountType: line.discountType,
+          discountValue: line.discountValue,
           lineTotal: totals.lines[index].lineTotal,
           sortOrder: index,
         })),

@@ -123,7 +123,37 @@ async function createFinalizedProforma(app: ReturnType<typeof createApp>, cookie
   return res.body.document as { id: string; publicToken: string };
 }
 
+async function createFinalizedQuote(app: ReturnType<typeof createApp>, cookies: string[]) {
+  const customerId = await createCustomer(app, cookies);
+  const created = await request(app)
+    .post("/documents")
+    .set("Cookie", cookies)
+    .send({
+      type: "QUOTE",
+      customerId,
+      issueDate: "2026-08-24",
+      lines: [{ description: "Printing", quantity: 1, unitPrice: 5000, taxRate: 18 }],
+    });
+  await request(app).post(`/documents/${created.body.document.id}/finalize`).set("Cookie", cookies);
+  const res = await request(app).get(`/documents/${created.body.document.id}`).set("Cookie", cookies);
+  return res.body.document as { id: string; publicToken: string };
+}
+
 describe("POST /public/documents/:token/accept", () => {
+  it("converts a finalized quote to a draft invoice, no auth required", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const quote = await createFinalizedQuote(app, cookies);
+
+    const res = await request(app).post(`/public/documents/${quote.publicToken}/accept`);
+
+    expect(res.status).toBe(201);
+    expect(res.body.accepted).toBe(true);
+
+    const quoteAfter = await request(app).get(`/documents/${quote.id}`).set("Cookie", cookies);
+    expect(quoteAfter.body.document.convertedTo).not.toBeNull();
+  });
+
   it("converts a finalized proforma to a draft invoice, no auth required", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app);
@@ -162,6 +192,83 @@ describe("POST /public/documents/:token/accept", () => {
 
   it("returns 404 for an unknown token", async () => {
     const res = await request(createApp()).post("/public/documents/nonexistent-token/accept");
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 409 for a document already declined", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const proforma = await createFinalizedProforma(app, cookies);
+    await request(app).post(`/public/documents/${proforma.publicToken}/decline`);
+
+    const res = await request(app).post(`/public/documents/${proforma.publicToken}/accept`);
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toBe("already_declined");
+  });
+});
+
+describe("POST /public/documents/:token/decline", () => {
+  it("declines a finalized proforma, no auth required", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const proforma = await createFinalizedProforma(app, cookies);
+
+    const res = await request(app).post(`/public/documents/${proforma.publicToken}/decline`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.declined).toBe(true);
+
+    const publicView = await request(app).get(`/public/documents/${proforma.publicToken}`);
+    expect(publicView.body.document.declined).toBe(true);
+  });
+
+  it("declines a finalized quote", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const quote = await createFinalizedQuote(app, cookies);
+
+    const res = await request(app).post(`/public/documents/${quote.publicToken}/decline`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.declined).toBe(true);
+  });
+
+  it("returns 409 when declining a document that was already accepted", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const proforma = await createFinalizedProforma(app, cookies);
+    await request(app).post(`/public/documents/${proforma.publicToken}/accept`);
+
+    const res = await request(app).post(`/public/documents/${proforma.publicToken}/decline`);
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toBe("already_converted");
+  });
+
+  it("returns 409 when declined twice", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const proforma = await createFinalizedProforma(app, cookies);
+    await request(app).post(`/public/documents/${proforma.publicToken}/decline`);
+
+    const res = await request(app).post(`/public/documents/${proforma.publicToken}/decline`);
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toBe("already_declined");
+  });
+
+  it("returns 400 for a token belonging to a non-proforma, non-quote document", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const document = await createFinalizedDocument(app, cookies);
+
+    const res = await request(app).post(`/public/documents/${document.publicToken}/decline`);
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 404 for an unknown token", async () => {
+    const res = await request(createApp()).post("/public/documents/nonexistent-token/decline");
     expect(res.status).toBe(404);
   });
 });

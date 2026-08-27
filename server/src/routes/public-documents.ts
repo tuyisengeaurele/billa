@@ -2,7 +2,7 @@ import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import { buildPdfRenderData } from "../lib/pdf/render-data.js";
 import { renderDocumentPdf } from "../lib/pdf/render-document-pdf.js";
-import { convertProformaToInvoice } from "../lib/convert-proforma.js";
+import { convertProformaToInvoice, declineDocument } from "../lib/convert-proforma.js";
 
 export const publicDocumentsRouter = Router();
 
@@ -59,6 +59,24 @@ publicDocumentsRouter.post("/:token/accept", async (req, res) => {
   res.status(201).json({ accepted: true });
 });
 
+publicDocumentsRouter.post("/:token/decline", async (req, res) => {
+  const { token } = req.params;
+
+  const document = await prisma.document.findFirst({ where: { publicToken: token } });
+  if (!document) {
+    res.status(404).json({ error: "not_found" });
+    return;
+  }
+
+  const result = await declineDocument({ id: document.id });
+  if (!result.ok) {
+    res.status(result.status).json({ error: result.error });
+    return;
+  }
+
+  res.json({ declined: true });
+});
+
 publicDocumentsRouter.get("/:token", async (req, res) => {
   const { token } = req.params;
 
@@ -71,6 +89,6 @@ publicDocumentsRouter.get("/:token", async (req, res) => {
     return;
   }
 
-  const { convertedTo, ...documentFields } = document;
-  res.json({ document: { ...documentFields, accepted: Boolean(convertedTo) } });
+  const { convertedTo, declinedAt, ...documentFields } = document;
+  res.json({ document: { ...documentFields, accepted: Boolean(convertedTo), declined: Boolean(declinedAt) } });
 });

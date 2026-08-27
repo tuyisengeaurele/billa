@@ -21,6 +21,7 @@ export interface PdfRenderLine {
   unitPriceFormatted: string;
   taxRateFormatted: string;
   lineTotalFormatted: string;
+  discountFormatted: string | null;
 }
 
 export interface PdfRenderData {
@@ -54,6 +55,7 @@ export interface PdfRenderData {
   issueDate: string;
   dueDate: string | null;
   notes: string | null;
+  customerReference: string | null;
   lines: PdfRenderLine[];
   subtotalFormatted: string;
   taxTotalFormatted: string;
@@ -66,6 +68,13 @@ type DocumentWithRelations = Document & { lines: DocumentLine[]; customer: Custo
 
 function escapeNullable(value: string | null): string | null {
   return value === null ? null : escapeHtml(value);
+}
+
+function formatDiscount(line: DocumentLine): string | null {
+  if (!line.discountType || !line.discountValue) return null;
+  return line.discountType === "PERCENT"
+    ? `${line.discountValue.toString()}% off`
+    : `${formatRwf(Number(line.discountValue))} off`;
 }
 
 export async function buildPdfRenderData(
@@ -110,6 +119,7 @@ export async function buildPdfRenderData(
     issueDate: document.issueDate.toISOString().slice(0, 10),
     dueDate: document.dueDate ? document.dueDate.toISOString().slice(0, 10) : null,
     notes: escapeNullable(document.notes),
+    customerReference: escapeNullable(document.customerReference),
     lines: [...document.lines]
       .sort((a, b) => a.sortOrder - b.sortOrder)
       .map((line) => ({
@@ -118,6 +128,7 @@ export async function buildPdfRenderData(
         unitPriceFormatted: formatRwf(line.unitPrice),
         taxRateFormatted: `${line.taxRate.toString()}%`,
         lineTotalFormatted: formatRwf(line.lineTotal),
+        discountFormatted: formatDiscount(line),
       })),
     subtotalFormatted: formatRwf(document.subtotal),
     taxTotalFormatted: formatRwf(document.taxTotal),

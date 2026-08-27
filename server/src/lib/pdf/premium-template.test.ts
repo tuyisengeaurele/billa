@@ -28,6 +28,7 @@ function makeData(overrides: Partial<PdfRenderData> = {}): PdfRenderData {
     issueDate: "2026-08-18",
     dueDate: "2026-09-01",
     notes: null,
+    customerReference: null,
     lines: [
       {
         description: "Printing service",
@@ -35,6 +36,7 @@ function makeData(overrides: Partial<PdfRenderData> = {}): PdfRenderData {
         unitPriceFormatted: "5,000 RWF",
         taxRateFormatted: "18%",
         lineTotalFormatted: "15,000 RWF",
+        discountFormatted: null,
       },
     ],
     subtotalFormatted: "15,000 RWF",
@@ -190,5 +192,22 @@ describe("renderPremiumHtml", () => {
   it("omits the notes callout when there are no notes", () => {
     const html = renderPremiumHtml(makeData({ notes: null }));
     expect(html).not.toContain('class="notes-row"');
+  });
+
+  it("shows the customer reference when set", () => {
+    const html = renderPremiumHtml(makeData({ customerReference: "PO-4821" }));
+    expect(html).toContain("PO-4821");
+  });
+
+  it("omits the reference row when there is no customer reference", () => {
+    const html = renderPremiumHtml(makeData({ customerReference: null }));
+    expect(html).not.toContain("Reference:");
+  });
+
+  it("shows the discount under a line when present", () => {
+    const html = renderPremiumHtml(
+      makeData({ lines: [{ ...makeData().lines[0], discountFormatted: "2,000 RWF off" }] }),
+    );
+    expect(html).toContain("2,000 RWF off");
   });
 });

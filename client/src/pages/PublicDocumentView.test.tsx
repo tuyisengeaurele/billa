@@ -47,6 +47,32 @@ describe("PublicDocumentView", () => {
     expect(screen.getByText(/total: 11,800 rwf/i)).toBeInTheDocument();
   });
 
+  it("shows the customer reference when present", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async () =>
+      new Response(
+        JSON.stringify({
+          document: {
+            id: "d1",
+            type: "INVOICE",
+            number: "INV-0001",
+            business: { name: "Kigali Traders" },
+            customer: { name: "Acme Ltd" },
+            customerReference: "PO-4821",
+            lines: [],
+            subtotal: 0,
+            taxTotal: 0,
+            total: 0,
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+
+    renderPage();
+
+    expect(await screen.findByText(/reference: po-4821/i)).toBeInTheDocument();
+  });
+
   it("links the download button to the public pdf endpoint", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async () =>
       new Response(
@@ -157,7 +183,7 @@ describe("PublicDocumentView", () => {
 
     renderPage("tok-abc123");
 
-    expect(await screen.findByText(/already been accepted/i)).toBeInTheDocument();
+    expect(await screen.findByText(/you accepted this proforma/i)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /accept this proforma/i })).not.toBeInTheDocument();
   });
 
@@ -192,7 +218,100 @@ describe("PublicDocumentView", () => {
     const button = await screen.findByRole("button", { name: /accept this proforma/i });
     fireEvent.click(button);
 
-    expect(await screen.findByText(/already been accepted/i)).toBeInTheDocument();
+    expect(await screen.findByText(/you accepted this proforma/i)).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/public/documents/tok-abc123/accept"), expect.any(Object));
+  });
+
+  it("offers to accept or decline an unconverted quote", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async () =>
+      new Response(
+        JSON.stringify({
+          document: {
+            id: "d1",
+            type: "QUOTE",
+            number: "QUO-0001",
+            business: { name: "Kigali Traders" },
+            customer: { name: "Acme Ltd" },
+            lines: [],
+            subtotal: 0,
+            taxTotal: 0,
+            total: 0,
+            accepted: false,
+            declined: false,
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+
+    renderPage("tok-abc123");
+
+    expect(await screen.findByRole("button", { name: /accept this quote/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /decline/i })).toBeInTheDocument();
+  });
+
+  it("declines a quote and shows a confirmation", async () => {
+    const fetchMock = vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = typeof input === "string" ? input : input.toString();
+      if (url.includes("/decline")) {
+        expect(init?.method).toBe("POST");
+        return new Response(JSON.stringify({ declined: true }), { status: 200 });
+      }
+      return new Response(
+        JSON.stringify({
+          document: {
+            id: "d1",
+            type: "QUOTE",
+            number: "QUO-0001",
+            business: { name: "Kigali Traders" },
+            customer: { name: "Acme Ltd" },
+            lines: [],
+            subtotal: 0,
+            taxTotal: 0,
+            total: 0,
+            accepted: false,
+            declined: false,
+          },
+        }),
+        { status: 200 },
+      );
+    });
+
+    renderPage("tok-abc123");
+
+    const button = await screen.findByRole("button", { name: /decline/i });
+    fireEvent.click(button);
+
+    expect(await screen.findByText(/you declined this quote/i)).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/public/documents/tok-abc123/decline"), expect.any(Object));
+  });
+
+  it("does not offer accept or decline for an already-declined proforma", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async () =>
+      new Response(
+        JSON.stringify({
+          document: {
+            id: "d1",
+            type: "PROFORMA",
+            number: "PRO-0001",
+            business: { name: "Kigali Traders" },
+            customer: { name: "Acme Ltd" },
+            lines: [],
+            subtotal: 0,
+            taxTotal: 0,
+            total: 0,
+            accepted: false,
+            declined: true,
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+
+    renderPage("tok-abc123");
+
+    expect(await screen.findByText(/you declined this proforma/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /accept/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /decline/i })).not.toBeInTheDocument();
   });
 });

@@ -17,6 +17,7 @@ interface DocumentLine {
 interface DocumentLink {
   id: string;
   number: string | null;
+  type: DocumentType;
 }
 
 interface DocumentDetail {
@@ -34,7 +35,10 @@ interface DocumentDetail {
   convertedFrom: DocumentLink | null;
   convertedTo: DocumentLink | null;
   referencedDocument: DocumentLink | null;
+  declinedAt: string | null;
 }
+
+const CONVERTIBLE_TYPES: DocumentType[] = ["PROFORMA", "QUOTE"];
 
 export default function DocumentView() {
   const { id } = useParams();
@@ -163,7 +167,7 @@ export default function DocumentView() {
           <h1 className="font-display text-2xl font-semibold text-neutral-900">{document.number ?? "Draft"}</h1>
           <div className="flex items-center gap-4">
             <span className="font-sans text-sm text-neutral-500">{document.status}</span>
-            {document.type === "PROFORMA" &&
+            {CONVERTIBLE_TYPES.includes(document.type) &&
               document.status === "FINALIZED" &&
               (document.convertedTo ? (
                 <Link
@@ -172,6 +176,8 @@ export default function DocumentView() {
                 >
                   Converted to invoice {document.convertedTo.number ?? "Draft"}
                 </Link>
+              ) : document.declinedAt ? (
+                <span className="font-sans text-sm font-medium text-neutral-500">Declined by customer</span>
               ) : (
                 <button
                   type="button"
@@ -260,7 +266,8 @@ export default function DocumentView() {
             to={`/documents/${document.convertedFrom.id}`}
             className="-mt-4 font-sans text-sm text-primary-500 hover:text-primary-700"
           >
-            Converted from proforma {document.convertedFrom.number ?? "Draft"}
+            Converted from {document.convertedFrom.type === "QUOTE" ? "quote" : "proforma"}{" "}
+            {document.convertedFrom.number ?? "Draft"}
           </Link>
         )}
         {document.referencedDocument && (

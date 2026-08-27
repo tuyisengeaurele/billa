@@ -25,6 +25,58 @@ describe("documentLineSchema", () => {
       documentLineSchema.safeParse({ description: "Printing", quantity: 1, unitPrice: -1, taxRate: 18 }).success,
     ).toBe(false);
   });
+
+  it("accepts a percentage discount", () => {
+    expect(
+      documentLineSchema.safeParse({
+        description: "Printing",
+        quantity: 1,
+        unitPrice: 5000,
+        taxRate: 18,
+        discountType: "PERCENT",
+        discountValue: 10,
+      }).success,
+    ).toBe(true);
+  });
+
+  it("accepts a flat discount", () => {
+    expect(
+      documentLineSchema.safeParse({
+        description: "Printing",
+        quantity: 1,
+        unitPrice: 5000,
+        taxRate: 18,
+        discountType: "FLAT",
+        discountValue: 500,
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects a percentage discount over 100", () => {
+    expect(
+      documentLineSchema.safeParse({
+        description: "Printing",
+        quantity: 1,
+        unitPrice: 5000,
+        taxRate: 18,
+        discountType: "PERCENT",
+        discountValue: 150,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects a negative discount value", () => {
+    expect(
+      documentLineSchema.safeParse({
+        description: "Printing",
+        quantity: 1,
+        unitPrice: 5000,
+        taxRate: 18,
+        discountType: "FLAT",
+        discountValue: -100,
+      }).success,
+    ).toBe(false);
+  });
 });
 
 describe("documentSchema", () => {
@@ -36,6 +88,18 @@ describe("documentSchema", () => {
 
   it("rejects a missing customerId", () => {
     expect(documentSchema.safeParse({ type: "INVOICE", issueDate: "2026-08-19", lines: [] }).success).toBe(false);
+  });
+
+  it("accepts an optional customerReference", () => {
+    expect(
+      documentSchema.safeParse({
+        type: "INVOICE",
+        customerId: "c1",
+        issueDate: "2026-08-19",
+        lines: [],
+        customerReference: "PO-4821",
+      }).success,
+    ).toBe(true);
   });
 
   it("rejects an unknown type", () => {

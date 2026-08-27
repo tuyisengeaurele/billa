@@ -1,19 +1,32 @@
 import { z } from "zod";
-import { DOCUMENT_STATUSES, DOCUMENT_TYPES, RECURRENCE_INTERVALS, type DocumentType } from "./document-types.js";
+import {
+  DISCOUNT_TYPES,
+  DOCUMENT_STATUSES,
+  DOCUMENT_TYPES,
+  RECURRENCE_INTERVALS,
+  type DocumentType,
+} from "./document-types.js";
 
-export const documentLineSchema = z.object({
-  itemId: z.string().trim().min(1).optional(),
-  description: z.string().trim().min(1, "Enter a description"),
-  quantity: z.number({ invalid_type_error: "Enter a quantity" }).positive("Enter a quantity greater than zero"),
-  unitPrice: z
-    .number({ invalid_type_error: "Enter a price" })
-    .int("Enter a whole number of RWF")
-    .nonnegative("Price can't be negative"),
-  taxRate: z
-    .number({ invalid_type_error: "Enter a tax rate" })
-    .min(0, "Tax rate can't be negative")
-    .max(100, "Tax rate can't exceed 100%"),
-});
+export const documentLineSchema = z
+  .object({
+    itemId: z.string().trim().min(1).optional(),
+    description: z.string().trim().min(1, "Enter a description"),
+    quantity: z.number({ invalid_type_error: "Enter a quantity" }).positive("Enter a quantity greater than zero"),
+    unitPrice: z
+      .number({ invalid_type_error: "Enter a price" })
+      .int("Enter a whole number of RWF")
+      .nonnegative("Price can't be negative"),
+    taxRate: z
+      .number({ invalid_type_error: "Enter a tax rate" })
+      .min(0, "Tax rate can't be negative")
+      .max(100, "Tax rate can't exceed 100%"),
+    discountType: z.enum(DISCOUNT_TYPES).nullable().optional(),
+    discountValue: z.number().nonnegative("Discount can't be negative").nullable().optional(),
+  })
+  .refine((line) => line.discountType !== "PERCENT" || (line.discountValue ?? 0) <= 100, {
+    message: "A percentage discount can't exceed 100%",
+    path: ["discountValue"],
+  });
 export type DocumentLineInput = z.infer<typeof documentLineSchema>;
 
 export const recurrenceSchema = z
@@ -35,6 +48,7 @@ export const documentSchema = z
     issueDate: z.string().trim().min(1, "Choose an issue date"),
     dueDate: z.string().trim().min(1).optional(),
     notes: z.string().trim().min(1).optional(),
+    customerReference: z.string().trim().min(1).optional(),
     lines: z.array(documentLineSchema),
     recurrence: recurrenceSchema,
     referencedDocumentId: z.string().trim().min(1).nullable().optional(),

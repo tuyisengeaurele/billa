@@ -78,6 +78,28 @@ describe("DocumentForm", () => {
     expect(screen.getByText(/subtotal: 0 rwf/i)).toBeInTheDocument();
   });
 
+  it("applies a percentage discount to the live subtotal before tax", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async () => new Response("{}", { status: 401 }));
+    const user = userEvent.setup();
+    renderNew();
+
+    await user.click(screen.getByRole("button", { name: /add line/i }));
+
+    const quantityInput = screen.getByLabelText(/quantity/i);
+    await user.clear(quantityInput);
+    await user.type(quantityInput, "1");
+    const priceInput = screen.getByLabelText(/unit price/i);
+    await user.clear(priceInput);
+    await user.type(priceInput, "10000");
+
+    await user.selectOptions(screen.getByLabelText(/discount type/i), "PERCENT");
+    const discountInput = await screen.findByLabelText(/discount value/i);
+    await user.clear(discountInput);
+    await user.type(discountInput, "10");
+
+    await waitFor(() => expect(screen.getByText(/subtotal: 9,000 rwf/i)).toBeInTheDocument());
+  });
+
   it("saves a new draft and navigates to its edit URL", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
       const url = urlOf(input);
@@ -174,6 +196,54 @@ describe("DocumentForm", () => {
     await waitFor(() =>
       expect(postBody).toMatchObject({ recurrence: { interval: "QUARTERLY" } }),
     );
+  });
+
+  it("sends a customerReference in the payload when filled in", async () => {
+    let postBody: unknown = null;
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.includes("/customers")) {
+        return new Response(
+          JSON.stringify({ results: [{ id: "c1", name: "Kigali Traders", phone: null }], total: 1, page: 1, pageSize: 10 }),
+          { status: 200 },
+        );
+      }
+      if (url.includes("/documents") && init?.method === "POST") {
+        postBody = JSON.parse(init.body as string);
+        return new Response(JSON.stringify({ document: { id: "d1" } }), { status: 201 });
+      }
+      if (url.endsWith("/documents/d1") && init?.method !== "PATCH") {
+        return new Response(
+          JSON.stringify({
+            document: {
+              id: "d1",
+              type: "INVOICE",
+              customerId: "c1",
+              customer: { name: "Kigali Traders" },
+              issueDate: "2026-08-19T00:00:00.000Z",
+              dueDate: null,
+              notes: null,
+              customerReference: null,
+              lines: [],
+            },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderNew();
+
+    await user.click(screen.getByRole("button", { name: /select a customer/i }));
+    await user.type(screen.getByLabelText("Search customers"), "Kigali");
+    await user.click(await screen.findByText("Kigali Traders"));
+
+    await user.type(screen.getByLabelText(/customer po/i), "PO-4821");
+    await user.click(screen.getByRole("button", { name: /save draft/i }));
+
+    await waitFor(() => expect(postBody).toMatchObject({ customerReference: "PO-4821" }));
   });
 
   it("does not show the interval picker until 'Make this recurring' is checked", async () => {
@@ -410,6 +480,12 @@ describe("DocumentForm", () => {
           { status: 200 },
         );
       }
+      if (url.includes("/customers")) {
+        return new Response(
+          JSON.stringify({ results: [{ id: "c1", name: "Acme Ltd", phone: null }], total: 1, page: 1, pageSize: 10 }),
+          { status: 200 },
+        );
+      }
       if (url.endsWith("/documents/inv1")) {
         return new Response(
           JSON.stringify({
@@ -435,6 +511,10 @@ describe("DocumentForm", () => {
     const user = userEvent.setup();
     renderNewForType("DELIVERY_NOTE");
 
+    await user.click(screen.getByRole("button", { name: /select a customer/i }));
+    await user.type(screen.getByLabelText("Search customers"), "Acme");
+    await user.click(await screen.findByText("Acme Ltd"));
+
     const select = await screen.findByLabelText(/invoice/i);
     await user.selectOptions(select, "inv1");
 
@@ -453,6 +533,12 @@ describe("DocumentForm", () => {
             page: 1,
             pageSize: 100,
           }),
+          { status: 200 },
+        );
+      }
+      if (url.includes("/customers")) {
+        return new Response(
+          JSON.stringify({ results: [{ id: "c1", name: "Acme Ltd", phone: null }], total: 1, page: 1, pageSize: 10 }),
           { status: 200 },
         );
       }
@@ -481,6 +567,10 @@ describe("DocumentForm", () => {
     const user = userEvent.setup();
     renderNewForType("RECEIPT");
 
+    await user.click(screen.getByRole("button", { name: /select a customer/i }));
+    await user.type(screen.getByLabelText("Search customers"), "Acme");
+    await user.click(await screen.findByText("Acme Ltd"));
+
     const select = await screen.findByLabelText(/invoice/i);
     await user.selectOptions(select, "inv1");
 
@@ -495,6 +585,18 @@ describe("DocumentForm", () => {
     renderNewForType("DELIVERY_NOTE");
 
     expect(await screen.findByLabelText(/invoice/i)).toHaveValue("");
+  });
+
+  it("disables the invoice picker until a customer is chosen", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async () =>
+      new Response(JSON.stringify({ results: [], total: 0, page: 1, pageSize: 100 }), { status: 200 }),
+    );
+
+    renderNewForType("DELIVERY_NOTE");
+
+    const select = await screen.findByLabelText(/invoice/i);
+    expect(select).toBeDisabled();
+    expect(screen.getByText(/choose a customer first/i)).toBeInTheDocument();
   });
 
   it("requires choosing an invoice before saving a receipt", async () => {
