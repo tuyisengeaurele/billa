@@ -2,6 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ActiveDocumentTypeProvider, useSetActiveDocumentType } from "../context/ActiveDocumentTypeContext";
 import { AuthProvider } from "../context/AuthContext";
 import { Sidebar } from "./Sidebar";
 
@@ -9,12 +10,31 @@ function mockFetch() {
   vi.spyOn(global, "fetch").mockImplementation(async () => new Response("{}", { status: 401 }));
 }
 
-function renderSidebar(onNavigate?: () => void) {
+function renderSidebar(onNavigate?: () => void, initialEntries = ["/"]) {
   mockFetch();
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={initialEntries}>
       <AuthProvider>
         <Sidebar billingBanner={null} onNavigate={onNavigate} />
+      </AuthProvider>
+    </MemoryRouter>,
+  );
+}
+
+function ReportsDocumentType({ type }: { type: "INVOICE" }) {
+  useSetActiveDocumentType(type);
+  return null;
+}
+
+function renderSidebarViewingDocumentType(type: "INVOICE") {
+  mockFetch();
+  return render(
+    <MemoryRouter initialEntries={["/documents/doc1/edit"]}>
+      <AuthProvider>
+        <ActiveDocumentTypeProvider>
+          <ReportsDocumentType type={type} />
+          <Sidebar billingBanner={null} />
+        </ActiveDocumentTypeProvider>
       </AuthProvider>
     </MemoryRouter>,
   );
@@ -96,5 +116,26 @@ describe("Sidebar", () => {
     await user.click(within(dialog).getByRole("button", { name: /cancel/i }));
 
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("highlights Customers while viewing a customer's statement page", async () => {
+    renderSidebar(undefined, ["/customers/c1/statement"]);
+
+    const link = await screen.findByRole("link", { name: "Customers" });
+    expect(link.querySelector("span.z-10")).toHaveClass("text-primary-700");
+  });
+
+  it("does not highlight Customers on an unrelated page", async () => {
+    renderSidebar(undefined, ["/dashboard"]);
+
+    const link = await screen.findByRole("link", { name: "Customers" });
+    expect(link.querySelector("span.z-10")).not.toHaveClass("text-primary-700");
+  });
+
+  it("highlights a document type link while editing a document of that type", async () => {
+    renderSidebarViewingDocumentType("INVOICE");
+
+    const link = await screen.findByRole("link", { name: /^invoices$/i });
+    expect(link.querySelector("span.z-10")).toHaveClass("text-primary-700");
   });
 });

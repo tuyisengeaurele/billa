@@ -4,11 +4,11 @@ import { useEffect, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { z } from "zod";
-import { AppLayout } from "../components/AppLayout";
 import { Modal } from "../components/Modal";
 import { CustomerPicker } from "../components/customers/CustomerPicker";
 import { ItemPicker } from "../components/items/ItemPicker";
 import { FormField } from "../components/FormField";
+import { useSetActiveDocumentType } from "../context/ActiveDocumentTypeContext";
 import { apiRequest, ApiError, API_BASE_URL } from "../lib/apiClient";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
 import { formatRwf } from "@billa/shared";
@@ -125,6 +125,7 @@ export default function DocumentForm() {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const [type, setType] = useState<DocumentType>(() => (searchParams.get("type") as DocumentType) ?? "INVOICE");
+  useSetActiveDocumentType(type);
   const dueDateLabel = getDueDateLabel(type);
   const isEditing = Boolean(id);
   const labels = DOCUMENT_TYPE_LABELS[type];
@@ -314,24 +315,18 @@ export default function DocumentForm() {
 
   if (loadError) {
     return (
-      <AppLayout>
-        <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
-          Couldn't load this document. Try again.
-        </div>
-      </AppLayout>
+      <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
+        Couldn't load this document. Try again.
+      </div>
     );
   }
 
   if (!isLoaded) {
-    return (
-      <AppLayout>
-        <p className="font-sans text-sm text-neutral-600">Loading…</p>
-      </AppLayout>
-    );
+    return <p className="font-sans text-sm text-neutral-600">Loading…</p>;
   }
 
   return (
-    <AppLayout>
+    <>
       <div className="mx-auto flex max-w-3xl flex-col gap-6">
         <h1 className="font-display text-2xl font-semibold text-neutral-900">
           {isEditing ? `Edit ${labels.singular}` : `New ${labels.singular}`}
@@ -641,6 +636,6 @@ export default function DocumentForm() {
           </button>
         </div>
       </Modal>
-    </AppLayout>
+    </>
   );
 }

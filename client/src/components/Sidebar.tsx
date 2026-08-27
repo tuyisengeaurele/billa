@@ -3,6 +3,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Link, useLocation } from "react-router-dom";
 import { DOCUMENT_TYPES } from "@billa/shared";
+import { useActiveDocumentType } from "../context/ActiveDocumentTypeContext";
 import { useAuth } from "../context/AuthContext";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
 import { DOCUMENT_TYPE_COLORS } from "../lib/documentTypeColors";
@@ -154,7 +155,9 @@ function LogoutIcon() {
 export function Sidebar({ billingBanner, onNavigate }: SidebarProps) {
   const { logout } = useAuth();
   const { pathname, search } = useLocation();
+  const activeDocumentType = useActiveDocumentType();
   const active = (to: string) => isLinkActive(pathname, search, to);
+  const isCustomersActive = pathname === "/customers" || pathname.startsWith("/customers/");
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
 
   return (
@@ -192,7 +195,7 @@ export function Sidebar({ billingBanner, onNavigate }: SidebarProps) {
           <SidebarLink
             key={type}
             to={`/documents?type=${type}`}
-            isActive={active(`/documents?type=${type}`)}
+            isActive={active(`/documents?type=${type}`) || activeDocumentType === type}
             onNavigate={onNavigate}
             dotColor={DOCUMENT_TYPE_COLORS[type].dot}
           >
@@ -201,7 +204,7 @@ export function Sidebar({ billingBanner, onNavigate }: SidebarProps) {
         ))}
 
         <div className="mt-4 flex flex-col gap-1">
-          <SidebarLink to="/customers" isActive={pathname === "/customers"} onNavigate={onNavigate} icon={<CustomersIcon />}>
+          <SidebarLink to="/customers" isActive={isCustomersActive} onNavigate={onNavigate} icon={<CustomersIcon />}>
             Customers
           </SidebarLink>
           <SidebarLink to="/items" isActive={pathname === "/items"} onNavigate={onNavigate} icon={<ItemsIcon />}>

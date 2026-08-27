@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import type { DocumentType } from "@billa/shared";
-import { AppLayout } from "../components/AppLayout";
 import { Modal } from "../components/Modal";
+import { useSetActiveDocumentType } from "../context/ActiveDocumentTypeContext";
 import { apiRequest, ApiError, API_BASE_URL } from "../lib/apiClient";
 import { formatRwf } from "@billa/shared";
 
@@ -44,6 +44,7 @@ export default function DocumentView() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [document, setDocument] = useState<DocumentDetail | null>(null);
+  useSetActiveDocumentType(document?.type);
   const [apiError, setApiError] = useState<string | null>(null);
   const [isConverting, setIsConverting] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -144,24 +145,18 @@ export default function DocumentView() {
 
   if (loadError) {
     return (
-      <AppLayout>
-        <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
-          Couldn't load this document. Try again.
-        </div>
-      </AppLayout>
+      <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
+        Couldn't load this document. Try again.
+      </div>
     );
   }
 
   if (!document) {
-    return (
-      <AppLayout>
-        <p className="font-sans text-sm text-neutral-600">Loading…</p>
-      </AppLayout>
-    );
+    return <p className="font-sans text-sm text-neutral-600">Loading…</p>;
   }
 
   return (
-    <AppLayout>
+    <>
       <div className="mx-auto flex max-w-3xl flex-col gap-6">
         <div className="flex items-center justify-between">
           <h1 className="font-display text-2xl font-semibold text-neutral-900">{document.number ?? "Draft"}</h1>
@@ -364,6 +359,6 @@ export default function DocumentView() {
           </button>
         </div>
       </Modal>
-    </AppLayout>
+    </>
   );
 }
