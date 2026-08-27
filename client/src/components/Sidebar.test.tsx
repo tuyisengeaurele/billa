@@ -30,6 +30,7 @@ describe("Sidebar", () => {
 
     expect(await screen.findByRole("link", { name: "Dashboard" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Revenue" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Receivables" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "All documents" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /^invoices$/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /proforma invoices/i })).toBeInTheDocument();

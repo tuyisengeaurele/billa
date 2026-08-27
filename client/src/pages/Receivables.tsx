@@ -1,0 +1,337 @@
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { formatRwf, PAYMENT_METHODS, type PaymentMethod } from "@billa/shared";
+import { AppLayout } from "../components/AppLayout";
+import { Modal } from "../components/Modal";
+import { apiRequest, ApiError } from "../lib/apiClient";
+
+interface ReceivableRow {
+  id: string;
+  number: string | null;
+  customerName: string;
+  total: number;
+  amountOwed: number;
+  dueDate: string | null;
+  daysOverdue: number;
+  agingBucket: "current" | "0-30" | "31-60" | "61-90" | "90+";
+}
+
+const BUCKET_LABELS: Record<ReceivableRow["agingBucket"], string> = {
+  current: "Current",
+  "0-30": "0-30 days",
+  "31-60": "31-60 days",
+  "61-90": "61-90 days",
+  "90+": "90+ days",
+};
+
+const BUCKET_COLORS: Record<ReceivableRow["agingBucket"], string> = {
+  current: "bg-neutral-100 text-neutral-600",
+  "0-30": "bg-amber-100 text-amber-700",
+  "31-60": "bg-orange-100 text-orange-700",
+  "61-90": "bg-red-100 text-red-700",
+  "90+": "bg-red-200 text-red-800",
+};
+
+const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  CASH: "Cash",
+  BANK_TRANSFER: "Bank transfer",
+  MOBILE_MONEY: "Mobile Money",
+  CHEQUE: "Cheque",
+  OTHER: "Other",
+};
+
+export default function Receivables() {
+  const [results, setResults] = useState<ReceivableRow[] | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  const [paymentTarget, setPaymentTarget] = useState<ReceivableRow | null>(null);
+  const [writeOffTarget, setWriteOffTarget] = useState<ReceivableRow | null>(null);
+
+  const [amount, setAmount] = useState("");
+  const [method, setMethod] = useState<PaymentMethod>("CASH");
+  const [paidOn, setPaidOn] = useState(() => new Date().toISOString().slice(0, 10));
+  const [generateReceipt, setGenerateReceipt] = useState(true);
+  const [isSavingPayment, setIsSavingPayment] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+
+  const [writeOffReason, setWriteOffReason] = useState("");
+  const [isSavingWriteOff, setIsSavingWriteOff] = useState(false);
+  const [writeOffError, setWriteOffError] = useState<string | null>(null);
+
+  function load() {
+    apiRequest<{ results: ReceivableRow[] }>("/receivables")
+      .then((data) => setResults(data.results))
+      .catch(() => setLoadError(true));
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  function openPaymentModal(row: ReceivableRow) {
+    setPaymentTarget(row);
+    setAmount(String(row.amountOwed));
+    setMethod("CASH");
+    setPaidOn(new Date().toISOString().slice(0, 10));
+    setGenerateReceipt(true);
+    setPaymentError(null);
+  }
+
+  async function submitPayment() {
+    if (!paymentTarget) return;
+    setIsSavingPayment(true);
+    setPaymentError(null);
+    try {
+      await apiRequest(`/documents/${paymentTarget.id}/payments`, {
+        method: "POST",
+        body: { amount: Number(amount), method, paidOn, generateReceipt },
+      });
+      setPaymentTarget(null);
+      load();
+    } catch (err) {
+      setPaymentError(
+        err instanceof ApiError ? "Couldn't record this payment. Try again." : "Something went wrong. Try again.",
+      );
+    } finally {
+      setIsSavingPayment(false);
+    }
+  }
+
+  function openWriteOffModal(row: ReceivableRow) {
+    setWriteOffTarget(row);
+    setWriteOffReason("");
+    setWriteOffError(null);
+  }
+
+  async function submitWriteOff() {
+    if (!writeOffTarget) return;
+    setIsSavingWriteOff(true);
+    setWriteOffError(null);
+    try {
+      await apiRequest(`/documents/${writeOffTarget.id}/write-off`, {
+        method: "POST",
+        body: { writeOffReason },
+      });
+      setWriteOffTarget(null);
+      load();
+    } catch (err) {
+      setWriteOffError(
+        err instanceof ApiError ? "Couldn't write off this invoice. Try again." : "Something went wrong. Try again.",
+      );
+    } finally {
+      setIsSavingWriteOff(false);
+    }
+  }
+
+  const totalOwed = (results ?? []).reduce((sum, row) => sum + row.amountOwed, 0);
+
+  return (
+    <AppLayout>
+      <div className="mx-auto flex max-w-5xl flex-col gap-6">
+        <div className="flex items-center justify-between">
+          <h1 className="font-display text-2xl font-semibold text-neutral-900">Accounts receivable</h1>
+          {results && results.length > 0 && (
+            <span className="font-sans text-sm text-neutral-500">Total owed: {formatRwf(totalOwed)}</span>
+          )}
+        </div>
+
+        {loadError && (
+          <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
+            Couldn't load accounts receivable. Try again.
+          </div>
+        )}
+
+        {!results && !loadError && <p className="font-sans text-sm text-neutral-600">Loading…</p>}
+
+        {results && results.length === 0 && (
+          <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-neutral-200 py-16 text-center">
+            <p className="font-sans text-sm text-neutral-600">Nothing outstanding. Every invoice is paid up.</p>
+          </div>
+        )}
+
+        {results && results.length > 0 && (
+          <div className="rounded-xl border border-neutral-200 bg-surface p-6">
+            <table className="w-full border-collapse font-sans text-sm">
+              <thead>
+                <tr className="border-b border-neutral-200 text-left text-neutral-500">
+                  <th className="py-2">Customer</th>
+                  <th className="py-2">Invoice</th>
+                  <th className="py-2">Due date</th>
+                  <th className="py-2">Aging</th>
+                  <th className="py-2">Owed</th>
+                  <th className="py-2" />
+                </tr>
+              </thead>
+              <tbody>
+                {results.map((row) => (
+                  <tr key={row.id} className="border-b border-neutral-100">
+                    <td className="py-3 text-neutral-900">{row.customerName}</td>
+                    <td className="py-3">
+                      <Link to={`/documents/${row.id}`} className="font-medium text-primary-500 hover:text-primary-700">
+                        {row.number ?? "Draft"}
+                      </Link>
+                    </td>
+                    <td className="py-3 text-neutral-600">{row.dueDate ?? "No due date"}</td>
+                    <td className="py-3">
+                      <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${BUCKET_COLORS[row.agingBucket]}`}>
+                        {BUCKET_LABELS[row.agingBucket]}
+                      </span>
+                    </td>
+                    <td className="py-3 font-medium text-neutral-900">{formatRwf(row.amountOwed)}</td>
+                    <td className="py-3">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => openPaymentModal(row)}
+                          className="rounded-lg border border-neutral-200 px-2.5 py-1 font-sans text-xs font-medium text-neutral-700 transition-colors hover:border-primary-500 hover:text-primary-700"
+                        >
+                          Record payment
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openWriteOffModal(row)}
+                          className="rounded-lg border border-neutral-200 px-2.5 py-1 font-sans text-xs font-medium text-neutral-500 transition-colors hover:border-error hover:text-error"
+                        >
+                          Write off
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <Modal isOpen={paymentTarget !== null} onClose={() => setPaymentTarget(null)} title="Record payment">
+        {paymentTarget && (
+          <div className="flex flex-col gap-4">
+            <p className="font-sans text-sm text-neutral-600">
+              Against invoice {paymentTarget.number ?? "Draft"} for {paymentTarget.customerName}.
+            </p>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="payment-amount" className="font-sans text-sm font-medium text-neutral-800">
+                Amount
+              </label>
+              <input
+                id="payment-amount"
+                type="number"
+                value={amount}
+                onChange={(event) => setAmount(event.target.value)}
+                className="rounded-lg border border-neutral-200 bg-surface px-3.5 py-2.5 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="payment-method" className="font-sans text-sm font-medium text-neutral-800">
+                Method
+              </label>
+              <select
+                id="payment-method"
+                value={method}
+                onChange={(event) => setMethod(event.target.value as PaymentMethod)}
+                className="rounded-lg border border-neutral-200 bg-surface px-3.5 py-2.5 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+              >
+                {PAYMENT_METHODS.map((paymentMethod) => (
+                  <option key={paymentMethod} value={paymentMethod}>
+                    {PAYMENT_METHOD_LABELS[paymentMethod]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="payment-date" className="font-sans text-sm font-medium text-neutral-800">
+                Date received
+              </label>
+              <input
+                id="payment-date"
+                type="date"
+                value={paidOn}
+                onChange={(event) => setPaidOn(event.target.value)}
+                className="rounded-lg border border-neutral-200 bg-surface px-3.5 py-2.5 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+              />
+            </div>
+            <label className="flex items-center gap-2 font-sans text-sm text-neutral-700">
+              <input
+                type="checkbox"
+                checked={generateReceipt}
+                onChange={(event) => setGenerateReceipt(event.target.checked)}
+              />
+              Generate a receipt for this payment
+            </label>
+
+            {paymentError && (
+              <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
+                {paymentError}
+              </div>
+            )}
+
+            <div className="mt-2 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setPaymentTarget(null)}
+                className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isSavingPayment}
+                onClick={submitPayment}
+                className="rounded-lg bg-primary-500 px-4 py-2 font-sans text-sm font-semibold text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {isSavingPayment ? "Saving…" : "Record payment"}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal isOpen={writeOffTarget !== null} onClose={() => setWriteOffTarget(null)} title="Write off invoice">
+        {writeOffTarget && (
+          <div className="flex flex-col gap-4">
+            <p className="font-sans text-sm text-neutral-600">
+              This removes invoice {writeOffTarget.number ?? "Draft"} from accounts receivable and records it as a
+              loss. You can reactivate it later from the invoice itself.
+            </p>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="write-off-reason" className="font-sans text-sm font-medium text-neutral-800">
+                Reason
+              </label>
+              <textarea
+                id="write-off-reason"
+                rows={3}
+                value={writeOffReason}
+                onChange={(event) => setWriteOffReason(event.target.value)}
+                className="rounded-lg border border-neutral-200 bg-surface px-3.5 py-2.5 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+              />
+            </div>
+
+            {writeOffError && (
+              <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
+                {writeOffError}
+              </div>
+            )}
+
+            <div className="mt-2 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setWriteOffTarget(null)}
+                className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isSavingWriteOff || writeOffReason.trim().length === 0}
+                onClick={submitWriteOff}
+                className="rounded-lg bg-error px-4 py-2 font-sans text-sm font-semibold text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isSavingWriteOff ? "Saving…" : "Write off"}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+    </AppLayout>
+  );
+}

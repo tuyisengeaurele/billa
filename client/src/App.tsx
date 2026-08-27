@@ -12,6 +12,7 @@ const Register = lazy(() => import("./pages/Register"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Revenue = lazy(() => import("./pages/Revenue"));
+const Receivables = lazy(() => import("./pages/Receivables"));
 const Customers = lazy(() => import("./pages/Customers"));
 const CustomerStatement = lazy(() => import("./pages/CustomerStatement"));
 const Items = lazy(() => import("./pages/Items"));
@@ -57,6 +58,7 @@ export default function App() {
                 <Route path="/onboarding" element={<Onboarding />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/revenue" element={<Revenue />} />
+                <Route path="/receivables" element={<Receivables />} />
                 <Route path="/activity" element={<Activity />} />
                 <Route path="/customers" element={<Customers />} />
                 <Route path="/customers/:id/statement" element={<CustomerStatement />} />

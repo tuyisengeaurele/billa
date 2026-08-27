@@ -81,6 +81,15 @@ function RevenueIcon() {
   );
 }
 
+function ReceivablesIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" />
+      <path strokeLinecap="round" d="M12 7v5l3 3" />
+    </svg>
+  );
+}
+
 function DocumentsIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -163,6 +172,14 @@ export function Sidebar({ billingBanner, onNavigate }: SidebarProps) {
         </SidebarLink>
         <SidebarLink to="/revenue" isActive={pathname === "/revenue"} onNavigate={onNavigate} icon={<RevenueIcon />}>
           Revenue
+        </SidebarLink>
+        <SidebarLink
+          to="/receivables"
+          isActive={pathname === "/receivables"}
+          onNavigate={onNavigate}
+          icon={<ReceivablesIcon />}
+        >
+          Receivables
         </SidebarLink>
 
         <p className="mt-4 px-3 font-sans text-xs font-semibold uppercase tracking-wide text-neutral-400">
