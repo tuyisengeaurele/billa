@@ -90,6 +90,38 @@ describe("Documents", () => {
     expect(screen.getByText("5,900 RWF")).toBeInTheDocument();
   });
 
+  it("shows a payment status badge for an invoice", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.includes("/documents")) {
+        return new Response(
+          JSON.stringify({
+            results: [
+              {
+                id: "d1",
+                number: "INV-0001",
+                status: "FINALIZED",
+                issueDate: "2026-08-19T00:00:00.000Z",
+                total: 5900,
+                customer: { name: "Kigali Traders" },
+                paymentStatus: "PARTIALLY_PAID",
+              },
+            ],
+            total: 1,
+            page: 1,
+            pageSize: 20,
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    renderDocuments();
+
+    expect(await screen.findByText("Partially paid")).toBeInTheDocument();
+  });
+
   it("navigates to the edit form when a draft row is clicked", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async (input) => {
       const url = urlOf(input);

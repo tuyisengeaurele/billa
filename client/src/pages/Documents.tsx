@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { DOCUMENT_TYPES, type DocumentType } from "@billa/shared";
+import { DOCUMENT_TYPES, type DocumentType, type InvoicePaymentStatus } from "@billa/shared";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AppLayout } from "../components/AppLayout";
 import { ExportCsvButton } from "../components/ExportCsvButton";
@@ -8,6 +8,7 @@ import { formatRwf } from "@billa/shared";
 import { API_BASE_URL } from "../lib/apiClient";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
 import { DOCUMENT_TYPE_COLORS } from "../lib/documentTypeColors";
+import { PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS } from "../lib/paymentStatusColors";
 
 interface DocumentRow {
   id: string;
@@ -17,6 +18,7 @@ interface DocumentRow {
   issueDate: string;
   total: number;
   customer: { name: string };
+  paymentStatus: InvoicePaymentStatus | null;
 }
 
 type SortBy = "issueDate" | "total" | "createdAt";
@@ -220,15 +222,24 @@ export default function Documents() {
                     <td className="py-3 text-neutral-600">{document.customer.name}</td>
                     <td className="py-3 text-neutral-600">{formatRwf(document.total)}</td>
                     <td className="py-3">
-                      <span
-                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                          document.status === "FINALIZED"
-                            ? "bg-primary-100 text-primary-700"
-                            : "bg-neutral-100 text-neutral-600"
-                        }`}
-                      >
-                        {document.status}
-                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                            document.status === "FINALIZED"
+                              ? "bg-primary-100 text-primary-700"
+                              : "bg-neutral-100 text-neutral-600"
+                          }`}
+                        >
+                          {document.status}
+                        </span>
+                        {document.paymentStatus && (
+                          <span
+                            className={`rounded-full px-2.5 py-1 text-xs font-medium ${PAYMENT_STATUS_COLORS[document.paymentStatus]}`}
+                          >
+                            {PAYMENT_STATUS_LABELS[document.paymentStatus]}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-3">
                       <button

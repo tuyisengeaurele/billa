@@ -12,12 +12,13 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { DOCUMENT_TYPES, type DocumentStatus, type DocumentType } from "@billa/shared";
+import { DOCUMENT_TYPES, type DocumentStatus, type DocumentType, type InvoicePaymentStatus } from "@billa/shared";
 import { AppLayout } from "../components/AppLayout";
 import { useAuth } from "../context/AuthContext";
 import { apiRequest } from "../lib/apiClient";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
 import { DOCUMENT_TYPE_COLORS } from "../lib/documentTypeColors";
+import { PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS } from "../lib/paymentStatusColors";
 import { useTheme } from "../context/ThemeContext";
 
 interface RecentDocument {
@@ -27,6 +28,7 @@ interface RecentDocument {
   status: DocumentStatus;
   customerName: string;
   issueDate: string;
+  paymentStatus: InvoicePaymentStatus | null;
 }
 
 interface DocumentTypeCount {
@@ -352,6 +354,13 @@ export default function Dashboard() {
                   >
                     {doc.status}
                   </span>
+                  {doc.paymentStatus && (
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${PAYMENT_STATUS_COLORS[doc.paymentStatus]}`}
+                    >
+                      {PAYMENT_STATUS_LABELS[doc.paymentStatus]}
+                    </span>
+                  )}
                   <span className="text-neutral-600">{doc.issueDate.slice(0, 10)}</span>
                 </Link>
               ))}

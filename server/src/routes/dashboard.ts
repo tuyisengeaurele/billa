@@ -91,6 +91,7 @@ dashboardRouter.get("/summary", async (req, res) => {
       status: doc.status,
       customerName: doc.customer.name,
       issueDate: doc.issueDate,
+      paymentStatus: doc.paymentStatus,
     })),
     documentsThisMonth,
     documentsLastMonth,

@@ -219,6 +219,28 @@ describe("Dashboard", () => {
     expect(screen.getByRole("link", { name: /Huye Traders/i })).toHaveAttribute("href", "/documents/d2/edit");
   });
 
+  it("shows a payment status badge on a recent invoice", async () => {
+    mockFetch(
+      baseSummary({
+        recentDocuments: [
+          {
+            id: "d1",
+            type: "INVOICE",
+            number: "INV-0001",
+            status: "FINALIZED",
+            customerName: "Musanze Supplies",
+            issueDate: "2026-08-19",
+            paymentStatus: "PAID",
+          },
+        ],
+      }),
+    );
+
+    renderDashboard();
+
+    expect(await screen.findByText("Paid")).toBeInTheDocument();
+  });
+
   it("shows the get-started checklist and skips the metrics section when the business has no documents yet", async () => {
     mockFetch(baseSummary());
 

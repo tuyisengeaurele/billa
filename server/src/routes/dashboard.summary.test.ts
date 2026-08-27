@@ -111,6 +111,18 @@ describe("GET /dashboard/summary", () => {
     expect(res.body.recentDocuments[0].customerName).toBe("Musanze Supplies");
   });
 
+  it("includes the payment status of a finalized invoice in recentDocuments", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies);
+    const id = await createDocument(app, cookies, customerId);
+    await finalizeDocument(app, cookies, id);
+
+    const res = await request(app).get("/dashboard/summary").set("Cookie", cookies);
+
+    expect(res.body.recentDocuments[0].paymentStatus).toBe("UNPAID");
+  });
+
   it("does not include another business's documents", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app);
