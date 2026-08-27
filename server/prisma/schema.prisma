@@ -115,6 +115,8 @@ model User {
   email                String            @unique
   firebaseUid          String            @unique
   name                 String?
+  avatarUrl            String?
+  productTourSeenAt    DateTime?
   trialEndsAt          DateTime
   currentPeriodEnd     DateTime?
   plan                 SubscriptionPlan?
