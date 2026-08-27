@@ -24,6 +24,9 @@ import { validateQuery } from "../middleware/validate-query.js";
 import { logAdminAction } from "../lib/admin-audit-log.js";
 import { toCsv } from "../lib/csv.js";
 import { deleteBusinessCascade, deleteUserCascade } from "../lib/delete-business.js";
+import { checkResendHealth } from "../lib/resend.js";
+import { checkFirebaseAdminHealth } from "../lib/firebase-admin.js";
+import { checkPdfRenderingHealth } from "../lib/pdf/browser.js";
 
 export const adminRouter = Router();
 
@@ -366,12 +369,15 @@ adminRouter.get("/metrics", async (_req, res) => {
 });
 
 adminRouter.get("/system-health", async (_req, res) => {
-  const [latestRuns, dbCheck] = await Promise.all([
+  const [latestRuns, dbCheck, emailCheck, firebaseCheck, pdfCheck] = await Promise.all([
     prisma.jobRunLog.findMany({ orderBy: { ranAt: "desc" } }),
     prisma.$queryRaw`SELECT 1`.then(
       () => true,
       () => false,
     ),
+    checkResendHealth(),
+    checkFirebaseAdminHealth(),
+    checkPdfRenderingHealth(),
   ]);
 
   const jobs = new Map<string, (typeof latestRuns)[number]>();
@@ -383,6 +389,9 @@ adminRouter.get("/system-health", async (_req, res) => {
 
   res.json({
     dbConnected: dbCheck,
+    emailConnected: emailCheck,
+    firebaseConnected: firebaseCheck,
+    pdfRenderingConnected: pdfCheck,
     jobs: Array.from(jobs.values()).map((run) => ({
       jobName: run.jobName,
       ranAt: run.ranAt,

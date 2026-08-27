@@ -32,6 +32,15 @@ export async function sendDocumentEmail(input: SendDocumentEmailInput): Promise<
   }
 }
 
+export async function checkResendHealth(): Promise<boolean> {
+  try {
+    const { error } = await getClient().apiKeys.list();
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
 export interface SendEmailInput {
   to: string;
   subject: string;

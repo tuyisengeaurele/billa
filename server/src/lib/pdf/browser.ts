@@ -27,6 +27,15 @@ export async function renderHtmlToPdfBuffer(html: string): Promise<Buffer> {
   }
 }
 
+export async function checkPdfRenderingHealth(): Promise<boolean> {
+  try {
+    await renderHtmlToPdfBuffer("<html><body>health check</body></html>");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function closeBrowser(): Promise<void> {
   if (browserPromise) {
     const browser = await browserPromise;

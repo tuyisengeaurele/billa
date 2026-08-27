@@ -12,6 +12,9 @@ interface JobStatus {
 
 interface SystemHealthResponse {
   dbConnected: boolean;
+  emailConnected: boolean;
+  firebaseConnected: boolean;
+  pdfRenderingConnected: boolean;
   jobs: JobStatus[];
 }
 
@@ -61,9 +64,23 @@ export default function AdminSystemHealth() {
 
         {health && (
           <>
-            <div className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-surface p-4">
-              <span className="font-sans text-sm font-medium text-neutral-900">Database:</span>
-              <StatusBadge ok={health.dbConnected} okLabel="Connected" badLabel="Disconnected" />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-surface p-4">
+                <span className="font-sans text-sm font-medium text-neutral-900">Database:</span>
+                <StatusBadge ok={health.dbConnected} okLabel="Connected" badLabel="Disconnected" />
+              </div>
+              <div className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-surface p-4">
+                <span className="font-sans text-sm font-medium text-neutral-900">Email:</span>
+                <StatusBadge ok={health.emailConnected} okLabel="Connected" badLabel="Disconnected" />
+              </div>
+              <div className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-surface p-4">
+                <span className="font-sans text-sm font-medium text-neutral-900">Sign-in:</span>
+                <StatusBadge ok={health.firebaseConnected} okLabel="Connected" badLabel="Disconnected" />
+              </div>
+              <div className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-surface p-4">
+                <span className="font-sans text-sm font-medium text-neutral-900">PDF rendering:</span>
+                <StatusBadge ok={health.pdfRenderingConnected} okLabel="Connected" badLabel="Disconnected" />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

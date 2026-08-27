@@ -21,3 +21,13 @@ export async function verifyFirebaseToken(idToken: string): Promise<{ uid: strin
   }
   return { uid: decoded.uid, email: decoded.email };
 }
+
+export async function checkFirebaseAdminHealth(): Promise<boolean> {
+  try {
+    ensureApp();
+    await getAuth().listUsers(1);
+    return true;
+  } catch {
+    return false;
+  }
+}

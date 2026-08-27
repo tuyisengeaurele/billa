@@ -14,6 +14,9 @@ describe("AdminSystemHealth", () => {
       new Response(
         JSON.stringify({
           dbConnected: true,
+          emailConnected: true,
+          firebaseConnected: false,
+          pdfRenderingConnected: true,
           jobs: [
             {
               jobName: "recurring-documents",
@@ -46,7 +49,11 @@ describe("AdminSystemHealth", () => {
     expect(await screen.findByText("recurring-documents")).toBeInTheDocument();
     expect(screen.getByText("overdue-reminders")).toBeInTheDocument();
     expect(screen.getByText(/database:/i)).toBeInTheDocument();
-    expect(screen.getByText("Connected")).toBeInTheDocument();
+    expect(screen.getByText(/email:/i)).toBeInTheDocument();
+    expect(screen.getByText(/sign-in:/i)).toBeInTheDocument();
+    expect(screen.getByText(/pdf rendering:/i)).toBeInTheDocument();
+    expect(screen.getAllByText("Connected")).toHaveLength(3);
+    expect(screen.getByText("Disconnected")).toBeInTheDocument();
     expect(screen.getByText("SMTP timeout")).toBeInTheDocument();
   });
 

@@ -1,8 +1,10 @@
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 import { createApp } from "../app.js";
 import { prisma } from "../lib/prisma.js";
 import { resetDb } from "../test/db.js";
+import * as resendModule from "../lib/resend.js";
+import * as firebaseAdminModule from "../lib/firebase-admin.js";
 
 beforeAll(() => {
   process.env.JWT_ACCESS_SECRET ??= "test-secret";
@@ -23,7 +25,9 @@ async function registerAndGetCookies(app: ReturnType<typeof createApp>, email: s
 }
 
 describe("GET /admin/system-health", () => {
-  it("returns the latest run per job plus DB connectivity", async () => {
+  it("returns the latest run per job plus DB, email, firebase, and PDF connectivity", async () => {
+    vi.spyOn(resendModule, "checkResendHealth").mockResolvedValue(true);
+    vi.spyOn(firebaseAdminModule, "checkFirebaseAdminHealth").mockResolvedValue(true);
     const app = createApp();
     const { cookies: adminCookies } = await registerAndGetCookies(app, "admin@example.com", true);
 
@@ -41,11 +45,26 @@ describe("GET /admin/system-health", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.dbConnected).toBe(true);
+    expect(res.body.emailConnected).toBe(true);
+    expect(res.body.firebaseConnected).toBe(true);
+    expect(res.body.pdfRenderingConnected).toBe(true);
     expect(res.body.jobs).toHaveLength(2);
     const recurring = res.body.jobs.find((j: { jobName: string }) => j.jobName === "recurring-documents");
     expect(recurring).toMatchObject({ succeeded: false, errorMessage: "boom" });
     const overdue = res.body.jobs.find((j: { jobName: string }) => j.jobName === "overdue-reminders");
     expect(overdue).toMatchObject({ succeeded: true, resultCount: 5 });
+  });
+
+  it("reports a service as disconnected when its check fails", async () => {
+    vi.spyOn(resendModule, "checkResendHealth").mockResolvedValue(false);
+    vi.spyOn(firebaseAdminModule, "checkFirebaseAdminHealth").mockResolvedValue(false);
+    const app = createApp();
+    const { cookies: adminCookies } = await registerAndGetCookies(app, "admin@example.com", true);
+
+    const res = await request(app).get("/admin/system-health").set("Cookie", adminCookies);
+
+    expect(res.body.emailConnected).toBe(false);
+    expect(res.body.firebaseConnected).toBe(false);
   });
 
   it("returns 403 for a non-admin", async () => {
