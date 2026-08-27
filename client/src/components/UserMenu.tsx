@@ -29,15 +29,6 @@ export function UserMenu({ profileHref, logoutConfirmMessage }: UserMenuProps) {
 
   return (
     <div className="flex items-center gap-1">
-      <button
-        type="button"
-        onClick={() => setIsLogoutConfirmOpen(true)}
-        aria-label="Log out"
-        className="flex h-9 w-9 items-center justify-center rounded-lg text-neutral-500 transition-colors hover:bg-error-bg hover:text-error"
-      >
-        <LogoutIcon />
-      </button>
-
       <Link
         to={profileHref}
         className="flex items-center gap-2 rounded-lg py-1.5 pl-1.5 pr-2.5 transition-colors hover:bg-neutral-100"
@@ -51,6 +42,15 @@ export function UserMenu({ profileHref, logoutConfirmMessage }: UserMenuProps) {
         )}
         <span className="hidden font-sans text-sm font-medium text-neutral-800 sm:block">{displayName}</span>
       </Link>
+
+      <button
+        type="button"
+        onClick={() => setIsLogoutConfirmOpen(true)}
+        aria-label="Log out"
+        className="flex h-9 w-9 items-center justify-center rounded-lg text-neutral-500 transition-colors hover:bg-error-bg hover:text-error"
+      >
+        <LogoutIcon />
+      </button>
 
       <Modal isOpen={isLogoutConfirmOpen} onClose={() => setIsLogoutConfirmOpen(false)} title="Log out">
         <p className="font-sans text-sm text-neutral-600">{logoutConfirmMessage}</p>
