@@ -16,6 +16,8 @@ import { addInterval, generateDueRecurringDocuments } from "../lib/recurring-doc
 import { sendOverdueReminders } from "../lib/overdue-reminders.js";
 import { logActivity } from "../lib/activity-log.js";
 import { recordJobRun } from "../lib/job-run-log.js";
+import { toCsv } from "../lib/csv.js";
+import { convertProformaToInvoice } from "../lib/convert-proforma.js";
 
 export const documentsRouter = Router();
 
@@ -103,6 +105,7 @@ documentsRouter.get("/", validateQuery(documentListQuerySchema), async (req, res
     businessId,
     ...(query.type && query.type.length > 0 ? { type: { in: query.type } } : {}),
     ...(query.status ? { status: query.status } : {}),
+    ...(query.customerId ? { customerId: query.customerId } : {}),
     ...(query.dateFrom || query.dateTo
       ? {
           issueDate: {
@@ -133,6 +136,41 @@ documentsRouter.get("/", validateQuery(documentListQuerySchema), async (req, res
   ]);
 
   res.json({ results, total, page: query.page, pageSize: query.pageSize });
+});
+
+documentsRouter.get("/export.csv", async (req, res) => {
+  const businessId = req.auth!.businessId;
+
+  const documents = await prisma.document.findMany({
+    where: { businessId },
+    orderBy: { issueDate: "desc" },
+    include: { customer: { select: { name: true } } },
+  });
+
+  const csv = toCsv(
+    documents.map((doc) => ({
+      type: doc.type,
+      number: doc.number ?? "Draft",
+      status: doc.status,
+      customer: doc.customer.name,
+      issueDate: doc.issueDate.toISOString().slice(0, 10),
+      dueDate: doc.dueDate ? doc.dueDate.toISOString().slice(0, 10) : "",
+      total: doc.total,
+    })),
+    [
+      { key: "type", header: "Type" },
+      { key: "number", header: "Number" },
+      { key: "status", header: "Status" },
+      { key: "customer", header: "Customer" },
+      { key: "issueDate", header: "Issue date" },
+      { key: "dueDate", header: "Due date" },
+      { key: "total", header: "Total" },
+    ],
+  );
+
+  res.setHeader("Content-Type", "text/csv");
+  res.setHeader("Content-Disposition", 'attachment; filename="documents.csv"');
+  res.send(csv);
 });
 
 documentsRouter.post("/", validateBody(documentSchema), async (req, res) => {
@@ -243,6 +281,7 @@ const DOCUMENT_TYPE_DISPLAY: Record<string, string> = {
   DELIVERY_NOTE: "Delivery note",
   QUOTE: "Quote",
   RECEIPT: "Receipt",
+  CREDIT_NOTE: "Credit note",
 };
 
 documentsRouter.post("/:id/send", async (req, res) => {
@@ -412,51 +451,53 @@ documentsRouter.post("/:id/convert", async (req, res) => {
   const businessId = req.auth!.businessId;
   const { id } = req.params;
 
-  const proforma = await prisma.document.findFirst({
+  const result = await convertProformaToInvoice({ id, businessId });
+  if (!result.ok) {
+    res.status(result.status).json({ error: result.error });
+    return;
+  }
+
+  const invoice = await prisma.document.findUnique({ where: { id: result.invoice.id }, include: DOCUMENT_INCLUDE });
+  res.status(201).json({ document: invoice });
+});
+
+documentsRouter.post("/:id/duplicate", async (req, res) => {
+  const businessId = req.auth!.businessId;
+  const { id } = req.params;
+
+  const source = await prisma.document.findFirst({
     where: { id, businessId },
-    include: { lines: true, convertedTo: { select: { id: true } } },
+    include: { lines: { orderBy: { sortOrder: "asc" } } },
   });
-  if (!proforma) {
+  if (!source) {
     res.status(404).json({ error: "not_found" });
-    return;
-  }
-  if (proforma.type !== "PROFORMA") {
-    res.status(400).json({ error: "not_a_proforma" });
-    return;
-  }
-  if (proforma.status !== "FINALIZED") {
-    res.status(409).json({ error: "not_finalized" });
-    return;
-  }
-  if (proforma.convertedTo) {
-    res.status(409).json({ error: "already_converted" });
     return;
   }
 
   const business = await prisma.business.findUnique({ where: { id: businessId } });
   const totals = calculateDocumentTotals(
-    proforma.lines.map((line) => ({
+    source.lines.map((line) => ({
       quantity: Number(line.quantity),
       unitPrice: line.unitPrice,
       taxRate: Number(line.taxRate),
     })),
   );
 
-  const invoice = await prisma.document.create({
+  const duplicate = await prisma.document.create({
     data: {
       businessId,
-      type: "INVOICE",
+      type: source.type,
       status: "DRAFT",
       template: business!.defaultTemplate,
-      customerId: proforma.customerId,
+      customerId: source.customerId,
       issueDate: new Date(new Date().toISOString().slice(0, 10)),
-      notes: proforma.notes,
+      notes: source.notes,
       subtotal: totals.subtotal,
       taxTotal: totals.taxTotal,
       total: totals.total,
-      convertedFromId: proforma.id,
+      referencedDocumentId: source.referencedDocumentId,
       lines: {
-        create: proforma.lines.map((line, index) => ({
+        create: source.lines.map((line, index) => ({
           itemId: line.itemId,
           description: line.description,
           quantity: line.quantity,
@@ -470,7 +511,16 @@ documentsRouter.post("/:id/convert", async (req, res) => {
     include: DOCUMENT_INCLUDE,
   });
 
-  res.status(201).json({ document: invoice });
+  await logActivity({
+    businessId,
+    actorUserId: req.auth!.userId,
+    action: "DOCUMENT_CREATED",
+    entityType: "Document",
+    entityId: duplicate.id,
+    metadata: { type: duplicate.type, duplicatedFrom: source.id },
+  });
+
+  res.status(201).json({ document: duplicate });
 });
 
 documentsRouter.delete("/:id", async (req, res) => {

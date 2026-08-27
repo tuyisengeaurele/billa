@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { AppLayout } from "../components/AppLayout";
 import { Button } from "../components/Button";
+import { ExportCsvButton } from "../components/ExportCsvButton";
 import { Modal } from "../components/Modal";
 import { ItemForm, type ItemFormValues } from "../components/items/ItemForm";
 import { apiRequest, ApiError } from "../lib/apiClient";
@@ -87,9 +88,12 @@ export default function Items() {
       <div className="mx-auto flex max-w-4xl flex-col gap-6">
         <div className="flex items-center justify-between">
           <h1 className="font-display text-2xl font-semibold text-neutral-900">Items</h1>
-          <Button type="button" onClick={openCreateModal} fullWidth={false} className="px-5">
-            Add item
-          </Button>
+          <div className="flex items-center gap-3">
+            <ExportCsvButton path="/items/export.csv" filename="items.csv" />
+            <Button type="button" onClick={openCreateModal} fullWidth={false} className="px-5">
+              Add item
+            </Button>
+          </div>
         </div>
 
         <div className="rounded-xl border border-neutral-200 bg-surface p-6">

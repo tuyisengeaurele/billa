@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { mergeSequences } from "./document-sequences.js";
 
 describe("mergeSequences", () => {
-  it("returns computed defaults for all 5 types when nothing is saved", () => {
+  it("returns computed defaults for all 6 types when nothing is saved", () => {
     const result = mergeSequences([]);
     expect(result).toEqual([
       { type: "INVOICE", prefix: "INV-", nextNumber: 1 },
@@ -10,6 +10,7 @@ describe("mergeSequences", () => {
       { type: "DELIVERY_NOTE", prefix: "DN-", nextNumber: 1 },
       { type: "QUOTE", prefix: "QTE-", nextNumber: 1 },
       { type: "RECEIPT", prefix: "RCT-", nextNumber: 1 },
+      { type: "CREDIT_NOTE", prefix: "CN-", nextNumber: 1 },
     ]);
   });
 

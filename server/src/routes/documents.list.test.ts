@@ -182,4 +182,19 @@ describe("GET /documents", () => {
     expect(draftRes.body.total).toBe(1);
     expect(draftRes.body.results[0].id).toBe(draftId);
   });
+
+  it("filters by customerId", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies);
+    await createDocument(app, cookies, customerId);
+
+    const otherCustomerRes = await request(app).post("/customers").set("Cookie", cookies).send({ name: "Other Co" });
+    const otherCustomerId = otherCustomerRes.body.customer.id as string;
+    await createDocument(app, cookies, otherCustomerId);
+
+    const res = await request(app).get(`/documents?customerId=${customerId}`).set("Cookie", cookies);
+    expect(res.body.total).toBe(1);
+    expect(res.body.results[0].customer.name).toBe("Musanze Supplies");
+  });
 });

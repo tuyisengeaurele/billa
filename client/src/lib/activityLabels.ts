@@ -4,6 +4,7 @@ const DOCUMENT_TYPE_DISPLAY: Record<string, string> = {
   DELIVERY_NOTE: "a delivery note",
   QUOTE: "a quote",
   RECEIPT: "a receipt",
+  CREDIT_NOTE: "a credit note",
 };
 
 export function describeActivity(action: string, metadata: Record<string, unknown> | null): string {

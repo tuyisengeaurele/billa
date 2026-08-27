@@ -13,6 +13,7 @@ const SEQUENCES = [
   { type: "DELIVERY_NOTE", prefix: "DN-", nextNumber: 1 },
   { type: "QUOTE", prefix: "QTE-", nextNumber: 1 },
   { type: "RECEIPT", prefix: "RCT-", nextNumber: 1 },
+  { type: "CREDIT_NOTE", prefix: "CN-", nextNumber: 1 },
 ];
 
 describe("SequenceEditor", () => {

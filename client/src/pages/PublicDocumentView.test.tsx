@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import PublicDocumentView from "./PublicDocumentView";
@@ -79,5 +79,120 @@ describe("PublicDocumentView", () => {
     renderPage("bad-token");
 
     expect(await screen.findByText(/isn't valid, or the document is no longer available/i)).toBeInTheDocument();
+  });
+
+  it("offers to accept an unconverted proforma", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async () =>
+      new Response(
+        JSON.stringify({
+          document: {
+            id: "d1",
+            type: "PROFORMA",
+            number: "PRO-0001",
+            business: { name: "Kigali Traders" },
+            customer: { name: "Acme Ltd" },
+            lines: [],
+            subtotal: 0,
+            taxTotal: 0,
+            total: 0,
+            accepted: false,
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+
+    renderPage("tok-abc123");
+
+    expect(await screen.findByRole("button", { name: /accept this proforma/i })).toBeInTheDocument();
+  });
+
+  it("does not offer to accept an invoice", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async () =>
+      new Response(
+        JSON.stringify({
+          document: {
+            id: "d1",
+            type: "INVOICE",
+            number: "INV-0001",
+            business: { name: "Kigali Traders" },
+            customer: { name: "Acme Ltd" },
+            lines: [],
+            subtotal: 0,
+            taxTotal: 0,
+            total: 0,
+            accepted: false,
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+
+    renderPage("tok-abc123");
+
+    await screen.findByText(/invoice inv-0001/i);
+    expect(screen.queryByRole("button", { name: /accept/i })).not.toBeInTheDocument();
+  });
+
+  it("does not offer to accept an already-accepted proforma, and shows confirmation instead", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async () =>
+      new Response(
+        JSON.stringify({
+          document: {
+            id: "d1",
+            type: "PROFORMA",
+            number: "PRO-0001",
+            business: { name: "Kigali Traders" },
+            customer: { name: "Acme Ltd" },
+            lines: [],
+            subtotal: 0,
+            taxTotal: 0,
+            total: 0,
+            accepted: true,
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+
+    renderPage("tok-abc123");
+
+    expect(await screen.findByText(/already been accepted/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /accept this proforma/i })).not.toBeInTheDocument();
+  });
+
+  it("accepts a proforma and shows a confirmation", async () => {
+    const fetchMock = vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = typeof input === "string" ? input : input.toString();
+      if (url.includes("/accept")) {
+        expect(init?.method).toBe("POST");
+        return new Response(JSON.stringify({ accepted: true }), { status: 201 });
+      }
+      return new Response(
+        JSON.stringify({
+          document: {
+            id: "d1",
+            type: "PROFORMA",
+            number: "PRO-0001",
+            business: { name: "Kigali Traders" },
+            customer: { name: "Acme Ltd" },
+            lines: [],
+            subtotal: 0,
+            taxTotal: 0,
+            total: 0,
+            accepted: false,
+          },
+        }),
+        { status: 200 },
+      );
+    });
+
+    renderPage("tok-abc123");
+
+    const button = await screen.findByRole("button", { name: /accept this proforma/i });
+    fireEvent.click(button);
+
+    expect(await screen.findByText(/already been accepted/i)).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/public/documents/tok-abc123/accept"), expect.any(Object));
   });
 });

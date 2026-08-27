@@ -8,6 +8,7 @@ export const DOCUMENT_TYPES = [
   "DELIVERY_NOTE",
   "QUOTE",
   "RECEIPT",
+  "CREDIT_NOTE",
 ] as const;
 export type DocumentType = (typeof DOCUMENT_TYPES)[number];
 

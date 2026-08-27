@@ -206,6 +206,50 @@ describe("DocumentView", () => {
     await waitFor(() => expect(screen.getByText("edit invoice page")).toBeInTheDocument());
   });
 
+  it("duplicates a document and navigates to editing the new draft", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/documents/d1/duplicate") && init?.method === "POST") {
+        return new Response(JSON.stringify({ document: { id: "d2" } }), { status: 201 });
+      }
+      if (url.endsWith("/documents/d1")) {
+        return new Response(
+          JSON.stringify({
+            document: {
+              id: "d1",
+              type: "INVOICE",
+              number: "INV-0001",
+              status: "FINALIZED",
+              customer: { name: "Kigali Traders" },
+              lines: [],
+              subtotal: 0,
+              taxTotal: 0,
+              total: 0,
+            },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={["/documents/d1"]}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/documents/:id" element={<DocumentView />} />
+            <Route path="/documents/:id/edit" element={<div>edit duplicate page</div>} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: /^duplicate$/i }));
+
+    await waitFor(() => expect(screen.getByText("edit duplicate page")).toBeInTheDocument());
+  });
+
   it("shows a link instead of a button once the proforma has already been converted", async () => {
     vi.spyOn(global, "fetch").mockImplementation(
       async () =>

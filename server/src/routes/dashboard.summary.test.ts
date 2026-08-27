@@ -151,7 +151,7 @@ describe("GET /dashboard/summary", () => {
     expect(res.body.documentsLastMonth).toBe(1);
   });
 
-  it("returns all five document types in documentsByType, even at zero", async () => {
+  it("returns all document types in documentsByType, even at zero", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app);
     const customerId = await createCustomer(app, cookies);
@@ -159,7 +159,7 @@ describe("GET /dashboard/summary", () => {
 
     const res = await request(app).get("/dashboard/summary").set("Cookie", cookies);
 
-    expect(res.body.documentsByType).toHaveLength(5);
+    expect(res.body.documentsByType).toHaveLength(6);
     const invoiceRow = res.body.documentsByType.find((row: { type: string }) => row.type === "INVOICE");
     const quoteRow = res.body.documentsByType.find((row: { type: string }) => row.type === "QUOTE");
     expect(invoiceRow.count).toBe(1);

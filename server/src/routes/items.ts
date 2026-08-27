@@ -7,6 +7,7 @@ import { requireAuth } from "../middleware/require-auth.js";
 import { requireActiveSubscription } from "../middleware/require-active-subscription.js";
 import { validateBody } from "../middleware/validate.js";
 import { validateQuery } from "../middleware/validate-query.js";
+import { toCsv } from "../lib/csv.js";
 
 export const itemsRouter = Router();
 
@@ -34,6 +35,31 @@ itemsRouter.get("/", validateQuery(itemListQuerySchema), async (req, res) => {
   ]);
 
   res.json({ results, total, page: query.page, pageSize: query.pageSize });
+});
+
+itemsRouter.get("/export.csv", async (req, res) => {
+  const businessId = req.auth!.businessId;
+
+  const items = await prisma.item.findMany({ where: { businessId }, orderBy: { description: "asc" } });
+
+  const csv = toCsv(
+    items.map((item) => ({
+      description: item.description,
+      unitPrice: item.unitPrice,
+      unit: item.unit,
+      status: item.isActive ? "Active" : "Inactive",
+    })),
+    [
+      { key: "description", header: "Description" },
+      { key: "unitPrice", header: "Unit price" },
+      { key: "unit", header: "Unit" },
+      { key: "status", header: "Status" },
+    ],
+  );
+
+  res.setHeader("Content-Type", "text/csv");
+  res.setHeader("Content-Disposition", 'attachment; filename="items.csv"');
+  res.send(csv);
 });
 
 itemsRouter.post("/", validateBody(itemSchema), async (req, res) => {

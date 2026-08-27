@@ -6,6 +6,7 @@ export const DEFAULT_PREFIXES: Record<DocumentType, string> = {
   DELIVERY_NOTE: "DN-",
   QUOTE: "QTE-",
   RECEIPT: "RCT-",
+  CREDIT_NOTE: "CN-",
 };
 
 export interface SequenceView {

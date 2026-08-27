@@ -12,6 +12,7 @@ enum DocumentType {
   DELIVERY_NOTE
   QUOTE
   RECEIPT
+  CREDIT_NOTE
 }
 
 enum DocumentStatus {

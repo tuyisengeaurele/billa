@@ -23,6 +23,7 @@ function baseByType() {
     { type: "DELIVERY_NOTE", count: 0 },
     { type: "QUOTE", count: 0 },
     { type: "RECEIPT", count: 0 },
+    { type: "CREDIT_NOTE", count: 0 },
   ];
 }
 

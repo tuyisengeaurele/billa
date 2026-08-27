@@ -19,14 +19,14 @@ async function registerAndGetCookies(app: ReturnType<typeof createApp>) {
 }
 
 describe("GET /business/sequences", () => {
-  it("returns computed defaults for all 5 types when none are saved", async () => {
+  it("returns computed defaults for all 6 types when none are saved", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app);
 
     const res = await request(app).get("/business/sequences").set("Cookie", cookies);
 
     expect(res.status).toBe(200);
-    expect(res.body.sequences).toHaveLength(5);
+    expect(res.body.sequences).toHaveLength(6);
     expect(res.body.sequences).toContainEqual({ type: "INVOICE", prefix: "INV-", nextNumber: 1 });
   });
 

@@ -26,4 +26,9 @@ export const DOCUMENT_TYPE_LABELS: Record<DocumentType, { singular: string; plur
     plural: "Receipts",
     description: "Confirm that payment was received.",
   },
+  CREDIT_NOTE: {
+    singular: "credit note",
+    plural: "Credit notes",
+    description: "Adjust an invoice for a return, discount, or correction.",
+  },
 };

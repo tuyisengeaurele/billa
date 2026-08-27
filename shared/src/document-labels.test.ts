@@ -21,6 +21,10 @@ describe("getDueDateLabel", () => {
   it("returns null for a receipt", () => {
     expect(getDueDateLabel("RECEIPT")).toBeNull();
   });
+
+  it("returns null for a credit note", () => {
+    expect(getDueDateLabel("CREDIT_NOTE")).toBeNull();
+  });
 });
 
 describe("getPartyLabel", () => {
@@ -42,5 +46,9 @@ describe("getPartyLabel", () => {
 
   it("returns 'Bill to' for a receipt", () => {
     expect(getPartyLabel("RECEIPT")).toBe("Bill to");
+  });
+
+  it("returns 'Bill to' for a credit note", () => {
+    expect(getPartyLabel("CREDIT_NOTE")).toBe("Bill to");
   });
 });

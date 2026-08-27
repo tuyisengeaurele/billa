@@ -25,7 +25,8 @@ export const recurrenceSchema = z
   .optional();
 export type RecurrenceInput = z.infer<typeof recurrenceSchema>;
 
-const REFERENCEABLE_TYPES: DocumentType[] = ["DELIVERY_NOTE", "RECEIPT"];
+const REFERENCEABLE_TYPES: DocumentType[] = ["DELIVERY_NOTE", "RECEIPT", "CREDIT_NOTE"];
+const REQUIRED_REFERENCE_TYPES: DocumentType[] = ["RECEIPT", "CREDIT_NOTE"];
 
 export const documentSchema = z
   .object({
@@ -38,12 +39,12 @@ export const documentSchema = z
     recurrence: recurrenceSchema,
     referencedDocumentId: z.string().trim().min(1).nullable().optional(),
   })
-  .refine((data) => data.type !== "RECEIPT" || Boolean(data.referencedDocumentId), {
-    message: "Choose the invoice this receipt is for",
+  .refine((data) => !REQUIRED_REFERENCE_TYPES.includes(data.type) || Boolean(data.referencedDocumentId), {
+    message: "Choose the invoice this document is for",
     path: ["referencedDocumentId"],
   })
   .refine((data) => REFERENCEABLE_TYPES.includes(data.type) || !data.referencedDocumentId, {
-    message: "Only delivery notes and receipts can reference another document",
+    message: "Only delivery notes, receipts, and credit notes can reference another document",
     path: ["referencedDocumentId"],
   });
 export type DocumentInput = z.infer<typeof documentSchema>;
@@ -60,6 +61,7 @@ export const documentListQuerySchema = z.object({
     ),
   search: z.string().trim().optional(),
   status: z.enum(DOCUMENT_STATUSES).optional(),
+  customerId: z.string().trim().min(1).optional(),
   dateFrom: z.string().trim().optional(),
   dateTo: z.string().trim().optional(),
   sortBy: z.enum(["issueDate", "total", "createdAt"]).optional().default("createdAt"),

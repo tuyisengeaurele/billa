@@ -34,7 +34,7 @@ export type DocumentSequenceInput = z.infer<typeof documentSequenceSchema>;
 export const updateSequencesSchema = z
   .array(documentSequenceSchema)
   .min(1)
-  .max(5)
+  .max(DOCUMENT_TYPES.length)
   .refine((items) => new Set(items.map((i) => i.type)).size === items.length, {
     message: "duplicate type in sequence update",
   });

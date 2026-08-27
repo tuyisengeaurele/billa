@@ -11,7 +11,9 @@ const AdminLogin = lazy(() => import("./pages/AdminLogin"));
 const Register = lazy(() => import("./pages/Register"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Revenue = lazy(() => import("./pages/Revenue"));
 const Customers = lazy(() => import("./pages/Customers"));
+const CustomerStatement = lazy(() => import("./pages/CustomerStatement"));
 const Items = lazy(() => import("./pages/Items"));
 const DocumentForm = lazy(() => import("./pages/DocumentForm"));
 const Documents = lazy(() => import("./pages/Documents"));
@@ -54,8 +56,10 @@ export default function App() {
               <Route element={<ProtectedRoute />}>
                 <Route path="/onboarding" element={<Onboarding />} />
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/revenue" element={<Revenue />} />
                 <Route path="/activity" element={<Activity />} />
                 <Route path="/customers" element={<Customers />} />
+                <Route path="/customers/:id/statement" element={<CustomerStatement />} />
                 <Route path="/items" element={<Items />} />
                 <Route path="/documents" element={<Documents />} />
                 <Route path="/documents/new" element={<DocumentForm />} />

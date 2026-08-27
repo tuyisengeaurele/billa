@@ -72,6 +72,15 @@ function DashboardIcon() {
   );
 }
 
+function RevenueIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 3v16a2 2 0 0 0 2 2h16" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M7 15l4-4 3 3 5-6" />
+    </svg>
+  );
+}
+
 function DocumentsIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -151,6 +160,9 @@ export function Sidebar({ billingBanner, onNavigate }: SidebarProps) {
       <nav className="flex flex-1 flex-col gap-1 px-3 py-2">
         <SidebarLink to="/dashboard" isActive={pathname === "/dashboard"} onNavigate={onNavigate} icon={<DashboardIcon />}>
           Dashboard
+        </SidebarLink>
+        <SidebarLink to="/revenue" isActive={pathname === "/revenue"} onNavigate={onNavigate} icon={<RevenueIcon />}>
+          Revenue
         </SidebarLink>
 
         <p className="mt-4 px-3 font-sans text-xs font-semibold uppercase tracking-wide text-neutral-400">

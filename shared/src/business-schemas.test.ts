@@ -105,7 +105,7 @@ describe("documentSequenceSchema", () => {
 });
 
 describe("updateSequencesSchema", () => {
-  it("accepts 1-5 valid entries", () => {
+  it("accepts a partial list of valid entries", () => {
     const result = updateSequencesSchema.safeParse([
       { type: "INVOICE", prefix: "INV-", nextNumber: 1 },
       { type: "QUOTE", prefix: "QTE-", nextNumber: 1 },

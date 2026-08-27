@@ -57,6 +57,7 @@ const TYPE_MONOGRAM: Record<DocumentType, string> = {
   DELIVERY_NOTE: "DN",
   QUOTE: "QU",
   RECEIPT: "RE",
+  CREDIT_NOTE: "CN",
 };
 
 function ChecklistStep({ to, label, done }: { to: string; label: string; done: boolean }) {

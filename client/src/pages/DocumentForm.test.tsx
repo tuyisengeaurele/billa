@@ -523,6 +523,32 @@ describe("DocumentForm", () => {
     expect(await screen.findByText(/choose the invoice/i)).toBeInTheDocument();
   });
 
+  it("requires choosing an invoice before saving a credit note", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.includes("/documents?type=INVOICE")) {
+        return new Response(JSON.stringify({ results: [], total: 0, page: 1, pageSize: 100 }), { status: 200 });
+      }
+      if (url.includes("/customers")) {
+        return new Response(
+          JSON.stringify({ results: [{ id: "c1", name: "Kigali Traders", phone: null }], total: 1, page: 1, pageSize: 10 }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderNewForType("CREDIT_NOTE");
+
+    await user.click(screen.getByRole("button", { name: /select a customer/i }));
+    await user.type(screen.getByLabelText("Search customers"), "Kigali");
+    await user.click(await screen.findByText("Kigali Traders"));
+    await user.click(screen.getByRole("button", { name: /save draft/i }));
+
+    expect(await screen.findByText(/choose the invoice/i)).toBeInTheDocument();
+  });
+
   it("shows a For invoice link when editing a receipt that references one", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async (input) => {
       const url = urlOf(input);

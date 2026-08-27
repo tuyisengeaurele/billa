@@ -56,4 +56,13 @@ export const DOCUMENT_TYPE_COLORS: Record<DocumentType, DocumentTypeColor> = {
     iconText: "text-emerald-700 dark:!text-emerald-300 group-hover:text-white",
     dot: "bg-emerald-500",
   },
+  CREDIT_NOTE: {
+    hex: "#e11d48",
+    chipBg: "bg-rose-100 dark:!bg-rose-500/15",
+    chipText: "text-rose-700 dark:!text-rose-300",
+    chipBgSelected: "bg-rose-600 text-white",
+    iconBg: "bg-rose-100 dark:!bg-rose-500/15 group-hover:bg-rose-600",
+    iconText: "text-rose-700 dark:!text-rose-300 group-hover:text-white",
+    dot: "bg-rose-500",
+  },
 };

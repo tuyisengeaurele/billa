@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { AppLayout } from "../components/AppLayout";
 import { Button } from "../components/Button";
+import { ExportCsvButton } from "../components/ExportCsvButton";
 import { Modal } from "../components/Modal";
 import { CustomerForm, type CustomerFormValues, type CustomerSubmitValues } from "../components/customers/CustomerForm";
 import { apiRequest, ApiError } from "../lib/apiClient";
@@ -94,9 +96,12 @@ export default function Customers() {
       <div className="mx-auto flex max-w-4xl flex-col gap-6">
         <div className="flex items-center justify-between">
           <h1 className="font-display text-2xl font-semibold text-neutral-900">Customers</h1>
-          <Button type="button" onClick={openCreateModal} fullWidth={false} className="px-5">
-            Add customer
-          </Button>
+          <div className="flex items-center gap-3">
+            <ExportCsvButton path="/customers/export.csv" filename="customers.csv" />
+            <Button type="button" onClick={openCreateModal} fullWidth={false} className="px-5">
+              Add customer
+            </Button>
+          </div>
         </div>
 
         <div className="rounded-xl border border-neutral-200 bg-surface p-6">
@@ -187,13 +192,21 @@ export default function Customers() {
                       </span>
                     </td>
                     <td className="py-3">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleActive(customer)}
-                        className="rounded-lg border border-neutral-200 px-2.5 py-1 font-sans text-xs font-medium text-neutral-700 transition-colors hover:border-primary-500 hover:text-primary-700"
-                      >
-                        {customer.isActive ? "Deactivate" : "Reactivate"}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          to={`/customers/${customer.id}/statement`}
+                          className="rounded-lg border border-neutral-200 px-2.5 py-1 font-sans text-xs font-medium text-neutral-700 transition-colors hover:border-primary-500 hover:text-primary-700"
+                        >
+                          Statement
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleActive(customer)}
+                          className="rounded-lg border border-neutral-200 px-2.5 py-1 font-sans text-xs font-medium text-neutral-700 transition-colors hover:border-primary-500 hover:text-primary-700"
+                        >
+                          {customer.isActive ? "Deactivate" : "Reactivate"}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

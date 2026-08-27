@@ -19,6 +19,10 @@ function utcMidnight(date: Date): Date {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
 }
 
+function monthKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
 dashboardRouter.get("/summary", async (req, res) => {
   const businessId = req.auth!.businessId;
   const now = new Date();
@@ -93,5 +97,80 @@ dashboardRouter.get("/summary", async (req, res) => {
     activityByDay,
     customerCount,
     hasLogo: Boolean(business?.logoUrl),
+  });
+});
+
+dashboardRouter.get("/revenue", async (req, res) => {
+  const businessId = req.auth!.businessId;
+  const now = new Date();
+  const windowStart = startOfMonth(now, 11);
+  const startOfYear = new Date(now.getFullYear(), 0, 1);
+
+  const docs = await prisma.document.findMany({
+    where: {
+      businessId,
+      status: "FINALIZED",
+      type: { in: ["INVOICE", "CREDIT_NOTE"] },
+      issueDate: { gte: windowStart },
+    },
+    select: {
+      type: true,
+      total: true,
+      issueDate: true,
+      customerId: true,
+      customer: { select: { name: true } },
+    },
+  });
+
+  const monthTotals = new Map<string, { invoiced: number; credited: number }>();
+  for (let i = 5; i >= 0; i--) {
+    monthTotals.set(monthKey(startOfMonth(now, i)), { invoiced: 0, credited: 0 });
+  }
+
+  let invoicedYearToDate = 0;
+  let creditedYearToDate = 0;
+  const customerNet = new Map<string, { name: string; total: number }>();
+
+  for (const doc of docs) {
+    const bucket = monthTotals.get(monthKey(doc.issueDate));
+    if (bucket) {
+      if (doc.type === "INVOICE") bucket.invoiced += doc.total;
+      else bucket.credited += doc.total;
+    }
+
+    if (doc.issueDate >= startOfYear) {
+      if (doc.type === "INVOICE") invoicedYearToDate += doc.total;
+      else creditedYearToDate += doc.total;
+    }
+
+    const signedTotal = doc.type === "INVOICE" ? doc.total : -doc.total;
+    const existing = customerNet.get(doc.customerId) ?? { name: doc.customer.name, total: 0 };
+    existing.total += signedTotal;
+    customerNet.set(doc.customerId, existing);
+  }
+
+  const monthlyRevenue = Array.from(monthTotals.entries()).map(([month, { invoiced, credited }]) => ({
+    month,
+    invoiced,
+    credited,
+    net: invoiced - credited,
+  }));
+
+  const invoicedThisMonth = monthTotals.get(monthKey(startOfMonth(now, 0)))?.invoiced ?? 0;
+  const invoicedLastMonth = monthTotals.get(monthKey(startOfMonth(now, 1)))?.invoiced ?? 0;
+
+  const topCustomers = Array.from(customerNet.entries())
+    .map(([customerId, { name, total }]) => ({ customerId, name, total }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 5);
+
+  res.json({
+    invoicedThisMonth,
+    invoicedLastMonth,
+    invoicedYearToDate,
+    creditedYearToDate,
+    netYearToDate: invoicedYearToDate - creditedYearToDate,
+    monthlyRevenue,
+    topCustomers,
   });
 });

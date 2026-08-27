@@ -76,7 +76,8 @@ interface InvoiceOption {
   customer: { name: string };
 }
 
-const REFERENCEABLE_TYPES: DocumentType[] = ["DELIVERY_NOTE", "RECEIPT"];
+const REFERENCEABLE_TYPES: DocumentType[] = ["DELIVERY_NOTE", "RECEIPT", "CREDIT_NOTE"];
+const REQUIRED_REFERENCE_TYPES: DocumentType[] = ["RECEIPT", "CREDIT_NOTE"];
 
 function calculateLiveTotals(lines: { quantity?: number; unitPrice?: number; taxRate?: number }[]) {
   let subtotal = 0;
@@ -110,6 +111,7 @@ export default function DocumentForm() {
   const [referencedDocumentId, setReferencedDocumentId] = useState("");
   const [isFinalizeConfirmOpen, setIsFinalizeConfirmOpen] = useState(false);
   const canReference = REFERENCEABLE_TYPES.includes(type);
+  const referenceIsRequired = REQUIRED_REFERENCE_TYPES.includes(type);
 
   const {
     register,
@@ -202,8 +204,8 @@ export default function DocumentForm() {
   }
 
   async function saveDraft(data: DocumentFormInput) {
-    if (type === "RECEIPT" && !referencedDocumentId) {
-      setApiError("Choose the invoice this receipt is for.");
+    if (referenceIsRequired && !referencedDocumentId) {
+      setApiError("Choose the invoice this document is for.");
       return;
     }
     setApiError(null);
@@ -346,7 +348,7 @@ export default function DocumentForm() {
               {canReference && (
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="referencedDocumentId" className="font-sans text-sm font-medium text-neutral-800">
-                    Invoice{type === "RECEIPT" ? "" : " (optional)"}
+                    Invoice{referenceIsRequired ? "" : " (optional)"}
                   </label>
                   <select
                     id="referencedDocumentId"
@@ -355,7 +357,7 @@ export default function DocumentForm() {
                     className="rounded-lg border border-neutral-200 bg-surface px-3.5 py-2.5 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
                   >
                     <option value="">
-                      {type === "RECEIPT" ? "Choose an invoice…" : "None (not tied to an invoice)"}
+                      {referenceIsRequired ? "Choose an invoice…" : "None (not tied to an invoice)"}
                     </option>
                     {invoiceOptions.map((invoice) => (
                       <option key={invoice.id} value={invoice.id}>

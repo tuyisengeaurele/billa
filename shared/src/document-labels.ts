@@ -9,6 +9,7 @@ export function getDueDateLabel(type: DocumentType): string | null {
       return "Valid until";
     case "DELIVERY_NOTE":
     case "RECEIPT":
+    case "CREDIT_NOTE":
       return null;
   }
 }

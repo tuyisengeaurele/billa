@@ -51,6 +51,7 @@ export default function DocumentView() {
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isDuplicating, setIsDuplicating] = useState(false);
 
   useEffect(() => {
     apiRequest<{ document: DocumentDetail }>(`/documents/${id}`)
@@ -100,6 +101,23 @@ export default function DocumentView() {
       );
     } finally {
       setIsSending(false);
+    }
+  }
+
+  async function handleDuplicate() {
+    if (!document) return;
+    setApiError(null);
+    setIsDuplicating(true);
+    try {
+      const response = await apiRequest<{ document: { id: string } }>(`/documents/${document.id}/duplicate`, {
+        method: "POST",
+      });
+      navigate(`/documents/${response.document.id}/edit`);
+    } catch (err) {
+      setApiError(
+        err instanceof ApiError ? "Couldn't duplicate this document. Try again." : "Something went wrong. Try again.",
+      );
+      setIsDuplicating(false);
     }
   }
 
@@ -173,6 +191,14 @@ export default function DocumentView() {
                 {linkCopied ? "Link copied" : "Copy link"}
               </button>
             )}
+            <button
+              type="button"
+              disabled={isDuplicating}
+              onClick={handleDuplicate}
+              className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {isDuplicating ? "Duplicating…" : "Duplicate"}
+            </button>
             <button
               type="button"
               onClick={() => window.open(`${API_BASE_URL}/documents/${document.id}/pdf`, "_blank")}

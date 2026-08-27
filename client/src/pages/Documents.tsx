@@ -2,6 +2,7 @@ import { useState } from "react";
 import { DOCUMENT_TYPES, type DocumentType } from "@billa/shared";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AppLayout } from "../components/AppLayout";
+import { ExportCsvButton } from "../components/ExportCsvButton";
 import { usePaginatedList } from "../lib/usePaginatedList";
 import { formatRwf } from "@billa/shared";
 import { API_BASE_URL } from "../lib/apiClient";
@@ -69,15 +70,18 @@ export default function Documents() {
       <div className="mx-auto flex max-w-4xl flex-col gap-6">
         <div className="flex items-center justify-between">
           <h1 className="font-display text-2xl font-semibold text-neutral-900">{heading}</h1>
-          {!isUnified && (
-            <button
-              type="button"
-              onClick={() => navigate(`/documents/new?type=${typeParam}`)}
-              className="flex w-auto items-center justify-center rounded-lg bg-primary-500 px-5 py-2.5 font-sans text-sm font-semibold text-white transition-colors hover:bg-primary-700"
-            >
-              New {labels!.singular}
-            </button>
-          )}
+          <div className="flex items-center gap-3">
+            <ExportCsvButton path="/documents/export.csv" filename="documents.csv" />
+            {!isUnified && (
+              <button
+                type="button"
+                onClick={() => navigate(`/documents/new?type=${typeParam}`)}
+                className="flex w-auto items-center justify-center rounded-lg bg-primary-500 px-5 py-2.5 font-sans text-sm font-semibold text-white transition-colors hover:bg-primary-700"
+              >
+                New {labels!.singular}
+              </button>
+            )}
+          </div>
         </div>
 
         {isUnified && (

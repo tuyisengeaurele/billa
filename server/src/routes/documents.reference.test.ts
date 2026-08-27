@@ -110,6 +110,40 @@ describe("referencedDocumentId on delivery notes and receipts", () => {
     expect(res.body.document.referencedDocument.id).toBe(invoice.id);
   });
 
+  it("requires a referencedDocumentId for a credit note", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies);
+
+    const res = await request(app)
+      .post("/documents")
+      .set("Cookie", cookies)
+      .send({ type: "CREDIT_NOTE", customerId, issueDate: "2026-08-20", lines: [] });
+
+    expect(res.status).toBe(400);
+  });
+
+  it("allows a credit note that references a finalized invoice", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies);
+    const invoice = await createFinalizedInvoice(app, cookies, customerId);
+
+    const res = await request(app)
+      .post("/documents")
+      .set("Cookie", cookies)
+      .send({
+        type: "CREDIT_NOTE",
+        customerId,
+        issueDate: "2026-08-20",
+        lines: [{ description: `Return against ${invoice.number}`, quantity: 1, unitPrice: 13000, taxRate: 18 }],
+        referencedDocumentId: invoice.id,
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.document.referencedDocument.id).toBe(invoice.id);
+  });
+
   it("rejects referencing a document that isn't an invoice", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app);

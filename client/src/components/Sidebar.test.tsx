@@ -29,12 +29,14 @@ describe("Sidebar", () => {
     renderSidebar();
 
     expect(await screen.findByRole("link", { name: "Dashboard" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Revenue" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "All documents" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /^invoices$/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /proforma invoices/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /delivery notes/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /^quotes$/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /receipts/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /credit notes/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Customers" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Items" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Activity" })).toBeInTheDocument();

@@ -100,6 +100,27 @@ describe("documentSchema", () => {
     expect(result.success).toBe(true);
   });
 
+  it("requires a referencedDocumentId for a credit note", () => {
+    const result = documentSchema.safeParse({
+      type: "CREDIT_NOTE",
+      customerId: "c1",
+      issueDate: "2026-08-19",
+      lines: [],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts a credit note with a referencedDocumentId", () => {
+    const result = documentSchema.safeParse({
+      type: "CREDIT_NOTE",
+      customerId: "c1",
+      issueDate: "2026-08-19",
+      lines: [],
+      referencedDocumentId: "inv1",
+    });
+    expect(result.success).toBe(true);
+  });
+
   it("allows a delivery note with no referencedDocumentId", () => {
     const result = documentSchema.safeParse({
       type: "DELIVERY_NOTE",
@@ -168,5 +189,9 @@ describe("documentListQuerySchema", () => {
 
   it("rejects an invalid status filter", () => {
     expect(documentListQuerySchema.safeParse({ status: "VOID" }).success).toBe(false);
+  });
+
+  it("accepts a customerId filter", () => {
+    expect(documentListQuerySchema.parse({ customerId: "c1" }).customerId).toBe("c1");
   });
 });

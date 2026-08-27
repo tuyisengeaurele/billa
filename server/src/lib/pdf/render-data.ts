@@ -12,6 +12,7 @@ const TYPE_LABELS: Record<DocumentType, string> = {
   DELIVERY_NOTE: "Delivery Note",
   QUOTE: "Quote",
   RECEIPT: "Receipt",
+  CREDIT_NOTE: "Credit Note",
 };
 
 export interface PdfRenderLine {
