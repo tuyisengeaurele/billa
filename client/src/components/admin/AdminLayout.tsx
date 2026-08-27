@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { IdleTimeoutModal } from "../IdleTimeoutModal";
 import { AdminSidebar } from "./AdminSidebar";
 import { MenuIcon } from "./icons";
 
@@ -13,6 +14,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
   return (
     <div className="flex min-h-screen bg-page">
+      <IdleTimeoutModal />
+
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-neutral-200 bg-surface lg:block">
         <AdminSidebar />
       </aside>
