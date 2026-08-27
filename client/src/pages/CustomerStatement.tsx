@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { formatRwf, type DocumentType } from "@billa/shared";
+import { formatRwf, type DocumentType, type InvoicePaymentStatus } from "@billa/shared";
 import { AppLayout } from "../components/AppLayout";
 import { apiRequest } from "../lib/apiClient";
 import { usePaginatedList } from "../lib/usePaginatedList";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
 import { DOCUMENT_TYPE_COLORS } from "../lib/documentTypeColors";
+import { PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS } from "../lib/paymentStatusColors";
 
 interface Customer {
   id: string;
@@ -24,6 +25,8 @@ interface DocumentRow {
   status: "DRAFT" | "FINALIZED";
   issueDate: string;
   total: number;
+  amountPaid: number;
+  paymentStatus: InvoicePaymentStatus | null;
 }
 
 type SortBy = "issueDate" | "total" | "createdAt";
@@ -48,6 +51,9 @@ export default function CustomerStatement() {
 
   const totalPages = Math.max(1, Math.ceil(list.total / list.pageSize));
   const documentsTotal = list.results.reduce((sum, doc) => sum + doc.total, 0);
+  const outstandingTotal = list.results
+    .filter((doc) => doc.type === "INVOICE" && doc.paymentStatus !== "PAID" && doc.paymentStatus !== "WRITTEN_OFF")
+    .reduce((sum, doc) => sum + (doc.total - doc.amountPaid), 0);
 
   if (loadError) {
     return (
@@ -88,11 +94,14 @@ export default function CustomerStatement() {
         </div>
 
         <div className="rounded-xl border border-neutral-200 bg-surface p-6">
-          <div className="flex items-center justify-between border-b border-neutral-100 pb-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-100 pb-4">
             <h2 className="font-display text-base font-semibold text-neutral-900">Documents</h2>
-            <span className="font-sans text-sm font-medium text-neutral-600">
-              Total on this page: {formatRwf(documentsTotal)}
-            </span>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 font-sans text-sm font-medium text-neutral-600">
+              <span>Total on this page: {formatRwf(documentsTotal)}</span>
+              {outstandingTotal > 0 && (
+                <span className="text-amber-700">Outstanding on this page: {formatRwf(outstandingTotal)}</span>
+              )}
+            </div>
           </div>
 
           {list.error && (
@@ -127,6 +136,7 @@ export default function CustomerStatement() {
                       Total {list.sortBy === "total" && (list.sortOrder === "asc" ? "↑" : "↓")}
                     </button>
                   </th>
+                  <th className="py-2">Owed</th>
                   <th className="py-2">Status</th>
                 </tr>
               </thead>
@@ -150,16 +160,28 @@ export default function CustomerStatement() {
                       </Link>
                     </td>
                     <td className="py-3 text-neutral-600">{formatRwf(document.total)}</td>
+                    <td className="py-3 text-neutral-600">
+                      {document.type === "INVOICE" ? formatRwf(document.total - document.amountPaid) : "N/A"}
+                    </td>
                     <td className="py-3">
-                      <span
-                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                          document.status === "FINALIZED"
-                            ? "bg-primary-100 text-primary-700"
-                            : "bg-neutral-100 text-neutral-600"
-                        }`}
-                      >
-                        {document.status}
-                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                            document.status === "FINALIZED"
+                              ? "bg-primary-100 text-primary-700"
+                              : "bg-neutral-100 text-neutral-600"
+                          }`}
+                        >
+                          {document.status}
+                        </span>
+                        {document.paymentStatus && (
+                          <span
+                            className={`rounded-full px-2.5 py-1 text-xs font-medium ${PAYMENT_STATUS_COLORS[document.paymentStatus]}`}
+                          >
+                            {PAYMENT_STATUS_LABELS[document.paymentStatus]}
+                          </span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
