@@ -13,3 +13,4 @@ export * from "./contact-schemas.js";
 export * from "./activity-schemas.js";
 export * from "./admin-schemas.js";
 export * from "./payment-schemas.js";
+export * from "./impersonation-schemas.js";
