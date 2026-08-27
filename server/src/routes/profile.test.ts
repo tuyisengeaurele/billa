@@ -90,6 +90,19 @@ describe("POST /profile/avatar", () => {
   });
 });
 
+describe("POST /profile/tour-seen", () => {
+  it("marks the product tour as seen for the caller", async () => {
+    const app = createApp();
+    const { cookies, userId } = await registerAndGetCookies(app);
+
+    const res = await request(app).post("/profile/tour-seen").set("Cookie", cookies);
+
+    expect(res.status).toBe(200);
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+    expect(user.productTourSeenAt).not.toBeNull();
+  });
+});
+
 describe("DELETE /profile/avatar", () => {
   it("clears the caller's avatar", async () => {
     const app = createApp();

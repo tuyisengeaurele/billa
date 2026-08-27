@@ -39,6 +39,7 @@ function serializeUser(user: {
   avatarUrl: string | null;
   totpEnabled: boolean;
   isAdmin: boolean;
+  productTourSeenAt: Date | null;
 }) {
   return {
     id: user.id,
@@ -47,6 +48,7 @@ function serializeUser(user: {
     avatarUrl: user.avatarUrl,
     totpEnabled: user.totpEnabled,
     isAdmin: user.isAdmin,
+    productTourSeenAt: user.productTourSeenAt,
   };
 }
 

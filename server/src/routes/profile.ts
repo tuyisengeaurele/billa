@@ -61,6 +61,14 @@ profileRouter.post(
   },
 );
 
+profileRouter.post("/tour-seen", async (req, res) => {
+  await prisma.user.update({
+    where: { id: req.auth!.userId },
+    data: { productTourSeenAt: new Date() },
+  });
+  res.json({ ok: true });
+});
+
 profileRouter.delete("/avatar", async (req, res) => {
   await prisma.user.update({ where: { id: req.auth!.userId }, data: { avatarUrl: null } });
   res.json({ ok: true });
