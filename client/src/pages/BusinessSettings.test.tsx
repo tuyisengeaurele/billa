@@ -67,6 +67,7 @@ describe("BusinessSettings", () => {
     expect(await screen.findByText("Kigali Traders")).toBeInTheDocument();
     expect(await screen.findByLabelText("Premium")).toBeChecked();
     expect(screen.getByRole("button", { name: /export all data/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /dark mode|light mode/i })).toBeInTheDocument();
   });
 
   it("submits changed fields and the selected template", async () => {

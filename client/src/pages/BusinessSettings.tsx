@@ -5,6 +5,7 @@ import { FormField } from "../components/FormField";
 import { Button } from "../components/Button";
 import { Modal } from "../components/Modal";
 import { LogoStep } from "../components/onboarding/LogoStep";
+import { ThemeToggle } from "../components/ThemeToggle";
 import { API_BASE_URL, apiRequest, ApiError } from "../lib/apiClient";
 import { useAuth } from "../context/AuthContext";
 import { SequenceEditor } from "../components/business/SequenceEditor";
@@ -188,6 +189,14 @@ export default function BusinessSettings() {
             Only the business owner can change these settings.
           </div>
         )}
+
+        <section className="rounded-xl border border-neutral-200 bg-surface p-6">
+          <h2 className="font-display text-base font-semibold text-neutral-900">Appearance</h2>
+          <p className="mt-1 font-sans text-sm text-neutral-500">Switch between light and dark mode.</p>
+          <div className="mt-4">
+            <ThemeToggle />
+          </div>
+        </section>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-6">
           <section className="rounded-xl border border-neutral-200 bg-surface p-6">
