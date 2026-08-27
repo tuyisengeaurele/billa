@@ -15,6 +15,9 @@ function mockRevenue(overrides: Record<string, unknown> = {}) {
     invoicedYearToDate: 900000,
     creditedYearToDate: 50000,
     netYearToDate: 850000,
+    totalCollected: 700000,
+    totalOutstanding: 60000,
+    daysSalesOutstanding: 12,
     monthlyRevenue: [
       { month: "2026-03", invoiced: 100000, credited: 0, net: 100000 },
       { month: "2026-04", invoiced: 120000, credited: 0, net: 120000 },
@@ -86,6 +89,24 @@ describe("Revenue", () => {
     expect(await screen.findByText(/250,000 rwf/i)).toBeInTheDocument();
     expect(screen.getByText(/900,000 rwf/i)).toBeInTheDocument();
     expect(screen.getByText(/850,000 rwf/i)).toBeInTheDocument();
+  });
+
+  it("shows collected, outstanding, and days sales outstanding", async () => {
+    mockFetch(mockRevenue());
+
+    renderPage();
+
+    expect(await screen.findByText(/700,000 rwf/i)).toBeInTheDocument();
+    expect(screen.getByText(/60,000 rwf/i)).toBeInTheDocument();
+    expect(screen.getByText("12 days")).toBeInTheDocument();
+  });
+
+  it("shows a fallback when there isn't enough data for days sales outstanding", async () => {
+    mockFetch(mockRevenue({ daysSalesOutstanding: null }));
+
+    renderPage();
+
+    expect(await screen.findByText(/not enough data/i)).toBeInTheDocument();
   });
 
   it("lists top customers by net invoiced total", async () => {

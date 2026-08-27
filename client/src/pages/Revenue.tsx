@@ -24,6 +24,9 @@ interface RevenueSummary {
   invoicedYearToDate: number;
   creditedYearToDate: number;
   netYearToDate: number;
+  totalCollected: number;
+  totalOutstanding: number;
+  daysSalesOutstanding: number | null;
   monthlyRevenue: MonthlyRevenueRow[];
   topCustomers: TopCustomerRow[];
 }
@@ -134,6 +137,30 @@ export default function Revenue() {
                 <p className="font-sans text-sm text-neutral-500">Net this year</p>
                 <p className="mt-2 font-display text-2xl font-semibold text-primary-700">
                   {formatRwf(summary.netYearToDate)}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+              <div className="rounded-xl border border-neutral-200 bg-surface p-5">
+                <p className="font-sans text-sm text-neutral-500">Collected, last 12 months</p>
+                <p className="mt-2 font-display text-2xl font-semibold text-neutral-900">
+                  {formatRwf(summary.totalCollected)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-neutral-200 bg-surface p-5">
+                <p className="font-sans text-sm text-neutral-500">Outstanding right now</p>
+                <p className="mt-2 font-display text-2xl font-semibold text-neutral-900">
+                  {formatRwf(summary.totalOutstanding)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-neutral-200 bg-surface p-5">
+                <p className="font-sans text-sm text-neutral-500">Days sales outstanding</p>
+                <p className="mt-2 font-display text-2xl font-semibold text-neutral-900">
+                  {summary.daysSalesOutstanding !== null ? `${summary.daysSalesOutstanding} days` : "Not enough data"}
+                </p>
+                <p className="mt-1 font-sans text-xs text-neutral-400">
+                  Simplified estimate, not a full accrual-accounting figure.
                 </p>
               </div>
             </div>

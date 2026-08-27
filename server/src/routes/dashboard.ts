@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { DOCUMENT_TYPES } from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
+import { getOutstandingInvoices } from "../lib/accounts-receivable.js";
 import { requireAuth } from "../middleware/require-auth.js";
 
 export const dashboardRouter = Router();
@@ -164,12 +165,43 @@ dashboardRouter.get("/revenue", async (req, res) => {
     .sort((a, b) => b.total - a.total)
     .slice(0, 5);
 
+  const [collectedPayments, outstandingInvoices, ninetyDayPaidInvoices] = await Promise.all([
+    prisma.invoicePayment.findMany({
+      where: { businessId, voidedAt: null, paidOn: { gte: windowStart } },
+      select: { amount: true },
+    }),
+    getOutstandingInvoices(businessId),
+    prisma.document.findMany({
+      where: { businessId, type: "INVOICE", status: "FINALIZED", paymentStatus: "PAID" },
+      select: {
+        issueDate: true,
+        payments: { where: { voidedAt: null }, orderBy: { paidOn: "desc" }, take: 1, select: { paidOn: true } },
+      },
+    }),
+  ]);
+
+  const totalCollected = collectedPayments.reduce((sum, payment) => sum + payment.amount, 0);
+  const totalOutstanding = outstandingInvoices.reduce((sum, invoice) => sum + invoice.amountOwed, 0);
+
+  const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+  const dsoSamples: number[] = [];
+  for (const invoice of ninetyDayPaidInvoices) {
+    const lastPayment = invoice.payments[0];
+    if (!lastPayment || lastPayment.paidOn < ninetyDaysAgo) continue;
+    dsoSamples.push(Math.round((lastPayment.paidOn.getTime() - invoice.issueDate.getTime()) / (24 * 60 * 60 * 1000)));
+  }
+  const daysSalesOutstanding =
+    dsoSamples.length > 0 ? Math.round(dsoSamples.reduce((sum, days) => sum + days, 0) / dsoSamples.length) : null;
+
   res.json({
     invoicedThisMonth,
     invoicedLastMonth,
     invoicedYearToDate,
     creditedYearToDate,
     netYearToDate: invoicedYearToDate - creditedYearToDate,
+    totalCollected,
+    totalOutstanding,
+    daysSalesOutstanding,
     monthlyRevenue,
     topCustomers,
   });

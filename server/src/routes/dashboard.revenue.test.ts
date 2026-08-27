@@ -162,4 +162,52 @@ describe("GET /dashboard/revenue", () => {
     expect(res.body.invoicedYearToDate).toBe(0);
     expect(res.body.topCustomers).toHaveLength(0);
   });
+
+  it("sums collected payments and outstanding balances", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies);
+    const paidInvoice = await createDocument(app, cookies, customerId, "INVOICE", 100000);
+    await finalizeDocument(app, cookies, paidInvoice.id);
+    await request(app)
+      .post(`/documents/${paidInvoice.id}/payments`)
+      .set("Cookie", cookies)
+      .send({ amount: 100000, method: "CASH", paidOn: new Date().toISOString().slice(0, 10) });
+
+    const unpaidInvoice = await createDocument(app, cookies, customerId, "INVOICE", 40000);
+    await finalizeDocument(app, cookies, unpaidInvoice.id);
+
+    const res = await request(app).get("/dashboard/revenue").set("Cookie", cookies);
+
+    expect(res.body.totalCollected).toBe(100000);
+    expect(res.body.totalOutstanding).toBe(40000);
+  });
+
+  it("computes days sales outstanding from recently completed payments", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies);
+    const invoice = await createDocument(app, cookies, customerId, "INVOICE", 100000);
+    await finalizeDocument(app, cookies, invoice.id);
+    await request(app)
+      .post(`/documents/${invoice.id}/payments`)
+      .set("Cookie", cookies)
+      .send({ amount: 100000, method: "CASH", paidOn: new Date().toISOString().slice(0, 10) });
+
+    const res = await request(app).get("/dashboard/revenue").set("Cookie", cookies);
+
+    expect(res.body.daysSalesOutstanding).toBe(0);
+  });
+
+  it("returns null for days sales outstanding when nothing was paid off recently", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies);
+    const invoice = await createDocument(app, cookies, customerId, "INVOICE", 100000);
+    await finalizeDocument(app, cookies, invoice.id);
+
+    const res = await request(app).get("/dashboard/revenue").set("Cookie", cookies);
+
+    expect(res.body.daysSalesOutstanding).toBeNull();
+  });
 });
