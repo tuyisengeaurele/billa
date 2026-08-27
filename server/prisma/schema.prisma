@@ -73,6 +73,13 @@ enum ImpersonationRequestStatus {
   OVERRIDDEN
 }
 
+enum NotificationType {
+  INVOICE_OVERDUE
+  PAYMENT_RECEIVED
+  MEMBER_JOINED
+  CONTACT_MESSAGE_RECEIVED
+}
+
 model Business {
   id                    String           @id @default(cuid())
   ownerId               String
@@ -142,6 +149,7 @@ model User {
   invoicePaymentsCreated     InvoicePayment[]
   impersonationRequestsMade  ImpersonationRequest[] @relation("ImpersonationRequester")
   impersonationRequestsForMe ImpersonationRequest[] @relation("ImpersonationTarget")
+  notifications              Notification[]
 }
 
 model BusinessMember {
@@ -258,6 +266,21 @@ model ImpersonationRequest {
 
   @@index([targetUserId, status])
   @@index([requesterId, status])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String?
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, readAt])
 }
 
 model RefreshToken {
