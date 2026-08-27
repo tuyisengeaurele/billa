@@ -18,6 +18,18 @@ describe("describeActivity", () => {
     expect(describeActivity("MEMBER_INVITED", { email: "friend@example.com" })).toBe("invited friend@example.com");
   });
 
+  it("describes an owner impersonating a member by email", () => {
+    expect(describeActivity("MEMBER_IMPERSONATION_STARTED", { email: "fred@example.com" })).toBe(
+      "viewed the account as fred@example.com",
+    );
+  });
+
+  it("describes an owner ending impersonation of a member by email", () => {
+    expect(describeActivity("MEMBER_IMPERSONATION_ENDED", { email: "fred@example.com" })).toBe(
+      "stopped viewing the account as fred@example.com",
+    );
+  });
+
   it("falls back gracefully when metadata is missing", () => {
     expect(describeActivity("MEMBER_JOINED", null)).toBe("joined the team");
   });

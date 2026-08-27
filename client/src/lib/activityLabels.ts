@@ -31,6 +31,10 @@ export function describeActivity(action: string, metadata: Record<string, unknow
       return "joined the team";
     case "MEMBER_REMOVED":
       return email ? `removed ${email}` : "removed a team member";
+    case "MEMBER_IMPERSONATION_STARTED":
+      return email ? `viewed the account as ${email}` : "viewed a team member's account";
+    case "MEMBER_IMPERSONATION_ENDED":
+      return email ? `stopped viewing the account as ${email}` : "stopped viewing a team member's account";
     default:
       return action;
   }
