@@ -32,6 +32,7 @@ import { toCsv } from "../lib/csv.js";
 import { convertProformaToInvoice } from "../lib/convert-proforma.js";
 import { recomputeInvoicePaymentStatus } from "../lib/invoice-payment-status.js";
 import { finalizeDocumentById } from "../lib/finalize-document.js";
+import { createNotification } from "../lib/notifications.js";
 
 export const documentsRouter = Router();
 
@@ -536,6 +537,16 @@ documentsRouter.post("/:id/payments", validateBody(createPaymentSchema), async (
   }
 
   await recomputeInvoicePaymentStatus(id);
+
+  const owningBusiness = await prisma.business.findUnique({ where: { id: businessId }, select: { ownerId: true } });
+  if (owningBusiness) {
+    await createNotification({
+      userId: owningBusiness.ownerId,
+      type: "PAYMENT_RECEIVED",
+      title: `Payment received for ${invoice.number ?? "an invoice"}`,
+      link: `/documents/${id}`,
+    });
+  }
 
   const updatedInvoice = await prisma.document.findUnique({ where: { id }, include: DOCUMENT_INCLUDE });
   res.status(201).json({ payment: { ...payment, receiptDocumentId }, document: updatedInvoice });

@@ -1,6 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import request from "supertest";
 import { createApp } from "../app.js";
+import { prisma } from "../lib/prisma.js";
 import { resetDb } from "../test/db.js";
 
 beforeAll(() => {
@@ -52,6 +53,24 @@ describe("POST /documents/:id/payments", () => {
     expect(res.status).toBe(201);
     expect(res.body.document.paymentStatus).toBe("PARTIALLY_PAID");
     expect(res.body.document.amountPaid).toBe(40000);
+  });
+
+  it("notifies the owner in-app when a payment is recorded", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies);
+    const invoice = await createFinalizedInvoice(app, cookies, customerId);
+
+    await request(app)
+      .post(`/documents/${invoice.id}/payments`)
+      .set("Cookie", cookies)
+      .send({ amount: 40000, method: "CASH", paidOn: "2026-08-20" });
+
+    const owner = await prisma.user.findUniqueOrThrow({ where: { email: "owner@example.com" } });
+    const notifications = await prisma.notification.findMany({ where: { userId: owner.id } });
+    expect(notifications).toHaveLength(1);
+    expect(notifications[0]).toMatchObject({ type: "PAYMENT_RECEIVED" });
+    expect(notifications[0].link).toBe(`/documents/${invoice.id}`);
   });
 
   it("marks the invoice PAID once fully paid", async () => {
