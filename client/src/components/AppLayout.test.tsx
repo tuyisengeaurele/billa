@@ -106,8 +106,7 @@ describe("AppLayout", () => {
     await screen.findByRole("link", { name: /customers/i });
 
     const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 200 }));
-    await user.click(screen.getByRole("button", { name: /owner person/i }));
-    await user.click(screen.getByRole("menuitem", { name: /log out/i }));
+    await user.click(screen.getByRole("button", { name: /^log out$/i }));
 
     const dialog = await screen.findByRole("dialog", { name: /log out/i });
     await user.click(within(dialog).getByRole("button", { name: /log out/i }));

@@ -43,35 +43,19 @@ describe("UserMenu", () => {
     vi.restoreAllMocks();
   });
 
-  it("shows the user's name and opens a menu with a profile link", async () => {
-    const user = userEvent.setup();
+  it("links the avatar and name straight to the profile page", async () => {
     renderUserMenu();
 
-    const trigger = await screen.findByRole("button", { name: /ange aurele/i });
-    await user.click(trigger);
-
-    const profileLink = screen.getByRole("menuitem", { name: /view profile/i });
+    const profileLink = await screen.findByRole("link", { name: /ange aurele/i });
     expect(profileLink).toHaveAttribute("href", "/profile");
-    expect(screen.getByText("owner@example.com")).toBeInTheDocument();
   });
 
-  it("closes the menu when clicking outside", async () => {
+  it("puts a standalone log out button to the left of the profile link, with a confirmation", async () => {
     const user = userEvent.setup();
     renderUserMenu();
 
-    await user.click(await screen.findByRole("button", { name: /ange aurele/i }));
-    expect(screen.getByRole("menu")).toBeInTheDocument();
-
-    await user.click(document.body);
-    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
-  });
-
-  it("confirms before logging out", async () => {
-    const user = userEvent.setup();
-    renderUserMenu();
-
-    await user.click(await screen.findByRole("button", { name: /ange aurele/i }));
-    await user.click(screen.getByRole("menuitem", { name: /log out/i }));
+    await screen.findByRole("link", { name: /ange aurele/i });
+    await user.click(screen.getByRole("button", { name: /^log out$/i }));
 
     const dialog = await screen.findByRole("dialog", { name: /^log out$/i });
     expect(within(dialog).getByText("Log out of Billa?")).toBeInTheDocument();
@@ -80,5 +64,20 @@ describe("UserMenu", () => {
     await user.click(within(dialog).getByRole("button", { name: /^log out$/i }));
 
     await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
+  });
+
+  it("does not log out when the confirmation is dismissed", async () => {
+    const user = userEvent.setup();
+    renderUserMenu();
+
+    await screen.findByRole("link", { name: /ange aurele/i });
+    await user.click(screen.getByRole("button", { name: /^log out$/i }));
+
+    const dialog = await screen.findByRole("dialog", { name: /^log out$/i });
+    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 200 }));
+    await user.click(within(dialog).getByRole("button", { name: /cancel/i }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });

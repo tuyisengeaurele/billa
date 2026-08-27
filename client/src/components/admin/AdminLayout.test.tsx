@@ -1,5 +1,4 @@
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../../context/AuthContext";
@@ -33,7 +32,6 @@ describe("AdminLayout", () => {
       }
       return new Response("{}", { status: 401 });
     });
-    const user = userEvent.setup();
 
     render(
       <MemoryRouter initialEntries={["/admin/users"]}>
@@ -53,8 +51,7 @@ describe("AdminLayout", () => {
     expect(screen.queryByRole("link", { name: /back to app/i })).not.toBeInTheDocument();
     expect(screen.getByText("page content")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /admin person/i }));
-    expect(screen.getByRole("menuitem", { name: /log out/i })).toBeInTheDocument();
-    expect(screen.getByRole("menuitem", { name: /view profile/i })).toHaveAttribute("href", "/admin/profile");
+    expect(screen.getByRole("button", { name: /^log out$/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /admin person/i })).toHaveAttribute("href", "/admin/profile");
   });
 });
