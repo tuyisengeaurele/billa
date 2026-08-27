@@ -13,7 +13,6 @@ import {
   YAxis,
 } from "recharts";
 import { DOCUMENT_TYPES, type DocumentStatus, type DocumentType, type InvoicePaymentStatus } from "@billa/shared";
-import { AppLayout } from "../components/AppLayout";
 import { useAuth } from "../context/AuthContext";
 import { apiRequest } from "../lib/apiClient";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
@@ -144,7 +143,6 @@ export default function Dashboard() {
   const hasAttentionItems = summary !== null && (summary.draftCount > 0 || summary.overdueInvoiceCount > 0);
 
   return (
-    <AppLayout>
       <div className="mx-auto flex max-w-5xl flex-col gap-8">
         <h1 className="font-display text-3xl font-semibold text-neutral-900">
           Welcome, {business?.name ?? "there"}.
@@ -368,6 +366,5 @@ export default function Dashboard() {
           </div>
         )}
       </div>
-    </AppLayout>
   );
 }

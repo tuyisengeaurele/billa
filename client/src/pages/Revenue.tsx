@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { formatRwf } from "@billa/shared";
-import { AppLayout } from "../components/AppLayout";
 import { apiRequest } from "../lib/apiClient";
 import { useTheme } from "../context/ThemeContext";
 
@@ -94,7 +93,6 @@ export default function Revenue() {
   const hasRevenue = summary !== null && summary.invoicedYearToDate > 0;
 
   return (
-    <AppLayout>
       <div className="mx-auto flex max-w-5xl flex-col gap-8">
         <h1 className="font-display text-3xl font-semibold text-neutral-900">Revenue</h1>
 
@@ -295,6 +293,5 @@ export default function Revenue() {
           )}
         </div>
       </div>
-    </AppLayout>
   );
 }

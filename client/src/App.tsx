@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
+import { AppLayoutRoute } from "./components/AppLayoutRoute";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminRoute } from "./components/AdminRoute";
 import { RootRoute } from "./components/RootRoute";
@@ -58,19 +59,21 @@ export default function App() {
               <Route path="/invite/:token" element={<AcceptInvite />} />
               <Route element={<ProtectedRoute />}>
                 <Route path="/onboarding" element={<Onboarding />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/revenue" element={<Revenue />} />
-                <Route path="/receivables" element={<Receivables />} />
-                <Route path="/activity" element={<Activity />} />
-                <Route path="/customers" element={<Customers />} />
-                <Route path="/customers/:id/statement" element={<CustomerStatement />} />
-                <Route path="/items" element={<Items />} />
-                <Route path="/documents" element={<Documents />} />
-                <Route path="/documents/new" element={<DocumentForm />} />
-                <Route path="/documents/:id/edit" element={<DocumentForm />} />
-                <Route path="/documents/:id" element={<DocumentView />} />
-                <Route path="/settings" element={<BusinessSettings />} />
-                <Route path="/billing/callback" element={<BillingCallback />} />
+                <Route element={<AppLayoutRoute />}>
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/revenue" element={<Revenue />} />
+                  <Route path="/receivables" element={<Receivables />} />
+                  <Route path="/activity" element={<Activity />} />
+                  <Route path="/customers" element={<Customers />} />
+                  <Route path="/customers/:id/statement" element={<CustomerStatement />} />
+                  <Route path="/items" element={<Items />} />
+                  <Route path="/documents" element={<Documents />} />
+                  <Route path="/documents/new" element={<DocumentForm />} />
+                  <Route path="/documents/:id/edit" element={<DocumentForm />} />
+                  <Route path="/documents/:id" element={<DocumentView />} />
+                  <Route path="/settings" element={<BusinessSettings />} />
+                  <Route path="/billing/callback" element={<BillingCallback />} />
+                </Route>
               </Route>
               <Route element={<AdminRoute />}>
                 <Route path="/admin" element={<Navigate to="/admin/users" replace />} />

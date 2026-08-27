@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { DocumentTemplate } from "@billa/shared";
-import { AppLayout } from "../components/AppLayout";
 import { FormField } from "../components/FormField";
 import { Button } from "../components/Button";
 import { Modal } from "../components/Modal";
@@ -161,26 +160,20 @@ export default function BusinessSettings() {
 
   if (loadError) {
     return (
-      <AppLayout>
-        <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
-          Couldn't load your business settings. Try again.
-        </div>
-      </AppLayout>
+      <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
+        Couldn't load your business settings. Try again.
+      </div>
     );
   }
 
   if (!profile || isAuthLoading) {
-    return (
-      <AppLayout>
-        <p className="font-sans text-sm text-neutral-600">Loading…</p>
-      </AppLayout>
-    );
+    return <p className="font-sans text-sm text-neutral-600">Loading…</p>;
   }
 
   const isOwner = profile.ownerId === user?.id;
 
   return (
-    <AppLayout>
+    <>
       <div className="mx-auto flex max-w-2xl flex-col gap-6">
         <h1 className="font-display text-2xl font-semibold text-neutral-900">Business settings</h1>
 
@@ -528,6 +521,6 @@ export default function BusinessSettings() {
           </button>
         </div>
       </Modal>
-    </AppLayout>
+    </>
   );
 }

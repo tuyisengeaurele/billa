@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { AppLayout } from "../components/AppLayout";
 import { useAuth } from "../context/AuthContext";
 import { usePaginatedList } from "../lib/usePaginatedList";
 import { describeActivity } from "../lib/activityLabels";
@@ -28,7 +27,6 @@ export default function Activity() {
   const totalPages = Math.max(1, Math.ceil(list.total / list.pageSize));
 
   return (
-    <AppLayout>
       <div className="mx-auto flex max-w-3xl flex-col gap-6">
         <h1 className="font-display text-2xl font-semibold text-neutral-900">Activity</h1>
 
@@ -111,6 +109,5 @@ export default function Activity() {
           )}
         </div>
       </div>
-    </AppLayout>
   );
 }

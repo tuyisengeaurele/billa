@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { formatRwf, PAYMENT_METHODS, type PaymentMethod } from "@billa/shared";
-import { AppLayout } from "../components/AppLayout";
 import { Modal } from "../components/Modal";
 import { apiRequest, ApiError } from "../lib/apiClient";
 
@@ -125,7 +124,7 @@ export default function Receivables() {
   const totalOwed = (results ?? []).reduce((sum, row) => sum + row.amountOwed, 0);
 
   return (
-    <AppLayout>
+    <>
       <div className="mx-auto flex max-w-5xl flex-col gap-6">
         <div className="flex items-center justify-between">
           <h1 className="font-display text-2xl font-semibold text-neutral-900">Accounts receivable</h1>
@@ -332,6 +331,6 @@ export default function Receivables() {
           </div>
         )}
       </Modal>
-    </AppLayout>
+    </>
   );
 }

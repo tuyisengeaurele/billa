@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { DOCUMENT_TYPES, type DocumentType, type InvoicePaymentStatus } from "@billa/shared";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { AppLayout } from "../components/AppLayout";
 import { ExportCsvButton } from "../components/ExportCsvButton";
 import { usePaginatedList } from "../lib/usePaginatedList";
 import { formatRwf } from "@billa/shared";
@@ -68,7 +67,6 @@ export default function Documents() {
   }
 
   return (
-    <AppLayout>
       <div className="mx-auto flex max-w-4xl flex-col gap-6">
         <div className="flex items-center justify-between">
           <h1 className="font-display text-2xl font-semibold text-neutral-900">{heading}</h1>
@@ -286,6 +284,5 @@ export default function Documents() {
           )}
         </div>
       </div>
-    </AppLayout>
   );
 }

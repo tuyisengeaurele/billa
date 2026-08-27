@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { AppLayout } from "../components/AppLayout";
 import { apiRequest } from "../lib/apiClient";
 
 export default function BillingCallback() {
@@ -20,7 +19,6 @@ export default function BillingCallback() {
   }, [searchParams]);
 
   return (
-    <AppLayout>
       <div className="mx-auto flex max-w-md flex-col items-center gap-4 py-16 text-center">
         {status === "verifying" && <p className="font-sans text-sm text-neutral-600">Confirming your payment…</p>}
         {status === "success" && (
@@ -42,6 +40,5 @@ export default function BillingCallback() {
           </>
         )}
       </div>
-    </AppLayout>
   );
 }

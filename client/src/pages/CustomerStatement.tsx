@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { formatRwf, type DocumentType, type InvoicePaymentStatus } from "@billa/shared";
-import { AppLayout } from "../components/AppLayout";
 import { apiRequest } from "../lib/apiClient";
 import { usePaginatedList } from "../lib/usePaginatedList";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
@@ -70,25 +69,18 @@ export default function CustomerStatement() {
 
   if (loadError) {
     return (
-      <AppLayout>
-        <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
-          Couldn't load this customer. Try again.
-        </div>
-      </AppLayout>
+      <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
+        Couldn't load this customer. Try again.
+      </div>
     );
   }
 
   if (!customer) {
-    return (
-      <AppLayout>
-        <p className="font-sans text-sm text-neutral-600">Loading…</p>
-      </AppLayout>
-    );
+    return <p className="font-sans text-sm text-neutral-600">Loading…</p>;
   }
 
   return (
-    <AppLayout>
-      <div className="mx-auto flex max-w-4xl flex-col gap-6">
+    <div className="mx-auto flex max-w-4xl flex-col gap-6">
         <div>
           <Link to="/customers" className="font-sans text-sm text-primary-500 hover:text-primary-700">
             ← Back to customers
@@ -238,6 +230,5 @@ export default function CustomerStatement() {
           )}
         </div>
       </div>
-    </AppLayout>
   );
 }
