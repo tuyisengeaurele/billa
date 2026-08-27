@@ -83,6 +83,17 @@ describe("sendOverdueReminders", () => {
     expect(resendModule.sendDocumentEmail).toHaveBeenCalledTimes(1);
   });
 
+  it("notifies the owner in-app when a reminder is sent", async () => {
+    const { business, customer } = await setupBusiness("customer@example.com");
+    await createOverdueInvoice(business.id, customer.id, { dueDate: new Date("2020-01-01") });
+
+    await sendOverdueReminders(business.id);
+
+    const notifications = await prisma.notification.findMany({ where: { userId: business.ownerId } });
+    expect(notifications).toHaveLength(1);
+    expect(notifications[0]).toMatchObject({ type: "INVOICE_OVERDUE", title: "INV-0001 is overdue" });
+  });
+
   it("does not remind about an invoice that's already been paid in full", async () => {
     const { business, customer } = await setupBusiness("customer@example.com");
     await createOverdueInvoice(business.id, customer.id, {

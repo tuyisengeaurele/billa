@@ -2,6 +2,7 @@ import { prisma } from "./prisma.js";
 import { buildPdfRenderData } from "./pdf/render-data.js";
 import { renderDocumentPdf } from "./pdf/render-document-pdf.js";
 import { sendDocumentEmail } from "./resend.js";
+import { createNotification } from "./notifications.js";
 
 const REMINDER_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -59,6 +60,15 @@ export async function sendOverdueReminders(businessId: string): Promise<SentRemi
     }
 
     await prisma.document.update({ where: { id: doc.id }, data: { lastReminderSentAt: now } });
+
+    await createNotification({
+      userId: business!.ownerId,
+      type: "INVOICE_OVERDUE",
+      title: `${doc.number} is overdue`,
+      body: `${doc.customer.name} hasn't paid ${doc.number} yet.`,
+      link: `/documents/${doc.id}`,
+    });
+
     sent.push({ documentId: doc.id, sentTo: email });
   }
 
