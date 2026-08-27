@@ -79,13 +79,35 @@ describe("AppLayout", () => {
   });
 
   it("calls the logout endpoint once the confirmation modal is confirmed", async () => {
-    vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 401 }));
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      if (url.includes("/auth/me")) {
+        return new Response(
+          JSON.stringify({
+            user: {
+              id: "u1",
+              email: "owner@example.com",
+              name: "Owner Person",
+              avatarUrl: null,
+              totpEnabled: false,
+              isAdmin: false,
+              productTourSeenAt: "2026-01-01T00:00:00.000Z",
+            },
+            business: { id: "b1", name: "Kigali Traders" },
+            impersonating: false,
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
     const user = userEvent.setup();
     renderAppLayout();
     await screen.findByRole("link", { name: /customers/i });
 
     const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 200 }));
-    await user.click(screen.getByRole("button", { name: /log out/i }));
+    await user.click(screen.getByRole("button", { name: /owner person/i }));
+    await user.click(screen.getByRole("menuitem", { name: /log out/i }));
 
     const dialog = await screen.findByRole("dialog", { name: /log out/i });
     await user.click(within(dialog).getByRole("button", { name: /log out/i }));

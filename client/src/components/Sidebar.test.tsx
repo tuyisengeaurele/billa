@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -63,6 +63,8 @@ describe("Sidebar", () => {
     expect(screen.getByRole("link", { name: "Activity" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Settings" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Admin" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Profile" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /log out/i })).not.toBeInTheDocument();
   });
 
   it("calls onNavigate when a link is clicked", async () => {
@@ -86,36 +88,6 @@ describe("Sidebar", () => {
     );
 
     expect(await screen.findByText("Your trial ends in 2 days.")).toBeInTheDocument();
-  });
-
-  it("opens a confirmation modal and calls the logout endpoint once confirmed", async () => {
-    const user = userEvent.setup();
-    renderSidebar();
-    await screen.findByRole("link", { name: "Dashboard" });
-
-    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 200 }));
-    await user.click(screen.getByRole("button", { name: /log out/i }));
-
-    const dialog = await screen.findByRole("dialog", { name: /log out/i });
-    expect(fetchSpy).not.toHaveBeenCalled();
-
-    await user.click(within(dialog).getByRole("button", { name: /log out/i }));
-
-    expect(fetchSpy).toHaveBeenCalled();
-  });
-
-  it("does not log out when the confirmation is dismissed", async () => {
-    const user = userEvent.setup();
-    renderSidebar();
-    await screen.findByRole("link", { name: "Dashboard" });
-
-    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 200 }));
-    await user.click(screen.getByRole("button", { name: /log out/i }));
-
-    const dialog = await screen.findByRole("dialog", { name: /log out/i });
-    await user.click(within(dialog).getByRole("button", { name: /cancel/i }));
-
-    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it("highlights Customers while viewing a customer's statement page", async () => {

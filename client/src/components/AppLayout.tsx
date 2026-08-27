@@ -8,6 +8,7 @@ import { IdleTimeoutModal } from "./IdleTimeoutModal";
 import { ImpersonationRequestModal } from "./ImpersonationRequestModal";
 import { ProductTourModal } from "./ProductTourModal";
 import { Sidebar } from "./Sidebar";
+import { UserMenu } from "./UserMenu";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -87,18 +88,19 @@ export function AppLayout({ children }: AppLayoutProps) {
         )}
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="flex items-center gap-3 border-b border-neutral-200 bg-surface px-4 py-3 lg:hidden">
+          <header className="flex items-center gap-3 border-b border-neutral-200 bg-surface px-4 py-3">
             <button
               type="button"
               onClick={() => setIsMobileNavOpen(true)}
               aria-label="Open menu"
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 text-neutral-600"
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 text-neutral-600 lg:hidden"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <span className="font-display text-base font-semibold text-neutral-900">Billa</span>
+            <span className="font-display text-base font-semibold text-neutral-900 lg:hidden">Billa</span>
+            <UserMenu profileHref="/profile" logoutConfirmMessage="Log out of Billa?" />
           </header>
           <main className="flex-1 px-6 py-8">{children}</main>
         </div>

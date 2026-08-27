@@ -1,14 +1,11 @@
 import type { ReactNode } from "react";
-import { useState } from "react";
 import { motion } from "framer-motion";
 import { Link, useLocation } from "react-router-dom";
 import { DOCUMENT_TYPES } from "@billa/shared";
 import { useActiveDocumentType } from "../context/ActiveDocumentTypeContext";
-import { useAuth } from "../context/AuthContext";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
 import { DOCUMENT_TYPE_COLORS } from "../lib/documentTypeColors";
 import { BusinessSwitcher } from "./BusinessSwitcher";
-import { Modal } from "./Modal";
 import { ThemeToggle } from "./ThemeToggle";
 
 interface SidebarProps {
@@ -142,32 +139,11 @@ function SettingsIcon() {
   );
 }
 
-function ProfileIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-      <circle cx="12" cy="8" r="4" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8" />
-    </svg>
-  );
-}
-
-function LogoutIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M16 17l5-5-5-5" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M21 12H9" />
-    </svg>
-  );
-}
-
 export function Sidebar({ billingBanner, onNavigate }: SidebarProps) {
-  const { logout } = useAuth();
   const { pathname, search } = useLocation();
   const activeDocumentType = useActiveDocumentType();
   const active = (to: string) => isLinkActive(pathname, search, to);
   const isCustomersActive = pathname === "/customers" || pathname.startsWith("/customers/");
-  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
 
   return (
     <div className="flex h-full flex-col overflow-y-auto bg-surface">
@@ -225,9 +201,6 @@ export function Sidebar({ billingBanner, onNavigate }: SidebarProps) {
         </div>
 
         <div className="mt-4 border-t border-neutral-100 pt-4">
-          <SidebarLink to="/profile" isActive={pathname === "/profile"} onNavigate={onNavigate} icon={<ProfileIcon />}>
-            Profile
-          </SidebarLink>
           <SidebarLink to="/settings" isActive={pathname === "/settings"} onNavigate={onNavigate} icon={<SettingsIcon />}>
             Settings
           </SidebarLink>
@@ -241,38 +214,7 @@ export function Sidebar({ billingBanner, onNavigate }: SidebarProps) {
           </p>
         )}
         <ThemeToggle />
-        <button
-          type="button"
-          onClick={() => setIsLogoutConfirmOpen(true)}
-          className="flex items-center gap-2 rounded-lg px-3 py-2 font-sans text-sm font-medium text-neutral-600 transition-colors hover:bg-error-bg hover:text-error"
-        >
-          <LogoutIcon />
-          Log out
-        </button>
       </div>
-
-      <Modal isOpen={isLogoutConfirmOpen} onClose={() => setIsLogoutConfirmOpen(false)} title="Log out">
-        <p className="font-sans text-sm text-neutral-600">Log out of Billa?</p>
-        <div className="mt-6 flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={() => setIsLogoutConfirmOpen(false)}
-            className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setIsLogoutConfirmOpen(false);
-              logout();
-            }}
-            className="rounded-lg bg-error px-4 py-2 font-sans text-sm font-semibold text-white hover:opacity-90"
-          >
-            Log out
-          </button>
-        </div>
-      </Modal>
     </div>
   );
 }

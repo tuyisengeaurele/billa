@@ -1,21 +1,8 @@
 import type { ReactNode } from "react";
-import { useState } from "react";
 import { motion } from "framer-motion";
 import { Link, useLocation } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
-import { Modal } from "../Modal";
 import { ThemeToggle } from "../ThemeToggle";
-import {
-  AnnouncementsIcon,
-  AuditLogIcon,
-  BusinessesIcon,
-  LogoutIcon,
-  MessagesIcon,
-  MetricsIcon,
-  ProfileIcon,
-  SystemHealthIcon,
-  UsersIcon,
-} from "./icons";
+import { AnnouncementsIcon, AuditLogIcon, BusinessesIcon, MessagesIcon, MetricsIcon, SystemHealthIcon, UsersIcon } from "./icons";
 
 interface AdminSidebarProps {
   onNavigate?: () => void;
@@ -66,9 +53,7 @@ function AdminSidebarLink({
 }
 
 export function AdminSidebar({ onNavigate }: AdminSidebarProps) {
-  const { logout } = useAuth();
   const { pathname } = useLocation();
-  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
 
   return (
     <div className="flex h-full flex-col overflow-y-auto bg-surface">
@@ -93,51 +78,9 @@ export function AdminSidebar({ onNavigate }: AdminSidebarProps) {
         ))}
       </nav>
 
-      <div className="border-t border-neutral-100 px-3 pt-2">
-        <AdminSidebarLink
-          to="/admin/profile"
-          isActive={pathname === "/admin/profile"}
-          onNavigate={onNavigate}
-          icon={<ProfileIcon />}
-        >
-          Profile
-        </AdminSidebarLink>
-      </div>
-
       <div className="flex flex-col gap-3 px-4 py-4">
         <ThemeToggle />
-        <button
-          type="button"
-          onClick={() => setIsLogoutConfirmOpen(true)}
-          className="flex items-center gap-2 rounded-lg px-3 py-2 font-sans text-sm font-medium text-neutral-600 transition-colors hover:bg-error-bg hover:text-error"
-        >
-          <LogoutIcon />
-          Log out
-        </button>
       </div>
-
-      <Modal isOpen={isLogoutConfirmOpen} onClose={() => setIsLogoutConfirmOpen(false)} title="Log out">
-        <p className="font-sans text-sm text-neutral-600">Log out of the admin dashboard?</p>
-        <div className="mt-6 flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={() => setIsLogoutConfirmOpen(false)}
-            className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 transition-colors hover:bg-neutral-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setIsLogoutConfirmOpen(false);
-              logout();
-            }}
-            className="rounded-lg bg-error px-4 py-2 font-sans text-sm font-semibold text-white transition-opacity hover:opacity-90"
-          >
-            Log out
-          </button>
-        </div>
-      </Modal>
     </div>
   );
 }

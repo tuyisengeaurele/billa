@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { IdleTimeoutModal } from "../IdleTimeoutModal";
+import { UserMenu } from "../UserMenu";
 import { AdminSidebar } from "./AdminSidebar";
 import { MenuIcon } from "./icons";
 
@@ -30,16 +31,17 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center gap-3 border-b border-neutral-200 bg-surface px-4 py-3 lg:hidden">
+        <header className="flex items-center gap-3 border-b border-neutral-200 bg-surface px-4 py-3">
           <button
             type="button"
             onClick={() => setIsMobileNavOpen(true)}
             aria-label="Open menu"
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 text-neutral-600"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 text-neutral-600 lg:hidden"
           >
             <MenuIcon />
           </button>
-          <span className="font-display text-base font-semibold text-neutral-900">Billa Admin</span>
+          <span className="font-display text-base font-semibold text-neutral-900 lg:hidden">Billa Admin</span>
+          <UserMenu profileHref="/admin/profile" logoutConfirmMessage="Log out of the admin dashboard?" />
         </header>
         <motion.main
           initial={{ opacity: 0, y: 8 }}
