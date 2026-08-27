@@ -22,6 +22,7 @@ import { issueSession } from "../lib/session.js";
 import { generateBackupCodes, generateTotpSetup, hashBackupCode, verifyTotpToken } from "../lib/totp.js";
 import { hasBusinessAccess } from "../lib/business-access.js";
 import { logAdminAction } from "../lib/admin-audit-log.js";
+import { logActivity } from "../lib/activity-log.js";
 import { deleteUserCascade } from "../lib/delete-business.js";
 import { validateBody } from "../middleware/validate.js";
 import { authRateLimit } from "../middleware/auth-rate-limit.js";
@@ -169,13 +170,25 @@ authRouter.post("/impersonate/stop", requireAuth, async (req, res) => {
 
   await issueSession(res, admin.id, businessId);
 
-  await logAdminAction({
-    adminUserId: admin.id,
-    action: "IMPERSONATION_ENDED",
-    targetType: "User",
-    targetId: req.auth!.userId,
-    metadata: {},
-  });
+  if (admin.isAdmin) {
+    await logAdminAction({
+      adminUserId: admin.id,
+      action: "IMPERSONATION_ENDED",
+      targetType: "User",
+      targetId: req.auth!.userId,
+      metadata: {},
+    });
+  } else {
+    const target = await prisma.user.findUnique({ where: { id: req.auth!.userId } });
+    await logActivity({
+      businessId,
+      actorUserId: admin.id,
+      action: "MEMBER_IMPERSONATION_ENDED",
+      entityType: "User",
+      entityId: req.auth!.userId,
+      metadata: { email: target?.email },
+    });
+  }
 
   res.json({
     user: { id: admin.id, email: admin.email, totpEnabled: admin.totpEnabled, isAdmin: admin.isAdmin },
