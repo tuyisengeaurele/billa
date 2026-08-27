@@ -12,6 +12,7 @@ import {
   LogoutIcon,
   MessagesIcon,
   MetricsIcon,
+  ProfileIcon,
   SystemHealthIcon,
   UsersIcon,
 } from "./icons";
@@ -91,6 +92,17 @@ export function AdminSidebar({ onNavigate }: AdminSidebarProps) {
           </AdminSidebarLink>
         ))}
       </nav>
+
+      <div className="border-t border-neutral-100 px-3 pt-2">
+        <AdminSidebarLink
+          to="/admin/profile"
+          isActive={pathname === "/admin/profile"}
+          onNavigate={onNavigate}
+          icon={<ProfileIcon />}
+        >
+          Profile
+        </AdminSidebarLink>
+      </div>
 
       <div className="flex flex-col gap-3 px-4 py-4">
         <ThemeToggle />

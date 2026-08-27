@@ -21,6 +21,7 @@ const DocumentForm = lazy(() => import("./pages/DocumentForm"));
 const Documents = lazy(() => import("./pages/Documents"));
 const DocumentView = lazy(() => import("./pages/DocumentView"));
 const BusinessSettings = lazy(() => import("./pages/BusinessSettings"));
+const Profile = lazy(() => import("./pages/Profile"));
 const BillingCallback = lazy(() => import("./pages/BillingCallback"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const TermsOfService = lazy(() => import("./pages/TermsOfService"));
@@ -35,6 +36,7 @@ const AdminAuditLog = lazy(() => import("./pages/admin/AdminAuditLog"));
 const AdminMetrics = lazy(() => import("./pages/admin/AdminMetrics"));
 const AdminSystemHealth = lazy(() => import("./pages/admin/AdminSystemHealth"));
 const AdminAnnouncements = lazy(() => import("./pages/admin/AdminAnnouncements"));
+const AdminProfile = lazy(() => import("./pages/admin/AdminProfile"));
 const PublicDocumentView = lazy(() => import("./pages/PublicDocumentView"));
 const PublicCustomerPortal = lazy(() => import("./pages/PublicCustomerPortal"));
 const AcceptInvite = lazy(() => import("./pages/AcceptInvite"));
@@ -72,6 +74,7 @@ export default function App() {
                   <Route path="/documents/:id/edit" element={<DocumentForm />} />
                   <Route path="/documents/:id" element={<DocumentView />} />
                   <Route path="/settings" element={<BusinessSettings />} />
+                  <Route path="/profile" element={<Profile />} />
                   <Route path="/billing/callback" element={<BillingCallback />} />
                 </Route>
               </Route>
@@ -86,6 +89,7 @@ export default function App() {
                 <Route path="/admin/audit-log" element={<AdminAuditLog />} />
                 <Route path="/admin/system-health" element={<AdminSystemHealth />} />
                 <Route path="/admin/announcements" element={<AdminAnnouncements />} />
+                <Route path="/admin/profile" element={<AdminProfile />} />
               </Route>
               <Route path="/" element={<RootRoute />} />
             </Routes>
