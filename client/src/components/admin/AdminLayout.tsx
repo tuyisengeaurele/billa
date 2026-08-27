@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { IdleTimeoutModal } from "../IdleTimeoutModal";
+import { NotificationBell } from "../NotificationBell";
 import { UserMenu } from "../UserMenu";
 import { AdminSidebar } from "./AdminSidebar";
 import { MenuIcon } from "./icons";
@@ -41,7 +42,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             <MenuIcon />
           </button>
           <span className="font-display text-base font-semibold text-neutral-900 lg:hidden">Billa Admin</span>
-          <UserMenu profileHref="/admin/profile" logoutConfirmMessage="Log out of the admin dashboard?" />
+          <div className="ml-auto flex items-center gap-2">
+            <NotificationBell allHref="/admin/notifications" />
+            <UserMenu profileHref="/admin/profile" logoutConfirmMessage="Log out of the admin dashboard?" />
+          </div>
         </header>
         <motion.main
           initial={{ opacity: 0, y: 8 }}

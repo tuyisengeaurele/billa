@@ -6,6 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import { AnnouncementBanner } from "./AnnouncementBanner";
 import { IdleTimeoutModal } from "./IdleTimeoutModal";
 import { ImpersonationRequestModal } from "./ImpersonationRequestModal";
+import { NotificationBell } from "./NotificationBell";
 import { ProductTourModal } from "./ProductTourModal";
 import { Sidebar } from "./Sidebar";
 import { UserMenu } from "./UserMenu";
@@ -100,7 +101,10 @@ export function AppLayout({ children }: AppLayoutProps) {
               </svg>
             </button>
             <span className="font-display text-base font-semibold text-neutral-900 lg:hidden">Billa</span>
-            <UserMenu profileHref="/profile" logoutConfirmMessage="Log out of Billa?" />
+            <div className="ml-auto flex items-center gap-2">
+              <NotificationBell allHref="/notifications" />
+              <UserMenu profileHref="/profile" logoutConfirmMessage="Log out of Billa?" />
+            </div>
           </header>
           <main className="flex-1 px-6 py-8">{children}</main>
         </div>

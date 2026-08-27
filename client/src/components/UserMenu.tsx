@@ -67,7 +67,7 @@ export function UserMenu({ profileHref, logoutConfirmMessage }: UserMenuProps) {
   const initial = displayName.charAt(0).toUpperCase();
 
   return (
-    <div ref={containerRef} className="relative ml-auto">
+    <div ref={containerRef} className="relative">
       <button
         type="button"
         onClick={() => setIsOpen((open) => !open)}
