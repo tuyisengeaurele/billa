@@ -1,8 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { AdminLayout } from "../../components/admin/AdminLayout";
 import { Modal } from "../../components/Modal";
 import { useAuth } from "../../context/AuthContext";
+import { usePageTitle } from "../../context/PageTitleContext";
 import { useImpersonationRequest } from "../../hooks/useImpersonationRequest";
 import { apiRequest, ApiError } from "../../lib/apiClient";
 import { PlanBadge, type PlanKey } from "../../lib/planColors";
@@ -40,6 +40,7 @@ export default function AdminUserDetail() {
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
   const [detail, setDetail] = useState<UserDetailResponse | null>(null);
+  usePageTitle(detail?.user.email ?? "User");
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isTogglingAdmin, setIsTogglingAdmin] = useState(false);
@@ -178,32 +179,23 @@ export default function AdminUserDetail() {
   }
 
   if (notFound) {
-    return (
-      <AdminLayout>
-        <p className="font-sans text-sm text-neutral-600">No user found with that id.</p>
-      </AdminLayout>
-    );
+    return <p className="font-sans text-sm text-neutral-600">No user found with that id.</p>;
   }
 
   if (!detail) {
     return (
-      <AdminLayout>
-        <div className="flex flex-col gap-6" aria-label="Loading user">
-          <div className="h-8 w-64 animate-pulse rounded-lg bg-neutral-100" />
-          <div className="h-48 animate-pulse rounded-xl bg-neutral-100" />
-          <div className="h-24 animate-pulse rounded-xl bg-neutral-100" />
-        </div>
-      </AdminLayout>
+      <div className="flex flex-col gap-6" aria-label="Loading user">
+        <div className="h-8 w-64 animate-pulse rounded-lg bg-neutral-100" />
+        <div className="h-48 animate-pulse rounded-xl bg-neutral-100" />
+        <div className="h-24 animate-pulse rounded-xl bg-neutral-100" />
+      </div>
     );
   }
 
   const isSelf = currentUser?.id === detail.user.id;
 
   return (
-    <AdminLayout>
-      <div className="flex flex-col gap-6">
-        <h1 className="font-display text-2xl font-semibold text-neutral-900">{detail.user.email}</h1>
-
+    <div className="flex flex-col gap-6">
         {error && (
           <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
             {error}
@@ -500,6 +492,5 @@ export default function AdminUserDetail() {
           )}
         </section>
       </div>
-    </AdminLayout>
   );
 }

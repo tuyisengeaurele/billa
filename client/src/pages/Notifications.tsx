@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { usePageTitle } from "../context/PageTitleContext";
 import { apiRequest } from "../lib/apiClient";
 
 interface NotificationRow {
@@ -13,6 +14,7 @@ interface NotificationRow {
 }
 
 export default function Notifications() {
+  usePageTitle("Notifications");
   const [notifications, setNotifications] = useState<NotificationRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isMarkingAll, setIsMarkingAll] = useState(false);
@@ -52,9 +54,8 @@ export default function Notifications() {
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <h1 className="font-display text-2xl font-semibold text-neutral-900">Notifications</h1>
-        {hasUnread && (
+      {hasUnread && (
+        <div className="flex justify-end">
           <button
             type="button"
             disabled={isMarkingAll}
@@ -63,8 +64,8 @@ export default function Notifications() {
           >
             {isMarkingAll ? "Marking…" : "Mark all as read"}
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {error && (
         <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">

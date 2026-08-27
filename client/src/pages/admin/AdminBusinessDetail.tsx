@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { AdminLayout } from "../../components/admin/AdminLayout";
 import { Modal } from "../../components/Modal";
+import { usePageTitle } from "../../context/PageTitleContext";
 import { apiRequest, ApiError } from "../../lib/apiClient";
 
 interface Member {
@@ -24,6 +24,7 @@ export default function AdminBusinessDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [business, setBusiness] = useState<BusinessDetail | null>(null);
+  usePageTitle(business?.name ?? "Business");
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -83,30 +84,22 @@ export default function AdminBusinessDetail() {
   }
 
   if (notFound) {
-    return (
-      <AdminLayout>
-        <p className="font-sans text-sm text-neutral-600">No business found with that id.</p>
-      </AdminLayout>
-    );
+    return <p className="font-sans text-sm text-neutral-600">No business found with that id.</p>;
   }
 
   if (!business) {
     return (
-      <AdminLayout>
-        <div className="flex flex-col gap-6" aria-label="Loading business">
-          <div className="h-8 w-64 animate-pulse rounded-lg bg-neutral-100" />
-          <div className="h-32 animate-pulse rounded-xl bg-neutral-100" />
-          <div className="h-24 animate-pulse rounded-xl bg-neutral-100" />
-        </div>
-      </AdminLayout>
+      <div className="flex flex-col gap-6" aria-label="Loading business">
+        <div className="h-8 w-64 animate-pulse rounded-lg bg-neutral-100" />
+        <div className="h-32 animate-pulse rounded-xl bg-neutral-100" />
+        <div className="h-24 animate-pulse rounded-xl bg-neutral-100" />
+      </div>
     );
   }
 
   return (
-    <AdminLayout>
+    <>
       <div className="flex flex-col gap-6">
-        <h1 className="font-display text-2xl font-semibold text-neutral-900">{business.name}</h1>
-
         {error && (
           <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
             {error}
@@ -260,6 +253,6 @@ export default function AdminBusinessDetail() {
           </button>
         </div>
       </Modal>
-    </AdminLayout>
+    </>
   );
 }

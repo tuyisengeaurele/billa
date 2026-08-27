@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { AdminLayout } from "../../components/admin/AdminLayout";
 import { AdminPagination } from "../../components/admin/AdminPagination";
+import { usePageTitle } from "../../context/PageTitleContext";
 import { downloadFile } from "../../lib/downloadFile";
 import { usePaginatedList } from "../../lib/usePaginatedList";
 
@@ -17,6 +17,7 @@ interface AdminBusinessRow {
 type SortBy = "createdAt" | "name";
 
 export default function AdminBusinesses() {
+  usePageTitle("Businesses");
   const list = usePaginatedList<AdminBusinessRow, SortBy>({
     resourcePath: "/admin/businesses",
     defaultSortBy: "createdAt",
@@ -38,20 +39,7 @@ export default function AdminBusinesses() {
   }
 
   return (
-    <AdminLayout>
       <div className="flex flex-col gap-6">
-        <div className="flex items-center justify-between">
-          <h1 className="font-display text-2xl font-semibold text-neutral-900">Businesses</h1>
-          <button
-            type="button"
-            disabled={isExporting}
-            onClick={handleExport}
-            className="rounded-lg border border-neutral-200 px-3.5 py-1.5 font-sans text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isExporting ? "Exporting…" : "Export CSV"}
-          </button>
-        </div>
-
         {exportError && (
           <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
             {exportError}
@@ -59,14 +47,24 @@ export default function AdminBusinesses() {
         )}
 
         <div className="rounded-xl border border-neutral-200 bg-surface p-6">
-          <input
-            type="text"
-            placeholder="Search by name"
-            aria-label="Search businesses"
-            value={list.search}
-            onChange={(event) => list.updateSearch(event.target.value)}
-            className="w-full max-w-xs rounded-lg border border-neutral-200 bg-surface px-3.5 py-2 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
-          />
+          <div className="flex items-center justify-between gap-4">
+            <input
+              type="text"
+              placeholder="Search by name"
+              aria-label="Search businesses"
+              value={list.search}
+              onChange={(event) => list.updateSearch(event.target.value)}
+              className="w-full max-w-xs rounded-lg border border-neutral-200 bg-surface px-3.5 py-2 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+            />
+            <button
+              type="button"
+              disabled={isExporting}
+              onClick={handleExport}
+              className="shrink-0 rounded-lg border border-neutral-200 px-3.5 py-1.5 font-sans text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isExporting ? "Exporting…" : "Export CSV"}
+            </button>
+          </div>
 
           {list.error && (
             <div className="mt-4 rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
@@ -126,6 +124,5 @@ export default function AdminBusinesses() {
           )}
         </div>
       </div>
-    </AdminLayout>
   );
 }

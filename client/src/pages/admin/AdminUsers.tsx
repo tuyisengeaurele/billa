@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { AdminLayout } from "../../components/admin/AdminLayout";
 import { AdminPagination } from "../../components/admin/AdminPagination";
+import { usePageTitle } from "../../context/PageTitleContext";
 import { downloadFile } from "../../lib/downloadFile";
 import { PlanBadge, PlanLegend, type PlanKey } from "../../lib/planColors";
 import { usePaginatedList } from "../../lib/usePaginatedList";
@@ -19,6 +19,7 @@ interface AdminUserRow {
 type SortBy = "createdAt" | "email";
 
 export default function AdminUsers() {
+  usePageTitle("Users");
   const list = usePaginatedList<AdminUserRow, SortBy>({ resourcePath: "/admin/users", defaultSortBy: "createdAt" });
   const totalPages = Math.max(1, Math.ceil(list.total / list.pageSize));
   const [isExporting, setIsExporting] = useState(false);
@@ -37,20 +38,7 @@ export default function AdminUsers() {
   }
 
   return (
-    <AdminLayout>
       <div className="flex flex-col gap-6">
-        <div className="flex items-center justify-between">
-          <h1 className="font-display text-2xl font-semibold text-neutral-900">Users</h1>
-          <button
-            type="button"
-            disabled={isExporting}
-            onClick={handleExport}
-            className="rounded-lg border border-neutral-200 px-3.5 py-1.5 font-sans text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isExporting ? "Exporting…" : "Export CSV"}
-          </button>
-        </div>
-
         {exportError && (
           <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
             {exportError}
@@ -67,7 +55,17 @@ export default function AdminUsers() {
               onChange={(event) => list.updateSearch(event.target.value)}
               className="w-full max-w-xs rounded-lg border border-neutral-200 bg-surface px-3.5 py-2 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
             />
-            <PlanLegend />
+            <div className="flex items-center gap-3">
+              <PlanLegend />
+              <button
+                type="button"
+                disabled={isExporting}
+                onClick={handleExport}
+                className="shrink-0 rounded-lg border border-neutral-200 px-3.5 py-1.5 font-sans text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isExporting ? "Exporting…" : "Export CSV"}
+              </button>
+            </div>
           </div>
 
           {list.error && (
@@ -130,6 +128,5 @@ export default function AdminUsers() {
           )}
         </div>
       </div>
-    </AdminLayout>
   );
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { AdminLayout } from "../components/admin/AdminLayout";
 import { AdminPagination } from "../components/admin/AdminPagination";
+import { usePageTitle } from "../context/PageTitleContext";
 import { apiRequest, ApiError } from "../lib/apiClient";
 
 interface ContactMessageRow {
@@ -21,6 +21,7 @@ interface ContactMessageList {
 const PAGE_SIZE = 20;
 
 export default function AdminMessages() {
+  usePageTitle("Contact messages");
   const [page, setPage] = useState(1);
   const [data, setData] = useState<ContactMessageList | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -46,10 +47,7 @@ export default function AdminMessages() {
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
 
   return (
-    <AdminLayout>
       <div className="mx-auto flex max-w-4xl flex-col gap-6">
-        <h1 className="font-display text-2xl font-semibold text-neutral-900">Contact messages</h1>
-
         <div className="rounded-xl border border-neutral-200 bg-surface p-6">
           {isForbidden && (
             <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
@@ -108,6 +106,5 @@ export default function AdminMessages() {
           )}
         </div>
       </div>
-    </AdminLayout>
   );
 }

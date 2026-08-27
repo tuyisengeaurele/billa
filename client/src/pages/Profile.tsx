@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { useAuth } from "../context/AuthContext";
+import { usePageTitle } from "../context/PageTitleContext";
 import { apiRequest } from "../lib/apiClient";
 import { changePassword, hasPasswordProvider } from "../lib/firebaseAuth";
 import { FormField } from "../components/FormField";
@@ -13,6 +14,7 @@ interface SessionRow {
 }
 
 export default function Profile() {
+  usePageTitle("Profile");
   const { user, refreshAuth } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -157,7 +159,6 @@ export default function Profile() {
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6">
-      <h1 className="font-display text-2xl font-semibold text-neutral-900">Profile</h1>
 
       <section className="rounded-xl border border-neutral-200 bg-surface p-6">
         <h2 className="font-display text-base font-semibold text-neutral-900">Identity</h2>

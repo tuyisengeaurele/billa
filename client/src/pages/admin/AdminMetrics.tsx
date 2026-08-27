@@ -12,8 +12,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { AdminLayout } from "../../components/admin/AdminLayout";
 import { useTheme } from "../../context/ThemeContext";
+import { usePageTitle } from "../../context/PageTitleContext";
 import { apiRequest } from "../../lib/apiClient";
 import { PLAN_CHART_COLORS, PLAN_LABELS, type PlanKey } from "../../lib/planColors";
 
@@ -100,6 +100,7 @@ function DailyLineChart({
 }
 
 export default function AdminMetrics() {
+  usePageTitle("Metrics");
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const gridColor = isDark ? "#3f3f46" : "#e4e4e7";
@@ -124,10 +125,7 @@ export default function AdminMetrics() {
   }, []);
 
   return (
-    <AdminLayout>
       <div className="flex flex-col gap-6">
-        <h1 className="font-display text-2xl font-semibold text-neutral-900">Metrics</h1>
-
         {error && (
           <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
             {error}
@@ -223,6 +221,5 @@ export default function AdminMetrics() {
           </>
         )}
       </div>
-    </AdminLayout>
   );
 }

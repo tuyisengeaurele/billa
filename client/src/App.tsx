@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { AppLayoutRoute } from "./components/AppLayoutRoute";
+import { AdminLayoutRoute } from "./components/admin/AdminLayoutRoute";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminRoute } from "./components/AdminRoute";
 import { RootRoute } from "./components/RootRoute";
@@ -37,8 +38,6 @@ const AdminAuditLog = lazy(() => import("./pages/admin/AdminAuditLog"));
 const AdminMetrics = lazy(() => import("./pages/admin/AdminMetrics"));
 const AdminSystemHealth = lazy(() => import("./pages/admin/AdminSystemHealth"));
 const AdminAnnouncements = lazy(() => import("./pages/admin/AdminAnnouncements"));
-const AdminProfile = lazy(() => import("./pages/admin/AdminProfile"));
-const AdminNotifications = lazy(() => import("./pages/admin/AdminNotifications"));
 const PublicDocumentView = lazy(() => import("./pages/PublicDocumentView"));
 const PublicCustomerPortal = lazy(() => import("./pages/PublicCustomerPortal"));
 const AcceptInvite = lazy(() => import("./pages/AcceptInvite"));
@@ -83,17 +82,19 @@ export default function App() {
               </Route>
               <Route element={<AdminRoute />}>
                 <Route path="/admin" element={<Navigate to="/admin/users" replace />} />
-                <Route path="/admin/metrics" element={<AdminMetrics />} />
-                <Route path="/admin/messages" element={<AdminMessages />} />
-                <Route path="/admin/users" element={<AdminUsers />} />
-                <Route path="/admin/users/:id" element={<AdminUserDetail />} />
-                <Route path="/admin/businesses" element={<AdminBusinesses />} />
-                <Route path="/admin/businesses/:id" element={<AdminBusinessDetail />} />
-                <Route path="/admin/audit-log" element={<AdminAuditLog />} />
-                <Route path="/admin/system-health" element={<AdminSystemHealth />} />
-                <Route path="/admin/announcements" element={<AdminAnnouncements />} />
-                <Route path="/admin/profile" element={<AdminProfile />} />
-                <Route path="/admin/notifications" element={<AdminNotifications />} />
+                <Route element={<AdminLayoutRoute />}>
+                  <Route path="/admin/metrics" element={<AdminMetrics />} />
+                  <Route path="/admin/messages" element={<AdminMessages />} />
+                  <Route path="/admin/users" element={<AdminUsers />} />
+                  <Route path="/admin/users/:id" element={<AdminUserDetail />} />
+                  <Route path="/admin/businesses" element={<AdminBusinesses />} />
+                  <Route path="/admin/businesses/:id" element={<AdminBusinessDetail />} />
+                  <Route path="/admin/audit-log" element={<AdminAuditLog />} />
+                  <Route path="/admin/system-health" element={<AdminSystemHealth />} />
+                  <Route path="/admin/announcements" element={<AdminAnnouncements />} />
+                  <Route path="/admin/profile" element={<Profile />} />
+                  <Route path="/admin/notifications" element={<Notifications />} />
+                </Route>
               </Route>
               <Route path="/" element={<RootRoute />} />
             </Routes>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AdminLayout } from "../../components/admin/AdminLayout";
+import { usePageTitle } from "../../context/PageTitleContext";
 import { apiRequest } from "../../lib/apiClient";
 
 interface AnnouncementRow {
@@ -10,6 +10,7 @@ interface AnnouncementRow {
 }
 
 export default function AdminAnnouncements() {
+  usePageTitle("Announcements");
   const [results, setResults] = useState<AnnouncementRow[] | null>(null);
   const [message, setMessage] = useState("");
   const [isPosting, setIsPosting] = useState(false);
@@ -54,10 +55,7 @@ export default function AdminAnnouncements() {
   }
 
   return (
-    <AdminLayout>
       <div className="flex flex-col gap-6">
-        <h1 className="font-display text-2xl font-semibold text-neutral-900">Announcements</h1>
-
         {error && (
           <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
             {error}
@@ -130,6 +128,5 @@ export default function AdminAnnouncements() {
           )}
         </section>
       </div>
-    </AdminLayout>
   );
 }

@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../../context/AuthContext";
+import { AdminLayoutRoute } from "../../components/admin/AdminLayoutRoute";
 import AdminBusinessDetail from "./AdminBusinessDetail";
 
 function urlOf(input: RequestInfo | URL): string {
@@ -14,7 +15,9 @@ function renderPage(businessId = "biz1") {
     <MemoryRouter initialEntries={[`/admin/businesses/${businessId}`]}>
       <AuthProvider>
         <Routes>
-          <Route path="/admin/businesses/:id" element={<AdminBusinessDetail />} />
+          <Route element={<AdminLayoutRoute />}>
+            <Route path="/admin/businesses/:id" element={<AdminBusinessDetail />} />
+          </Route>
           <Route path="/admin/businesses" element={<div>businesses list page</div>} />
         </Routes>
       </AuthProvider>
@@ -47,8 +50,7 @@ describe("AdminBusinessDetail", () => {
 
     renderPage();
 
-    expect(await screen.findByText("Kigali Traders")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "owner@example.com" })).toHaveAttribute("href", "/admin/users/u1");
+    expect(await screen.findByRole("link", { name: "owner@example.com" })).toHaveAttribute("href", "/admin/users/u1");
     expect(screen.getByRole("link", { name: "member@example.com" })).toHaveAttribute("href", "/admin/users/u2");
   });
 

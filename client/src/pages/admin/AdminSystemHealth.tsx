@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AdminLayout } from "../../components/admin/AdminLayout";
+import { usePageTitle } from "../../context/PageTitleContext";
 import { apiRequest } from "../../lib/apiClient";
 
 interface JobStatus {
@@ -34,6 +34,7 @@ function StatusBadge({ ok, okLabel, badLabel }: { ok: boolean; okLabel: string; 
 }
 
 export default function AdminSystemHealth() {
+  usePageTitle("System health");
   const [health, setHealth] = useState<SystemHealthResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,10 +45,7 @@ export default function AdminSystemHealth() {
   }, []);
 
   return (
-    <AdminLayout>
       <div className="flex flex-col gap-6">
-        <h1 className="font-display text-2xl font-semibold text-neutral-900">System health</h1>
-
         {error && (
           <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
             {error}
@@ -124,6 +122,5 @@ export default function AdminSystemHealth() {
           </>
         )}
       </div>
-    </AdminLayout>
   );
 }

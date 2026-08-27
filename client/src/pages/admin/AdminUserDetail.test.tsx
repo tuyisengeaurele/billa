@@ -60,8 +60,10 @@ describe("AdminUserDetail", () => {
 
     renderPage();
 
-    expect(await screen.findByText("owner@example.com")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Kigali Traders" })).toHaveAttribute("href", "/admin/businesses/biz1");
+    expect(await screen.findByRole("link", { name: "Kigali Traders" })).toHaveAttribute(
+      "href",
+      "/admin/businesses/biz1",
+    );
     expect(screen.getByRole("button", { name: /grant admin/i })).toBeInTheDocument();
   });
 
@@ -177,7 +179,7 @@ describe("AdminUserDetail", () => {
     const user = userEvent.setup();
     renderPage();
 
-    await screen.findByText("owner@example.com");
+    await screen.findByRole("button", { name: /extend trial/i });
     await user.click(screen.getByRole("button", { name: /extend trial/i }));
 
     expect(await screen.findByText(new Date("2026-10-01T00:00:00.000Z").toLocaleDateString())).toBeInTheDocument();

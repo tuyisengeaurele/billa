@@ -1,5 +1,5 @@
-import { AdminLayout } from "../../components/admin/AdminLayout";
 import { AdminPagination } from "../../components/admin/AdminPagination";
+import { usePageTitle } from "../../context/PageTitleContext";
 import { usePaginatedList } from "../../lib/usePaginatedList";
 
 interface AuditLogRow {
@@ -14,14 +14,12 @@ interface AuditLogRow {
 type SortBy = "createdAt";
 
 export default function AdminAuditLog() {
+  usePageTitle("Audit log");
   const list = usePaginatedList<AuditLogRow, SortBy>({ resourcePath: "/admin/audit-log", defaultSortBy: "createdAt" });
   const totalPages = Math.max(1, Math.ceil(list.total / list.pageSize));
 
   return (
-    <AdminLayout>
       <div className="flex flex-col gap-6">
-        <h1 className="font-display text-2xl font-semibold text-neutral-900">Audit log</h1>
-
         <div className="rounded-xl border border-neutral-200 bg-surface p-6">
           {list.error && (
             <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
@@ -74,6 +72,5 @@ export default function AdminAuditLog() {
           )}
         </div>
       </div>
-    </AdminLayout>
   );
 }
