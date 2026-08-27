@@ -74,6 +74,7 @@ function makeDocument(
       phone: null,
       email: null,
       isActive: true,
+      portalToken: "portal-token1",
       createdAt: new Date(),
       updatedAt: new Date(),
     },

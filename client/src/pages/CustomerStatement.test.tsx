@@ -1,7 +1,9 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../context/AuthContext";
+import * as clipboardModule from "../lib/clipboard";
 import CustomerStatement from "./CustomerStatement";
 
 function urlOf(input: RequestInfo | URL): string {
@@ -117,6 +119,42 @@ describe("CustomerStatement", () => {
     expect(await screen.findByText("Partially paid")).toBeInTheDocument();
     expect(screen.getAllByText(/60,000 rwf/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/outstanding on this page: 60,000 rwf/i)).toBeInTheDocument();
+  });
+
+  it("copies the customer portal link to the clipboard", async () => {
+    const copySpy = vi.spyOn(clipboardModule, "copyToClipboard").mockResolvedValue(true);
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.endsWith("/customers/c1")) {
+        return new Response(
+          JSON.stringify({
+            customer: {
+              id: "c1",
+              name: "Acme Ltd",
+              tin: null,
+              address: null,
+              phone: null,
+              email: null,
+              isActive: true,
+              portalToken: "portal-abc123",
+            },
+          }),
+          { status: 200 },
+        );
+      }
+      if (url.includes("/documents?")) {
+        return new Response(JSON.stringify({ results: [], total: 0, page: 1, pageSize: 50 }), { status: 200 });
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: /copy portal link/i }));
+
+    expect(copySpy).toHaveBeenCalledWith(expect.stringContaining("/portal/portal-abc123"));
+    expect(await screen.findByText(/portal link copied/i)).toBeInTheDocument();
   });
 
   it("shows an empty state when the customer has no documents", async () => {

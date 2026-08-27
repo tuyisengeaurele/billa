@@ -35,6 +35,7 @@ const AdminMetrics = lazy(() => import("./pages/admin/AdminMetrics"));
 const AdminSystemHealth = lazy(() => import("./pages/admin/AdminSystemHealth"));
 const AdminAnnouncements = lazy(() => import("./pages/admin/AdminAnnouncements"));
 const PublicDocumentView = lazy(() => import("./pages/PublicDocumentView"));
+const PublicCustomerPortal = lazy(() => import("./pages/PublicCustomerPortal"));
 const AcceptInvite = lazy(() => import("./pages/AcceptInvite"));
 const Activity = lazy(() => import("./pages/Activity"));
 
@@ -53,6 +54,7 @@ export default function App() {
               <Route path="/help" element={<HelpCenter />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/view/:token" element={<PublicDocumentView />} />
+              <Route path="/portal/:token" element={<PublicCustomerPortal />} />
               <Route path="/invite/:token" element={<AcceptInvite />} />
               <Route element={<ProtectedRoute />}>
                 <Route path="/onboarding" element={<Onboarding />} />

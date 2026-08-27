@@ -7,6 +7,7 @@ import { usePaginatedList } from "../lib/usePaginatedList";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
 import { DOCUMENT_TYPE_COLORS } from "../lib/documentTypeColors";
 import { PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS } from "../lib/paymentStatusColors";
+import { copyToClipboard } from "../lib/clipboard";
 
 interface Customer {
   id: string;
@@ -16,6 +17,7 @@ interface Customer {
   phone: string | null;
   email: string | null;
   isActive: boolean;
+  portalToken: string;
 }
 
 interface DocumentRow {
@@ -35,6 +37,17 @@ export default function CustomerStatement() {
   const { id } = useParams();
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const [portalLinkCopied, setPortalLinkCopied] = useState(false);
+
+  async function handleCopyPortalLink() {
+    if (!customer) return;
+    const url = `${window.location.origin}/portal/${customer.portalToken}`;
+    const succeeded = await copyToClipboard(url);
+    if (succeeded) {
+      setPortalLinkCopied(true);
+      setTimeout(() => setPortalLinkCopied(false), 3000);
+    }
+  }
 
   useEffect(() => {
     apiRequest<{ customer: Customer }>(`/customers/${id}`)
@@ -82,9 +95,18 @@ export default function CustomerStatement() {
           </Link>
           <div className="mt-3 flex items-center justify-between">
             <h1 className="font-display text-2xl font-semibold text-neutral-900">{customer.name}</h1>
-            <span className="font-sans text-sm text-neutral-500">
-              {list.total} document{list.total === 1 ? "" : "s"}
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="font-sans text-sm text-neutral-500">
+                {list.total} document{list.total === 1 ? "" : "s"}
+              </span>
+              <button
+                type="button"
+                onClick={handleCopyPortalLink}
+                className="rounded-lg border border-neutral-200 px-3 py-1.5 font-sans text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-50"
+              >
+                {portalLinkCopied ? "Portal link copied" : "Copy portal link"}
+              </button>
+            </div>
           </div>
           <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 font-sans text-sm text-neutral-500">
             {customer.phone && <span>{customer.phone}</span>}

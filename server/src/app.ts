@@ -14,6 +14,7 @@ import { dashboardRouter } from "./routes/dashboard.js";
 import { businessesRouter } from "./routes/businesses.js";
 import { contactRouter } from "./routes/contact.js";
 import { publicDocumentsRouter } from "./routes/public-documents.js";
+import { publicCustomersRouter } from "./routes/public-customers.js";
 import { invitesRouter } from "./routes/invites.js";
 import { adminRouter } from "./routes/admin.js";
 import { announcementsRouter } from "./routes/announcements.js";
@@ -78,6 +79,7 @@ export function createApp() {
   app.use("/businesses", businessesRouter);
   app.use("/contact", contactRouter);
   app.use("/public/documents", publicDocumentsRouter);
+  app.use("/public/customers", publicCustomersRouter);
   app.use("/invites", invitesRouter);
   app.use("/admin", adminRouter);
   app.use("/announcements", announcementsRouter);
