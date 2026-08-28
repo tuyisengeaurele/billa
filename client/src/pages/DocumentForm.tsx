@@ -9,6 +9,7 @@ import { CustomerPicker } from "../components/customers/CustomerPicker";
 import { ItemPicker } from "../components/items/ItemPicker";
 import { FormField } from "../components/FormField";
 import { useSetActiveDocumentType } from "../context/ActiveDocumentTypeContext";
+import { usePageTitle } from "../context/PageTitleContext";
 import { apiRequest, ApiError, API_BASE_URL } from "../lib/apiClient";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
 import { formatRwf } from "@billa/shared";
@@ -129,6 +130,10 @@ export default function DocumentForm() {
   const dueDateLabel = getDueDateLabel(type);
   const isEditing = Boolean(id);
   const labels = DOCUMENT_TYPE_LABELS[type];
+  usePageTitle([
+    { label: labels.plural, href: `/documents?type=${type}` },
+    { label: isEditing ? `Edit ${labels.singular}` : `New ${labels.singular}` },
+  ]);
 
   const [apiError, setApiError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -328,10 +333,6 @@ export default function DocumentForm() {
   return (
     <>
       <div className="mx-auto flex max-w-3xl flex-col gap-6">
-        <h1 className="font-display text-2xl font-semibold text-neutral-900">
-          {isEditing ? `Edit ${labels.singular}` : `New ${labels.singular}`}
-        </h1>
-
         {convertedFrom && (
           <Link
             to={`/documents/${convertedFrom.id}`}

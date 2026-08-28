@@ -3,6 +3,7 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 import { formatRwf } from "@billa/shared";
 import { apiRequest } from "../lib/apiClient";
 import { useTheme } from "../context/ThemeContext";
+import { usePageTitle } from "../context/PageTitleContext";
 
 interface MonthlyRevenueRow {
   month: string;
@@ -59,6 +60,7 @@ function formatMonth(month: string): string {
 }
 
 export default function Revenue() {
+  usePageTitle("Revenue");
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const gridColor = isDark ? "#3f3f46" : "#e4e4e7";
@@ -94,8 +96,6 @@ export default function Revenue() {
 
   return (
       <div className="mx-auto flex max-w-5xl flex-col gap-8">
-        <h1 className="font-display text-3xl font-semibold text-neutral-900">Revenue</h1>
-
         {loadError && (
           <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
             Couldn't load revenue. Try again.

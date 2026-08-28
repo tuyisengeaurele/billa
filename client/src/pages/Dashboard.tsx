@@ -14,6 +14,7 @@ import {
 } from "recharts";
 import { DOCUMENT_TYPES, type DocumentStatus, type DocumentType, type InvoicePaymentStatus } from "@billa/shared";
 import { useAuth } from "../context/AuthContext";
+import { usePageTitle } from "../context/PageTitleContext";
 import { apiRequest } from "../lib/apiClient";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
 import { DOCUMENT_TYPE_COLORS } from "../lib/documentTypeColors";
@@ -91,6 +92,7 @@ function monthComparison(thisMonth: number, lastMonth: number): string {
 }
 
 export default function Dashboard() {
+  usePageTitle("Dashboard");
   const { business } = useAuth();
   const { theme } = useTheme();
   const isDark = theme === "dark";
@@ -144,9 +146,9 @@ export default function Dashboard() {
 
   return (
       <div className="mx-auto flex max-w-5xl flex-col gap-8">
-        <h1 className="font-display text-3xl font-semibold text-neutral-900">
+        <p className="font-display text-3xl font-semibold text-neutral-900">
           Welcome, {business?.name ?? "there"}.
-        </h1>
+        </p>
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           {DOCUMENT_TYPES.map((type) => {

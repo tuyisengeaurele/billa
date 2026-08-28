@@ -8,6 +8,7 @@ import { LogoStep } from "../components/onboarding/LogoStep";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { API_BASE_URL, apiRequest, ApiError } from "../lib/apiClient";
 import { useAuth } from "../context/AuthContext";
+import { usePageTitle } from "../context/PageTitleContext";
 import { SequenceEditor } from "../components/business/SequenceEditor";
 import { BillingSection } from "../components/business/BillingSection";
 import { TwoFactorSection } from "../components/business/TwoFactorSection";
@@ -64,6 +65,7 @@ const PAYMENT_FIELD_IDS: (keyof BusinessProfile)[] = [
 ];
 
 export default function BusinessSettings() {
+  usePageTitle("Business settings");
   const { user, isLoading: isAuthLoading, deleteAccount } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<BusinessProfile | null>(null);
@@ -176,8 +178,6 @@ export default function BusinessSettings() {
   return (
     <>
       <div className="mx-auto flex max-w-2xl flex-col gap-6">
-        <h1 className="font-display text-2xl font-semibold text-neutral-900">Business settings</h1>
-
         {apiError && (
           <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
             {apiError}

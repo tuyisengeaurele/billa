@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../context/AuthContext";
+import { AppLayoutRoute } from "../components/AppLayoutRoute";
 import DocumentView from "./DocumentView";
 
 function urlOf(input: RequestInfo | URL): string {
@@ -21,6 +22,7 @@ describe("DocumentView", () => {
           document: {
             id: "d1",
             number: "INV-0001",
+            type: "INVOICE",
             status: "FINALIZED",
             customer: { name: "Kigali Traders" },
             lines: [{ id: "l1", description: "Printing", quantity: "2.00", unitPrice: 5000, lineTotal: 10000 }],
@@ -37,13 +39,15 @@ describe("DocumentView", () => {
       <MemoryRouter initialEntries={["/documents/d1"]}>
         <AuthProvider>
           <Routes>
-            <Route path="/documents/:id" element={<DocumentView />} />
+            <Route element={<AppLayoutRoute />}>
+              <Route path="/documents/:id" element={<DocumentView />} />
+            </Route>
           </Routes>
         </AuthProvider>
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText("INV-0001")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /invoices.*inv-0001/i }, { timeout: 5000 })).toBeInTheDocument();
     expect(screen.getByText("Kigali Traders")).toBeInTheDocument();
     expect(screen.getByText("Printing")).toBeInTheDocument();
     expect(screen.getByText(/total: 11,800 rwf/i)).toBeInTheDocument();
@@ -655,7 +659,7 @@ describe("DocumentView", () => {
       </MemoryRouter>,
     );
 
-    await screen.findByText("INV-0001");
+    await screen.findByText("Kigali Traders");
     expect(screen.queryByRole("button", { name: /^delete$/i })).not.toBeInTheDocument();
   });
 });

@@ -8,6 +8,7 @@ import { API_BASE_URL } from "../lib/apiClient";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
 import { DOCUMENT_TYPE_COLORS } from "../lib/documentTypeColors";
 import { PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS } from "../lib/paymentStatusColors";
+import { usePageTitle } from "../context/PageTitleContext";
 
 interface DocumentRow {
   id: string;
@@ -49,6 +50,7 @@ export default function Documents() {
 
   const totalPages = Math.max(1, Math.ceil(list.total / list.pageSize));
   const heading = isUnified ? "All documents" : labels!.plural;
+  usePageTitle(heading);
   const searchPlaceholder = isUnified ? "Search documents" : `Search ${labels!.plural.toLowerCase()}`;
   const emptyText = isUnified ? "No documents yet." : `No ${labels!.plural.toLowerCase()} yet.`;
   const loadingLabel = isUnified ? "Loading documents" : `Loading ${labels!.plural.toLowerCase()}`;
@@ -68,21 +70,17 @@ export default function Documents() {
 
   return (
       <div className="mx-auto flex max-w-4xl flex-col gap-6">
-        <div className="flex items-center justify-between">
-          <h1 className="font-display text-2xl font-semibold text-neutral-900">{heading}</h1>
-          <div className="flex items-center gap-3">
-            <ExportCsvButton path="/documents/export.csv" filename="documents.csv" />
-            {!isUnified && (
-              <button
-                type="button"
-                onClick={() => navigate(`/documents/new?type=${typeParam}`)}
-                className="flex w-auto items-center justify-center rounded-lg bg-primary-500 px-5 py-2.5 font-sans text-sm font-semibold text-white transition-colors hover:bg-primary-700"
-              >
-                New {labels!.singular}
-              </button>
-            )}
+        {!isUnified && (
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => navigate(`/documents/new?type=${typeParam}`)}
+              className="flex w-auto items-center justify-center rounded-lg bg-primary-500 px-5 py-2.5 font-sans text-sm font-semibold text-white transition-colors hover:bg-primary-700"
+            >
+              New {labels!.singular}
+            </button>
           </div>
-        </div>
+        )}
 
         {isUnified && (
           <div className="flex flex-wrap gap-2">
@@ -140,6 +138,9 @@ export default function Documents() {
                 }}
                 className="rounded-lg border border-neutral-200 bg-surface px-3 py-2 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
               />
+            </div>
+            <div className="ml-auto">
+              <ExportCsvButton path="/documents/export.csv" filename="documents.csv" />
             </div>
           </div>
 

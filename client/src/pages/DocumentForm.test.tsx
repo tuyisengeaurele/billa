@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../context/AuthContext";
+import { AppLayoutRoute } from "../components/AppLayoutRoute";
 import DocumentForm from "./DocumentForm";
 
 function urlOf(input: RequestInfo | URL): string {
@@ -45,6 +46,20 @@ function renderEdit(id: string) {
           <Route path="/documents/new" element={<DocumentForm />} />
           <Route path="/documents/:id/edit" element={<DocumentForm />} />
           <Route path="/documents/:id" element={<div>view document page</div>} />
+        </Routes>
+      </AuthProvider>
+    </MemoryRouter>,
+  );
+}
+
+function renderEditWithLayout(id: string) {
+  return render(
+    <MemoryRouter initialEntries={[`/documents/${id}/edit`]}>
+      <AuthProvider>
+        <Routes>
+          <Route element={<AppLayoutRoute />}>
+            <Route path="/documents/:id/edit" element={<DocumentForm />} />
+          </Route>
         </Routes>
       </AuthProvider>
     </MemoryRouter>,
@@ -387,7 +402,7 @@ describe("DocumentForm", () => {
     vi.spyOn(global, "fetch").mockImplementation(async () => new Response("{}", { status: 401 }));
     renderNewForType("DELIVERY_NOTE");
 
-    await screen.findByText(/new delivery note/i);
+    await screen.findByRole("button", { name: /save draft/i });
     expect(screen.queryByLabelText(/due date/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/valid until/i)).not.toBeInTheDocument();
   });
@@ -451,9 +466,11 @@ describe("DocumentForm", () => {
       return new Response("{}", { status: 401 });
     });
 
-    renderEdit("d1");
+    renderEditWithLayout("d1");
 
-    expect(await screen.findByText(/edit proforma invoice/i)).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: /proforma invoices.*edit proforma invoice/i }, { timeout: 5000 }),
+    ).toBeInTheDocument();
     expect(screen.getByLabelText("Valid until")).toBeInTheDocument();
     expect(screen.queryByLabelText(/due date/i)).not.toBeInTheDocument();
   });

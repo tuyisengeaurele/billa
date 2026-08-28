@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../context/AuthContext";
 import * as clipboardModule from "../lib/clipboard";
+import { AppLayoutRoute } from "../components/AppLayoutRoute";
 import CustomerStatement from "./CustomerStatement";
 
 function urlOf(input: RequestInfo | URL): string {
@@ -16,6 +17,20 @@ function renderPage(id = "c1") {
       <AuthProvider>
         <Routes>
           <Route path="/customers/:id/statement" element={<CustomerStatement />} />
+        </Routes>
+      </AuthProvider>
+    </MemoryRouter>,
+  );
+}
+
+function renderPageWithLayout(id = "c1") {
+  return render(
+    <MemoryRouter initialEntries={[`/customers/${id}/statement`]}>
+      <AuthProvider>
+        <Routes>
+          <Route element={<AppLayoutRoute />}>
+            <Route path="/customers/:id/statement" element={<CustomerStatement />} />
+          </Route>
         </Routes>
       </AuthProvider>
     </MemoryRouter>,
@@ -69,9 +84,11 @@ describe("CustomerStatement", () => {
       return new Response("{}", { status: 401 });
     });
 
-    renderPage();
+    renderPageWithLayout();
 
-    expect(await screen.findByText("Acme Ltd")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: /customers.*acme ltd/i }, { timeout: 5000 }),
+    ).toBeInTheDocument();
     expect(screen.getByText("+250788000000")).toBeInTheDocument();
     expect(screen.getByText("TIN 123456789")).toBeInTheDocument();
     expect(await screen.findByText("INV-0001")).toBeInTheDocument();

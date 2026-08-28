@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import { usePageTitle } from "../context/PageTitleContext";
 import { usePaginatedList } from "../lib/usePaginatedList";
 import { describeActivity } from "../lib/activityLabels";
 
@@ -16,6 +17,7 @@ interface ActivityEntry {
 type SortBy = "createdAt";
 
 export default function Activity() {
+  usePageTitle("Activity");
   const { user } = useAuth();
   const [showMineOnly, setShowMineOnly] = useState(false);
   const list = usePaginatedList<ActivityEntry, SortBy>({
@@ -28,8 +30,6 @@ export default function Activity() {
 
   return (
       <div className="mx-auto flex max-w-3xl flex-col gap-6">
-        <h1 className="font-display text-2xl font-semibold text-neutral-900">Activity</h1>
-
         <div className="flex gap-2">
           <button
             type="button"

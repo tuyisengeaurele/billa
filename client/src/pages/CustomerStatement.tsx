@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { formatRwf, type DocumentType, type InvoicePaymentStatus } from "@billa/shared";
 import { apiRequest } from "../lib/apiClient";
+import { usePageTitle } from "../context/PageTitleContext";
 import { usePaginatedList } from "../lib/usePaginatedList";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
 import { DOCUMENT_TYPE_COLORS } from "../lib/documentTypeColors";
@@ -35,6 +36,7 @@ type SortBy = "issueDate" | "total" | "createdAt";
 export default function CustomerStatement() {
   const { id } = useParams();
   const [customer, setCustomer] = useState<Customer | null>(null);
+  usePageTitle([{ label: "Customers", href: "/customers" }, { label: customer?.name ?? "Customer" }]);
   const [loadError, setLoadError] = useState(false);
   const [portalLinkCopied, setPortalLinkCopied] = useState(false);
 
@@ -82,15 +84,11 @@ export default function CustomerStatement() {
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6">
         <div>
-          <Link to="/customers" className="font-sans text-sm text-primary-500 hover:text-primary-700">
-            ← Back to customers
-          </Link>
-          <div className="mt-3 flex items-center justify-between">
-            <h1 className="font-display text-2xl font-semibold text-neutral-900">{customer.name}</h1>
+          <div className="flex items-center justify-between">
+            <span className="font-sans text-sm text-neutral-500">
+              {list.total} document{list.total === 1 ? "" : "s"}
+            </span>
             <div className="flex items-center gap-3">
-              <span className="font-sans text-sm text-neutral-500">
-                {list.total} document{list.total === 1 ? "" : "s"}
-              </span>
               <button
                 type="button"
                 onClick={handleCopyPortalLink}

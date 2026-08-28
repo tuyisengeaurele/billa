@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { formatRwf, PAYMENT_METHODS, type PaymentMethod } from "@billa/shared";
 import { Modal } from "../components/Modal";
+import { usePageTitle } from "../context/PageTitleContext";
 import { apiRequest, ApiError } from "../lib/apiClient";
 
 interface ReceivableRow {
@@ -40,6 +41,7 @@ const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
 };
 
 export default function Receivables() {
+  usePageTitle("Accounts receivable");
   const [results, setResults] = useState<ReceivableRow[] | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [paymentTarget, setPaymentTarget] = useState<ReceivableRow | null>(null);
@@ -126,12 +128,11 @@ export default function Receivables() {
   return (
     <>
       <div className="mx-auto flex max-w-5xl flex-col gap-6">
-        <div className="flex items-center justify-between">
-          <h1 className="font-display text-2xl font-semibold text-neutral-900">Accounts receivable</h1>
-          {results && results.length > 0 && (
+        {results && results.length > 0 && (
+          <div className="flex justify-end">
             <span className="font-sans text-sm text-neutral-500">Total owed: {formatRwf(totalOwed)}</span>
-          )}
-        </div>
+          </div>
+        )}
 
         {loadError && (
           <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">

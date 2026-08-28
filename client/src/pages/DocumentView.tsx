@@ -3,7 +3,9 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import type { DocumentType } from "@billa/shared";
 import { Modal } from "../components/Modal";
 import { useSetActiveDocumentType } from "../context/ActiveDocumentTypeContext";
+import { usePageTitle } from "../context/PageTitleContext";
 import { apiRequest, ApiError, API_BASE_URL } from "../lib/apiClient";
+import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
 import { formatRwf } from "@billa/shared";
 
 interface DocumentLine {
@@ -45,6 +47,15 @@ export default function DocumentView() {
   const navigate = useNavigate();
   const [document, setDocument] = useState<DocumentDetail | null>(null);
   useSetActiveDocumentType(document?.type);
+  const typeLabels = document ? DOCUMENT_TYPE_LABELS[document.type] : undefined;
+  usePageTitle(
+    document && typeLabels
+      ? [
+          { label: typeLabels.plural, href: `/documents?type=${document.type}` },
+          { label: document.number ?? "Draft" },
+        ]
+      : "Document",
+  );
   const [apiError, setApiError] = useState<string | null>(null);
   const [isConverting, setIsConverting] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -158,8 +169,7 @@ export default function DocumentView() {
   return (
     <>
       <div className="mx-auto flex max-w-3xl flex-col gap-6">
-        <div className="flex items-center justify-between">
-          <h1 className="font-display text-2xl font-semibold text-neutral-900">{document.number ?? "Draft"}</h1>
+        <div className="flex justify-end">
           <div className="flex items-center gap-4">
             <span className="font-sans text-sm text-neutral-500">{document.status}</span>
             {CONVERTIBLE_TYPES.includes(document.type) &&

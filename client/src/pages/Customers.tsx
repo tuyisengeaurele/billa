@@ -5,6 +5,7 @@ import { ExportCsvButton } from "../components/ExportCsvButton";
 import { Modal } from "../components/Modal";
 import { CustomerForm, type CustomerFormValues, type CustomerSubmitValues } from "../components/customers/CustomerForm";
 import { apiRequest, ApiError } from "../lib/apiClient";
+import { usePageTitle } from "../context/PageTitleContext";
 import { usePaginatedList } from "../lib/usePaginatedList";
 
 interface Customer {
@@ -20,6 +21,7 @@ interface Customer {
 type SortBy = "name" | "createdAt";
 
 export default function Customers() {
+  usePageTitle("Customers");
   const list = usePaginatedList<Customer, SortBy>({ resourcePath: "/customers", defaultSortBy: "createdAt" });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
@@ -93,34 +95,33 @@ export default function Customers() {
   return (
     <>
       <div className="mx-auto flex max-w-4xl flex-col gap-6">
-        <div className="flex items-center justify-between">
-          <h1 className="font-display text-2xl font-semibold text-neutral-900">Customers</h1>
-          <div className="flex items-center gap-3">
-            <ExportCsvButton path="/customers/export.csv" filename="customers.csv" />
-            <Button type="button" onClick={openCreateModal} fullWidth={false} className="px-5">
-              Add customer
-            </Button>
-          </div>
+        <div className="flex justify-end">
+          <Button type="button" onClick={openCreateModal} fullWidth={false} className="px-5">
+            Add customer
+          </Button>
         </div>
 
         <div className="rounded-xl border border-neutral-200 bg-surface p-6">
-          <div className="flex items-center gap-4">
-            <input
-              type="text"
-              placeholder="Search customers"
-              aria-label="Search customers"
-              value={list.search}
-              onChange={(event) => list.updateSearch(event.target.value)}
-              className="w-full max-w-xs rounded-lg border border-neutral-200 bg-surface px-3.5 py-2 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
-            />
-            <label className="flex items-center gap-2 font-sans text-sm text-neutral-600">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
               <input
-                type="checkbox"
-                checked={list.includeInactive}
-                onChange={(event) => list.updateIncludeInactive(event.target.checked)}
+                type="text"
+                placeholder="Search customers"
+                aria-label="Search customers"
+                value={list.search}
+                onChange={(event) => list.updateSearch(event.target.value)}
+                className="w-full max-w-xs rounded-lg border border-neutral-200 bg-surface px-3.5 py-2 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
               />
-              Show inactive
-            </label>
+              <label className="flex items-center gap-2 font-sans text-sm text-neutral-600">
+                <input
+                  type="checkbox"
+                  checked={list.includeInactive}
+                  onChange={(event) => list.updateIncludeInactive(event.target.checked)}
+                />
+                Show inactive
+              </label>
+            </div>
+            <ExportCsvButton path="/customers/export.csv" filename="customers.csv" />
           </div>
 
           {list.error && (
