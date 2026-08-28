@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { useAuth } from "../context/AuthContext";
 import { usePageTitle } from "../context/PageTitleContext";
+import { useToast } from "../context/ToastContext";
 import { apiRequest } from "../lib/apiClient";
 import { changePassword, hasPasswordProvider } from "../lib/firebaseAuth";
 import { FormField } from "../components/FormField";
@@ -15,6 +16,7 @@ interface SessionRow {
 
 export default function Profile() {
   usePageTitle("Profile");
+  const toast = useToast();
   const { user, refreshAuth } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -78,6 +80,7 @@ export default function Profile() {
       formData.append("avatar", file);
       await apiRequest("/profile/avatar", { method: "POST", body: formData });
       await refreshAuth();
+      toast.success("Photo updated");
     } catch {
       setAvatarError("Couldn't upload that image. Try a different file.");
     } finally {
@@ -91,6 +94,7 @@ export default function Profile() {
     try {
       await apiRequest("/profile/avatar", { method: "DELETE" });
       await refreshAuth();
+      toast.success("Photo removed");
     } catch {
       setAvatarError("Couldn't remove your photo. Try again.");
     } finally {
@@ -132,6 +136,7 @@ export default function Profile() {
     try {
       await apiRequest(`/profile/sessions/${id}/revoke`, { method: "POST" });
       loadSessions();
+      toast.success("Session signed out");
     } catch {
       setSessionsError("Couldn't sign that session out. Try again.");
     } finally {
@@ -145,6 +150,7 @@ export default function Profile() {
     try {
       await apiRequest("/profile/sessions/revoke-others", { method: "POST" });
       loadSessions();
+      toast.success("Other sessions signed out");
     } catch {
       setSessionsError("Couldn't sign out other sessions. Try again.");
     } finally {

@@ -2,6 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../context/AuthContext";
+import { ToastTestWrapper } from "../test/ToastTestWrapper";
 import Profile from "./Profile";
 
 vi.mock("../lib/firebaseAuth", () => ({
@@ -29,9 +30,11 @@ function baseUser(overrides: Partial<{ name: string | null; avatarUrl: string | 
 function renderProfile(mock: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>) {
   vi.spyOn(global, "fetch").mockImplementation(mock);
   return render(
-    <AuthProvider>
-      <Profile />
-    </AuthProvider>,
+    <ToastTestWrapper>
+      <AuthProvider>
+        <Profile />
+      </AuthProvider>
+    </ToastTestWrapper>,
   );
 }
 
@@ -104,6 +107,7 @@ describe("Profile", () => {
     await user.upload(fileInput, file);
 
     await waitFor(() => expect(screen.getByRole("button", { name: /remove/i })).toBeInTheDocument());
+    expect(await screen.findByText("Photo updated")).toBeInTheDocument();
   });
 
   it("shows the password form and changes the password when a password provider is present", async () => {
@@ -188,6 +192,7 @@ describe("Profile", () => {
     await user.click(screen.getByRole("button", { name: /^sign out$/i }));
 
     await waitFor(() => expect(screen.queryByRole("button", { name: /^sign out$/i })).not.toBeInTheDocument());
+    expect(await screen.findByText("Session signed out")).toBeInTheDocument();
   });
 
   it("signs out other sessions when the bulk action is clicked", async () => {
@@ -226,5 +231,6 @@ describe("Profile", () => {
     await waitFor(() =>
       expect(screen.queryByRole("button", { name: /sign out of other sessions/i })).not.toBeInTheDocument(),
     );
+    expect(await screen.findByText("Other sessions signed out")).toBeInTheDocument();
   });
 });
