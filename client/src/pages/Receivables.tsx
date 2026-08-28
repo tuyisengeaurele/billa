@@ -154,6 +154,7 @@ export default function Receivables() {
 
         {results && results.length > 0 && (
           <div className="rounded-xl border border-neutral-200 bg-surface p-6">
+            <div className="overflow-x-auto">
             <table className="w-full border-collapse font-sans text-sm">
               <thead>
                 <tr className="border-b border-neutral-200 text-left text-neutral-500">
@@ -203,6 +204,7 @@ export default function Receivables() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </div>

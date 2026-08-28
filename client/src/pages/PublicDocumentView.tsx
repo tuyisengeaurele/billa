@@ -169,6 +169,7 @@ export default function PublicDocumentView() {
           </div>
         )}
 
+        <div className="overflow-x-auto">
         <table className="w-full border-collapse font-sans text-sm">
           <thead>
             <tr className="border-b border-neutral-200 text-left text-neutral-500">
@@ -189,6 +190,7 @@ export default function PublicDocumentView() {
             ))}
           </tbody>
         </table>
+        </div>
 
         <div className="flex flex-col items-end gap-1 font-sans text-sm text-neutral-600">
           <span>Subtotal: {formatRwf(document.subtotal)}</span>

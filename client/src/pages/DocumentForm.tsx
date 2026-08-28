@@ -479,6 +479,7 @@ export default function DocumentForm() {
             {fields.length === 0 ? (
               <p className="mt-4 font-sans text-sm text-neutral-400">No lines yet.</p>
             ) : (
+              <div className="overflow-x-auto">
               <table className="mt-4 w-full border-collapse font-sans text-sm">
                 <thead>
                   <tr className="border-b border-neutral-200 text-left text-neutral-500">
@@ -576,6 +577,7 @@ export default function DocumentForm() {
                   })}
                 </tbody>
               </table>
+              </div>
             )}
 
             <div className="mt-4 flex flex-col items-end gap-1 border-t border-neutral-100 pt-4 font-sans text-sm text-neutral-600">

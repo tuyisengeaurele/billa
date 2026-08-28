@@ -133,6 +133,7 @@ export default function CustomerStatement() {
               <p className="font-sans text-sm text-neutral-600">No documents for this customer yet.</p>
             </div>
           ) : (
+            <div className="overflow-x-auto">
             <table className="mt-4 w-full border-collapse font-sans text-sm">
               <thead>
                 <tr className="border-b border-neutral-200 text-left text-neutral-500">
@@ -199,6 +200,7 @@ export default function CustomerStatement() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
 
           {!list.isLoading && list.results.length > 0 && (

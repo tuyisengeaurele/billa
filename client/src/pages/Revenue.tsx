@@ -270,6 +270,7 @@ export default function Revenue() {
               </div>
 
               {taxSummary.byRate.length > 0 && (
+                <div className="overflow-x-auto">
                 <table className="mt-4 w-full border-collapse font-sans text-sm">
                   <thead>
                     <tr className="border-b border-neutral-200 text-left text-neutral-500">
@@ -288,6 +289,7 @@ export default function Revenue() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               )}
             </>
           )}

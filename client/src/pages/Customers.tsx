@@ -157,6 +157,7 @@ export default function Customers() {
               </Button>
             </div>
           ) : (
+            <div className="overflow-x-auto">
             <table className="mt-4 w-full border-collapse font-sans text-sm">
               <colgroup>
                 <col />
@@ -225,6 +226,7 @@ export default function Customers() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
 
           {!list.isLoading && list.results.length > 0 && (
