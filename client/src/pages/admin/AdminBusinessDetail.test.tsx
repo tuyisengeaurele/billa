@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../../context/AuthContext";
 import { AdminLayoutRoute } from "../../components/admin/AdminLayoutRoute";
+import { ToastTestWrapper } from "../../test/ToastTestWrapper";
 import AdminBusinessDetail from "./AdminBusinessDetail";
 
 function urlOf(input: RequestInfo | URL): string {
@@ -12,16 +13,18 @@ function urlOf(input: RequestInfo | URL): string {
 
 function renderPage(businessId = "biz1") {
   return render(
-    <MemoryRouter initialEntries={[`/admin/businesses/${businessId}`]}>
-      <AuthProvider>
-        <Routes>
-          <Route element={<AdminLayoutRoute />}>
-            <Route path="/admin/businesses/:id" element={<AdminBusinessDetail />} />
-          </Route>
-          <Route path="/admin/businesses" element={<div>businesses list page</div>} />
-        </Routes>
-      </AuthProvider>
-    </MemoryRouter>,
+    <ToastTestWrapper>
+      <MemoryRouter initialEntries={[`/admin/businesses/${businessId}`]}>
+        <AuthProvider>
+          <Routes>
+            <Route element={<AdminLayoutRoute />}>
+              <Route path="/admin/businesses/:id" element={<AdminBusinessDetail />} />
+            </Route>
+            <Route path="/admin/businesses" element={<div>businesses list page</div>} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    </ToastTestWrapper>,
   );
 }
 
@@ -118,6 +121,7 @@ describe("AdminBusinessDetail", () => {
     await user.click(confirmButton);
 
     expect(await screen.findByText("businesses list page")).toBeInTheDocument();
+    expect(await screen.findByText("Business deleted")).toBeInTheDocument();
   });
 
   it("requires typing the current name before rename is enabled, then renames and updates the page", async () => {
@@ -164,6 +168,7 @@ describe("AdminBusinessDetail", () => {
     await user.click(confirmButton);
 
     expect(await screen.findByText("Musanze Traders")).toBeInTheDocument();
+    expect(await screen.findByText("Business renamed")).toBeInTheDocument();
   });
 
   it("shows a not-found message for an unknown business", async () => {

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Modal } from "../../components/Modal";
 import { usePageTitle } from "../../context/PageTitleContext";
+import { useToast } from "../../context/ToastContext";
 import { apiRequest, ApiError } from "../../lib/apiClient";
 
 interface Member {
@@ -25,6 +26,7 @@ export default function AdminBusinessDetail() {
   const navigate = useNavigate();
   const [business, setBusiness] = useState<BusinessDetail | null>(null);
   usePageTitle([{ label: "Businesses", href: "/admin/businesses" }, { label: business?.name ?? "Business" }]);
+  const toast = useToast();
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -63,6 +65,7 @@ export default function AdminBusinessDetail() {
       });
       setBusiness({ ...business, name: data.business.name });
       setIsRenameModalOpen(false);
+      toast.success("Business renamed");
     } catch {
       setError("Couldn't rename the business. Try again.");
     } finally {
@@ -77,6 +80,7 @@ export default function AdminBusinessDetail() {
     try {
       await apiRequest(`/admin/businesses/${id}`, { method: "DELETE" });
       navigate("/admin/businesses");
+      toast.success("Business deleted");
     } catch {
       setError("Couldn't delete the business. Try again.");
       setIsDeleting(false);
