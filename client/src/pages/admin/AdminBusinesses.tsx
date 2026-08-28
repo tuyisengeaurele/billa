@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { AdminPagination } from "../../components/admin/AdminPagination";
 import { usePageTitle } from "../../context/PageTitleContext";
+import { useToast } from "../../context/ToastContext";
 import { downloadFile } from "../../lib/downloadFile";
 import { usePaginatedList } from "../../lib/usePaginatedList";
 
@@ -24,15 +25,15 @@ export default function AdminBusinesses() {
   });
   const totalPages = Math.max(1, Math.ceil(list.total / list.pageSize));
   const [isExporting, setIsExporting] = useState(false);
-  const [exportError, setExportError] = useState<string | null>(null);
+  const toast = useToast();
 
   async function handleExport() {
-    setExportError(null);
     setIsExporting(true);
     try {
       await downloadFile("/admin/businesses/export.csv", "businesses.csv");
+      toast.success("Exported businesses.csv");
     } catch {
-      setExportError("Couldn't export businesses. Try again.");
+      toast.error("Couldn't export businesses. Try again.");
     } finally {
       setIsExporting(false);
     }
@@ -40,11 +41,6 @@ export default function AdminBusinesses() {
 
   return (
       <div className="flex flex-col gap-6">
-        {exportError && (
-          <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
-            {exportError}
-          </div>
-        )}
 
         <div className="rounded-xl border border-neutral-200 bg-surface p-6">
           <div className="flex items-center justify-between gap-4">
