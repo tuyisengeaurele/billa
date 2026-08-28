@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { usePageTitle } from "../../context/PageTitleContext";
+import { useToast } from "../../context/ToastContext";
 import { apiRequest } from "../../lib/apiClient";
 
 interface AnnouncementRow {
@@ -11,6 +12,7 @@ interface AnnouncementRow {
 
 export default function AdminAnnouncements() {
   usePageTitle("Announcements");
+  const toast = useToast();
   const [results, setResults] = useState<AnnouncementRow[] | null>(null);
   const [message, setMessage] = useState("");
   const [isPosting, setIsPosting] = useState(false);
@@ -34,6 +36,7 @@ export default function AdminAnnouncements() {
       await apiRequest("/admin/announcements", { method: "POST", body: { message: message.trim() } });
       setMessage("");
       load();
+      toast.success("Announcement posted");
     } catch {
       setError("Couldn't post the announcement. Try again.");
     } finally {
@@ -47,6 +50,7 @@ export default function AdminAnnouncements() {
     try {
       await apiRequest(`/admin/announcements/${id}/deactivate`, { method: "POST" });
       load();
+      toast.success("Announcement deactivated");
     } catch {
       setError("Couldn't deactivate the announcement. Try again.");
     } finally {

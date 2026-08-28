@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../../context/AuthContext";
+import { ToastTestWrapper } from "../../test/ToastTestWrapper";
 import AdminAnnouncements from "./AdminAnnouncements";
 
 function urlOf(input: RequestInfo | URL): string {
@@ -11,11 +12,13 @@ function urlOf(input: RequestInfo | URL): string {
 
 function renderPage() {
   return render(
-    <MemoryRouter>
-      <AuthProvider>
-        <AdminAnnouncements />
-      </AuthProvider>
-    </MemoryRouter>,
+    <ToastTestWrapper>
+      <MemoryRouter>
+        <AuthProvider>
+          <AdminAnnouncements />
+        </AuthProvider>
+      </MemoryRouter>
+    </ToastTestWrapper>,
   );
 }
 
@@ -82,6 +85,7 @@ describe("AdminAnnouncements", () => {
     await user.click(screen.getByRole("button", { name: /^post$/i }));
 
     expect(await screen.findByText("New maintenance window")).toBeInTheDocument();
+    expect(await screen.findByText("Announcement posted")).toBeInTheDocument();
   });
 
   it("deactivates the active announcement when confirmed", async () => {
@@ -109,5 +113,6 @@ describe("AdminAnnouncements", () => {
     await user.click(await screen.findByRole("button", { name: /deactivate/i }));
 
     expect(screen.queryByRole("button", { name: /deactivate/i })).not.toBeInTheDocument();
+    expect(await screen.findByText("Announcement deactivated")).toBeInTheDocument();
   });
 });
