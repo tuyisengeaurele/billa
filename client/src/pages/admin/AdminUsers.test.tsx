@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../../context/AuthContext";
+import { ToastTestWrapper } from "../../test/ToastTestWrapper";
 import AdminUsers from "./AdminUsers";
 
 function urlOf(input: RequestInfo | URL): string {
@@ -100,15 +101,43 @@ describe("AdminUsers", () => {
 
     const user = userEvent.setup();
     render(
-      <MemoryRouter>
-        <AuthProvider>
-          <AdminUsers />
-        </AuthProvider>
-      </MemoryRouter>,
+      <ToastTestWrapper>
+        <MemoryRouter>
+          <AuthProvider>
+            <AdminUsers />
+          </AuthProvider>
+        </MemoryRouter>
+      </ToastTestWrapper>,
     );
 
     await user.click(await screen.findByRole("button", { name: /export csv/i }));
 
     await vi.waitFor(() => expect(exportRequested).toBe(true));
+    expect(await screen.findByText("Exported users.csv")).toBeInTheDocument();
+  });
+
+  it("shows an error toast when the export fails", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.endsWith("/admin/users/export.csv")) {
+        return new Response("{}", { status: 500 });
+      }
+      return new Response(JSON.stringify({ results: [], total: 0, page: 1, pageSize: 20 }), { status: 200 });
+    });
+
+    const user = userEvent.setup();
+    render(
+      <ToastTestWrapper>
+        <MemoryRouter>
+          <AuthProvider>
+            <AdminUsers />
+          </AuthProvider>
+        </MemoryRouter>
+      </ToastTestWrapper>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: /export csv/i }));
+
+    expect(await screen.findByText("Couldn't export users. Try again.")).toBeInTheDocument();
   });
 });

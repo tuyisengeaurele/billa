@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { AdminPagination } from "../../components/admin/AdminPagination";
 import { usePageTitle } from "../../context/PageTitleContext";
+import { useToast } from "../../context/ToastContext";
 import { downloadFile } from "../../lib/downloadFile";
 import { PlanBadge, PlanLegend, type PlanKey } from "../../lib/planColors";
 import { usePaginatedList } from "../../lib/usePaginatedList";
@@ -23,15 +24,15 @@ export default function AdminUsers() {
   const list = usePaginatedList<AdminUserRow, SortBy>({ resourcePath: "/admin/users", defaultSortBy: "createdAt" });
   const totalPages = Math.max(1, Math.ceil(list.total / list.pageSize));
   const [isExporting, setIsExporting] = useState(false);
-  const [exportError, setExportError] = useState<string | null>(null);
+  const toast = useToast();
 
   async function handleExport() {
-    setExportError(null);
     setIsExporting(true);
     try {
       await downloadFile("/admin/users/export.csv", "users.csv");
+      toast.success("Exported users.csv");
     } catch {
-      setExportError("Couldn't export users. Try again.");
+      toast.error("Couldn't export users. Try again.");
     } finally {
       setIsExporting(false);
     }
@@ -39,11 +40,6 @@ export default function AdminUsers() {
 
   return (
       <div className="flex flex-col gap-6">
-        {exportError && (
-          <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
-            {exportError}
-          </div>
-        )}
 
         <div className="rounded-xl border border-neutral-200 bg-surface p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
