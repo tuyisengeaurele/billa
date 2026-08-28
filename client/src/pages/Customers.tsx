@@ -6,6 +6,7 @@ import { Modal } from "../components/Modal";
 import { CustomerForm, type CustomerFormValues, type CustomerSubmitValues } from "../components/customers/CustomerForm";
 import { apiRequest, ApiError } from "../lib/apiClient";
 import { usePageTitle } from "../context/PageTitleContext";
+import { useToast } from "../context/ToastContext";
 import { usePaginatedList } from "../lib/usePaginatedList";
 
 interface Customer {
@@ -22,6 +23,7 @@ type SortBy = "name" | "createdAt";
 
 export default function Customers() {
   usePageTitle("Customers");
+  const toast = useToast();
   const list = usePaginatedList<Customer, SortBy>({ resourcePath: "/customers", defaultSortBy: "createdAt" });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
@@ -52,6 +54,7 @@ export default function Customers() {
       }
       setIsModalOpen(false);
       list.reload();
+      toast.success(editingCustomer ? "Customer updated" : "Customer added");
     } catch (err) {
       if (err instanceof ApiError && err.status === 402) {
         setFormError("Your trial has ended. Subscribe in Settings to continue.");
@@ -70,15 +73,25 @@ export default function Customers() {
       setDeactivateTarget(customer);
       return;
     }
-    await apiRequest(`/customers/${customer.id}`, { method: "PATCH", body: { isActive: true } });
-    list.reload();
+    try {
+      await apiRequest(`/customers/${customer.id}`, { method: "PATCH", body: { isActive: true } });
+      list.reload();
+      toast.success("Customer reactivated");
+    } catch {
+      toast.error("Couldn't reactivate that customer. Try again.");
+    }
   }
 
   async function confirmDeactivate() {
     if (!deactivateTarget) return;
-    await apiRequest(`/customers/${deactivateTarget.id}`, { method: "PATCH", body: { isActive: false } });
-    setDeactivateTarget(null);
-    list.reload();
+    try {
+      await apiRequest(`/customers/${deactivateTarget.id}`, { method: "PATCH", body: { isActive: false } });
+      setDeactivateTarget(null);
+      list.reload();
+      toast.success("Customer deactivated");
+    } catch {
+      toast.error("Couldn't deactivate that customer. Try again.");
+    }
   }
 
   const totalPages = Math.max(1, Math.ceil(list.total / list.pageSize));

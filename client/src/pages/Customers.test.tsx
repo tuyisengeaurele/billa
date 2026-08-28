@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../context/AuthContext";
+import { ToastTestWrapper } from "../test/ToastTestWrapper";
 import Customers from "./Customers";
 
 function urlOf(input: RequestInfo | URL): string {
@@ -11,11 +12,13 @@ function urlOf(input: RequestInfo | URL): string {
 
 function renderCustomers() {
   return render(
-    <MemoryRouter>
-      <AuthProvider>
-        <Customers />
-      </AuthProvider>
-    </MemoryRouter>,
+    <ToastTestWrapper>
+      <MemoryRouter>
+        <AuthProvider>
+          <Customers />
+        </AuthProvider>
+      </MemoryRouter>
+    </ToastTestWrapper>,
   );
 }
 
@@ -95,6 +98,7 @@ describe("Customers", () => {
     await user.click(screen.getByRole("button", { name: /save customer/i }));
 
     await waitFor(() => expect(screen.getByText("New Co")).toBeInTheDocument());
+    expect(await screen.findByText("Customer added")).toBeInTheDocument();
   });
 
   it("deactivates a customer after confirming", async () => {
@@ -143,6 +147,7 @@ describe("Customers", () => {
     await user.click(within(dialog).getByRole("button", { name: /deactivate/i }));
 
     await waitFor(() => expect(screen.getByText(/no customers yet/i)).toBeInTheDocument());
+    expect(await screen.findByText("Customer deactivated")).toBeInTheDocument();
   });
 
   it("has an accessible label on the search input", async () => {
