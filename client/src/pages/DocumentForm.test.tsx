@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../context/AuthContext";
 import { AppLayoutRoute } from "../components/AppLayoutRoute";
+import { ToastTestWrapper } from "../test/ToastTestWrapper";
 import DocumentForm from "./DocumentForm";
 
 function urlOf(input: RequestInfo | URL): string {
@@ -12,57 +13,65 @@ function urlOf(input: RequestInfo | URL): string {
 
 function renderNew() {
   return render(
-    <MemoryRouter initialEntries={["/documents/new?type=INVOICE"]}>
-      <AuthProvider>
-        <Routes>
-          <Route path="/documents/new" element={<DocumentForm />} />
-          <Route path="/documents/:id/edit" element={<DocumentForm />} />
-          <Route path="/documents/:id" element={<div>view document page</div>} />
-        </Routes>
-      </AuthProvider>
-    </MemoryRouter>,
+    <ToastTestWrapper>
+      <MemoryRouter initialEntries={["/documents/new?type=INVOICE"]}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/documents/new" element={<DocumentForm />} />
+            <Route path="/documents/:id/edit" element={<DocumentForm />} />
+            <Route path="/documents/:id" element={<div>view document page</div>} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    </ToastTestWrapper>,
   );
 }
 
 function renderNewForType(type: string) {
   return render(
-    <MemoryRouter initialEntries={[`/documents/new?type=${type}`]}>
-      <AuthProvider>
-        <Routes>
-          <Route path="/documents/new" element={<DocumentForm />} />
-          <Route path="/documents/:id/edit" element={<DocumentForm />} />
-          <Route path="/documents/:id" element={<div>view document page</div>} />
-        </Routes>
-      </AuthProvider>
-    </MemoryRouter>,
+    <ToastTestWrapper>
+      <MemoryRouter initialEntries={[`/documents/new?type=${type}`]}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/documents/new" element={<DocumentForm />} />
+            <Route path="/documents/:id/edit" element={<DocumentForm />} />
+            <Route path="/documents/:id" element={<div>view document page</div>} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    </ToastTestWrapper>,
   );
 }
 
 function renderEdit(id: string) {
   return render(
-    <MemoryRouter initialEntries={[`/documents/${id}/edit`]}>
-      <AuthProvider>
-        <Routes>
-          <Route path="/documents/new" element={<DocumentForm />} />
-          <Route path="/documents/:id/edit" element={<DocumentForm />} />
-          <Route path="/documents/:id" element={<div>view document page</div>} />
-        </Routes>
-      </AuthProvider>
-    </MemoryRouter>,
+    <ToastTestWrapper>
+      <MemoryRouter initialEntries={[`/documents/${id}/edit`]}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/documents/new" element={<DocumentForm />} />
+            <Route path="/documents/:id/edit" element={<DocumentForm />} />
+            <Route path="/documents/:id" element={<div>view document page</div>} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    </ToastTestWrapper>,
   );
 }
 
 function renderEditWithLayout(id: string) {
   return render(
-    <MemoryRouter initialEntries={[`/documents/${id}/edit`]}>
-      <AuthProvider>
-        <Routes>
-          <Route element={<AppLayoutRoute />}>
-            <Route path="/documents/:id/edit" element={<DocumentForm />} />
-          </Route>
-        </Routes>
-      </AuthProvider>
-    </MemoryRouter>,
+    <ToastTestWrapper>
+      <MemoryRouter initialEntries={[`/documents/${id}/edit`]}>
+        <AuthProvider>
+          <Routes>
+            <Route element={<AppLayoutRoute />}>
+              <Route path="/documents/:id/edit" element={<DocumentForm />} />
+            </Route>
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    </ToastTestWrapper>,
   );
 }
 
@@ -159,6 +168,7 @@ describe("DocumentForm", () => {
     // Save navigates to /documents/d1/edit, which remounts DocumentForm with isEditing=true;
     // the Finalize button only renders in edit mode, so its presence confirms the navigation worked.
     await waitFor(() => expect(screen.getByRole("button", { name: /finalize/i })).toBeInTheDocument());
+    expect(await screen.findByText("Document created")).toBeInTheDocument();
   });
 
   it("sends recurrence in the payload when 'Make this recurring' is checked", async () => {
@@ -364,6 +374,7 @@ describe("DocumentForm", () => {
     await user.click(within(dialog).getByRole("button", { name: /finalize/i }));
 
     await waitFor(() => expect(screen.getByText("view document page")).toBeInTheDocument());
+    expect(await screen.findByText("Document finalized")).toBeInTheDocument();
   });
 
   it("opens the PDF download URL for an existing draft", async () => {

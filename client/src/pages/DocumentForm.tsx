@@ -10,6 +10,7 @@ import { ItemPicker } from "../components/items/ItemPicker";
 import { FormField } from "../components/FormField";
 import { useSetActiveDocumentType } from "../context/ActiveDocumentTypeContext";
 import { usePageTitle } from "../context/PageTitleContext";
+import { useToast } from "../context/ToastContext";
 import { apiRequest, ApiError, API_BASE_URL } from "../lib/apiClient";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
 import { formatRwf } from "@billa/shared";
@@ -134,6 +135,7 @@ export default function DocumentForm() {
     { label: labels.plural, href: `/documents?type=${type}` },
     { label: isEditing ? `Edit ${labels.singular}` : `New ${labels.singular}` },
   ]);
+  const toast = useToast();
 
   const [apiError, setApiError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -281,6 +283,7 @@ export default function DocumentForm() {
         ? await apiRequest<{ document: DocumentResponse }>(`/documents/${id}`, { method: "PATCH", body: payload })
         : await apiRequest<{ document: DocumentResponse }>("/documents", { method: "POST", body: payload });
       navigate(`/documents/${response.document.id}/edit`, { replace: true });
+      toast.success(isEditing ? "Document saved" : "Document created");
     } catch (err) {
       if (err instanceof ApiError && err.status === 402) {
         setApiError("Your trial has ended. Subscribe in Settings to continue.");
@@ -311,6 +314,7 @@ export default function DocumentForm() {
     try {
       await apiRequest(`/documents/${id}/finalize`, { method: "POST" });
       navigate(`/documents/${id}`);
+      toast.success("Document finalized");
     } catch {
       setApiError("Couldn't finalize this document. Try again.");
     } finally {
