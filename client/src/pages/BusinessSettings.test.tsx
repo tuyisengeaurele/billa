@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../context/AuthContext";
+import { ToastTestWrapper } from "../test/ToastTestWrapper";
 import BusinessSettings from "./BusinessSettings";
 
 function urlOf(input: RequestInfo | URL): string {
@@ -11,11 +12,13 @@ function urlOf(input: RequestInfo | URL): string {
 
 function renderPage() {
   return render(
-    <MemoryRouter initialEntries={["/settings"]}>
-      <AuthProvider>
-        <BusinessSettings />
-      </AuthProvider>
-    </MemoryRouter>,
+    <ToastTestWrapper>
+      <MemoryRouter initialEntries={["/settings"]}>
+        <AuthProvider>
+          <BusinessSettings />
+        </AuthProvider>
+      </MemoryRouter>
+    </ToastTestWrapper>,
   );
 }
 
@@ -121,6 +124,7 @@ describe("BusinessSettings", () => {
     await user.click(screen.getByRole("button", { name: /^save$/i }));
 
     await waitFor(() => expect(patchBody).toMatchObject({ defaultTemplate: "PREMIUM" }));
+    expect(await screen.findByText("Settings saved")).toBeInTheDocument();
   });
 
   it("sends null for a field cleared to blank, and the trimmed value for one that's set", async () => {
@@ -409,6 +413,7 @@ describe("BusinessSettings", () => {
     await user.click(confirmButton);
 
     expect(await screen.findByText("Musanze Traders")).toBeInTheDocument();
+    expect(await screen.findByText("Business renamed")).toBeInTheDocument();
   });
 
   it("requires typing your email before delete is enabled, then deletes the account and redirects to login", async () => {

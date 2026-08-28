@@ -9,6 +9,7 @@ import { ThemeToggle } from "../components/ThemeToggle";
 import { API_BASE_URL, apiRequest, ApiError } from "../lib/apiClient";
 import { useAuth } from "../context/AuthContext";
 import { usePageTitle } from "../context/PageTitleContext";
+import { useToast } from "../context/ToastContext";
 import { SequenceEditor } from "../components/business/SequenceEditor";
 import { BillingSection } from "../components/business/BillingSection";
 import { TwoFactorSection } from "../components/business/TwoFactorSection";
@@ -66,6 +67,7 @@ const PAYMENT_FIELD_IDS: (keyof BusinessProfile)[] = [
 
 export default function BusinessSettings() {
   usePageTitle("Business settings");
+  const toast = useToast();
   const { user, isLoading: isAuthLoading, deleteAccount } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<BusinessProfile | null>(null);
@@ -115,6 +117,7 @@ export default function BusinessSettings() {
       await apiRequest("/business", { method: "PATCH", body: { name: trimmed } });
       setProfile({ ...profile, name: trimmed });
       setIsRenameModalOpen(false);
+      toast.success("Business renamed");
     } catch {
       setRenameError("Couldn't rename your business. Try again.");
     } finally {
@@ -154,6 +157,7 @@ export default function BusinessSettings() {
         payload[field.id] = trimmed.length > 0 ? trimmed : null;
       }
       await apiRequest("/business", { method: "PATCH", body: payload });
+      toast.success("Settings saved");
     } catch (err) {
       setApiError(err instanceof ApiError ? "Couldn't save your settings. Try again." : "Something went wrong. Try again.");
     } finally {
