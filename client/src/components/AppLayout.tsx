@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiRequest } from "../lib/apiClient";
 import { useAuth } from "../context/AuthContext";
@@ -10,6 +10,8 @@ import { ImpersonationRequestModal } from "./ImpersonationRequestModal";
 import { NotificationBell } from "./NotificationBell";
 import { PageTitleBreadcrumb } from "./PageTitleBreadcrumb";
 import { ProductTourModal } from "./ProductTourModal";
+import { SearchPalette } from "./SearchPalette";
+import { SearchPaletteTrigger } from "./SearchPaletteTrigger";
 import { Sidebar } from "./Sidebar";
 import { UserMenu } from "./UserMenu";
 
@@ -23,6 +25,24 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [billingBanner, setBillingBanner] = useState<string | null>(null);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isReturningToAdmin, setIsReturningToAdmin] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const searchTriggerRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setIsSearchOpen((current) => !current);
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  function closeSearch() {
+    setIsSearchOpen(false);
+    searchTriggerRef.current?.focus();
+  }
 
   useEffect(() => {
     apiRequest<{ activeUntil: string }>("/billing/status")
@@ -57,6 +77,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         <ImpersonationRequestModal />
         <IdleTimeoutModal />
         <ProductTourModal />
+        <SearchPalette isOpen={isSearchOpen} onClose={closeSearch} />
 
         {impersonating && (
           <div
@@ -105,6 +126,7 @@ export function AppLayout({ children }: AppLayoutProps) {
               </button>
               <PageTitleBreadcrumb />
               <div className="ml-auto flex shrink-0 items-center gap-2">
+                <SearchPaletteTrigger ref={searchTriggerRef} onClick={() => setIsSearchOpen(true)} />
                 <NotificationBell allHref="/notifications" />
                 <UserMenu profileHref="/profile" logoutConfirmMessage="Log out of Billa?" />
               </div>

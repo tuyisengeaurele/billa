@@ -127,4 +127,15 @@ describe("AppLayout", () => {
     await user.click(customersLinks[customersLinks.length - 1]);
     expect(screen.getAllByRole("link", { name: /customers/i })).toHaveLength(1);
   });
+
+  it("opens the search palette on Cmd/Ctrl+K", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 401 }));
+    const user = userEvent.setup();
+    renderAppLayout();
+    await screen.findByText("page content");
+
+    await user.keyboard("{Meta>}k{/Meta}");
+
+    expect(await screen.findByRole("dialog", { name: /search/i })).toBeInTheDocument();
+  });
 });
