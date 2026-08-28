@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../context/AuthContext";
 import { AppLayoutRoute } from "../components/AppLayoutRoute";
+import { ToastTestWrapper } from "../test/ToastTestWrapper";
 import DocumentView from "./DocumentView";
 
 function urlOf(input: RequestInfo | URL): string {
@@ -192,14 +193,16 @@ describe("DocumentView", () => {
     const user = userEvent.setup();
 
     render(
-      <MemoryRouter initialEntries={["/documents/d1"]}>
-        <AuthProvider>
-          <Routes>
-            <Route path="/documents/:id" element={<DocumentView />} />
-            <Route path="/documents/:id/edit" element={<div>edit invoice page</div>} />
-          </Routes>
-        </AuthProvider>
-      </MemoryRouter>,
+      <ToastTestWrapper>
+        <MemoryRouter initialEntries={["/documents/d1"]}>
+          <AuthProvider>
+            <Routes>
+              <Route path="/documents/:id" element={<DocumentView />} />
+              <Route path="/documents/:id/edit" element={<div>edit invoice page</div>} />
+            </Routes>
+          </AuthProvider>
+        </MemoryRouter>
+      </ToastTestWrapper>,
     );
 
     await user.click(await screen.findByRole("button", { name: /convert to invoice/i }));
@@ -208,6 +211,7 @@ describe("DocumentView", () => {
     await user.click(within(dialog).getByRole("button", { name: /^convert$/i }));
 
     await waitFor(() => expect(screen.getByText("edit invoice page")).toBeInTheDocument());
+    expect(await screen.findByText("Converted to invoice")).toBeInTheDocument();
   });
 
   it("offers to convert a finalized quote to a draft invoice too", async () => {
@@ -320,19 +324,22 @@ describe("DocumentView", () => {
     const user = userEvent.setup();
 
     render(
-      <MemoryRouter initialEntries={["/documents/d1"]}>
-        <AuthProvider>
-          <Routes>
-            <Route path="/documents/:id" element={<DocumentView />} />
-            <Route path="/documents/:id/edit" element={<div>edit duplicate page</div>} />
-          </Routes>
-        </AuthProvider>
-      </MemoryRouter>,
+      <ToastTestWrapper>
+        <MemoryRouter initialEntries={["/documents/d1"]}>
+          <AuthProvider>
+            <Routes>
+              <Route path="/documents/:id" element={<DocumentView />} />
+              <Route path="/documents/:id/edit" element={<div>edit duplicate page</div>} />
+            </Routes>
+          </AuthProvider>
+        </MemoryRouter>
+      </ToastTestWrapper>,
     );
 
     await user.click(await screen.findByRole("button", { name: /^duplicate$/i }));
 
     await waitFor(() => expect(screen.getByText("edit duplicate page")).toBeInTheDocument());
+    expect(await screen.findByText("Document duplicated")).toBeInTheDocument();
   });
 
   it("shows a link instead of a button once the proforma has already been converted", async () => {
@@ -522,13 +529,15 @@ describe("DocumentView", () => {
     const user = userEvent.setup();
 
     render(
-      <MemoryRouter initialEntries={["/documents/d1"]}>
-        <AuthProvider>
-          <Routes>
-            <Route path="/documents/:id" element={<DocumentView />} />
-          </Routes>
-        </AuthProvider>
-      </MemoryRouter>,
+      <ToastTestWrapper>
+        <MemoryRouter initialEntries={["/documents/d1"]}>
+          <AuthProvider>
+            <Routes>
+              <Route path="/documents/:id" element={<DocumentView />} />
+            </Routes>
+          </AuthProvider>
+        </MemoryRouter>
+      </ToastTestWrapper>,
     );
 
     await user.click(await screen.findByRole("button", { name: /send by email/i }));
@@ -607,14 +616,16 @@ describe("DocumentView", () => {
     const user = userEvent.setup();
 
     render(
-      <MemoryRouter initialEntries={["/documents/d1"]}>
-        <AuthProvider>
-          <Routes>
-            <Route path="/documents/:id" element={<DocumentView />} />
-            <Route path="/documents" element={<div>documents list page</div>} />
-          </Routes>
-        </AuthProvider>
-      </MemoryRouter>,
+      <ToastTestWrapper>
+        <MemoryRouter initialEntries={["/documents/d1"]}>
+          <AuthProvider>
+            <Routes>
+              <Route path="/documents/:id" element={<DocumentView />} />
+              <Route path="/documents" element={<div>documents list page</div>} />
+            </Routes>
+          </AuthProvider>
+        </MemoryRouter>
+      </ToastTestWrapper>,
     );
 
     await user.click(await screen.findByRole("button", { name: /^delete$/i }));
@@ -628,6 +639,7 @@ describe("DocumentView", () => {
     await user.click(confirmButton);
 
     expect(await screen.findByText("documents list page")).toBeInTheDocument();
+    expect(await screen.findByText("Document deleted")).toBeInTheDocument();
   });
 
   it("does not show a delete option for a finalized document", async () => {

@@ -4,6 +4,7 @@ import type { DocumentType } from "@billa/shared";
 import { Modal } from "../components/Modal";
 import { useSetActiveDocumentType } from "../context/ActiveDocumentTypeContext";
 import { usePageTitle } from "../context/PageTitleContext";
+import { useToast } from "../context/ToastContext";
 import { apiRequest, ApiError, API_BASE_URL } from "../lib/apiClient";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
 import { formatRwf } from "@billa/shared";
@@ -45,6 +46,7 @@ const CONVERTIBLE_TYPES: DocumentType[] = ["PROFORMA", "QUOTE"];
 export default function DocumentView() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const toast = useToast();
   const [document, setDocument] = useState<DocumentDetail | null>(null);
   useSetActiveDocumentType(document?.type);
   const typeLabels = document ? DOCUMENT_TYPE_LABELS[document.type] : undefined;
@@ -59,7 +61,6 @@ export default function DocumentView() {
   const [apiError, setApiError] = useState<string | null>(null);
   const [isConverting, setIsConverting] = useState(false);
   const [isSending, setIsSending] = useState(false);
-  const [sendMessage, setSendMessage] = useState<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [isConvertConfirmOpen, setIsConvertConfirmOpen] = useState(false);
@@ -85,6 +86,7 @@ export default function DocumentView() {
         method: "POST",
       });
       navigate(`/documents/${response.document.id}/edit`);
+      toast.success("Converted to invoice");
     } catch (err) {
       setApiError(
         err instanceof ApiError ? "Couldn't convert this document. Try again." : "Something went wrong. Try again.",
@@ -105,12 +107,11 @@ export default function DocumentView() {
   async function handleSend() {
     if (!document || !document.customer.email) return;
     setApiError(null);
-    setSendMessage(null);
     setIsSending(true);
     try {
       const response = await apiRequest<{ sentAt: string }>(`/documents/${document.id}/send`, { method: "POST" });
       setDocument({ ...document, sentAt: response.sentAt });
-      setSendMessage(`Sent to ${document.customer.email}`);
+      toast.success(`Sent to ${document.customer.email}`);
     } catch (err) {
       setApiError(
         err instanceof ApiError ? "Couldn't send this document. Try again." : "Something went wrong. Try again.",
@@ -129,6 +130,7 @@ export default function DocumentView() {
         method: "POST",
       });
       navigate(`/documents/${response.document.id}/edit`);
+      toast.success("Document duplicated");
     } catch (err) {
       setApiError(
         err instanceof ApiError ? "Couldn't duplicate this document. Try again." : "Something went wrong. Try again.",
@@ -144,6 +146,7 @@ export default function DocumentView() {
     try {
       await apiRequest(`/documents/${document.id}`, { method: "DELETE" });
       navigate("/documents");
+      toast.success("Document deleted");
     } catch (err) {
       setDeleteError(
         err instanceof ApiError && err.status === 409
@@ -250,12 +253,7 @@ export default function DocumentView() {
           </div>
         )}
 
-        {sendMessage && (
-          <div className="rounded-lg bg-success-bg px-4 py-3 font-sans text-sm text-success" role="status">
-            {sendMessage}
-          </div>
-        )}
-        {document.sentAt && !sendMessage && (
+        {document.sentAt && (
           <p className="font-sans text-xs text-neutral-400">Sent {document.sentAt.slice(0, 10)}</p>
         )}
 
