@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../../context/AuthContext";
 import { AdminLayoutRoute } from "../../components/admin/AdminLayoutRoute";
+import { ToastTestWrapper } from "../../test/ToastTestWrapper";
 import AdminUserDetail from "./AdminUserDetail";
 
 function urlOf(input: RequestInfo | URL): string {
@@ -12,30 +13,34 @@ function urlOf(input: RequestInfo | URL): string {
 
 function renderPage(userId = "u2") {
   return render(
-    <MemoryRouter initialEntries={[`/admin/users/${userId}`]}>
-      <AuthProvider>
-        <Routes>
-          <Route path="/admin/users/:id" element={<AdminUserDetail />} />
-          <Route path="/dashboard" element={<div>dashboard page</div>} />
-          <Route path="/admin/users" element={<div>users list page</div>} />
-        </Routes>
-      </AuthProvider>
-    </MemoryRouter>,
+    <ToastTestWrapper>
+      <MemoryRouter initialEntries={[`/admin/users/${userId}`]}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/admin/users/:id" element={<AdminUserDetail />} />
+            <Route path="/dashboard" element={<div>dashboard page</div>} />
+            <Route path="/admin/users" element={<div>users list page</div>} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    </ToastTestWrapper>,
   );
 }
 
 function renderPageWithLayout(userId = "u2") {
   return render(
-    <MemoryRouter initialEntries={[`/admin/users/${userId}`]}>
-      <AuthProvider>
-        <Routes>
-          <Route element={<AdminLayoutRoute />}>
-            <Route path="/admin/users/:id" element={<AdminUserDetail />} />
-          </Route>
-          <Route path="/admin/users" element={<div>users list page</div>} />
-        </Routes>
-      </AuthProvider>
-    </MemoryRouter>,
+    <ToastTestWrapper>
+      <MemoryRouter initialEntries={[`/admin/users/${userId}`]}>
+        <AuthProvider>
+          <Routes>
+            <Route element={<AdminLayoutRoute />}>
+              <Route path="/admin/users/:id" element={<AdminUserDetail />} />
+            </Route>
+            <Route path="/admin/users" element={<div>users list page</div>} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    </ToastTestWrapper>,
   );
 }
 
@@ -153,6 +158,7 @@ describe("AdminUserDetail", () => {
     await user.click(await screen.findByRole("button", { name: /grant admin/i }));
 
     expect(await screen.findByRole("button", { name: /revoke admin/i })).toBeInTheDocument();
+    expect(await screen.findByText("Admin access granted")).toBeInTheDocument();
   });
 
   it("disables the admin toggle when viewing your own account", async () => {
@@ -230,6 +236,7 @@ describe("AdminUserDetail", () => {
     await user.click(screen.getByRole("button", { name: /extend trial/i }));
 
     expect(await screen.findByText(new Date("2026-10-01T00:00:00.000Z").toLocaleDateString())).toBeInTheDocument();
+    expect(await screen.findByText("Trial extended")).toBeInTheDocument();
   });
 
   it("suspends the account after confirming in the modal", async () => {
@@ -275,6 +282,7 @@ describe("AdminUserDetail", () => {
 
     expect(await screen.findByRole("button", { name: /^reinstate$/i })).toBeInTheDocument();
     expect(screen.getByText(/suspended since/i)).toBeInTheDocument();
+    expect(await screen.findByText("Account suspended")).toBeInTheDocument();
   });
 
   it("reinstates a suspended account", async () => {
@@ -318,6 +326,7 @@ describe("AdminUserDetail", () => {
 
     expect(await screen.findByRole("button", { name: /^suspend$/i })).toBeInTheDocument();
     expect(screen.queryByText(/suspended since/i)).not.toBeInTheDocument();
+    expect(await screen.findByText("Account reinstated")).toBeInTheDocument();
   });
 
   it("disables the suspend button when viewing your own account", async () => {
@@ -546,6 +555,7 @@ describe("AdminUserDetail", () => {
 
     expect(screen.queryByRole("button", { name: /^revoke$/i })).not.toBeInTheDocument();
     expect(await screen.findByText(/no active sessions/i)).toBeInTheDocument();
+    expect(await screen.findByText("Session signed out")).toBeInTheDocument();
   });
 
   it("requires typing the user's email before delete is enabled, then deletes and redirects", async () => {
@@ -596,6 +606,7 @@ describe("AdminUserDetail", () => {
     await user.click(confirmButton);
 
     expect(await screen.findByText("users list page")).toBeInTheDocument();
+    expect(await screen.findByText("Account deleted")).toBeInTheDocument();
   });
 
   it("disables the delete account button when viewing your own account", async () => {

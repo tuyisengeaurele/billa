@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { Modal } from "../../components/Modal";
 import { useAuth } from "../../context/AuthContext";
 import { usePageTitle } from "../../context/PageTitleContext";
+import { useToast } from "../../context/ToastContext";
 import { useImpersonationRequest } from "../../hooks/useImpersonationRequest";
 import { apiRequest, ApiError } from "../../lib/apiClient";
 import { PlanBadge, type PlanKey } from "../../lib/planColors";
@@ -41,6 +42,7 @@ export default function AdminUserDetail() {
   const navigate = useNavigate();
   const [detail, setDetail] = useState<UserDetailResponse | null>(null);
   usePageTitle([{ label: "Users", href: "/admin/users" }, { label: detail?.user.email ?? "User" }]);
+  const toast = useToast();
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isTogglingAdmin, setIsTogglingAdmin] = useState(false);
@@ -80,6 +82,7 @@ export default function AdminUserDetail() {
     try {
       await apiRequest(`/admin/users/${id}/sessions/${sessionId}/revoke`, { method: "POST" });
       loadSessions();
+      toast.success("Session signed out");
     } catch {
       setError("Couldn't revoke the session. Try again.");
     } finally {
@@ -96,6 +99,7 @@ export default function AdminUserDetail() {
         method: "POST",
       });
       setDetail({ ...detail, user: { ...detail.user, isAdmin: data.user.isAdmin } });
+      toast.success(data.user.isAdmin ? "Admin access granted" : "Admin access revoked");
     } catch {
       setError("Couldn't change admin status. Try again.");
     } finally {
@@ -114,6 +118,7 @@ export default function AdminUserDetail() {
         body: { days },
       });
       setDetail({ ...detail, user: { ...detail.user, trialEndsAt: data.trialEndsAt } });
+      toast.success("Trial extended");
     } catch {
       setError("Couldn't extend the trial. Try again.");
     } finally {
@@ -129,6 +134,7 @@ export default function AdminUserDetail() {
       await apiRequest(`/admin/users/${id}/suspend`, { method: "POST" });
       setDetail({ ...detail, user: { ...detail.user, suspendedAt: new Date().toISOString() } });
       setIsSuspendModalOpen(false);
+      toast.success("Account suspended");
     } catch {
       setError("Couldn't suspend the account. Try again.");
     } finally {
@@ -154,6 +160,7 @@ export default function AdminUserDetail() {
     try {
       await apiRequest(`/admin/users/${id}`, { method: "DELETE" });
       navigate("/admin/users");
+      toast.success("Account deleted");
     } catch (err) {
       setError(
         err instanceof ApiError && err.status === 409
@@ -171,6 +178,7 @@ export default function AdminUserDetail() {
     try {
       await apiRequest(`/admin/users/${id}/reinstate`, { method: "POST" });
       setDetail({ ...detail, user: { ...detail.user, suspendedAt: null } });
+      toast.success("Account reinstated");
     } catch {
       setError("Couldn't reinstate the account. Try again.");
     } finally {
