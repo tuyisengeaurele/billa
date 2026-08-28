@@ -6,6 +6,7 @@ import { ItemForm, type ItemFormValues } from "../components/items/ItemForm";
 import { apiRequest, ApiError } from "../lib/apiClient";
 import { formatRwf } from "@billa/shared";
 import { usePageTitle } from "../context/PageTitleContext";
+import { useToast } from "../context/ToastContext";
 import { usePaginatedList } from "../lib/usePaginatedList";
 
 interface Item {
@@ -20,6 +21,7 @@ type SortBy = "description" | "unitPrice" | "createdAt";
 
 export default function Items() {
   usePageTitle("Items");
+  const toast = useToast();
   const list = usePaginatedList<Item, SortBy>({ resourcePath: "/items", defaultSortBy: "createdAt" });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
@@ -50,6 +52,7 @@ export default function Items() {
       }
       setIsModalOpen(false);
       list.reload();
+      toast.success(editingItem ? "Item updated" : "Item added");
     } catch (err) {
       if (err instanceof ApiError && err.status === 402) {
         setFormError("Your trial has ended. Subscribe in Settings to continue.");
@@ -68,15 +71,25 @@ export default function Items() {
       setDeactivateTarget(item);
       return;
     }
-    await apiRequest(`/items/${item.id}`, { method: "PATCH", body: { isActive: true } });
-    list.reload();
+    try {
+      await apiRequest(`/items/${item.id}`, { method: "PATCH", body: { isActive: true } });
+      list.reload();
+      toast.success("Item reactivated");
+    } catch {
+      toast.error("Couldn't reactivate that item. Try again.");
+    }
   }
 
   async function confirmDeactivate() {
     if (!deactivateTarget) return;
-    await apiRequest(`/items/${deactivateTarget.id}`, { method: "PATCH", body: { isActive: false } });
-    setDeactivateTarget(null);
-    list.reload();
+    try {
+      await apiRequest(`/items/${deactivateTarget.id}`, { method: "PATCH", body: { isActive: false } });
+      setDeactivateTarget(null);
+      list.reload();
+      toast.success("Item deactivated");
+    } catch {
+      toast.error("Couldn't deactivate that item. Try again.");
+    }
   }
 
   const totalPages = Math.max(1, Math.ceil(list.total / list.pageSize));

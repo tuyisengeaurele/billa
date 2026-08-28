@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../context/AuthContext";
+import { ToastTestWrapper } from "../test/ToastTestWrapper";
 import Items from "./Items";
 
 function urlOf(input: RequestInfo | URL): string {
@@ -11,11 +12,13 @@ function urlOf(input: RequestInfo | URL): string {
 
 function renderItems() {
   return render(
-    <MemoryRouter>
-      <AuthProvider>
-        <Items />
-      </AuthProvider>
-    </MemoryRouter>,
+    <ToastTestWrapper>
+      <MemoryRouter>
+        <AuthProvider>
+          <Items />
+        </AuthProvider>
+      </MemoryRouter>
+    </ToastTestWrapper>,
   );
 }
 
@@ -95,6 +98,7 @@ describe("Items", () => {
     await user.click(screen.getByRole("button", { name: /save item/i }));
 
     await waitFor(() => expect(screen.getByText("New item")).toBeInTheDocument());
+    expect(await screen.findByText("Item added")).toBeInTheDocument();
   });
 
   it("deactivates an item after confirming", async () => {
@@ -133,6 +137,7 @@ describe("Items", () => {
     await user.click(within(dialog).getByRole("button", { name: /deactivate/i }));
 
     await waitFor(() => expect(screen.getByText(/no items yet/i)).toBeInTheDocument());
+    expect(await screen.findByText("Item deactivated")).toBeInTheDocument();
   });
 
   it("has an accessible label on the search input", async () => {
