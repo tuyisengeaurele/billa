@@ -9,6 +9,7 @@ import { businessRouter } from "./routes/business.js";
 import { customersRouter } from "./routes/customers.js";
 import { itemsRouter } from "./routes/items.js";
 import { documentsRouter } from "./routes/documents.js";
+import { searchRouter } from "./routes/search.js";
 import { billingRouter } from "./routes/billing.js";
 import { dashboardRouter } from "./routes/dashboard.js";
 import { businessesRouter } from "./routes/businesses.js";
@@ -77,6 +78,7 @@ export function createApp() {
   app.use("/customers", customersRouter);
   app.use("/items", itemsRouter);
   app.use("/documents", documentsRouter);
+  app.use("/search", searchRouter);
   app.use("/billing", billingRouter);
   app.use("/dashboard", dashboardRouter);
   app.use("/businesses", businessesRouter);
