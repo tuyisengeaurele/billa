@@ -15,3 +15,4 @@ export * from "./admin-schemas.js";
 export * from "./payment-schemas.js";
 export * from "./impersonation-schemas.js";
 export * from "./profile-schemas.js";
+export * from "./search-schemas.js";
