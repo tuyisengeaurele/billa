@@ -3,18 +3,14 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { IdleTimeoutModal } from "../IdleTimeoutModal";
 import { NotificationBell } from "../NotificationBell";
+import { PageTitleBreadcrumb } from "../PageTitleBreadcrumb";
 import { UserMenu } from "../UserMenu";
-import { PageTitleProvider, usePageTitleValue } from "../../context/PageTitleContext";
+import { PageTitleProvider } from "../../context/PageTitleContext";
 import { AdminSidebar } from "./AdminSidebar";
 import { MenuIcon } from "./icons";
 
 interface AdminLayoutProps {
   children: ReactNode;
-}
-
-function AdminHeaderTitle() {
-  const title = usePageTitleValue();
-  return <h1 className="truncate font-display text-lg font-semibold text-neutral-900">{title}</h1>;
 }
 
 export function AdminLayout({ children }: AdminLayoutProps) {
@@ -48,7 +44,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             >
               <MenuIcon />
             </button>
-            <AdminHeaderTitle />
+            <PageTitleBreadcrumb />
             <div className="ml-auto flex shrink-0 items-center gap-2">
               <NotificationBell allHref="/admin/notifications" />
               <UserMenu profileHref="/admin/profile" logoutConfirmMessage="Log out of the admin dashboard?" />

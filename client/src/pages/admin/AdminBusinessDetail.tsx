@@ -24,7 +24,7 @@ export default function AdminBusinessDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [business, setBusiness] = useState<BusinessDetail | null>(null);
-  usePageTitle(business?.name ?? "Business");
+  usePageTitle([{ label: "Businesses", href: "/admin/businesses" }, { label: business?.name ?? "Business" }]);
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);

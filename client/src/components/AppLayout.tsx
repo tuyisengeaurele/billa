@@ -3,10 +3,12 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiRequest } from "../lib/apiClient";
 import { useAuth } from "../context/AuthContext";
+import { PageTitleProvider } from "../context/PageTitleContext";
 import { AnnouncementBanner } from "./AnnouncementBanner";
 import { IdleTimeoutModal } from "./IdleTimeoutModal";
 import { ImpersonationRequestModal } from "./ImpersonationRequestModal";
 import { NotificationBell } from "./NotificationBell";
+import { PageTitleBreadcrumb } from "./PageTitleBreadcrumb";
 import { ProductTourModal } from "./ProductTourModal";
 import { Sidebar } from "./Sidebar";
 import { UserMenu } from "./UserMenu";
@@ -50,65 +52,67 @@ export function AppLayout({ children }: AppLayoutProps) {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-page">
-      <ImpersonationRequestModal />
-      <IdleTimeoutModal />
-      <ProductTourModal />
+    <PageTitleProvider>
+      <div className="flex min-h-screen flex-col bg-page">
+        <ImpersonationRequestModal />
+        <IdleTimeoutModal />
+        <ProductTourModal />
 
-      {impersonating && (
-        <div
-          className="flex items-center justify-center gap-3 bg-warning-bg px-4 py-2 font-sans text-sm font-medium text-warning"
-          role="status"
-        >
-          <span>Viewing as {user?.email}.</span>
-          <button
-            type="button"
-            onClick={handleReturnToAdmin}
-            disabled={isReturningToAdmin}
-            className="underline hover:no-underline disabled:opacity-50"
+        {impersonating && (
+          <div
+            className="flex items-center justify-center gap-3 bg-warning-bg px-4 py-2 font-sans text-sm font-medium text-warning"
+            role="status"
           >
-            {isReturningToAdmin ? "Returning…" : "Return to admin"}
-          </button>
-        </div>
-      )}
-
-      <AnnouncementBanner />
-
-      <div className="flex flex-1">
-        <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-neutral-200 bg-surface lg:block">
-          <Sidebar billingBanner={billingBanner} />
-        </aside>
-
-        {isMobileNavOpen && (
-          <div className="fixed inset-0 z-40 lg:hidden">
-            <div className="absolute inset-0 bg-black/40" onClick={() => setIsMobileNavOpen(false)} />
-            <aside className="absolute inset-y-0 left-0 w-64 border-r border-neutral-200 bg-surface">
-              <Sidebar billingBanner={billingBanner} onNavigate={() => setIsMobileNavOpen(false)} />
-            </aside>
+            <span>Viewing as {user?.email}.</span>
+            <button
+              type="button"
+              onClick={handleReturnToAdmin}
+              disabled={isReturningToAdmin}
+              className="underline hover:no-underline disabled:opacity-50"
+            >
+              {isReturningToAdmin ? "Returning…" : "Return to admin"}
+            </button>
           </div>
         )}
 
-        <div className="flex min-w-0 flex-1 flex-col">
-          <header className="flex items-center gap-3 border-b border-neutral-200 bg-surface px-4 py-3">
-            <button
-              type="button"
-              onClick={() => setIsMobileNavOpen(true)}
-              aria-label="Open menu"
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 text-neutral-600 lg:hidden"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-            <span className="font-display text-base font-semibold text-neutral-900 lg:hidden">Billa</span>
-            <div className="ml-auto flex items-center gap-2">
-              <NotificationBell allHref="/notifications" />
-              <UserMenu profileHref="/profile" logoutConfirmMessage="Log out of Billa?" />
+        <AnnouncementBanner />
+
+        <div className="flex flex-1">
+          <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-neutral-200 bg-surface lg:block">
+            <Sidebar billingBanner={billingBanner} />
+          </aside>
+
+          {isMobileNavOpen && (
+            <div className="fixed inset-0 z-40 lg:hidden">
+              <div className="absolute inset-0 bg-black/40" onClick={() => setIsMobileNavOpen(false)} />
+              <aside className="absolute inset-y-0 left-0 w-64 border-r border-neutral-200 bg-surface">
+                <Sidebar billingBanner={billingBanner} onNavigate={() => setIsMobileNavOpen(false)} />
+              </aside>
             </div>
-          </header>
-          <main className="flex-1 px-6 py-8">{children}</main>
+          )}
+
+          <div className="flex min-w-0 flex-1 flex-col">
+            <header className="flex items-center gap-3 border-b border-neutral-200 bg-surface px-4 py-3">
+              <button
+                type="button"
+                onClick={() => setIsMobileNavOpen(true)}
+                aria-label="Open menu"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-neutral-200 text-neutral-600 lg:hidden"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+              <PageTitleBreadcrumb />
+              <div className="ml-auto flex shrink-0 items-center gap-2">
+                <NotificationBell allHref="/notifications" />
+                <UserMenu profileHref="/profile" logoutConfirmMessage="Log out of Billa?" />
+              </div>
+            </header>
+            <main className="flex-1 px-6 py-8">{children}</main>
+          </div>
         </div>
       </div>
-    </div>
+    </PageTitleProvider>
   );
 }

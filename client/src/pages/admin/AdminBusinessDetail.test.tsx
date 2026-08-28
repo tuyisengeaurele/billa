@@ -54,6 +54,31 @@ describe("AdminBusinessDetail", () => {
     expect(screen.getByRole("link", { name: "member@example.com" })).toHaveAttribute("href", "/admin/users/u2");
   });
 
+  it("shows a Businesses / <name> breadcrumb in the top bar, with Businesses linking back to the list", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async () =>
+      new Response(
+        JSON.stringify({
+          business: {
+            id: "biz1",
+            name: "Kigali Traders",
+            createdAt: "2026-08-01T00:00:00.000Z",
+            owner: { id: "u1", email: "owner@example.com" },
+            members: [],
+            documentCount: 0,
+            customerCount: 0,
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+
+    renderPage();
+
+    const heading = await screen.findByRole("heading", { name: /businesses.*kigali traders/i }, { timeout: 5000 });
+    expect(within(heading).getByRole("link", { name: "Businesses" })).toHaveAttribute("href", "/admin/businesses");
+    expect(within(heading).getByText("Kigali Traders")).toBeInTheDocument();
+  });
+
   it("requires typing the business name before the delete button is enabled, then deletes and redirects", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
       const url = urlOf(input);

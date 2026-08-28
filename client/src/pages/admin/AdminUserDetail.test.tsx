@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../../context/AuthContext";
+import { AdminLayoutRoute } from "../../components/admin/AdminLayoutRoute";
 import AdminUserDetail from "./AdminUserDetail";
 
 function urlOf(input: RequestInfo | URL): string {
@@ -16,6 +17,21 @@ function renderPage(userId = "u2") {
         <Routes>
           <Route path="/admin/users/:id" element={<AdminUserDetail />} />
           <Route path="/dashboard" element={<div>dashboard page</div>} />
+          <Route path="/admin/users" element={<div>users list page</div>} />
+        </Routes>
+      </AuthProvider>
+    </MemoryRouter>,
+  );
+}
+
+function renderPageWithLayout(userId = "u2") {
+  return render(
+    <MemoryRouter initialEntries={[`/admin/users/${userId}`]}>
+      <AuthProvider>
+        <Routes>
+          <Route element={<AdminLayoutRoute />}>
+            <Route path="/admin/users/:id" element={<AdminUserDetail />} />
+          </Route>
           <Route path="/admin/users" element={<div>users list page</div>} />
         </Routes>
       </AuthProvider>
@@ -65,6 +81,37 @@ describe("AdminUserDetail", () => {
       "/admin/businesses/biz1",
     );
     expect(screen.getByRole("button", { name: /grant admin/i })).toBeInTheDocument();
+  });
+
+  it("shows a Users / <email> breadcrumb in the top bar, with Users linking back to the list", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.endsWith("/admin/users/u2")) {
+        return new Response(
+          JSON.stringify({
+            user: {
+              id: "u2",
+              email: "owner@example.com",
+              isAdmin: false,
+              trialEndsAt: "2026-09-01T00:00:00.000Z",
+              currentPeriodEnd: null,
+              plan: null,
+              createdAt: "2026-08-01T00:00:00.000Z",
+            },
+            ownedBusinesses: [],
+            memberBusinesses: [],
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    renderPageWithLayout();
+
+    const heading = await screen.findByRole("heading", { name: /users.*owner@example\.com/i }, { timeout: 5000 });
+    expect(within(heading).getByRole("link", { name: "Users" })).toHaveAttribute("href", "/admin/users");
+    expect(within(heading).getByText("owner@example.com")).toBeInTheDocument();
   });
 
   it("grants admin when the button is clicked", async () => {

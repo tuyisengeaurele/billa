@@ -40,7 +40,7 @@ export default function AdminUserDetail() {
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
   const [detail, setDetail] = useState<UserDetailResponse | null>(null);
-  usePageTitle(detail?.user.email ?? "User");
+  usePageTitle([{ label: "Users", href: "/admin/users" }, { label: detail?.user.email ?? "User" }]);
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isTogglingAdmin, setIsTogglingAdmin] = useState(false);
