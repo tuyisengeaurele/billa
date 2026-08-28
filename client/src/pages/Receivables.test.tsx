@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../context/AuthContext";
+import { ToastTestWrapper } from "../test/ToastTestWrapper";
 import Receivables from "./Receivables";
 
 function urlOf(input: RequestInfo | URL): string {
@@ -35,11 +36,13 @@ function authMeResponse() {
 
 function renderPage() {
   return render(
-    <MemoryRouter>
-      <AuthProvider>
-        <Receivables />
-      </AuthProvider>
-    </MemoryRouter>,
+    <ToastTestWrapper>
+      <MemoryRouter>
+        <AuthProvider>
+          <Receivables />
+        </AuthProvider>
+      </MemoryRouter>
+    </ToastTestWrapper>,
   );
 }
 
@@ -112,6 +115,7 @@ describe("Receivables", () => {
 
     await waitFor(() => expect(paymentBody).toMatchObject({ amount: 100000, method: "CASH" }));
     expect(await screen.findByText(/nothing outstanding/i)).toBeInTheDocument();
+    expect(await screen.findByText("Payment recorded")).toBeInTheDocument();
   });
 
   it("writes off an invoice with a reason and refreshes the list", async () => {
@@ -147,5 +151,6 @@ describe("Receivables", () => {
 
     await waitFor(() => expect(writeOffBody).toEqual({ writeOffReason: "Customer unreachable" }));
     expect(await screen.findByText(/nothing outstanding/i)).toBeInTheDocument();
+    expect(await screen.findByText("Invoice written off")).toBeInTheDocument();
   });
 });

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { formatRwf, PAYMENT_METHODS, type PaymentMethod } from "@billa/shared";
 import { Modal } from "../components/Modal";
 import { usePageTitle } from "../context/PageTitleContext";
+import { useToast } from "../context/ToastContext";
 import { apiRequest, ApiError } from "../lib/apiClient";
 
 interface ReceivableRow {
@@ -42,6 +43,7 @@ const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
 
 export default function Receivables() {
   usePageTitle("Accounts receivable");
+  const toast = useToast();
   const [results, setResults] = useState<ReceivableRow[] | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [paymentTarget, setPaymentTarget] = useState<ReceivableRow | null>(null);
@@ -88,6 +90,7 @@ export default function Receivables() {
       });
       setPaymentTarget(null);
       load();
+      toast.success("Payment recorded");
     } catch (err) {
       setPaymentError(
         err instanceof ApiError ? "Couldn't record this payment. Try again." : "Something went wrong. Try again.",
@@ -114,6 +117,7 @@ export default function Receivables() {
       });
       setWriteOffTarget(null);
       load();
+      toast.success("Invoice written off");
     } catch (err) {
       setWriteOffError(
         err instanceof ApiError ? "Couldn't write off this invoice. Try again." : "Something went wrong. Try again.",
