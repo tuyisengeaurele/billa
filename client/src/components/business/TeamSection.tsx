@@ -4,6 +4,7 @@ import { apiRequest, ApiError } from "../../lib/apiClient";
 import { copyToClipboard } from "../../lib/clipboard";
 import { Button } from "../Button";
 import { FormField } from "../FormField";
+import { LoadErrorBanner } from "../LoadErrorBanner";
 
 interface Member {
   id: string;
@@ -25,6 +26,7 @@ export function TeamSection() {
   const [invites, setInvites] = useState<Invite[] | null>(null);
   const [isOwner, setIsOwner] = useState<boolean | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
   const [inviteEmail, setInviteEmail] = useState("");
   const [isInviting, setIsInviting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,6 +37,7 @@ export function TeamSection() {
   const [impersonatingMemberId, setImpersonatingMemberId] = useState<string | null>(null);
 
   useEffect(() => {
+    setLoadError(false);
     Promise.all([
       apiRequest<{ members: Member[] }>("/business/members"),
       apiRequest<{ invites: Invite[] }>("/business/invites"),
@@ -51,7 +54,7 @@ export function TeamSection() {
           setLoadError(true);
         }
       });
-  }, []);
+  }, [reloadToken]);
 
   async function sendInvite(event: FormEvent) {
     event.preventDefault();
@@ -132,8 +135,8 @@ export function TeamSection() {
     return (
       <section className="rounded-xl border border-neutral-200 bg-surface p-6">
         <h2 className="font-display text-base font-semibold text-neutral-900">Team</h2>
-        <div className="mt-4 rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
-          Couldn't load your team. Try again.
+        <div className="mt-4">
+          <LoadErrorBanner message="Couldn't load your team." onRetry={() => setReloadToken((t) => t + 1)} />
         </div>
       </section>
     );

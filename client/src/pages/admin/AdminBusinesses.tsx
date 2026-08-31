@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { AdminPagination } from "../../components/admin/AdminPagination";
+import { LoadErrorBanner } from "../../components/LoadErrorBanner";
 import { usePageTitle } from "../../context/PageTitleContext";
 import { useToast } from "../../context/ToastContext";
 import { downloadFile } from "../../lib/downloadFile";
@@ -63,8 +64,8 @@ export default function AdminBusinesses() {
           </div>
 
           {list.error && (
-            <div className="mt-4 rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
-              {list.error}
+            <div className="mt-4">
+              <LoadErrorBanner message={list.error} onRetry={list.reload} />
             </div>
           )}
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { formatRwf, PAYMENT_METHODS, type PaymentMethod } from "@billa/shared";
+import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { Modal } from "../components/Modal";
 import { usePageTitle } from "../context/PageTitleContext";
 import { useToast } from "../context/ToastContext";
@@ -61,6 +62,7 @@ export default function Receivables() {
   const [writeOffError, setWriteOffError] = useState<string | null>(null);
 
   function load() {
+    setLoadError(false);
     apiRequest<{ results: ReceivableRow[] }>("/receivables")
       .then((data) => setResults(data.results))
       .catch(() => setLoadError(true));
@@ -138,11 +140,7 @@ export default function Receivables() {
           </div>
         )}
 
-        {loadError && (
-          <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
-            Couldn't load accounts receivable. Try again.
-          </div>
-        )}
+        {loadError && <LoadErrorBanner message="Couldn't load accounts receivable." onRetry={load} />}
 
         {!results && !loadError && <p className="font-sans text-sm text-neutral-600">Loading…</p>}
 

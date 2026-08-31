@@ -334,4 +334,35 @@ describe("Dashboard", () => {
 
     expect(await screen.findByText(/3 fewer than last month/i)).toBeInTheDocument();
   });
+
+  it("retries loading the dashboard after a failure and shows it once it succeeds", async () => {
+    let shouldFail = true;
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.includes("/dashboard/summary")) {
+        if (shouldFail) return new Response("{}", { status: 500 });
+        return new Response(JSON.stringify(baseSummary()), { status: 200 });
+      }
+      if (url.includes("/auth/me")) {
+        return new Response(
+          JSON.stringify({
+            user: { id: "u1", email: "owner@example.com" },
+            business: { id: "b1", name: "Kigali Traders" },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderDashboard();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't load your dashboard.");
+    shouldFail = false;
+    await user.click(screen.getByRole("button", { name: /try again/i }));
+
+    expect(await screen.findByText(/welcome, kigali traders/i)).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
 });

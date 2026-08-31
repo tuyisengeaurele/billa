@@ -2,6 +2,7 @@ import { useState } from "react";
 import { DOCUMENT_TYPES, type DocumentType, type InvoicePaymentStatus } from "@billa/shared";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ExportCsvButton } from "../components/ExportCsvButton";
+import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { usePaginatedList } from "../lib/usePaginatedList";
 import { formatRwf } from "@billa/shared";
 import { API_BASE_URL } from "../lib/apiClient";
@@ -145,8 +146,8 @@ export default function Documents() {
           </div>
 
           {list.error && (
-            <div className="mt-4 rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
-              {list.error}
+            <div className="mt-4">
+              <LoadErrorBanner message={list.error} onRetry={list.reload} />
             </div>
           )}
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { formatRwf } from "@billa/shared";
 import { apiRequest } from "../lib/apiClient";
+import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { useTheme } from "../context/ThemeContext";
 import { usePageTitle } from "../context/PageTitleContext";
 
@@ -74,33 +75,32 @@ export default function Revenue() {
   };
   const [summary, setSummary] = useState<RevenueSummary | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
   const [taxSummary, setTaxSummary] = useState<TaxSummary | null>(null);
   const [taxLoadError, setTaxLoadError] = useState(false);
+  const [taxReloadToken, setTaxReloadToken] = useState(0);
   const [taxFrom, setTaxFrom] = useState(startOfMonthIso());
   const [taxTo, setTaxTo] = useState(todayIso());
 
   useEffect(() => {
+    setLoadError(false);
     apiRequest<RevenueSummary>("/dashboard/revenue")
       .then(setSummary)
       .catch(() => setLoadError(true));
-  }, []);
+  }, [reloadToken]);
 
   useEffect(() => {
     setTaxLoadError(false);
     apiRequest<TaxSummary>(`/reports/tax-summary?from=${taxFrom}&to=${taxTo}`)
       .then(setTaxSummary)
       .catch(() => setTaxLoadError(true));
-  }, [taxFrom, taxTo]);
+  }, [taxFrom, taxTo, taxReloadToken]);
 
   const hasRevenue = summary !== null && summary.invoicedYearToDate > 0;
 
   return (
       <div className="mx-auto flex max-w-5xl flex-col gap-8">
-        {loadError && (
-          <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
-            Couldn't load revenue. Try again.
-          </div>
-        )}
+        {loadError && <LoadErrorBanner message="Couldn't load revenue." onRetry={() => setReloadToken((t) => t + 1)} />}
 
         {!summary && !loadError && <p className="font-sans text-sm text-neutral-600">Loading…</p>}
 
@@ -241,8 +241,8 @@ export default function Revenue() {
           </div>
 
           {taxLoadError && (
-            <div className="mt-4 rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
-              Couldn't load the tax summary. Try again.
+            <div className="mt-4">
+              <LoadErrorBanner message="Couldn't load the tax summary." onRetry={() => setTaxReloadToken((t) => t + 1)} />
             </div>
           )}
 

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { LoadErrorBanner } from "../../components/LoadErrorBanner";
 import { usePageTitle } from "../../context/PageTitleContext";
 import { useToast } from "../../context/ToastContext";
 import { apiRequest } from "../../lib/apiClient";
@@ -18,11 +19,13 @@ export default function AdminAnnouncements() {
   const [isPosting, setIsPosting] = useState(false);
   const [deactivatingId, setDeactivatingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState(false);
 
   function load() {
+    setLoadError(false);
     apiRequest<{ results: AnnouncementRow[] }>("/admin/announcements")
       .then((data) => setResults(data.results))
-      .catch(() => setError("Couldn't load announcements. Try again."));
+      .catch(() => setLoadError(true));
   }
 
   useEffect(load, []);
@@ -60,6 +63,7 @@ export default function AdminAnnouncements() {
 
   return (
       <div className="flex flex-col gap-6">
+        {loadError && <LoadErrorBanner message="Couldn't load announcements." onRetry={load} />}
         {error && (
           <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
             {error}

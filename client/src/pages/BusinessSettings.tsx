@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import type { DocumentTemplate } from "@billa/shared";
 import { FormField } from "../components/FormField";
 import { Button } from "../components/Button";
+import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { Modal } from "../components/Modal";
 import { LogoStep } from "../components/onboarding/LogoStep";
 import { ThemeToggle } from "../components/ThemeToggle";
@@ -86,6 +87,7 @@ export default function BusinessSettings() {
   const [renameError, setRenameError] = useState<string | null>(null);
 
   function loadProfile() {
+    setLoadError(false);
     return apiRequest<{ business: BusinessProfile }>("/business")
       .then((data) => setProfile(data.business))
       .catch(() => setLoadError(true));
@@ -166,11 +168,7 @@ export default function BusinessSettings() {
   }
 
   if (loadError) {
-    return (
-      <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
-        Couldn't load your business settings. Try again.
-      </div>
-    );
+    return <LoadErrorBanner message="Couldn't load your business settings." onRetry={loadProfile} />;
   }
 
   if (!profile || isAuthLoading) {

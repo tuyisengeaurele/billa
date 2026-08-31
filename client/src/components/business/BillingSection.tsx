@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiRequest, ApiError } from "../../lib/apiClient";
+import { LoadErrorBanner } from "../LoadErrorBanner";
 
 interface BillingStatus {
   trialEndsAt: string;
@@ -16,14 +17,16 @@ const PLAN_LABELS: Record<"MONTHLY" | "ANNUAL", string> = {
 export function BillingSection() {
   const [status, setStatus] = useState<BillingStatus | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [isRedirecting, setIsRedirecting] = useState<"MONTHLY" | "ANNUAL" | null>(null);
 
   useEffect(() => {
+    setLoadError(false);
     apiRequest<BillingStatus>("/billing/status")
       .then(setStatus)
       .catch(() => setLoadError(true));
-  }, []);
+  }, [reloadToken]);
 
   async function subscribe(plan: "MONTHLY" | "ANNUAL") {
     setCheckoutError(null);
@@ -41,9 +44,7 @@ export function BillingSection() {
 
   if (loadError) {
     return (
-      <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
-        Couldn't load your billing status. Try again.
-      </div>
+      <LoadErrorBanner message="Couldn't load your billing status." onRetry={() => setReloadToken((t) => t + 1)} />
     );
   }
 

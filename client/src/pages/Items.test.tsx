@@ -219,4 +219,34 @@ describe("Items", () => {
 
     expect(await screen.findByText(/trial has ended/i)).toBeInTheDocument();
   });
+
+  it("retries the list after a failed load and shows results once it succeeds", async () => {
+    let shouldFail = true;
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.includes("/items")) {
+        if (shouldFail) return new Response("{}", { status: 500 });
+        return new Response(
+          JSON.stringify({
+            results: [{ id: "i1", description: "Printing service", unitPrice: 5000, unit: "service", isActive: true }],
+            total: 1,
+            page: 1,
+            pageSize: 20,
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderItems();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't load the list.");
+    shouldFail = false;
+    await user.click(screen.getByRole("button", { name: /try again/i }));
+
+    expect(await screen.findByText("Printing service")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
 });

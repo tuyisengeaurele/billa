@@ -15,6 +15,7 @@ import {
 import { useTheme } from "../../context/ThemeContext";
 import { usePageTitle } from "../../context/PageTitleContext";
 import { apiRequest } from "../../lib/apiClient";
+import { LoadErrorBanner } from "../../components/LoadErrorBanner";
 import { PLAN_CHART_COLORS, PLAN_LABELS, type PlanKey } from "../../lib/planColors";
 
 interface DailyPoint {
@@ -117,20 +118,18 @@ export default function AdminMetrics() {
 
   const [metrics, setMetrics] = useState<MetricsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
+    setError(null);
     apiRequest<MetricsResponse>("/admin/metrics")
       .then(setMetrics)
-      .catch(() => setError("Couldn't load metrics. Try again."));
-  }, []);
+      .catch(() => setError("Couldn't load metrics."));
+  }, [reloadToken]);
 
   return (
       <div className="flex flex-col gap-6">
-        {error && (
-          <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
-            {error}
-          </div>
-        )}
+        {error && <LoadErrorBanner message={error} onRetry={() => setReloadToken((t) => t + 1)} />}
 
         {!metrics && !error && (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4" aria-label="Loading metrics">

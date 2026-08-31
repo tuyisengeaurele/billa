@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { formatRwf, type DocumentType, type InvoicePaymentStatus } from "@billa/shared";
 import { apiRequest } from "../lib/apiClient";
+import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { usePageTitle } from "../context/PageTitleContext";
 import { usePaginatedList } from "../lib/usePaginatedList";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
@@ -38,6 +39,7 @@ export default function CustomerStatement() {
   const [customer, setCustomer] = useState<Customer | null>(null);
   usePageTitle([{ label: "Customers", href: "/customers" }, { label: customer?.name ?? "Customer" }]);
   const [loadError, setLoadError] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
   const [portalLinkCopied, setPortalLinkCopied] = useState(false);
 
   async function handleCopyPortalLink() {
@@ -51,10 +53,11 @@ export default function CustomerStatement() {
   }
 
   useEffect(() => {
+    setLoadError(false);
     apiRequest<{ customer: Customer }>(`/customers/${id}`)
       .then((data) => setCustomer(data.customer))
       .catch(() => setLoadError(true));
-  }, [id]);
+  }, [id, reloadToken]);
 
   const list = usePaginatedList<DocumentRow, SortBy>({
     resourcePath: "/documents",
@@ -70,11 +73,7 @@ export default function CustomerStatement() {
     .reduce((sum, doc) => sum + (doc.total - doc.amountPaid), 0);
 
   if (loadError) {
-    return (
-      <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
-        Couldn't load this customer. Try again.
-      </div>
-    );
+    return <LoadErrorBanner message="Couldn't load this customer." onRetry={() => setReloadToken((t) => t + 1)} />;
   }
 
   if (!customer) {
@@ -117,8 +116,8 @@ export default function CustomerStatement() {
           </div>
 
           {list.error && (
-            <div className="mt-4 rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
-              {list.error}
+            <div className="mt-4">
+              <LoadErrorBanner message={list.error} onRetry={list.reload} />
             </div>
           )}
 

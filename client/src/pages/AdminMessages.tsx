@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { AdminPagination } from "../components/admin/AdminPagination";
+import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { usePageTitle } from "../context/PageTitleContext";
 import { apiRequest, ApiError } from "../lib/apiClient";
 
@@ -27,6 +28,7 @@ export default function AdminMessages() {
   const [isLoading, setIsLoading] = useState(true);
   const [isForbidden, setIsForbidden] = useState(false);
   const [loadError, setLoadError] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
     setIsLoading(true);
@@ -42,7 +44,7 @@ export default function AdminMessages() {
         }
       })
       .finally(() => setIsLoading(false));
-  }, [page]);
+  }, [page, reloadToken]);
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
 
@@ -56,9 +58,7 @@ export default function AdminMessages() {
           )}
 
           {loadError && (
-            <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
-              Couldn't load messages. Try again.
-            </div>
+            <LoadErrorBanner message="Couldn't load messages." onRetry={() => setReloadToken((t) => t + 1)} />
           )}
 
           {isLoading && (

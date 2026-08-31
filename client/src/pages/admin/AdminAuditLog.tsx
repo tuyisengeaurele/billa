@@ -1,4 +1,5 @@
 import { AdminPagination } from "../../components/admin/AdminPagination";
+import { LoadErrorBanner } from "../../components/LoadErrorBanner";
 import { usePageTitle } from "../../context/PageTitleContext";
 import { usePaginatedList } from "../../lib/usePaginatedList";
 
@@ -21,11 +22,7 @@ export default function AdminAuditLog() {
   return (
       <div className="flex flex-col gap-6">
         <div className="rounded-xl border border-neutral-200 bg-surface p-6">
-          {list.error && (
-            <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
-              {list.error}
-            </div>
-          )}
+          {list.error && <LoadErrorBanner message={list.error} onRetry={list.reload} />}
 
           {list.isLoading ? (
             <div className="flex flex-col gap-2" aria-label="Loading audit log">

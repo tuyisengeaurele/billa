@@ -55,7 +55,7 @@ export function usePaginatedList<T, SortByT extends string>({
           setTotal(data.total);
         })
         .catch(() => {
-          if (!cancelled) setError("Couldn't load the list. Try again.");
+          if (!cancelled) setError("Couldn't load the list.");
         })
         .finally(() => {
           if (!cancelled) setIsLoading(false);

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { z } from "zod";
+import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { Modal } from "../components/Modal";
 import { CustomerPicker } from "../components/customers/CustomerPicker";
 import { ItemPicker } from "../components/items/ItemPicker";
@@ -142,6 +143,7 @@ export default function DocumentForm() {
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [isLoaded, setIsLoaded] = useState(!isEditing);
   const [loadError, setLoadError] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
   const [convertedFrom, setConvertedFrom] = useState<{ id: string; number: string | null } | null>(null);
   const [referencedDocument, setReferencedDocument] = useState<{ id: string; number: string | null } | null>(null);
   const [invoiceOptions, setInvoiceOptions] = useState<InvoiceOption[]>([]);
@@ -180,6 +182,7 @@ export default function DocumentForm() {
 
   useEffect(() => {
     if (!isEditing) return;
+    setLoadError(false);
     apiRequest<{ document: DocumentResponse }>(`/documents/${id}`)
       .then((data) => {
         const doc = data.document;
@@ -210,7 +213,7 @@ export default function DocumentForm() {
         setIsLoaded(true);
       })
       .catch(() => setLoadError(true));
-  }, [id, isEditing, reset]);
+  }, [id, isEditing, reset, reloadToken]);
 
   useEffect(() => {
     if (!canReference || !watchedCustomerId) {
@@ -324,9 +327,7 @@ export default function DocumentForm() {
 
   if (loadError) {
     return (
-      <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
-        Couldn't load this document. Try again.
-      </div>
+      <LoadErrorBanner message="Couldn't load this document." onRetry={() => setReloadToken((t) => t + 1)} />
     );
   }
 

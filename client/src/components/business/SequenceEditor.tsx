@@ -5,6 +5,7 @@ import { z } from "zod";
 import { DOCUMENT_TYPES, updateSequencesSchema, type DocumentSequenceInput } from "@billa/shared";
 import { DOCUMENT_TYPE_LABELS } from "../../lib/documentTypeLabels";
 import { apiRequest, ApiError } from "../../lib/apiClient";
+import { LoadErrorBanner } from "../LoadErrorBanner";
 
 const sequencesFormSchema = z.object({ sequences: updateSequencesSchema });
 type SequencesFormInput = z.infer<typeof sequencesFormSchema>;
@@ -12,6 +13,7 @@ type SequencesFormInput = z.infer<typeof sequencesFormSchema>;
 export function SequenceEditor() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [loadError, setLoadError] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
   const [apiError, setApiError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -21,13 +23,14 @@ export function SequenceEditor() {
   });
 
   useEffect(() => {
+    setLoadError(false);
     apiRequest<{ sequences: DocumentSequenceInput[] }>("/business/sequences")
       .then((data) => {
         reset({ sequences: data.sequences });
         setIsLoaded(true);
       })
       .catch(() => setLoadError(true));
-  }, [reset]);
+  }, [reset, reloadToken]);
 
   async function onSubmit(data: SequencesFormInput) {
     setApiError(null);
@@ -43,9 +46,7 @@ export function SequenceEditor() {
 
   if (loadError) {
     return (
-      <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
-        Couldn't load document numbering. Try again.
-      </div>
+      <LoadErrorBanner message="Couldn't load document numbering." onRetry={() => setReloadToken((t) => t + 1)} />
     );
   }
 

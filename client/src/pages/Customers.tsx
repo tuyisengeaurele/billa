@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "../components/Button";
 import { ExportCsvButton } from "../components/ExportCsvButton";
+import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { Modal } from "../components/Modal";
 import { CustomerForm, type CustomerFormValues, type CustomerSubmitValues } from "../components/customers/CustomerForm";
 import { apiRequest, ApiError } from "../lib/apiClient";
@@ -138,8 +139,8 @@ export default function Customers() {
           </div>
 
           {list.error && (
-            <div className="mt-4 rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
-              {list.error}
+            <div className="mt-4">
+              <LoadErrorBanner message={list.error} onRetry={list.reload} />
             </div>
           )}
 

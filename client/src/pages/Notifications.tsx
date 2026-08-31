@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { usePageTitle } from "../context/PageTitleContext";
 import { apiRequest } from "../lib/apiClient";
 
@@ -17,12 +18,14 @@ export default function Notifications() {
   usePageTitle("Notifications");
   const [notifications, setNotifications] = useState<NotificationRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const [isMarkingAll, setIsMarkingAll] = useState(false);
 
   function load() {
+    setLoadError(false);
     apiRequest<{ results: NotificationRow[] }>("/notifications")
       .then((data) => setNotifications(data.results))
-      .catch(() => setError("Couldn't load your notifications. Try again."));
+      .catch(() => setLoadError(true));
   }
 
   useEffect(load, []);
@@ -67,6 +70,7 @@ export default function Notifications() {
         </div>
       )}
 
+      {loadError && <LoadErrorBanner message="Couldn't load your notifications." onRetry={load} />}
       {error && (
         <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
           {error}

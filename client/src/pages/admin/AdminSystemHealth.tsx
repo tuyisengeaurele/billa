@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { LoadErrorBanner } from "../../components/LoadErrorBanner";
 import { usePageTitle } from "../../context/PageTitleContext";
 import { apiRequest } from "../../lib/apiClient";
 
@@ -37,20 +38,18 @@ export default function AdminSystemHealth() {
   usePageTitle("System health");
   const [health, setHealth] = useState<SystemHealthResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
+    setError(null);
     apiRequest<SystemHealthResponse>("/admin/system-health")
       .then(setHealth)
-      .catch(() => setError("Couldn't load system health. Try again."));
-  }, []);
+      .catch(() => setError("Couldn't load system health."));
+  }, [reloadToken]);
 
   return (
       <div className="flex flex-col gap-6">
-        {error && (
-          <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
-            {error}
-          </div>
-        )}
+        {error && <LoadErrorBanner message={error} onRetry={() => setReloadToken((t) => t + 1)} />}
 
         {!health && !error && (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2" aria-label="Loading system health">

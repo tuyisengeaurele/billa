@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import type { DocumentType } from "@billa/shared";
+import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { Modal } from "../components/Modal";
 import { useSetActiveDocumentType } from "../context/ActiveDocumentTypeContext";
 import { usePageTitle } from "../context/PageTitleContext";
@@ -69,12 +70,14 @@ export default function DocumentView() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isDuplicating, setIsDuplicating] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
+    setLoadError(false);
     apiRequest<{ document: DocumentDetail }>(`/documents/${id}`)
       .then((data) => setDocument(data.document))
       .catch(() => setLoadError(true));
-  }, [id]);
+  }, [id, reloadToken]);
 
   async function confirmConvert() {
     if (!document) return;
@@ -159,9 +162,7 @@ export default function DocumentView() {
 
   if (loadError) {
     return (
-      <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
-        Couldn't load this document. Try again.
-      </div>
+      <LoadErrorBanner message="Couldn't load this document." onRetry={() => setReloadToken((t) => t + 1)} />
     );
   }
 

@@ -13,6 +13,7 @@ import {
   YAxis,
 } from "recharts";
 import { DOCUMENT_TYPES, type DocumentStatus, type DocumentType, type InvoicePaymentStatus } from "@billa/shared";
+import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { useAuth } from "../context/AuthContext";
 import { usePageTitle } from "../context/PageTitleContext";
 import { apiRequest } from "../lib/apiClient";
@@ -110,15 +111,17 @@ export default function Dashboard() {
   const tooltipItemStyle = { color: isDark ? "#fafafa" : "#18181b" };
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
   const [isSendingReminders, setIsSendingReminders] = useState(false);
   const [reminderMessage, setReminderMessage] = useState<string | null>(null);
   const [reminderIsError, setReminderIsError] = useState(false);
 
   useEffect(() => {
+    setLoadError(false);
     apiRequest<DashboardSummary>("/dashboard/summary")
       .then(setSummary)
       .catch(() => setLoadError(true));
-  }, []);
+  }, [reloadToken]);
 
   async function handleSendReminders() {
     setReminderMessage(null);
@@ -176,9 +179,7 @@ export default function Dashboard() {
         </div>
 
         {loadError && (
-          <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
-            Couldn't load your dashboard. Try again.
-          </div>
+          <LoadErrorBanner message="Couldn't load your dashboard." onRetry={() => setReloadToken((t) => t + 1)} />
         )}
 
         {!summary && !loadError && <p className="font-sans text-sm text-neutral-600">Loading…</p>}
