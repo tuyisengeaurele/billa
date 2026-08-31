@@ -3,6 +3,14 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider, useAuth } from "./AuthContext";
 
+vi.mock("../lib/firebaseAuth", () => ({
+  signInWithEmail: vi.fn(),
+  signUpWithEmail: vi.fn(),
+  signInWithGoogle: vi.fn(),
+  signOutFirebase: vi.fn(),
+  resetPassword: vi.fn(),
+}));
+
 function TestConsumer() {
   const {
     user,
@@ -13,6 +21,7 @@ function TestConsumer() {
     stopImpersonating,
     refreshAuth,
     deleteAccount,
+    logout,
   } = useAuth();
   if (isLoading) return <div>loading</div>;
   if (!user) {
@@ -30,6 +39,7 @@ function TestConsumer() {
       <button onClick={() => stopImpersonating()}>Return to admin</button>
       <button onClick={() => refreshAuth()}>Refresh</button>
       <button onClick={() => deleteAccount()}>Delete account</button>
+      <button onClick={() => logout()}>Log out</button>
     </div>
   );
 }
@@ -37,6 +47,7 @@ function TestConsumer() {
 describe("AuthProvider", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    localStorage.clear();
   });
 
   it("shows loading, then unauthenticated when /auth/me returns 401", async () => {
@@ -224,5 +235,69 @@ describe("AuthProvider", () => {
     await waitFor(() =>
       expect(screen.getByText("authenticated as owner@example.com (Kigali Traders)")).toBeInTheDocument(),
     );
+  });
+
+  it("logout clears the session and broadcasts the change so other tabs can pick it up", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      if (url.includes("/auth/logout") && init?.method === "POST") {
+        return new Response("{}", { status: 200 });
+      }
+      return new Response(
+        JSON.stringify({
+          user: { id: "u1", email: "owner@example.com" },
+          business: { id: "b1", name: "Kigali Traders" },
+        }),
+        { status: 200 },
+      );
+    });
+
+    render(
+      <AuthProvider>
+        <TestConsumer />
+      </AuthProvider>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText("authenticated as owner@example.com (Kigali Traders)")).toBeInTheDocument(),
+    );
+
+    expect(localStorage.getItem("billa:auth-broadcast")).toBeNull();
+    await user.click(screen.getByText("Log out"));
+
+    await waitFor(() => expect(screen.getByText("unauthenticated")).toBeInTheDocument());
+    expect(localStorage.getItem("billa:auth-broadcast")).not.toBeNull();
+  });
+
+  it("resyncs when another tab reports an auth change via the storage event", async () => {
+    let loggedOutElsewhere = false;
+    vi.spyOn(global, "fetch").mockImplementation(async () => {
+      if (loggedOutElsewhere) return new Response("{}", { status: 401 });
+      return new Response(
+        JSON.stringify({
+          user: { id: "u1", email: "owner@example.com" },
+          business: { id: "b1", name: "Kigali Traders" },
+        }),
+        { status: 200 },
+      );
+    });
+
+    render(
+      <AuthProvider>
+        <TestConsumer />
+      </AuthProvider>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText("authenticated as owner@example.com (Kigali Traders)")).toBeInTheDocument(),
+    );
+
+    loggedOutElsewhere = true;
+    window.dispatchEvent(
+      new StorageEvent("storage", { key: "billa:auth-broadcast", newValue: String(Date.now()) }),
+    );
+
+    await waitFor(() => expect(screen.getByText("unauthenticated")).toBeInTheDocument());
   });
 });

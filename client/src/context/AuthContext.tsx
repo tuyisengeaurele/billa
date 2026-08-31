@@ -54,6 +54,21 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+// Session cookies aren't visible to other tabs, so a logout (or account deletion) in one
+// tab would otherwise leave every other open tab looking signed in until its next request
+// happens to 401. Writing to localStorage fires a `storage` event in those other tabs,
+// which resyncs them against the server immediately.
+const AUTH_BROADCAST_KEY = "billa:auth-broadcast";
+
+function broadcastAuthChange() {
+  try {
+    localStorage.setItem(AUTH_BROADCAST_KEY, String(Date.now()));
+  } catch {
+    // Storage can be unavailable (private browsing, disabled cookies/storage) - the
+    // current tab's own logout still works, it just won't notify other tabs.
+  }
+}
+
 async function exchangeSession(idToken: string, businessName?: string) {
   return apiRequest<SessionResult>("/auth/session", {
     method: "POST",
@@ -82,6 +97,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     refreshAuth().finally(() => setIsLoading(false));
+  }, []);
+
+  useEffect(() => {
+    function handleStorageEvent(event: StorageEvent) {
+      if (event.key === AUTH_BROADCAST_KEY) refreshAuth();
+    }
+    window.addEventListener("storage", handleStorageEvent);
+    return () => window.removeEventListener("storage", handleStorageEvent);
   }, []);
 
   async function login(email: string, password: string) {
@@ -145,6 +168,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setBusiness(null);
     setImpersonating(false);
+    broadcastAuthChange();
   }
 
   async function stopImpersonating() {
@@ -166,6 +190,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setBusiness(null);
     setImpersonating(false);
+    broadcastAuthChange();
   }
 
   return (
