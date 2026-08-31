@@ -7,6 +7,7 @@ import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { Modal } from "../components/Modal";
 import { CustomerForm, type CustomerFormValues, type CustomerSubmitValues } from "../components/customers/CustomerForm";
 import { apiRequest, ApiError } from "../lib/apiClient";
+import { ariaSortValue } from "../lib/ariaSort";
 import { usePageTitle } from "../context/PageTitleContext";
 import { useToast } from "../context/ToastContext";
 import { usePaginatedList } from "../lib/usePaginatedList";
@@ -273,7 +274,7 @@ export default function Customers() {
                       aria-label="Select all on this page"
                     />
                   </th>
-                  <th className="py-2">
+                  <th className="py-2" aria-sort={ariaSortValue(list.sortBy, "name", list.sortOrder)}>
                     <button type="button" onClick={() => list.toggleSort("name")} className="cursor-pointer">
                       Name {list.sortBy === "name" && (list.sortOrder === "asc" ? "↑" : "↓")}
                     </button>

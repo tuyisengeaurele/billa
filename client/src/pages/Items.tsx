@@ -6,6 +6,7 @@ import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { Modal } from "../components/Modal";
 import { ItemForm, type ItemFormValues } from "../components/items/ItemForm";
 import { apiRequest, ApiError } from "../lib/apiClient";
+import { ariaSortValue } from "../lib/ariaSort";
 import { formatRwf } from "@billa/shared";
 import { usePageTitle } from "../context/PageTitleContext";
 import { useToast } from "../context/ToastContext";
@@ -265,12 +266,12 @@ export default function Items() {
                       aria-label="Select all on this page"
                     />
                   </th>
-                  <th className="py-2">
+                  <th className="py-2" aria-sort={ariaSortValue(list.sortBy, "description", list.sortOrder)}>
                     <button type="button" onClick={() => list.toggleSort("description")} className="cursor-pointer">
                       Description {list.sortBy === "description" && (list.sortOrder === "asc" ? "↑" : "↓")}
                     </button>
                   </th>
-                  <th className="py-2">
+                  <th className="py-2" aria-sort={ariaSortValue(list.sortBy, "unitPrice", list.sortOrder)}>
                     <button type="button" onClick={() => list.toggleSort("unitPrice")} className="cursor-pointer">
                       Price {list.sortBy === "unitPrice" && (list.sortOrder === "asc" ? "↑" : "↓")}
                     </button>

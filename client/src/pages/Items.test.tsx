@@ -64,6 +64,40 @@ describe("Items", () => {
     expect(screen.getByText("5,000 RWF")).toBeInTheDocument();
   });
 
+  it("marks the sorted column header with aria-sort, flipping direction on repeat clicks", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.includes("/items")) {
+        return new Response(
+          JSON.stringify({
+            results: [{ id: "i1", description: "Printing service", unitPrice: 5000, unit: "service", isActive: true }],
+            total: 1,
+            page: 1,
+            pageSize: 20,
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    renderItems();
+    await screen.findByText("Printing service");
+
+    const descriptionHeader = screen.getByRole("columnheader", { name: /description/i });
+    const priceHeader = screen.getByRole("columnheader", { name: /price/i });
+    expect(descriptionHeader).toHaveAttribute("aria-sort", "none");
+    expect(priceHeader).toHaveAttribute("aria-sort", "none");
+
+    await user.click(screen.getByRole("button", { name: /price/i }));
+    expect(priceHeader).toHaveAttribute("aria-sort", "ascending");
+    expect(descriptionHeader).toHaveAttribute("aria-sort", "none");
+
+    await user.click(screen.getByRole("button", { name: /price/i }));
+    expect(priceHeader).toHaveAttribute("aria-sort", "descending");
+  });
+
   it("creates an item through the modal and refreshes the list", async () => {
     let created = false;
     vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {

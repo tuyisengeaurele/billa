@@ -44,6 +44,53 @@ describe("Documents", () => {
     vi.restoreAllMocks();
   });
 
+  it("marks the sorted column header with aria-sort, flipping direction on repeat clicks", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.includes("/documents")) {
+        return new Response(
+          JSON.stringify({
+            results: [
+              {
+                id: "d1",
+                number: "INV-0001",
+                status: "FINALIZED",
+                issueDate: "2026-08-19T00:00:00.000Z",
+                total: 5900,
+                customer: { name: "Kigali Traders" },
+              },
+            ],
+            total: 1,
+            page: 1,
+            pageSize: 20,
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    renderDocuments();
+    await screen.findByText("INV-0001");
+
+    const dateHeader = screen.getByRole("columnheader", { name: /date/i });
+    const totalHeader = screen.getByRole("columnheader", { name: /total/i });
+    expect(dateHeader).toHaveAttribute("aria-sort", "none");
+    expect(totalHeader).toHaveAttribute("aria-sort", "none");
+
+    await user.click(screen.getByRole("button", { name: /date/i }));
+    expect(dateHeader).toHaveAttribute("aria-sort", "ascending");
+    expect(totalHeader).toHaveAttribute("aria-sort", "none");
+
+    await user.click(screen.getByRole("button", { name: /date/i }));
+    expect(dateHeader).toHaveAttribute("aria-sort", "descending");
+
+    await user.click(screen.getByRole("button", { name: /total/i }));
+    expect(dateHeader).toHaveAttribute("aria-sort", "none");
+    expect(totalHeader).toHaveAttribute("aria-sort", "ascending");
+  });
+
   it("shows the empty state when there are no invoices", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async (input) => {
       const url = urlOf(input);

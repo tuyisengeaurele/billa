@@ -65,6 +65,39 @@ describe("Customers", () => {
     expect(await screen.findByText("Kigali Traders")).toBeInTheDocument();
   });
 
+  it("marks the Name column header with aria-sort, flipping direction on repeat clicks", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.includes("/customers")) {
+        return new Response(
+          JSON.stringify({
+            results: [
+              { id: "c1", name: "Kigali Traders", tin: null, address: null, phone: "0788000000", email: null, isActive: true },
+            ],
+            total: 1,
+            page: 1,
+            pageSize: 20,
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    renderCustomers();
+    await screen.findByText("Kigali Traders");
+
+    const nameHeader = screen.getByRole("columnheader", { name: /name/i });
+    expect(nameHeader).toHaveAttribute("aria-sort", "none");
+
+    await user.click(screen.getByRole("button", { name: /name/i }));
+    expect(nameHeader).toHaveAttribute("aria-sort", "ascending");
+
+    await user.click(screen.getByRole("button", { name: /name/i }));
+    expect(nameHeader).toHaveAttribute("aria-sort", "descending");
+  });
+
   it("creates a customer through the modal and refreshes the list", async () => {
     let created = false;
     vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {

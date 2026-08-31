@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { ExportCsvButton } from "../components/ExportCsvButton";
 import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { usePaginatedList } from "../lib/usePaginatedList";
+import { ariaSortValue } from "../lib/ariaSort";
 import { formatRwf } from "@billa/shared";
 import { API_BASE_URL } from "../lib/apiClient";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
@@ -179,7 +180,7 @@ export default function Documents() {
             <table className="mt-4 w-full border-collapse font-sans text-sm">
               <thead>
                 <tr className="border-b border-neutral-200 text-left text-neutral-500">
-                  <th className="py-2">
+                  <th className="py-2" aria-sort={ariaSortValue(list.sortBy, "issueDate", list.sortOrder)}>
                     <button type="button" onClick={() => list.toggleSort("issueDate")} className="cursor-pointer">
                       Date {list.sortBy === "issueDate" && (list.sortOrder === "asc" ? "↑" : "↓")}
                     </button>
@@ -187,7 +188,7 @@ export default function Documents() {
                   {isUnified && <th className="py-2">Type</th>}
                   <th className="py-2">Number</th>
                   <th className="py-2">Customer</th>
-                  <th className="py-2">
+                  <th className="py-2" aria-sort={ariaSortValue(list.sortBy, "total", list.sortOrder)}>
                     <button type="button" onClick={() => list.toggleSort("total")} className="cursor-pointer">
                       Total {list.sortBy === "total" && (list.sortOrder === "asc" ? "↑" : "↓")}
                     </button>

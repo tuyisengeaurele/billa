@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { formatRwf, type DocumentType, type InvoicePaymentStatus } from "@billa/shared";
 import { apiRequest } from "../lib/apiClient";
+import { ariaSortValue } from "../lib/ariaSort";
 import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { usePageTitle } from "../context/PageTitleContext";
 import { usePaginatedList } from "../lib/usePaginatedList";
@@ -136,14 +137,14 @@ export default function CustomerStatement() {
             <table className="mt-4 w-full border-collapse font-sans text-sm">
               <thead>
                 <tr className="border-b border-neutral-200 text-left text-neutral-500">
-                  <th className="py-2">
+                  <th className="py-2" aria-sort={ariaSortValue(list.sortBy, "issueDate", list.sortOrder)}>
                     <button type="button" onClick={() => list.toggleSort("issueDate")} className="cursor-pointer">
                       Date {list.sortBy === "issueDate" && (list.sortOrder === "asc" ? "↑" : "↓")}
                     </button>
                   </th>
                   <th className="py-2">Type</th>
                   <th className="py-2">Number</th>
-                  <th className="py-2">
+                  <th className="py-2" aria-sort={ariaSortValue(list.sortBy, "total", list.sortOrder)}>
                     <button type="button" onClick={() => list.toggleSort("total")} className="cursor-pointer">
                       Total {list.sortBy === "total" && (list.sortOrder === "asc" ? "↑" : "↓")}
                     </button>

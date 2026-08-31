@@ -95,6 +95,66 @@ describe("CustomerStatement", () => {
     expect(screen.getAllByText(/17,700 rwf/i).length).toBeGreaterThan(0);
   });
 
+  it("marks the sorted column header with aria-sort, flipping direction on repeat clicks", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.endsWith("/customers/c1")) {
+        return new Response(
+          JSON.stringify({
+            customer: {
+              id: "c1",
+              name: "Acme Ltd",
+              tin: "123456789",
+              address: null,
+              phone: "+250788000000",
+              email: "acme@example.com",
+              isActive: true,
+            },
+          }),
+          { status: 200 },
+        );
+      }
+      if (url.includes("/documents?")) {
+        return new Response(
+          JSON.stringify({
+            results: [
+              {
+                id: "d1",
+                type: "INVOICE",
+                number: "INV-0001",
+                status: "FINALIZED",
+                issueDate: "2026-08-19T00:00:00.000Z",
+                total: 17700,
+              },
+            ],
+            total: 1,
+            page: 1,
+            pageSize: 50,
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    renderPageWithLayout();
+    await screen.findByText("INV-0001");
+
+    const dateHeader = screen.getByRole("columnheader", { name: /date/i });
+    const totalHeader = screen.getByRole("columnheader", { name: /total/i });
+    // The list defaults to sorting by date, descending.
+    expect(dateHeader).toHaveAttribute("aria-sort", "descending");
+    expect(totalHeader).toHaveAttribute("aria-sort", "none");
+
+    await user.click(screen.getByRole("button", { name: /total/i }));
+    expect(totalHeader).toHaveAttribute("aria-sort", "ascending");
+    expect(dateHeader).toHaveAttribute("aria-sort", "none");
+
+    await user.click(screen.getByRole("button", { name: /total/i }));
+    expect(totalHeader).toHaveAttribute("aria-sort", "descending");
+  });
+
   it("shows the amount owed and payment status for a partially paid invoice", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async (input) => {
       const url = urlOf(input);
