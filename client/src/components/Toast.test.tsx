@@ -26,6 +26,46 @@ describe("Toast", () => {
     expect(onDismiss).toHaveBeenCalledWith("err-1");
   });
 
+  it("pauses on hover and resumes when the pointer leaves", async () => {
+    const onPause = vi.fn();
+    const onResume = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <Toast
+        toast={{ id: "1", variant: "success", message: "Item saved" }}
+        onDismiss={vi.fn()}
+        onPause={onPause}
+        onResume={onResume}
+      />,
+    );
+
+    await user.hover(screen.getByRole("status"));
+    expect(onPause).toHaveBeenCalledTimes(1);
+
+    await user.unhover(screen.getByRole("status"));
+    expect(onResume).toHaveBeenCalledTimes(1);
+  });
+
+  it("pauses on keyboard focus and resumes on blur", () => {
+    const onPause = vi.fn();
+    const onResume = vi.fn();
+    render(
+      <Toast
+        toast={{ id: "1", variant: "success", message: "Item deactivated", action: { label: "Undo", onClick: vi.fn() } }}
+        onDismiss={vi.fn()}
+        onPause={onPause}
+        onResume={onResume}
+      />,
+    );
+
+    const undoButton = screen.getByRole("button", { name: "Undo" });
+    undoButton.focus();
+    expect(onPause).toHaveBeenCalledTimes(1);
+
+    undoButton.blur();
+    expect(onResume).toHaveBeenCalledTimes(1);
+  });
+
   it("runs the action and dismisses the toast when its action button is clicked", async () => {
     const onDismiss = vi.fn();
     const onAction = vi.fn();

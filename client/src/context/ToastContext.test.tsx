@@ -73,6 +73,44 @@ describe("ToastContext", () => {
     expect(() => result.current.error("x")).not.toThrow();
   });
 
+  it("pauseAutoDismiss stops the timer, and resumeAutoDismiss continues from the remaining time", () => {
+    vi.useFakeTimers();
+    const { result } = renderHook(() => ({ toast: useToast(), items: useToastItems() }), { wrapper });
+
+    act(() => {
+      result.current.toast.success("Item saved");
+    });
+    const id = result.current.items.toasts[0].id;
+
+    act(() => {
+      vi.advanceTimersByTime(3000);
+      result.current.items.pauseAutoDismiss(id);
+    });
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+    // Paused with 1s of its original 4s left; waiting 5 more seconds shouldn't dismiss it.
+    expect(result.current.items.toasts).toHaveLength(1);
+
+    act(() => {
+      result.current.items.resumeAutoDismiss(id);
+      vi.advanceTimersByTime(999);
+    });
+    expect(result.current.items.toasts).toHaveLength(1);
+
+    act(() => {
+      vi.advanceTimersByTime(2);
+    });
+    expect(result.current.items.toasts).toHaveLength(0);
+    vi.useRealTimers();
+  });
+
+  it("pauseAutoDismiss and resumeAutoDismiss on an unknown id is a harmless no-op", () => {
+    const { result } = renderHook(() => ({ toast: useToast(), items: useToastItems() }), { wrapper });
+    expect(() => result.current.items.pauseAutoDismiss("nope")).not.toThrow();
+    expect(() => result.current.items.resumeAutoDismiss("nope")).not.toThrow();
+  });
+
   it("carries an optional action through to the toast item", () => {
     const { result } = renderHook(() => ({ toast: useToast(), items: useToastItems() }), { wrapper });
     const onClick = vi.fn();

@@ -4,9 +4,11 @@ import type { ToastItem } from "../context/ToastContext";
 interface ToastProps {
   toast: ToastItem;
   onDismiss: (id: string) => void;
+  onPause?: () => void;
+  onResume?: () => void;
 }
 
-export function Toast({ toast, onDismiss }: ToastProps) {
+export function Toast({ toast, onDismiss, onPause, onResume }: ToastProps) {
   const isError = toast.variant === "error";
 
   return (
@@ -18,6 +20,10 @@ export function Toast({ toast, onDismiss }: ToastProps) {
       transition={{ duration: 0.2, ease: "easeOut" }}
       role={isError ? "alert" : "status"}
       aria-live={isError ? "assertive" : "polite"}
+      onMouseEnter={onPause}
+      onMouseLeave={onResume}
+      onFocus={onPause}
+      onBlur={onResume}
       className={`flex w-80 items-start gap-3 rounded-xl border px-4 py-3 shadow-lg ${
         isError ? "border-transparent bg-error-bg text-error" : "border-neutral-200 bg-surface text-neutral-900"
       }`}
