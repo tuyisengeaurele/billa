@@ -312,6 +312,20 @@ describe("Documents", () => {
     expect(screen.getByLabelText("Search invoices")).toBeInTheDocument();
   });
 
+  it("shows a search-specific empty message instead of the generic one while searching", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(
+      async () => new Response(JSON.stringify({ results: [], total: 0, page: 1, pageSize: 20 }), { status: 200 }),
+    );
+    const user = userEvent.setup();
+    renderDocuments();
+    await screen.findByText(/no invoices yet/i);
+
+    await user.type(screen.getByLabelText("Search invoices"), "zzz");
+
+    expect(await screen.findByText('No invoices match "zzz".')).toBeInTheDocument();
+    expect(screen.queryByText(/no invoices yet/i)).not.toBeInTheDocument();
+  });
+
   it("sorts by date when the Date header button is clicked", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async () =>
       new Response(

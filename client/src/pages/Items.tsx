@@ -237,7 +237,9 @@ export default function Items() {
             </div>
           ) : list.results.length === 0 ? (
             <div className="mt-4 flex flex-col items-center gap-3 rounded-xl border border-dashed border-neutral-200 py-16 text-center">
-              <p className="font-sans text-sm text-neutral-600">No items yet.</p>
+              <p className="font-sans text-sm text-neutral-600">
+                {list.search.trim() ? `No items match "${list.search.trim()}".` : "No items yet."}
+              </p>
               <Button type="button" onClick={openCreateModal} fullWidth={false} className="px-5">
                 Add item
               </Button>

@@ -192,6 +192,20 @@ describe("Items", () => {
     expect(screen.getByLabelText("Search items")).toBeInTheDocument();
   });
 
+  it("shows a search-specific empty message instead of the generic one while searching", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(
+      async () => new Response(JSON.stringify({ results: [], total: 0, page: 1, pageSize: 20 }), { status: 200 }),
+    );
+    const user = userEvent.setup();
+    renderItems();
+    await screen.findByText(/no items yet/i);
+
+    await user.type(screen.getByLabelText("Search items"), "zzz");
+
+    expect(await screen.findByText('No items match "zzz".')).toBeInTheDocument();
+    expect(screen.queryByText(/no items yet/i)).not.toBeInTheDocument();
+  });
+
   it("opens the edit modal when an item's description button is clicked", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async (input) => {
       const url = urlOf(input);

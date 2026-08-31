@@ -212,6 +212,20 @@ describe("Customers", () => {
     expect(screen.getByLabelText("Search customers")).toBeInTheDocument();
   });
 
+  it("shows a search-specific empty message instead of the generic one while searching", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(
+      async () => new Response(JSON.stringify({ results: [], total: 0, page: 1, pageSize: 20 }), { status: 200 }),
+    );
+    const user = userEvent.setup();
+    renderCustomers();
+    await screen.findByText(/no customers yet/i);
+
+    await user.type(screen.getByLabelText("Search customers"), "zzz");
+
+    expect(await screen.findByText('No customers match "zzz".')).toBeInTheDocument();
+    expect(screen.queryByText(/no customers yet/i)).not.toBeInTheDocument();
+  });
+
   it("opens the edit modal when a customer's name button is clicked", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async (input) => {
       const url = urlOf(input);

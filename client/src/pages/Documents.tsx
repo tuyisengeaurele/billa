@@ -53,7 +53,11 @@ export default function Documents() {
   const heading = isUnified ? "All documents" : labels!.plural;
   usePageTitle(heading);
   const searchPlaceholder = isUnified ? "Search documents" : `Search ${labels!.plural.toLowerCase()}`;
-  const emptyText = isUnified ? "No documents yet." : `No ${labels!.plural.toLowerCase()} yet.`;
+  const emptyText = list.search.trim()
+    ? `No ${isUnified ? "documents" : labels!.plural.toLowerCase()} match "${list.search.trim()}".`
+    : isUnified
+      ? "No documents yet."
+      : `No ${labels!.plural.toLowerCase()} yet.`;
   const loadingLabel = isUnified ? "Loading documents" : `Loading ${labels!.plural.toLowerCase()}`;
 
   function openDocument(document: DocumentRow) {
