@@ -76,6 +76,8 @@ describe("AppLayout", () => {
     expect(screen.getByRole("link", { name: /^quotes$/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /receipts/i })).toBeInTheDocument();
     expect(screen.getByText("page content")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /skip to content/i })).toHaveAttribute("href", "#main-content");
+    expect(document.getElementById("main-content")).toBeInTheDocument();
   });
 
   it("calls the logout endpoint once the confirmation modal is confirmed", async () => {

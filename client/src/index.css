@@ -80,3 +80,11 @@ body {
 [data-theme="dark"] {
   color-scheme: dark;
 }
+
+/* Consistent, deliberate keyboard-focus ring across the whole app, applied via
+   the browser's own :focus-visible (keyboard/programmatic focus only, never on
+   a mouse click) rather than relying on inconsistent browser defaults. */
+:focus-visible {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+}

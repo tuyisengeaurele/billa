@@ -53,5 +53,7 @@ describe("AdminLayout", () => {
 
     expect(screen.getByRole("button", { name: /^log out$/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /admin person/i })).toHaveAttribute("href", "/admin/profile");
+    expect(screen.getByRole("link", { name: /skip to content/i })).toHaveAttribute("href", "#main-content");
+    expect(document.getElementById("main-content")).toBeInTheDocument();
   });
 });

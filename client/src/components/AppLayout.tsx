@@ -13,6 +13,7 @@ import { ProductTourModal } from "./ProductTourModal";
 import { SearchPalette } from "./SearchPalette";
 import { SearchPaletteTrigger } from "./SearchPaletteTrigger";
 import { Sidebar } from "./Sidebar";
+import { SkipToContentLink } from "./SkipToContentLink";
 import { UserMenu } from "./UserMenu";
 
 interface AppLayoutProps {
@@ -74,6 +75,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   return (
     <PageTitleProvider>
       <div className="flex min-h-screen flex-col bg-page">
+        <SkipToContentLink />
         <ImpersonationRequestModal />
         <IdleTimeoutModal />
         <ProductTourModal />
@@ -131,7 +133,9 @@ export function AppLayout({ children }: AppLayoutProps) {
                 <UserMenu profileHref="/profile" logoutConfirmMessage="Log out of Billa?" />
               </div>
             </header>
-            <main className="flex-1 px-6 py-8">{children}</main>
+            <main id="main-content" tabIndex={-1} className="flex-1 px-6 py-8 outline-none">
+              {children}
+            </main>
           </div>
         </div>
       </div>

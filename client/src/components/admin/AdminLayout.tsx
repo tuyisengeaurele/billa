@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { IdleTimeoutModal } from "../IdleTimeoutModal";
 import { NotificationBell } from "../NotificationBell";
 import { PageTitleBreadcrumb } from "../PageTitleBreadcrumb";
+import { SkipToContentLink } from "../SkipToContentLink";
 import { UserMenu } from "../UserMenu";
 import { PageTitleProvider } from "../../context/PageTitleContext";
 import { AdminSidebar } from "./AdminSidebar";
@@ -19,6 +20,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   return (
     <PageTitleProvider>
       <div className="flex min-h-screen bg-page">
+        <SkipToContentLink />
         <IdleTimeoutModal />
 
         <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-neutral-200 bg-surface lg:block">
@@ -51,10 +53,12 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             </div>
           </header>
           <motion.main
+            id="main-content"
+            tabIndex={-1}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
-            className="mx-auto w-full max-w-5xl flex-1 px-6 py-8"
+            className="mx-auto w-full max-w-5xl flex-1 px-6 py-8 outline-none"
           >
             {children}
           </motion.main>
