@@ -124,6 +124,27 @@ describe("DocumentForm", () => {
     await waitFor(() => expect(screen.getByText(/subtotal: 9,000 rwf/i)).toBeInTheDocument());
   });
 
+  it("warns before leaving once a field has been edited, but not on a pristine form", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async () => new Response("{}", { status: 401 }));
+    const user = userEvent.setup();
+    renderNew();
+
+    function dispatchBeforeUnload(): boolean {
+      const event = new Event("beforeunload", { cancelable: true });
+      window.dispatchEvent(event);
+      return event.defaultPrevented;
+    }
+
+    expect(dispatchBeforeUnload()).toBe(false);
+
+    await user.click(screen.getByRole("button", { name: /add line/i }));
+    const quantityInput = screen.getByLabelText(/quantity/i);
+    await user.clear(quantityInput);
+    await user.type(quantityInput, "2");
+
+    expect(dispatchBeforeUnload()).toBe(true);
+  });
+
   it("saves a new draft and navigates to its edit URL", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
       const url = urlOf(input);

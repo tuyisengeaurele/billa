@@ -14,6 +14,7 @@ import { usePageTitle } from "../context/PageTitleContext";
 import { useToast } from "../context/ToastContext";
 import { apiRequest, ApiError, API_BASE_URL } from "../lib/apiClient";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
+import { useUnsavedChangesWarning } from "../lib/useUnsavedChangesWarning";
 import { formatRwf } from "@billa/shared";
 
 const lineFormSchema = z.object({
@@ -159,7 +160,7 @@ export default function DocumentForm() {
     watch,
     setValue,
     reset,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<DocumentFormInput>({
     resolver: zodResolver(documentFormSchema),
     defaultValues: {
@@ -179,6 +180,7 @@ export default function DocumentForm() {
   const { fields, append, remove } = useFieldArray({ control, name: "lines" });
   const watchedLines = watch("lines");
   const watchedCustomerId = watch("customerId");
+  useUnsavedChangesWarning(isDirty);
 
   useEffect(() => {
     if (!isEditing) return;
