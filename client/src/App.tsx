@@ -1,4 +1,5 @@
 import { lazy, Suspense } from "react";
+import { MotionConfig } from "framer-motion";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
@@ -48,66 +49,70 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <ToastProvider>
-        <BrowserRouter>
-          <AuthProvider>
-            <Suspense fallback={null}>
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/admin/login" element={<AdminLogin />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/privacy" element={<PrivacyPolicy />} />
-                <Route path="/terms" element={<TermsOfService />} />
-                <Route path="/help" element={<HelpCenter />} />
-                <Route path="/contact" element={<Contact />} />
-                <Route path="/view/:token" element={<PublicDocumentView />} />
-                <Route path="/portal/:token" element={<PublicCustomerPortal />} />
-                <Route path="/invite/:token" element={<AcceptInvite />} />
-                <Route element={<ProtectedRoute />}>
-                  <Route path="/onboarding" element={<Onboarding />} />
-                  <Route element={<AppLayoutRoute />}>
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/revenue" element={<Revenue />} />
-                    <Route path="/receivables" element={<Receivables />} />
-                    <Route path="/activity" element={<Activity />} />
-                    <Route path="/customers" element={<Customers />} />
-                    <Route path="/customers/:id/statement" element={<CustomerStatement />} />
-                    <Route path="/items" element={<Items />} />
-                    <Route path="/documents" element={<Documents />} />
-                    <Route path="/documents/new" element={<DocumentForm />} />
-                    <Route path="/documents/:id/edit" element={<DocumentForm />} />
-                    <Route path="/documents/:id" element={<DocumentView />} />
-                    <Route path="/settings" element={<BusinessSettings />} />
-                    <Route path="/profile" element={<Profile />} />
-                    <Route path="/notifications" element={<Notifications />} />
-                    <Route path="/billing/callback" element={<BillingCallback />} />
+    // reducedMotion="user" makes every motion component in the tree respect the OS-level
+    // "reduce motion" accessibility setting automatically, instead of animating regardless.
+    <MotionConfig reducedMotion="user">
+      <ThemeProvider>
+        <ToastProvider>
+          <BrowserRouter>
+            <AuthProvider>
+              <Suspense fallback={null}>
+                <Routes>
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/admin/login" element={<AdminLogin />} />
+                  <Route path="/register" element={<Register />} />
+                  <Route path="/privacy" element={<PrivacyPolicy />} />
+                  <Route path="/terms" element={<TermsOfService />} />
+                  <Route path="/help" element={<HelpCenter />} />
+                  <Route path="/contact" element={<Contact />} />
+                  <Route path="/view/:token" element={<PublicDocumentView />} />
+                  <Route path="/portal/:token" element={<PublicCustomerPortal />} />
+                  <Route path="/invite/:token" element={<AcceptInvite />} />
+                  <Route element={<ProtectedRoute />}>
+                    <Route path="/onboarding" element={<Onboarding />} />
+                    <Route element={<AppLayoutRoute />}>
+                      <Route path="/dashboard" element={<Dashboard />} />
+                      <Route path="/revenue" element={<Revenue />} />
+                      <Route path="/receivables" element={<Receivables />} />
+                      <Route path="/activity" element={<Activity />} />
+                      <Route path="/customers" element={<Customers />} />
+                      <Route path="/customers/:id/statement" element={<CustomerStatement />} />
+                      <Route path="/items" element={<Items />} />
+                      <Route path="/documents" element={<Documents />} />
+                      <Route path="/documents/new" element={<DocumentForm />} />
+                      <Route path="/documents/:id/edit" element={<DocumentForm />} />
+                      <Route path="/documents/:id" element={<DocumentView />} />
+                      <Route path="/settings" element={<BusinessSettings />} />
+                      <Route path="/profile" element={<Profile />} />
+                      <Route path="/notifications" element={<Notifications />} />
+                      <Route path="/billing/callback" element={<BillingCallback />} />
+                    </Route>
                   </Route>
-                </Route>
-                <Route element={<AdminRoute />}>
-                  <Route path="/admin" element={<Navigate to="/admin/users" replace />} />
-                  <Route element={<AdminLayoutRoute />}>
-                    <Route path="/admin/metrics" element={<AdminMetrics />} />
-                    <Route path="/admin/messages" element={<AdminMessages />} />
-                    <Route path="/admin/users" element={<AdminUsers />} />
-                    <Route path="/admin/users/:id" element={<AdminUserDetail />} />
-                    <Route path="/admin/businesses" element={<AdminBusinesses />} />
-                    <Route path="/admin/businesses/:id" element={<AdminBusinessDetail />} />
-                    <Route path="/admin/audit-log" element={<AdminAuditLog />} />
-                    <Route path="/admin/system-health" element={<AdminSystemHealth />} />
-                    <Route path="/admin/announcements" element={<AdminAnnouncements />} />
-                    <Route path="/admin/profile" element={<Profile />} />
-                    <Route path="/admin/notifications" element={<Notifications />} />
+                  <Route element={<AdminRoute />}>
+                    <Route path="/admin" element={<Navigate to="/admin/users" replace />} />
+                    <Route element={<AdminLayoutRoute />}>
+                      <Route path="/admin/metrics" element={<AdminMetrics />} />
+                      <Route path="/admin/messages" element={<AdminMessages />} />
+                      <Route path="/admin/users" element={<AdminUsers />} />
+                      <Route path="/admin/users/:id" element={<AdminUserDetail />} />
+                      <Route path="/admin/businesses" element={<AdminBusinesses />} />
+                      <Route path="/admin/businesses/:id" element={<AdminBusinessDetail />} />
+                      <Route path="/admin/audit-log" element={<AdminAuditLog />} />
+                      <Route path="/admin/system-health" element={<AdminSystemHealth />} />
+                      <Route path="/admin/announcements" element={<AdminAnnouncements />} />
+                      <Route path="/admin/profile" element={<Profile />} />
+                      <Route path="/admin/notifications" element={<Notifications />} />
+                    </Route>
                   </Route>
-                </Route>
-                <Route path="/" element={<RootRoute />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Suspense>
-            <ToastContainer />
-          </AuthProvider>
-        </BrowserRouter>
-      </ToastProvider>
-    </ThemeProvider>
+                  <Route path="/" element={<RootRoute />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Suspense>
+              <ToastContainer />
+            </AuthProvider>
+          </BrowserRouter>
+        </ToastProvider>
+      </ThemeProvider>
+    </MotionConfig>
   );
 }
