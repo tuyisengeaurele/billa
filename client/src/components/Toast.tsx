@@ -23,6 +23,18 @@ export function Toast({ toast, onDismiss }: ToastProps) {
       }`}
     >
       <p className="flex-1 font-sans text-sm font-medium">{toast.message}</p>
+      {toast.action && (
+        <button
+          type="button"
+          onClick={() => {
+            toast.action?.onClick();
+            onDismiss(toast.id);
+          }}
+          className="shrink-0 font-sans text-sm font-semibold text-primary-500 underline transition-opacity hover:opacity-70"
+        >
+          {toast.action.label}
+        </button>
+      )}
       {isError && (
         <button
           type="button"

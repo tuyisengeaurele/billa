@@ -2,15 +2,21 @@ import { createContext, useCallback, useContext, useRef, useState, type ReactNod
 
 export type ToastVariant = "success" | "error";
 
+export interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
 export interface ToastItem {
   id: string;
   variant: ToastVariant;
   message: string;
+  action?: ToastAction;
 }
 
 interface ToastContextValue {
   toasts: ToastItem[];
-  success: (message: string) => void;
+  success: (message: string, action?: ToastAction) => void;
   error: (message: string) => void;
   dismiss: (id: string) => void;
 }
@@ -29,10 +35,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const push = useCallback(
-    (variant: ToastVariant, message: string) => {
+    (variant: ToastVariant, message: string, action?: ToastAction) => {
       const id = `toast-${nextId.current++}`;
       setToasts((current) => {
-        const next = [...current, { id, variant, message }];
+        const next = [...current, { id, variant, message, action }];
         return next.length > MAX_VISIBLE_TOASTS ? next.slice(next.length - MAX_VISIBLE_TOASTS) : next;
       });
       if (variant === "success") {
@@ -42,7 +48,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     [dismiss],
   );
 
-  const success = useCallback((message: string) => push("success", message), [push]);
+  const success = useCallback((message: string, action?: ToastAction) => push("success", message, action), [push]);
   const error = useCallback((message: string) => push("error", message), [push]);
 
   return <ToastContext.Provider value={{ toasts, success, error, dismiss }}>{children}</ToastContext.Provider>;
@@ -55,7 +61,7 @@ const FALLBACK_TOAST: ToastContextValue = {
   dismiss: () => {},
 };
 
-export function useToast(): { success: (message: string) => void; error: (message: string) => void } {
+export function useToast(): { success: (message: string, action?: ToastAction) => void; error: (message: string) => void } {
   const ctx = useContext(ToastContext) ?? FALLBACK_TOAST;
   return { success: ctx.success, error: ctx.error };
 }

@@ -25,4 +25,21 @@ describe("Toast", () => {
     await user.click(screen.getByRole("button", { name: /dismiss/i }));
     expect(onDismiss).toHaveBeenCalledWith("err-1");
   });
+
+  it("runs the action and dismisses the toast when its action button is clicked", async () => {
+    const onDismiss = vi.fn();
+    const onAction = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <Toast
+        toast={{ id: "1", variant: "success", message: "Item deactivated", action: { label: "Undo", onClick: onAction } }}
+        onDismiss={onDismiss}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Undo" }));
+
+    expect(onAction).toHaveBeenCalled();
+    expect(onDismiss).toHaveBeenCalledWith("1");
+  });
 });

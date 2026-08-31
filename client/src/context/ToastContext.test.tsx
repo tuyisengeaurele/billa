@@ -72,4 +72,15 @@ describe("ToastContext", () => {
     expect(() => result.current.success("x")).not.toThrow();
     expect(() => result.current.error("x")).not.toThrow();
   });
+
+  it("carries an optional action through to the toast item", () => {
+    const { result } = renderHook(() => ({ toast: useToast(), items: useToastItems() }), { wrapper });
+    const onClick = vi.fn();
+
+    act(() => {
+      result.current.toast.success("Item deactivated", { label: "Undo", onClick });
+    });
+
+    expect(result.current.items.toasts[0].action).toEqual({ label: "Undo", onClick });
+  });
 });
