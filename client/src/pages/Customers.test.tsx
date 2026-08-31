@@ -150,6 +150,58 @@ describe("Customers", () => {
     expect(await screen.findByText("Customer deactivated")).toBeInTheDocument();
   });
 
+  it("reactivates a customer when Undo is clicked on the deactivation toast", async () => {
+    let isActive = true;
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.includes("/customers/c1") && init?.method === "PATCH") {
+        const body = JSON.parse((init.body as string) ?? "{}");
+        isActive = body.isActive;
+        return new Response(JSON.stringify({ customer: { id: "c1", name: "Kigali Traders", isActive } }), {
+          status: 200,
+        });
+      }
+      if (url.includes("/customers")) {
+        return new Response(
+          JSON.stringify({
+            results: isActive
+              ? [
+                  {
+                    id: "c1",
+                    name: "Kigali Traders",
+                    tin: null,
+                    address: null,
+                    phone: null,
+                    email: null,
+                    isActive: true,
+                  },
+                ]
+              : [],
+            total: isActive ? 1 : 0,
+            page: 1,
+            pageSize: 20,
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderCustomers();
+    await screen.findByText("Kigali Traders");
+
+    await user.click(screen.getByRole("button", { name: /deactivate/i }));
+    const dialog = await screen.findByRole("dialog", { name: /deactivate customer/i });
+    await user.click(within(dialog).getByRole("button", { name: /deactivate/i }));
+    await screen.findByText(/no customers yet/i);
+
+    await user.click(await screen.findByRole("button", { name: "Undo" }));
+
+    expect(await screen.findByText("Kigali Traders")).toBeInTheDocument();
+    expect(await screen.findByText("Customer reactivated")).toBeInTheDocument();
+  });
+
   it("has an accessible label on the search input", async () => {
     vi.spyOn(global, "fetch").mockImplementation(
       async () => new Response(JSON.stringify({ results: [], total: 0, page: 1, pageSize: 20 }), { status: 200 }),

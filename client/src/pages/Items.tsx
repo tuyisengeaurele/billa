@@ -83,11 +83,23 @@ export default function Items() {
 
   async function confirmDeactivate() {
     if (!deactivateTarget) return;
+    const target = deactivateTarget;
     try {
-      await apiRequest(`/items/${deactivateTarget.id}`, { method: "PATCH", body: { isActive: false } });
+      await apiRequest(`/items/${target.id}`, { method: "PATCH", body: { isActive: false } });
       setDeactivateTarget(null);
       list.reload();
-      toast.success("Item deactivated");
+      toast.success("Item deactivated", {
+        label: "Undo",
+        onClick: async () => {
+          try {
+            await apiRequest(`/items/${target.id}`, { method: "PATCH", body: { isActive: true } });
+            list.reload();
+            toast.success("Item reactivated");
+          } catch {
+            toast.error("Couldn't undo. Reactivate it from the list instead.");
+          }
+        },
+      });
     } catch {
       toast.error("Couldn't deactivate that item. Try again.");
     }

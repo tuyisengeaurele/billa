@@ -85,11 +85,23 @@ export default function Customers() {
 
   async function confirmDeactivate() {
     if (!deactivateTarget) return;
+    const target = deactivateTarget;
     try {
-      await apiRequest(`/customers/${deactivateTarget.id}`, { method: "PATCH", body: { isActive: false } });
+      await apiRequest(`/customers/${target.id}`, { method: "PATCH", body: { isActive: false } });
       setDeactivateTarget(null);
       list.reload();
-      toast.success("Customer deactivated");
+      toast.success("Customer deactivated", {
+        label: "Undo",
+        onClick: async () => {
+          try {
+            await apiRequest(`/customers/${target.id}`, { method: "PATCH", body: { isActive: true } });
+            list.reload();
+            toast.success("Customer reactivated");
+          } catch {
+            toast.error("Couldn't undo. Reactivate it from the list instead.");
+          }
+        },
+      });
     } catch {
       toast.error("Couldn't deactivate that customer. Try again.");
     }

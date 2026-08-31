@@ -285,6 +285,61 @@ describe("AdminUserDetail", () => {
     expect(await screen.findByText("Account suspended")).toBeInTheDocument();
   });
 
+  it("reinstates the account when Undo is clicked on the suspend toast", async () => {
+    let suspendedAt: string | null = null;
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/auth/me")) {
+        return new Response(
+          JSON.stringify({ user: { id: "u1", email: "admin@example.com", isAdmin: true }, business: { id: "b1", name: "Admin Co" } }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/admin/users/u2/suspend") && init?.method === "POST") {
+        suspendedAt = "2026-08-28T00:00:00.000Z";
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      }
+      if (url.endsWith("/admin/users/u2/reinstate") && init?.method === "POST") {
+        suspendedAt = null;
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      }
+      if (url.endsWith("/admin/users/u2")) {
+        return new Response(
+          JSON.stringify({
+            user: {
+              id: "u2",
+              email: "owner@example.com",
+              isAdmin: false,
+              suspendedAt,
+              trialEndsAt: "2026-09-01T00:00:00.000Z",
+              currentPeriodEnd: null,
+              plan: null,
+              createdAt: "2026-08-01T00:00:00.000Z",
+            },
+            ownedBusinesses: [],
+            memberBusinesses: [],
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: /^suspend$/i }));
+    const dialog = await screen.findByRole("dialog", { name: /suspend account/i });
+    await user.click(within(dialog).getByRole("button", { name: /^suspend$/i }));
+    await screen.findByRole("button", { name: /^reinstate$/i });
+
+    await user.click(await screen.findByRole("button", { name: "Undo" }));
+
+    expect(await screen.findByRole("button", { name: /^suspend$/i })).toBeInTheDocument();
+    expect(screen.queryByText(/suspended since/i)).not.toBeInTheDocument();
+    expect(await screen.findByText("Account reinstated")).toBeInTheDocument();
+  });
+
   it("reinstates a suspended account", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
       const url = urlOf(input);

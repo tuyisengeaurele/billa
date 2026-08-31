@@ -134,7 +134,7 @@ export default function AdminUserDetail() {
       await apiRequest(`/admin/users/${id}/suspend`, { method: "POST" });
       setDetail({ ...detail, user: { ...detail.user, suspendedAt: new Date().toISOString() } });
       setIsSuspendModalOpen(false);
-      toast.success("Account suspended");
+      toast.success("Account suspended", { label: "Undo", onClick: reinstate });
     } catch {
       setError("Couldn't suspend the account. Try again.");
     } finally {

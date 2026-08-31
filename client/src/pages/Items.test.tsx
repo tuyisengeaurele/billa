@@ -140,6 +140,48 @@ describe("Items", () => {
     expect(await screen.findByText("Item deactivated")).toBeInTheDocument();
   });
 
+  it("reactivates an item when Undo is clicked on the deactivation toast", async () => {
+    let isActive = true;
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.includes("/items/i1") && init?.method === "PATCH") {
+        const body = JSON.parse((init.body as string) ?? "{}");
+        isActive = body.isActive;
+        return new Response(JSON.stringify({ item: { id: "i1", description: "Printing service", isActive } }), {
+          status: 200,
+        });
+      }
+      if (url.includes("/items")) {
+        return new Response(
+          JSON.stringify({
+            results: isActive
+              ? [{ id: "i1", description: "Printing service", unitPrice: 5000, unit: "service", isActive: true }]
+              : [],
+            total: isActive ? 1 : 0,
+            page: 1,
+            pageSize: 20,
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderItems();
+    await screen.findByText("Printing service");
+
+    await user.click(screen.getByRole("button", { name: /deactivate/i }));
+    const dialog = await screen.findByRole("dialog", { name: /deactivate item/i });
+    await user.click(within(dialog).getByRole("button", { name: /deactivate/i }));
+    await screen.findByText(/no items yet/i);
+
+    await user.click(await screen.findByRole("button", { name: "Undo" }));
+
+    expect(await screen.findByText("Printing service")).toBeInTheDocument();
+    expect(await screen.findByText("Item reactivated")).toBeInTheDocument();
+  });
+
   it("has an accessible label on the search input", async () => {
     vi.spyOn(global, "fetch").mockImplementation(
       async () => new Response(JSON.stringify({ results: [], total: 0, page: 1, pageSize: 20 }), { status: 200 }),
