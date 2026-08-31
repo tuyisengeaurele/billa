@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { BulkActionBar } from "../components/BulkActionBar";
 import { Button } from "../components/Button";
 import { ExportCsvButton } from "../components/ExportCsvButton";
 import { LoadErrorBanner } from "../components/LoadErrorBanner";
@@ -31,6 +32,13 @@ export default function Customers() {
   const [isSaving, setIsSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [deactivateTarget, setDeactivateTarget] = useState<Customer | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkAction, setBulkAction] = useState<"deactivate" | "reactivate" | null>(null);
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [list.page]);
 
   function openCreateModal() {
     setEditingCustomer(null);
@@ -107,7 +115,68 @@ export default function Customers() {
     }
   }
 
+  function toggleSelectRow(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (allOnPageSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(list.results.map((customer) => customer.id)));
+    }
+  }
+
+  async function confirmBulkAction() {
+    if (!bulkAction) return;
+    const isActive = bulkAction === "reactivate";
+    const targetIds = selectedCustomers.filter((customer) => customer.isActive !== isActive).map((customer) => customer.id);
+
+    setIsBulkProcessing(true);
+    const outcomes = await Promise.allSettled(
+      targetIds.map((id) => apiRequest(`/customers/${id}`, { method: "PATCH", body: { isActive } })),
+    );
+    setIsBulkProcessing(false);
+    setBulkAction(null);
+    setSelectedIds(new Set());
+    list.reload();
+
+    const succeeded = outcomes.filter((outcome) => outcome.status === "fulfilled").length;
+    const verb = isActive ? "reactivated" : "deactivated";
+
+    if (succeeded === targetIds.length) {
+      const noun = succeeded === 1 ? "customer" : "customers";
+      toast.success(`${succeeded} ${noun} ${verb}`, {
+        label: "Undo",
+        onClick: async () => {
+          const undoOutcomes = await Promise.allSettled(
+            targetIds.map((id) => apiRequest(`/customers/${id}`, { method: "PATCH", body: { isActive: !isActive } })),
+          );
+          list.reload();
+          const undoSucceeded = undoOutcomes.filter((outcome) => outcome.status === "fulfilled").length;
+          if (undoSucceeded === targetIds.length) {
+            const undoNoun = undoSucceeded === 1 ? "customer" : "customers";
+            toast.success(`${undoSucceeded} ${undoNoun} ${isActive ? "deactivated" : "reactivated"}`);
+          } else {
+            toast.error(`Couldn't undo all of them. ${undoSucceeded} of ${targetIds.length} reversed.`);
+          }
+        },
+      });
+    } else {
+      toast.error(`${succeeded} of ${targetIds.length} customers ${verb}`);
+    }
+  }
+
   const totalPages = Math.max(1, Math.ceil(list.total / list.pageSize));
+  const selectedCustomers = list.results.filter((customer) => selectedIds.has(customer.id));
+  const selectedActiveCount = selectedCustomers.filter((customer) => customer.isActive).length;
+  const selectedInactiveCount = selectedCustomers.filter((customer) => !customer.isActive).length;
+  const allOnPageSelected = list.results.length > 0 && list.results.every((customer) => selectedIds.has(customer.id));
   const editingValues: CustomerFormValues | undefined = editingCustomer
     ? {
         name: editingCustomer.name,
@@ -128,6 +197,17 @@ export default function Customers() {
         </div>
 
         <div className="rounded-xl border border-neutral-200 bg-surface p-6">
+          {selectedIds.size > 0 ? (
+            <BulkActionBar
+              activeCount={selectedActiveCount}
+              inactiveCount={selectedInactiveCount}
+              noun="customer"
+              pluralNoun="customers"
+              onDeactivate={() => setBulkAction("deactivate")}
+              onReactivate={() => setBulkAction("reactivate")}
+              onClear={() => setSelectedIds(new Set())}
+            />
+          ) : (
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <input
@@ -149,6 +229,7 @@ export default function Customers() {
             </div>
             <ExportCsvButton path="/customers/export.csv" filename="customers.csv" />
           </div>
+          )}
 
           {list.error && (
             <div className="mt-4">
@@ -173,6 +254,7 @@ export default function Customers() {
             <div className="overflow-x-auto">
             <table className="mt-4 w-full border-collapse font-sans text-sm">
               <colgroup>
+                <col style={{ width: 36 }} />
                 <col />
                 <col style={{ width: 140 }} />
                 <col style={{ width: 200 }} />
@@ -181,6 +263,14 @@ export default function Customers() {
               </colgroup>
               <thead>
                 <tr className="border-b border-neutral-200 text-left text-neutral-500">
+                  <th className="py-2">
+                    <input
+                      type="checkbox"
+                      checked={allOnPageSelected}
+                      onChange={toggleSelectAll}
+                      aria-label="Select all on this page"
+                    />
+                  </th>
                   <th className="py-2">
                     <button type="button" onClick={() => list.toggleSort("name")} className="cursor-pointer">
                       Name {list.sortBy === "name" && (list.sortOrder === "asc" ? "↑" : "↓")}
@@ -198,6 +288,14 @@ export default function Customers() {
                     key={customer.id}
                     className={`border-b border-neutral-100 hover:bg-neutral-50 ${customer.isActive ? "" : "opacity-50"}`}
                   >
+                    <td className="py-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(customer.id)}
+                        onChange={() => toggleSelectRow(customer.id)}
+                        aria-label={`Select ${customer.name}`}
+                      />
+                    </td>
                     <td className="py-3">
                       <button
                         type="button"
@@ -296,6 +394,35 @@ export default function Customers() {
             className="rounded-lg bg-error px-4 py-2 font-sans text-sm font-semibold text-white hover:opacity-90"
           >
             Deactivate
+          </button>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={bulkAction !== null}
+        onClose={() => setBulkAction(null)}
+        title={bulkAction === "reactivate" ? "Reactivate customers?" : "Deactivate customers?"}
+      >
+        <p className="font-sans text-sm text-neutral-600">
+          {bulkAction === "reactivate"
+            ? `Reactivate ${selectedInactiveCount} customer${selectedInactiveCount === 1 ? "" : "s"}?`
+            : `Deactivate ${selectedActiveCount} customer${selectedActiveCount === 1 ? "" : "s"}? They'll be hidden from new documents until reactivated.`}
+        </p>
+        <div className="mt-6 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={() => setBulkAction(null)}
+            className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={isBulkProcessing}
+            onClick={confirmBulkAction}
+            className="rounded-lg bg-error px-4 py-2 font-sans text-sm font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {isBulkProcessing ? "Working…" : bulkAction === "reactivate" ? "Reactivate" : "Deactivate"}
           </button>
         </div>
       </Modal>

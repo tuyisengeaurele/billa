@@ -284,4 +284,83 @@ describe("Customers", () => {
 
     expect(await screen.findByText(/trial has ended/i)).toBeInTheDocument();
   });
+
+  it("selects rows and bulk-deactivates them, with Undo reactivating the batch", async () => {
+    let activeMap: Record<string, boolean> = { c1: true, c2: true };
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      const idMatch = url.match(/\/customers\/(c\d)$/);
+      if (idMatch && init?.method === "PATCH") {
+        const body = JSON.parse((init.body as string) ?? "{}");
+        activeMap[idMatch[1]] = body.isActive;
+        return new Response(JSON.stringify({ customer: { id: idMatch[1], isActive: body.isActive } }), { status: 200 });
+      }
+      if (url.includes("/customers")) {
+        return new Response(
+          JSON.stringify({
+            results: [
+              { id: "c1", name: "Kigali Traders", tin: null, address: null, phone: null, email: null, isActive: activeMap.c1 },
+              { id: "c2", name: "Musanze Supplies", tin: null, address: null, phone: null, email: null, isActive: activeMap.c2 },
+            ].filter((customer) => activeMap[customer.id]),
+            total: Object.values(activeMap).filter(Boolean).length,
+            page: 1,
+            pageSize: 20,
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderCustomers();
+    await screen.findByText("Kigali Traders");
+
+    await user.click(screen.getByRole("checkbox", { name: "Select all on this page" }));
+    expect(screen.getByText("2 customers selected")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Deactivate (2)" }));
+    const dialog = await screen.findByRole("dialog", { name: /deactivate customers/i });
+    await user.click(within(dialog).getByRole("button", { name: /^deactivate$/i }));
+
+    await waitFor(() => expect(screen.getByText(/no customers yet/i)).toBeInTheDocument());
+    expect(await screen.findByText("2 customers deactivated")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Undo" }));
+
+    expect(await screen.findByText("Kigali Traders")).toBeInTheDocument();
+    expect(await screen.findByText("Musanze Supplies")).toBeInTheDocument();
+    expect(await screen.findByText("2 customers reactivated")).toBeInTheDocument();
+  });
+
+  it("shows both Deactivate and Reactivate when the selection is mixed", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.includes("/customers")) {
+        return new Response(
+          JSON.stringify({
+            results: [
+              { id: "c1", name: "Kigali Traders", tin: null, address: null, phone: null, email: null, isActive: true },
+              { id: "c2", name: "Musanze Supplies", tin: null, address: null, phone: null, email: null, isActive: false },
+            ],
+            total: 2,
+            page: 1,
+            pageSize: 20,
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderCustomers();
+    await screen.findByText("Kigali Traders");
+
+    await user.click(screen.getByRole("checkbox", { name: "Select Kigali Traders" }));
+    await user.click(screen.getByRole("checkbox", { name: "Select Musanze Supplies" }));
+
+    expect(screen.getByRole("button", { name: "Deactivate (1)" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reactivate (1)" })).toBeInTheDocument();
+  });
 });
