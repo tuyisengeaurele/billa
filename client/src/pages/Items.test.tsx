@@ -291,4 +291,83 @@ describe("Items", () => {
     expect(await screen.findByText("Printing service")).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
+
+  it("selects rows and bulk-deactivates them, with Undo reactivating the batch", async () => {
+    let activeMap: Record<string, boolean> = { i1: true, i2: true };
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      const idMatch = url.match(/\/items\/(i\d)$/);
+      if (idMatch && init?.method === "PATCH") {
+        const body = JSON.parse((init.body as string) ?? "{}");
+        activeMap[idMatch[1]] = body.isActive;
+        return new Response(JSON.stringify({ item: { id: idMatch[1], isActive: body.isActive } }), { status: 200 });
+      }
+      if (url.includes("/items")) {
+        return new Response(
+          JSON.stringify({
+            results: [
+              { id: "i1", description: "Printing service", unitPrice: 5000, unit: "service", isActive: activeMap.i1 },
+              { id: "i2", description: "Delivery box", unitPrice: 1000, unit: "piece", isActive: activeMap.i2 },
+            ].filter((item) => activeMap[item.id]),
+            total: Object.values(activeMap).filter(Boolean).length,
+            page: 1,
+            pageSize: 20,
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderItems();
+    await screen.findByText("Printing service");
+
+    await user.click(screen.getByRole("checkbox", { name: "Select all on this page" }));
+    expect(screen.getByText("2 items selected")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Deactivate (2)" }));
+    const dialog = await screen.findByRole("dialog", { name: /deactivate items/i });
+    await user.click(within(dialog).getByRole("button", { name: /^deactivate$/i }));
+
+    await waitFor(() => expect(screen.getByText(/no items yet/i)).toBeInTheDocument());
+    expect(await screen.findByText("2 items deactivated")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Undo" }));
+
+    expect(await screen.findByText("Printing service")).toBeInTheDocument();
+    expect(await screen.findByText("Delivery box")).toBeInTheDocument();
+    expect(await screen.findByText("2 items reactivated")).toBeInTheDocument();
+  });
+
+  it("shows both Deactivate and Reactivate when the selection is mixed", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.includes("/items")) {
+        return new Response(
+          JSON.stringify({
+            results: [
+              { id: "i1", description: "Printing service", unitPrice: 5000, unit: "service", isActive: true },
+              { id: "i2", description: "Delivery box", unitPrice: 1000, unit: "piece", isActive: false },
+            ],
+            total: 2,
+            page: 1,
+            pageSize: 20,
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderItems();
+    await screen.findByText("Printing service");
+
+    await user.click(screen.getByRole("checkbox", { name: "Select Printing service" }));
+    await user.click(screen.getByRole("checkbox", { name: "Select Delivery box" }));
+
+    expect(screen.getByRole("button", { name: "Deactivate (1)" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reactivate (1)" })).toBeInTheDocument();
+  });
 });
