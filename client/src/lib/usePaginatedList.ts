@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { apiRequest } from "./apiClient";
 
 interface PaginatedResponse<T> {
@@ -21,13 +22,20 @@ export function usePaginatedList<T, SortByT extends string>({
   pageSize = 20,
   extraParams,
 }: UsePaginatedListParams<SortByT>) {
+  const [urlParams, setUrlParams] = useSearchParams();
+
   const [results, setResults] = useState<T[]>([]);
   const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState<SortByT>(defaultSortBy);
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
-  const [includeInactive, setIncludeInactive] = useState(false);
+  const [page, setPage] = useState(() => {
+    const raw = Number(urlParams.get("page"));
+    return Number.isInteger(raw) && raw > 0 ? raw : 1;
+  });
+  const [search, setSearch] = useState(() => urlParams.get("q") ?? "");
+  const [sortBy, setSortBy] = useState<SortByT>(() => (urlParams.get("sortBy") as SortByT) || defaultSortBy);
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">(() =>
+    urlParams.get("sortOrder") === "asc" ? "asc" : "desc",
+  );
+  const [includeInactive, setIncludeInactive] = useState(() => urlParams.get("includeInactive") === "true");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
@@ -37,6 +45,28 @@ export function usePaginatedList<T, SortByT extends string>({
     const timeout = setTimeout(() => {
       setIsLoading(true);
       setError(null);
+
+      // Reflect the current filters in the URL (replacing, not pushing, so typing
+      // in the search box doesn't spam browser history) so that navigating away
+      // and back — e.g. clicking into a row, then hitting the browser's back
+      // button — restores this list's search/sort/page instead of resetting it.
+      setUrlParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (search.trim()) next.set("q", search.trim());
+          else next.delete("q");
+          if (page > 1) next.set("page", String(page));
+          else next.delete("page");
+          if (sortBy !== defaultSortBy) next.set("sortBy", sortBy);
+          else next.delete("sortBy");
+          if (sortOrder !== "desc") next.set("sortOrder", sortOrder);
+          else next.delete("sortOrder");
+          if (includeInactive) next.set("includeInactive", "true");
+          else next.delete("includeInactive");
+          return next;
+        },
+        { replace: true },
+      );
 
       const params = new URLSearchParams({
         sortBy,
@@ -66,7 +96,18 @@ export function usePaginatedList<T, SortByT extends string>({
       cancelled = true;
       clearTimeout(timeout);
     };
-  }, [resourcePath, search, sortBy, sortOrder, page, pageSize, includeInactive, reloadToken, JSON.stringify(extraParams)]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    resourcePath,
+    search,
+    sortBy,
+    sortOrder,
+    page,
+    pageSize,
+    includeInactive,
+    reloadToken,
+    JSON.stringify(extraParams),
+  ]);
 
   function toggleSort(column: SortByT) {
     setSortBy((current) => {
