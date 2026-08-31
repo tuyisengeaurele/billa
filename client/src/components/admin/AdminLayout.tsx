@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { DocumentTitleSync } from "../DocumentTitleSync";
 import { IdleTimeoutModal } from "../IdleTimeoutModal";
 import { NotificationBell } from "../NotificationBell";
 import { PageTitleBreadcrumb } from "../PageTitleBreadcrumb";
@@ -21,6 +22,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     <PageTitleProvider>
       <div className="flex min-h-screen bg-page">
         <SkipToContentLink />
+        <DocumentTitleSync />
         <IdleTimeoutModal />
 
         <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-neutral-200 bg-surface lg:block">

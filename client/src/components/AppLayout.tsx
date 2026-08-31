@@ -5,6 +5,7 @@ import { apiRequest } from "../lib/apiClient";
 import { useAuth } from "../context/AuthContext";
 import { PageTitleProvider } from "../context/PageTitleContext";
 import { AnnouncementBanner } from "./AnnouncementBanner";
+import { DocumentTitleSync } from "./DocumentTitleSync";
 import { IdleTimeoutModal } from "./IdleTimeoutModal";
 import { ImpersonationRequestModal } from "./ImpersonationRequestModal";
 import { NotificationBell } from "./NotificationBell";
@@ -76,6 +77,7 @@ export function AppLayout({ children }: AppLayoutProps) {
     <PageTitleProvider>
       <div className="flex min-h-screen flex-col bg-page">
         <SkipToContentLink />
+        <DocumentTitleSync />
         <ImpersonationRequestModal />
         <IdleTimeoutModal />
         <ProductTourModal />
