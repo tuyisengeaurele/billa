@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState, type FormEvent } from "react";
 import { useForm } from "react-hook-form";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import { AuthLayout } from "../components/AuthLayout";
 import { Button } from "../components/Button";
@@ -25,6 +25,8 @@ function isTwoFactorRequired(result: unknown): result is { twoFactorRequired: tr
 export default function AdminLogin() {
   const { user, login, loginWithGoogle, completeTwoFactorChallenge, logout } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const sessionExpired = searchParams.get("expired") === "true";
   const [apiError, setApiError] = useState<string | null>(null);
   const [challengeId, setChallengeId] = useState<string | null>(null);
   const [twoFactorCode, setTwoFactorCode] = useState("");
@@ -144,6 +146,11 @@ export default function AdminLogin() {
       <p className="mt-2 font-sans text-sm text-neutral-600">Restricted to accounts with admin access.</p>
 
       <form onSubmit={handleSubmit(onSubmit)} className="mt-6 flex flex-col gap-5" noValidate>
+        {sessionExpired && (
+          <div className="rounded-lg bg-warning-bg px-4 py-3 font-sans text-sm text-warning" role="status">
+            Your session expired. Log in again to continue.
+          </div>
+        )}
         {apiError && (
           <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
             {apiError}

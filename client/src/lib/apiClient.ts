@@ -37,6 +37,19 @@ async function parseBody(response: Response): Promise<unknown> {
   }
 }
 
+// Paths where a 401 is an expected, routine outcome (an anonymous visitor with
+// no session, the auth endpoints themselves, or a wrong two-factor code)
+// rather than "you were logged in and now you're not" — these never trigger
+// the session-expiry redirect below, even though they still get the normal
+// silent-refresh retry.
+const SESSION_EXPIRY_EXEMPT_PATHS = ["/auth/session", "/auth/refresh", "/auth/me", "/auth/2fa/challenge"];
+
+function redirectToLoginOnSessionExpiry() {
+  const loginPath = window.location.pathname.startsWith("/admin") ? "/admin/login" : "/login";
+  if (window.location.pathname === loginPath) return;
+  window.location.href = `${window.location.origin}${loginPath}?expired=true`;
+}
+
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   let response = await rawRequest(path, options);
 
@@ -44,6 +57,8 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     const refreshResponse = await rawRequest("/auth/refresh", { method: "POST" });
     if (refreshResponse.ok) {
       response = await rawRequest(path, options);
+    } else if (refreshResponse.status === 401 && !SESSION_EXPIRY_EXEMPT_PATHS.includes(path)) {
+      redirectToLoginOnSessionExpiry();
     }
   }
 

@@ -17,9 +17,9 @@ vi.mock("../lib/firebaseAuth", () => ({
 
 import { signInWithEmail } from "../lib/firebaseAuth";
 
-function renderAdminLogin() {
+function renderAdminLogin(initialEntry = "/admin/login") {
   return render(
-    <MemoryRouter initialEntries={["/admin/login"]}>
+    <MemoryRouter initialEntries={[initialEntry]}>
       <AuthProvider>
         <Routes>
           <Route path="/admin/login" element={<AdminLogin />} />
@@ -37,6 +37,21 @@ function urlOf(input: RequestInfo | URL): string {
 describe("AdminLogin", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it("shows a session-expired notice when redirected here with ?expired=true", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 401 }));
+    renderAdminLogin("/admin/login?expired=true");
+
+    expect(await screen.findByText(/your session expired/i)).toBeInTheDocument();
+  });
+
+  it("does not show the session-expired notice on a plain visit", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 401 }));
+    renderAdminLogin();
+    await screen.findByRole("button", { name: /log in/i });
+
+    expect(screen.queryByText(/your session expired/i)).not.toBeInTheDocument();
   });
 
   it("logs an admin in and enters the admin area", async () => {

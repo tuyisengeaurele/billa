@@ -17,9 +17,9 @@ vi.mock("../lib/firebaseAuth", () => ({
 
 import { resetPassword, signInWithEmail, signInWithGoogle } from "../lib/firebaseAuth";
 
-function renderLogin() {
+function renderLogin(initialEntry = "/login") {
   return render(
-    <MemoryRouter initialEntries={["/login"]}>
+    <MemoryRouter initialEntries={[initialEntry]}>
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<Login />} />
@@ -48,6 +48,21 @@ describe("Login", () => {
     await user.click(await screen.findByRole("button", { name: /log in/i }));
 
     await waitFor(() => expect(screen.getByLabelText(/email/i)).toHaveAttribute("aria-invalid", "true"));
+  });
+
+  it("shows a session-expired notice when redirected here with ?expired=true", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 401 }));
+    renderLogin("/login?expired=true");
+
+    expect(await screen.findByText(/your session expired/i)).toBeInTheDocument();
+  });
+
+  it("does not show the session-expired notice on a plain visit", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 401 }));
+    renderLogin();
+    await screen.findByRole("button", { name: /log in/i });
+
+    expect(screen.queryByText(/your session expired/i)).not.toBeInTheDocument();
   });
 
   it("navigates to /onboarding after a successful login", async () => {
