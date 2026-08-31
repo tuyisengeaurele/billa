@@ -44,6 +44,7 @@ const PublicDocumentView = lazy(() => import("./pages/PublicDocumentView"));
 const PublicCustomerPortal = lazy(() => import("./pages/PublicCustomerPortal"));
 const AcceptInvite = lazy(() => import("./pages/AcceptInvite"));
 const Activity = lazy(() => import("./pages/Activity"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 export default function App() {
   return (
@@ -100,6 +101,7 @@ export default function App() {
                   </Route>
                 </Route>
                 <Route path="/" element={<RootRoute />} />
+                <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
             <ToastContainer />

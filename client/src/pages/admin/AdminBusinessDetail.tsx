@@ -88,7 +88,14 @@ export default function AdminBusinessDetail() {
   }
 
   if (notFound) {
-    return <p className="font-sans text-sm text-neutral-600">No business found with that id.</p>;
+    return (
+      <div className="flex flex-col items-start gap-3">
+        <p className="font-sans text-sm text-neutral-600">No business found with that id.</p>
+        <Link to="/admin/businesses" className="font-sans text-sm font-medium text-primary-500 hover:text-primary-700">
+          ← Back to businesses
+        </Link>
+      </div>
+    );
   }
 
   if (!business) {

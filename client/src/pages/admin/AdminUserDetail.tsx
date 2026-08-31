@@ -187,7 +187,14 @@ export default function AdminUserDetail() {
   }
 
   if (notFound) {
-    return <p className="font-sans text-sm text-neutral-600">No user found with that id.</p>;
+    return (
+      <div className="flex flex-col items-start gap-3">
+        <p className="font-sans text-sm text-neutral-600">No user found with that id.</p>
+        <Link to="/admin/users" className="font-sans text-sm font-medium text-primary-500 hover:text-primary-700">
+          ← Back to users
+        </Link>
+      </div>
+    );
   }
 
   if (!detail) {

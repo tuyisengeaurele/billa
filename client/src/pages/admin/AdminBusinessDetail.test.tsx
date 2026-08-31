@@ -177,5 +177,6 @@ describe("AdminBusinessDetail", () => {
     renderPage("nonexistent");
 
     expect(await screen.findByText(/no business found/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /back to businesses/i })).toHaveAttribute("href", "/admin/businesses");
   });
 });

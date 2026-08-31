@@ -712,5 +712,6 @@ describe("AdminUserDetail", () => {
     renderPage("nonexistent");
 
     expect(await screen.findByText(/no user found/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /back to users/i })).toHaveAttribute("href", "/admin/users");
   });
 });
