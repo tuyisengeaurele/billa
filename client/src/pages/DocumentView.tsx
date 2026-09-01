@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import type { DocumentType } from "@billa/shared";
 import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { Modal } from "../components/Modal";
+import { Spinner } from "../components/Spinner";
 import { useSetActiveDocumentType } from "../context/ActiveDocumentTypeContext";
 import { usePageTitle } from "../context/PageTitleContext";
 import { useToast } from "../context/ToastContext";
@@ -167,7 +168,11 @@ export default function DocumentView() {
   }
 
   if (!document) {
-    return <p className="font-sans text-sm text-neutral-600">Loading…</p>;
+    return (
+      <div className="flex justify-center py-16">
+        <Spinner size="lg" />
+      </div>
+    );
   }
 
   return (
