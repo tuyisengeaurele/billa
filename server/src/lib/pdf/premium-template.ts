@@ -90,10 +90,12 @@ export function renderPremiumHtml(data: PdfRenderData): string {
     )
     .join("");
 
+  const labels = data.labels;
+
   const totalsRows = `
-    <tr><td class="tot-lbl">Subtotal</td><td class="tot-val">${data.subtotalFormatted}</td></tr>
-    <tr><td class="tot-lbl">Tax</td><td class="tot-val">${data.taxTotalFormatted}</td></tr>
-    <tr class="grand"><td>Total</td><td style="text-align:right;">${data.totalFormatted}</td></tr>
+    <tr><td class="tot-lbl">${labels.subtotal}</td><td class="tot-val">${data.subtotalFormatted}</td></tr>
+    <tr><td class="tot-lbl">${labels.tax}</td><td class="tot-val">${data.taxTotalFormatted}</td></tr>
+    <tr class="grand"><td>${labels.total}</td><td style="text-align:right;">${data.totalFormatted}</td></tr>
   `;
 
   const hasSignatory = Boolean(business.signatoryName);
@@ -102,15 +104,15 @@ export function renderPremiumHtml(data: PdfRenderData): string {
   const footerLeft =
     data.showTotals && hasBankDetails
       ? `<div class="ft-bank">
-          <strong>Payment Instructions</strong>
-          ${business.bankName ? `Bank: ${business.bankName}<br/>` : ""}
-          Account Name: ${business.name}<br/>
-          ${business.bankAccountNumber ? `Account No: ${business.bankAccountNumber}<br/>` : ""}
-          Reference: ${data.number ?? "DRAFT"}
+          <strong>${labels.paymentInstructions}</strong>
+          ${business.bankName ? `${labels.bank}: ${business.bankName}<br/>` : ""}
+          ${labels.accountName}: ${business.name}<br/>
+          ${business.bankAccountNumber ? `${labels.accountNo}: ${business.bankAccountNumber}<br/>` : ""}
+          ${labels.reference}: ${data.number ?? "DRAFT"}
         </div>`
       : `<div class="ft-bank">
-          ${business.phone ? `Tel: ${business.phone}<br/>` : ""}
-          ${business.email ? `Email: ${business.email}<br/>` : ""}
+          ${business.phone ? `${labels.tel}: ${business.phone}<br/>` : ""}
+          ${business.email ? `${labels.email}: ${business.email}<br/>` : ""}
           ${business.rraEbmNumber ?? ""}
         </div>`;
 
@@ -119,7 +121,7 @@ export function renderPremiumHtml(data: PdfRenderData): string {
   const signatureBlocks = data.showTotals
     ? `<div class="ft-sig">
         ${signatureImage}
-        <div class="sig-name">${hasSignatory ? business.signatoryName : "Authorized signature"}</div>
+        <div class="sig-name">${hasSignatory ? business.signatoryName : labels.authorizedSignature}</div>
         <div class="sig-title">${business.signatoryTitle ?? ""}</div>
         <div class="sig-company">${business.name}</div>
       </div>`
@@ -127,11 +129,11 @@ export function renderPremiumHtml(data: PdfRenderData): string {
         <div class="ft-sig">
           ${signatureImage}
           <div class="sig-name">${hasSignatory ? business.signatoryName : "&nbsp;"}</div>
-          <div class="sig-title">Dispatched by</div>
+          <div class="sig-title">${labels.dispatchedBy}</div>
         </div>
         <div class="ft-sig">
           <div class="sig-name">&nbsp;</div>
-          <div class="sig-title">Received by</div>
+          <div class="sig-title">${labels.receivedBy}</div>
         </div>
       </div>`;
 
@@ -143,7 +145,7 @@ export function renderPremiumHtml(data: PdfRenderData): string {
           <div class="hd-company">
             <strong>${business.name}</strong>
             ${business.address ? `${business.address}<br/>` : ""}
-            ${business.tin ? `TIN: ${business.tin}<br/>` : ""}
+            ${business.tin ? `${labels.tin}: ${business.tin}<br/>` : ""}
             ${business.phone || business.email ? `${business.phone ?? ""}${business.phone && business.email ? "&nbsp;&nbsp;|&nbsp;&nbsp;" : ""}${business.email ?? ""}` : ""}
           </div>
         </div>
@@ -151,51 +153,51 @@ export function renderPremiumHtml(data: PdfRenderData): string {
           <div class="doc-word">${data.typeLabel}</div>
           <div class="doc-num">${data.number ?? "DRAFT"}</div>
           <table class="doc-dates">
-            <tr><td>Issued:</td><td>${data.issueDate}</td></tr>
+            <tr><td>${labels.issued}:</td><td>${data.issueDate}</td></tr>
             ${data.dueDateLabel && data.dueDate ? `<tr><td>${data.dueDateLabel}:</td><td>${data.dueDate}</td></tr>` : ""}
-            ${data.customerReference ? `<tr><td>Reference:</td><td>${data.customerReference}</td></tr>` : ""}
+            ${data.customerReference ? `<tr><td>${labels.reference}:</td><td>${data.customerReference}</td></tr>` : ""}
           </table>
           <div class="status-pill" style="background:${data.status === "FINALIZED" ? "#e6f4ea" : "#f3f4f6"}; color:${data.status === "FINALIZED" ? "#1e7d32" : "#6b7280"}">
-            ${data.status === "FINALIZED" ? "Finalized" : "Draft"}
+            ${data.status === "FINALIZED" ? labels.finalized : labels.draft}
           </div>
         </div>
       </div>
 
       <div class="addr-row">
         <div class="addr-cell">
-          <div class="addr-lbl">From (Seller)</div>
+          <div class="addr-lbl">${labels.fromSeller}</div>
           <table class="addr-tbl">
-            <tr><td>Company:</td><td>${business.name}</td></tr>
-            ${business.tin ? `<tr><td>TIN:</td><td>${business.tin}</td></tr>` : ""}
-            ${business.bankName ? `<tr><td>Bank:</td><td>${business.bankName}</td></tr>` : ""}
-            ${business.bankAccountNumber ? `<tr><td>Acc. No:</td><td>${business.bankAccountNumber}</td></tr>` : ""}
-            ${business.phone ? `<tr><td>Tel:</td><td>${business.phone}</td></tr>` : ""}
-            ${business.email ? `<tr><td>Email:</td><td>${business.email}</td></tr>` : ""}
+            <tr><td>${labels.company}:</td><td>${business.name}</td></tr>
+            ${business.tin ? `<tr><td>${labels.tin}:</td><td>${business.tin}</td></tr>` : ""}
+            ${business.bankName ? `<tr><td>${labels.bank}:</td><td>${business.bankName}</td></tr>` : ""}
+            ${business.bankAccountNumber ? `<tr><td>${labels.accountNo}:</td><td>${business.bankAccountNumber}</td></tr>` : ""}
+            ${business.phone ? `<tr><td>${labels.tel}:</td><td>${business.phone}</td></tr>` : ""}
+            ${business.email ? `<tr><td>${labels.email}:</td><td>${business.email}</td></tr>` : ""}
           </table>
         </div>
         <div class="addr-cell">
           <div class="addr-lbl">${data.partyLabel}</div>
           <table class="addr-tbl">
-            <tr><td>Name:</td><td>${data.customer.name}</td></tr>
-            ${data.customer.tin ? `<tr><td>TIN:</td><td>${data.customer.tin}</td></tr>` : ""}
-            ${data.customer.phone ? `<tr><td>Contact:</td><td>${data.customer.phone}</td></tr>` : ""}
-            ${data.customer.address ? `<tr><td>Location:</td><td>${data.customer.address}</td></tr>` : ""}
-            <tr><td>Currency:</td><td>RWF (Rwandan Franc)</td></tr>
+            <tr><td>${labels.name}:</td><td>${data.customer.name}</td></tr>
+            ${data.customer.tin ? `<tr><td>${labels.tin}:</td><td>${data.customer.tin}</td></tr>` : ""}
+            ${data.customer.phone ? `<tr><td>${labels.contact}:</td><td>${data.customer.phone}</td></tr>` : ""}
+            ${data.customer.address ? `<tr><td>${labels.location}:</td><td>${data.customer.address}</td></tr>` : ""}
+            <tr><td>${labels.currency}:</td><td>${labels.currencyValue}</td></tr>
           </table>
         </div>
       </div>
 
       <div class="tbl-wrap">
-        <div class="tbl-title">Line Items</div>
+        <div class="tbl-title">${labels.lineItems}</div>
         <table class="items">
           <thead>
             <tr>
               <th style="width:28px;">#</th>
-              <th>Description</th>
-              <th class="r" style="width:70px;">Qty</th>
-              <th class="r" style="width:100px;">Unit price</th>
-              <th class="r" style="width:60px;">Tax</th>
-              <th class="r" style="width:110px;">Total</th>
+              <th>${labels.description}</th>
+              <th class="r" style="width:70px;">${labels.qty}</th>
+              <th class="r" style="width:100px;">${labels.unitPrice}</th>
+              <th class="r" style="width:60px;">${labels.tax}</th>
+              <th class="r" style="width:110px;">${labels.total}</th>
             </tr>
           </thead>
           <tbody>${itemRows}</tbody>
@@ -212,7 +214,7 @@ export function renderPremiumHtml(data: PdfRenderData): string {
             ${
               data.amountInWordsFormatted
                 ? `<div class="words-row">
-                    <div class="words-lbl">Amount in words</div>
+                    <div class="words-lbl">${labels.amountInWords}</div>
                     <div class="words-val">${data.amountInWordsFormatted} (${data.totalFormatted})</div>
                   </div>`
                 : ""
@@ -223,7 +225,7 @@ export function renderPremiumHtml(data: PdfRenderData): string {
       ${
         data.notes
           ? `<div class="notes-row">
-              <div class="notes-lbl">Notes</div>
+              <div class="notes-lbl">${labels.notes}</div>
               <div class="notes-val">${data.notes}</div>
             </div>`
           : ""
@@ -235,8 +237,8 @@ export function renderPremiumHtml(data: PdfRenderData): string {
       </div>
 
       <div class="disclaimer">
-        This is a document issued by ${business.name}.
-        &nbsp;|&nbsp; All amounts in Rwandan Francs (RWF)
+        ${labels.documentIssuedBy} ${business.name}.
+        &nbsp;|&nbsp; ${labels.allAmountsIn}
         ${data.dueDateLabel && data.dueDate && data.showTotals ? `&nbsp;|&nbsp; ${data.dueDateLabel}: ${data.dueDate}` : ""}
       </div>
     </div>

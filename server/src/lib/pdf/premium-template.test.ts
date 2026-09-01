@@ -129,6 +129,25 @@ describe("renderPremiumHtml", () => {
     expect(html).not.toContain("Dispatched by");
   });
 
+  it("renders French labels end-to-end when the document is in French", () => {
+    const html = renderPremiumHtml(
+      makeData({
+        labels: getPdfLabels("FR"),
+        typeLabel: "Facture",
+        partyLabel: "Facturé à",
+        business: { ...makeData().business, bankName: "Bank of Kigali", bankAccountNumber: "000123456789" },
+      }),
+    );
+    expect(html).toContain("Facture");
+    expect(html).toContain("Facturé à");
+    expect(html).toContain(">Qté<");
+    expect(html).toContain(">Prix unitaire<");
+    expect(html).toContain("Sous-total");
+    expect(html).toContain("Instructions de paiement");
+    expect(html).toContain("Articles");
+    expect(html).toContain("Ceci est un document émis par");
+  });
+
   it("renders the signature image above the sign-off block when present, only on the business side", () => {
     const html = renderPremiumHtml(
       makeData({
@@ -146,7 +165,7 @@ describe("renderPremiumHtml", () => {
         business: { ...makeData().business, bankName: "Bank of Kigali", bankAccountNumber: "000123456789" },
       }),
     );
-    expect(html).toContain("Payment Instructions");
+    expect(html).toContain("Payment instructions");
     expect(html).toContain("Bank of Kigali");
     expect(html).toContain("000123456789");
     expect(html).toContain("Reference: INV-0001");
@@ -154,7 +173,7 @@ describe("renderPremiumHtml", () => {
 
   it("falls back to contact details in the footer when there are no bank details", () => {
     const html = renderPremiumHtml(makeData());
-    expect(html).not.toContain("Payment Instructions");
+    expect(html).not.toContain("Payment instructions");
     expect(html).toContain("+250788000000");
   });
 
@@ -183,7 +202,7 @@ describe("renderPremiumHtml", () => {
     expect(html).toContain("From (Seller)");
     expect(html).toContain("Bank:");
     expect(html).toContain("Bank of Kigali");
-    expect(html).toContain("Acc. No:");
+    expect(html).toContain("Account no:");
     expect(html).toContain("000123456789");
     expect(html).toContain("KN 1 Rd");
     expect(html).toContain("+250788111222");
@@ -194,7 +213,7 @@ describe("renderPremiumHtml", () => {
   it("omits seller bank rows from the panel when there are no bank details", () => {
     const html = renderPremiumHtml(makeData());
     expect(html).not.toContain("Bank:");
-    expect(html).not.toContain("Acc. No:");
+    expect(html).not.toContain("Account no:");
   });
 
   it("shows a notes callout when notes are present", () => {
