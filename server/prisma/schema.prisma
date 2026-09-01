@@ -97,6 +97,7 @@ model Business {
   bankAccountNumber     String?
   signatoryName         String?
   signatoryTitle        String?
+  signatureUrl          String?
   defaultTemplate       DocumentTemplate @default(MINIMAL)
   onboardingCompletedAt DateTime?
   lastDigestSentAt      DateTime?

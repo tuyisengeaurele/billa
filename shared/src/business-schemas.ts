@@ -16,6 +16,7 @@ export const businessProfileSchema = z
     bankAccountNumber: z.string().trim().min(1).nullable().optional(),
     signatoryName: z.string().trim().min(1).nullable().optional(),
     signatoryTitle: z.string().trim().min(1).nullable().optional(),
+    signatureUrl: z.string().min(1).nullable().optional(),
     defaultTemplate: z.enum(DOCUMENT_TEMPLATES).optional(),
     primaryColor: z.string().regex(hexColorPattern, "Enter a valid hex color").nullable().optional(),
   })

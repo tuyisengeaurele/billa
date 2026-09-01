@@ -55,6 +55,20 @@ describe("PATCH /business", () => {
     expect(res.body.business.primaryColor).toBe("#2563EB");
   });
 
+  it("sets and clears a signature image url", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+
+    const set = await request(app)
+      .patch("/business")
+      .set("Cookie", cookies)
+      .send({ signatureUrl: "/uploads/b1/signature.png" });
+    expect(set.body.business.signatureUrl).toBe("/uploads/b1/signature.png");
+
+    const cleared = await request(app).patch("/business").set("Cookie", cookies).send({ signatureUrl: null });
+    expect(cleared.body.business.signatureUrl).toBeNull();
+  });
+
   it("rejects an invalid primaryColor with 400", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app);

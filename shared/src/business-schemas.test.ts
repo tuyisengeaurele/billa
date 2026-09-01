@@ -47,6 +47,16 @@ describe("businessProfileSchema", () => {
     expect(result.success).toBe(false);
   });
 
+  it("accepts a valid signatureUrl", () => {
+    const result = businessProfileSchema.safeParse({ signatureUrl: "/uploads/b1/signature.png" });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts null signatureUrl to clear it", () => {
+    const result = businessProfileSchema.safeParse({ signatureUrl: null });
+    expect(result.success).toBe(true);
+  });
+
   it("accepts a valid defaultTemplate", () => {
     const result = businessProfileSchema.safeParse({ defaultTemplate: "PREMIUM" });
     expect(result.success).toBe(true);
