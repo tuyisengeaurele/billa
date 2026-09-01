@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Button } from "../components/Button";
+import { Spinner } from "../components/Spinner";
 import { useAuth } from "../context/AuthContext";
 import { apiRequest, ApiError } from "../lib/apiClient";
 
@@ -58,7 +59,7 @@ export default function AcceptInvite() {
   if (!invite || isLoading) {
     return (
       <div className="mx-auto flex min-h-screen max-w-md items-center justify-center px-6">
-        <p className="font-sans text-sm text-neutral-600">Loading…</p>
+        <Spinner size="lg" />
       </div>
     );
   }
