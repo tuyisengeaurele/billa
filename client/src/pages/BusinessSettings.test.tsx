@@ -362,6 +362,94 @@ describe("BusinessSettings", () => {
     expect(screen.getByAltText(/your business logo/i)).toBeInTheDocument();
   });
 
+  it("uploads a signature image and saves it to the business", async () => {
+    let patchBody: unknown = null;
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/business/sequences")) {
+        return new Response(JSON.stringify({ sequences: [] }), { status: 200 });
+      }
+      if (url.endsWith("/business/signature") && init?.method === "POST") {
+        return new Response(JSON.stringify({ url: "/uploads/b1/signature.png" }), { status: 201 });
+      }
+      if (url.endsWith("/business") && init?.method === "PATCH") {
+        patchBody = JSON.parse(init.body as string);
+        return new Response(
+          JSON.stringify({ business: { ownerId: "u1", name: "Kigali Traders", signatureUrl: "/uploads/b1/signature.png" } }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/business") || url.endsWith("/auth/me")) {
+        return new Response(
+          JSON.stringify({
+            business: {
+              ownerId: "u1",
+              name: "Kigali Traders",
+              tin: null,
+              industry: null,
+              phone: null,
+              email: null,
+              address: null,
+              rraEbmNumber: null,
+              defaultTemplate: "PREMIUM",
+              logoUrl: null,
+              signatureUrl: null,
+            },
+            user: { id: "u1" },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderPage();
+
+    const file = new File(["fake-bytes"], "signature.png", { type: "image/png" });
+    const input = await screen.findByLabelText(/upload signature/i);
+    await user.upload(input, file);
+
+    await waitFor(() => expect(patchBody).toMatchObject({ signatureUrl: "/uploads/b1/signature.png" }));
+    expect(await screen.findByAltText(/your signature/i)).toBeInTheDocument();
+  });
+
+  it("shows the current signature with a Remove option when one is already set", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.endsWith("/business/sequences")) {
+        return new Response(JSON.stringify({ sequences: [] }), { status: 200 });
+      }
+      if (url.endsWith("/business") || url.endsWith("/auth/me")) {
+        return new Response(
+          JSON.stringify({
+            business: {
+              ownerId: "u1",
+              name: "Kigali Traders",
+              tin: null,
+              industry: null,
+              phone: null,
+              email: null,
+              address: null,
+              rraEbmNumber: null,
+              defaultTemplate: "PREMIUM",
+              logoUrl: null,
+              signatureUrl: "/uploads/b1/signature.png",
+            },
+            user: { id: "u1" },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    renderPage();
+
+    expect(await screen.findByAltText(/your signature/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /remove/i })).toBeInTheDocument();
+  });
+
   it("requires typing the current name before rename is enabled, then renames the business", async () => {
     let currentName = "Kigali Traders";
     vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {

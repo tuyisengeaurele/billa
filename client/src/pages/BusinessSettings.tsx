@@ -33,6 +33,7 @@ interface BusinessProfile {
   defaultTemplate: DocumentTemplate;
   primaryColor: string | null;
   logoUrl: string | null;
+  signatureUrl: string | null;
 }
 
 const DEFAULT_BRAND_COLOR = "#27272a";
@@ -80,6 +81,8 @@ export default function BusinessSettings() {
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isUploadingSignature, setIsUploadingSignature] = useState(false);
+  const [signatureError, setSignatureError] = useState<string | null>(null);
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
   const [newBusinessName, setNewBusinessName] = useState("");
   const [renameConfirmText, setRenameConfirmText] = useState("");
@@ -100,6 +103,43 @@ export default function BusinessSettings() {
   function handleLogoComplete() {
     setIsEditingLogo(false);
     loadProfile();
+  }
+
+  async function handleSignatureFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || !profile) return;
+    setSignatureError(null);
+    setIsUploadingSignature(true);
+    try {
+      const formData = new FormData();
+      formData.append("signature", file);
+      const uploaded = await apiRequest<{ url: string }>("/business/signature", { method: "POST", body: formData });
+      const updated = await apiRequest<{ business: BusinessProfile }>("/business", {
+        method: "PATCH",
+        body: { signatureUrl: uploaded.url },
+      });
+      setProfile(updated.business);
+      toast.success("Signature added");
+    } catch {
+      setSignatureError("Couldn't upload that signature. Try again.");
+    } finally {
+      setIsUploadingSignature(false);
+    }
+  }
+
+  async function handleRemoveSignature() {
+    if (!profile) return;
+    setSignatureError(null);
+    try {
+      const updated = await apiRequest<{ business: BusinessProfile }>("/business", {
+        method: "PATCH",
+        body: { signatureUrl: null },
+      });
+      setProfile(updated.business);
+    } catch {
+      setSignatureError("Couldn't remove the signature. Try again.");
+    }
   }
 
   function openRenameModal() {
@@ -287,6 +327,50 @@ export default function BusinessSettings() {
                 />
               ))}
             </div>
+            {isOwner && (
+              <div className="mt-5 border-t border-neutral-100 pt-5">
+                <p className="font-sans text-sm font-medium text-neutral-800">Signature / stamp image</p>
+                <p className="mt-1 font-sans text-sm text-neutral-500">
+                  Shown on the signature line of every finalized document instead of a blank line to sign by hand.
+                </p>
+                {signatureError && (
+                  <div className="mt-3 rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
+                    {signatureError}
+                  </div>
+                )}
+                <div className="mt-3 flex items-center gap-4">
+                  {profile.signatureUrl && (
+                    <div className="flex h-16 w-32 items-center justify-center rounded-xl border border-neutral-200 bg-neutral-50 p-2">
+                      <img
+                        src={`${API_BASE_URL}${profile.signatureUrl}`}
+                        alt="Your signature"
+                        className="h-full w-full object-contain"
+                      />
+                    </div>
+                  )}
+                  <label className="cursor-pointer rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 transition-colors hover:bg-neutral-50">
+                    {isUploadingSignature ? "Uploading…" : profile.signatureUrl ? "Replace" : "Upload signature"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={isUploadingSignature}
+                      onChange={handleSignatureFileChange}
+                      className="sr-only"
+                      aria-label="Upload signature"
+                    />
+                  </label>
+                  {profile.signatureUrl && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveSignature}
+                      className="font-sans text-sm text-neutral-500 transition-colors hover:text-error"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </section>
 
           <section className="rounded-xl border border-neutral-200 bg-surface p-6">
