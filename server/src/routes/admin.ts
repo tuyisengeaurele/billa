@@ -51,6 +51,7 @@ adminRouter.get("/audit-log", validateQuery(adminAuditLogQuerySchema), async (re
 
 const USER_LIST_SELECT = {
   id: true,
+  name: true,
   email: true,
   isAdmin: true,
   suspendedAt: true,
@@ -85,6 +86,7 @@ adminRouter.get("/users/export.csv", async (_req, res) => {
   const users = await prisma.user.findMany({ orderBy: { createdAt: "desc" }, select: USER_LIST_SELECT });
 
   const csv = toCsv(users, [
+    { key: "name", header: "Name" },
     { key: "email", header: "Email" },
     { key: "isAdmin", header: "Admin" },
     { key: "suspendedAt", header: "Suspended" },

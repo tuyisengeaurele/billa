@@ -39,6 +39,17 @@ describe("GET /admin/users", () => {
     expect(res.body.results[0].email).toBe("someone@acme.com");
   });
 
+  it("includes each user's name", async () => {
+    const app = createApp();
+    const { cookies: adminCookies } = await registerAndGetCookies(app, "admin@example.com", "Admin Co", true);
+    const { userId } = await registerAndGetCookies(app, "someone@acme.com", "Acme");
+    await prisma.user.update({ where: { id: userId }, data: { name: "Jane Uwase" } });
+
+    const res = await request(app).get("/admin/users?search=acme").set("Cookie", adminCookies);
+
+    expect(res.body.results[0].name).toBe("Jane Uwase");
+  });
+
   it("returns 403 for a non-admin", async () => {
     const app = createApp();
     const { cookies } = await registerAndGetCookies(app, "owner@example.com", "Kigali Traders");

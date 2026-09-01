@@ -22,6 +22,7 @@ describe("AdminUsers", () => {
           results: [
             {
               id: "u1",
+              name: "Jane Uwase",
               email: "owner@example.com",
               isAdmin: false,
               trialEndsAt: "2026-09-01T00:00:00.000Z",
@@ -31,6 +32,7 @@ describe("AdminUsers", () => {
             },
             {
               id: "u2",
+              name: null,
               email: "paying@example.com",
               isAdmin: false,
               trialEndsAt: "2026-09-01T00:00:00.000Z",
@@ -59,6 +61,7 @@ describe("AdminUsers", () => {
     expect(link).toHaveAttribute("href", "/admin/users/u1");
     expect(screen.getAllByText("Trial")).toHaveLength(2); // one badge, one legend entry
     expect(screen.getAllByText("Monthly")).toHaveLength(2); // one badge, one legend entry
+    expect(screen.getByText("Jane Uwase")).toBeInTheDocument();
   });
 
   it("searches by email, re-fetching with the search param", async () => {

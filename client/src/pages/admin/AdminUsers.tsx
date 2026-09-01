@@ -10,6 +10,7 @@ import { usePaginatedList } from "../../lib/usePaginatedList";
 
 interface AdminUserRow {
   id: string;
+  name: string | null;
   email: string;
   isAdmin: boolean;
   trialEndsAt: string;
@@ -86,6 +87,7 @@ export default function AdminUsers() {
             <table className="mt-4 w-full border-collapse font-sans text-sm">
               <thead>
                 <tr className="border-b border-neutral-200 text-left text-neutral-500">
+                  <th className="py-2">Name</th>
                   <th className="py-2">Email</th>
                   <th className="py-2">Admin</th>
                   <th className="py-2">Trial ends</th>
@@ -96,6 +98,7 @@ export default function AdminUsers() {
               <tbody>
                 {list.results.map((user) => (
                   <tr key={user.id} className="border-b border-neutral-100 transition-colors hover:bg-neutral-50">
+                    <td className="py-3 text-neutral-600">{user.name ?? "-"}</td>
                     <td className="py-3">
                       <Link
                         to={`/admin/users/${user.id}`}
