@@ -14,11 +14,13 @@ export const PREMIUM_STYLES = `
 .signature-label { font-size: 8px; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85; }
 `;
 
-export function renderStatusPill(status: "DRAFT" | "FINALIZED"): string {
+import type { PdfLabels } from "@billa/shared";
+
+export function renderStatusPill(status: "DRAFT" | "FINALIZED", labels: PdfLabels): string {
   const isFinal = status === "FINALIZED";
   const bg = isFinal ? "#DCFCE7" : "#F3F4F6";
   const fg = isFinal ? "#166534" : "#6B7280";
-  const label = isFinal ? "Finalized" : "Draft";
+  const label = isFinal ? labels.finalized : labels.draft;
   return `<span class="status-pill" style="background:${bg}; color:${fg}">${label}</span>`;
 }
 
@@ -27,17 +29,18 @@ export function renderTotalsBox(data: {
   taxTotalFormatted: string;
   totalFormatted: string;
   dark: string;
+  labels: PdfLabels;
 }): string {
   return `<div class="totals-box">
-    <div class="totals-row"><span>Subtotal</span><span>${data.subtotalFormatted}</span></div>
-    <div class="totals-row"><span>Tax</span><span>${data.taxTotalFormatted}</span></div>
-    <div class="totals-row total" style="background:${data.dark}"><span>Total</span><span>${data.totalFormatted}</span></div>
+    <div class="totals-row"><span>${data.labels.subtotal}</span><span>${data.subtotalFormatted}</span></div>
+    <div class="totals-row"><span>${data.labels.tax}</span><span>${data.taxTotalFormatted}</span></div>
+    <div class="totals-row total" style="background:${data.dark}"><span>${data.labels.total}</span><span>${data.totalFormatted}</span></div>
   </div>`;
 }
 
-export function renderAmountInWordsBox(amountInWordsFormatted: string): string {
+export function renderAmountInWordsBox(amountInWordsFormatted: string, labels: PdfLabels): string {
   return `<div class="amount-words">
-    <div class="amount-words-label">Amount in words</div>
+    <div class="amount-words-label">${labels.amountInWords}</div>
     <div class="amount-words-text">${amountInWordsFormatted}</div>
   </div>`;
 }
@@ -69,15 +72,20 @@ function renderSignature({ label, name, imageDataUri }: FooterSignature): string
 export function buildSignatures(
   business: { signatoryName: string | null; signatoryTitle: string | null; signatureDataUri?: string | null },
   showTotals: boolean,
+  labels: PdfLabels,
 ): FooterSignature[] {
   if (!showTotals) {
     return [
-      { label: "Dispatched by", name: business.signatoryName, imageDataUri: business.signatureDataUri },
-      { label: "Received by" },
+      { label: labels.dispatchedBy, name: business.signatoryName, imageDataUri: business.signatureDataUri },
+      { label: labels.receivedBy },
     ];
   }
   return [
-    { label: business.signatoryTitle ?? "Authorized signature", name: business.signatoryName, imageDataUri: business.signatureDataUri },
+    {
+      label: business.signatoryTitle ?? labels.authorizedSignature,
+      name: business.signatoryName,
+      imageDataUri: business.signatureDataUri,
+    },
   ];
 }
 
@@ -87,23 +95,24 @@ export function renderFooterBar(options: {
   documentNumber: string;
   showPaymentInstructions: boolean;
   signatures: FooterSignature[];
+  labels: PdfLabels;
 }): string {
-  const { business, dark, documentNumber, showPaymentInstructions, signatures } = options;
+  const { business, dark, documentNumber, showPaymentInstructions, signatures, labels } = options;
   const hasBankDetails = Boolean(business.bankName || business.bankAccountNumber);
 
   const leftHtml =
     showPaymentInstructions && hasBankDetails
       ? `<div class="footer-payment">
-          <div class="footer-payment-title">Payment instructions</div>
-          ${business.bankName ? `<div>Bank: ${business.bankName}</div>` : ""}
-          <div>Account name: ${business.name}</div>
-          ${business.bankAccountNumber ? `<div>Account no: ${business.bankAccountNumber}</div>` : ""}
-          <div>Reference: ${documentNumber}</div>
+          <div class="footer-payment-title">${labels.paymentInstructions}</div>
+          ${business.bankName ? `<div>${labels.bank}: ${business.bankName}</div>` : ""}
+          <div>${labels.accountName}: ${business.name}</div>
+          ${business.bankAccountNumber ? `<div>${labels.accountNo}: ${business.bankAccountNumber}</div>` : ""}
+          <div>${labels.reference}: ${documentNumber}</div>
         </div>`
       : `<div class="footer-contact">${[
           business.phone,
           business.email,
-          business.tin ? `TIN ${business.tin}` : null,
+          business.tin ? `${labels.tin} ${business.tin}` : null,
           business.rraEbmNumber,
         ]
           .filter((value): value is string => Boolean(value))

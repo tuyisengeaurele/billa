@@ -83,6 +83,15 @@ describe("renderMinimalHtml", () => {
     expect(html).toContain('src="data:image/png;base64,abc"');
   });
 
+  it("renders French labels end-to-end when the document is in French", () => {
+    const html = renderMinimalHtml(makeData({ labels: getPdfLabels("FR") }));
+    expect(html).toContain(">Qté<");
+    expect(html).toContain(">Prix unitaire<");
+    expect(html).toContain(">Taxe<");
+    expect(html).toContain(">Montant<");
+    expect(html).toContain("Sous-total");
+  });
+
   it("renders the signature image in place of the blank line when present", () => {
     const html = renderMinimalHtml(
       makeData({ business: { ...makeData().business, signatureDataUri: "data:image/png;base64,sig" } }),

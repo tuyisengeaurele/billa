@@ -57,8 +57,8 @@ export function renderMinimalHtml(data: PdfRenderData): string {
           <div class="doc-type">${data.typeLabel}</div>
           <div class="doc-number">${data.number ?? "DRAFT"}</div>
           <div class="doc-number">${data.issueDate}</div>
-          ${data.customerReference ? `<div class="doc-number">Ref: ${data.customerReference}</div>` : ""}
-          <div style="margin-top:2mm">${renderStatusPill(data.status)}</div>
+          ${data.customerReference ? `<div class="doc-number">${data.labels.reference}: ${data.customerReference}</div>` : ""}
+          <div style="margin-top:2mm">${renderStatusPill(data.status, data.labels)}</div>
         </div>
       </div>
       <div class="rule" style="background:${data.business.accentColor}"></div>
@@ -72,11 +72,11 @@ export function renderMinimalHtml(data: PdfRenderData): string {
       <table>
         <thead>
           <tr>
-            <th>Description</th>
-            <th class="num">Qty</th>
-            <th class="num">Unit price</th>
-            <th class="num">Tax</th>
-            <th class="num">Amount</th>
+            <th>${data.labels.description}</th>
+            <th class="num">${data.labels.qty}</th>
+            <th class="num">${data.labels.unitPrice}</th>
+            <th class="num">${data.labels.tax}</th>
+            <th class="num">${data.labels.amount}</th>
           </tr>
         </thead>
         <tbody>${linesHtml}</tbody>
@@ -88,8 +88,9 @@ export function renderMinimalHtml(data: PdfRenderData): string {
               taxTotalFormatted: data.taxTotalFormatted,
               totalFormatted: data.totalFormatted,
               dark,
+              labels: data.labels,
             })}</div>
-      ${data.amountInWordsFormatted ? renderAmountInWordsBox(data.amountInWordsFormatted) : ""}`
+      ${data.amountInWordsFormatted ? renderAmountInWordsBox(data.amountInWordsFormatted, data.labels) : ""}`
           : ""
       }
       ${data.notes ? `<div class="notes">${data.notes}</div>` : ""}
@@ -98,7 +99,8 @@ export function renderMinimalHtml(data: PdfRenderData): string {
         dark,
         documentNumber: data.number ?? "DRAFT",
         showPaymentInstructions: data.showTotals,
-        signatures: buildSignatures(data.business, data.showTotals),
+        signatures: buildSignatures(data.business, data.showTotals, data.labels),
+        labels: data.labels,
       })}
     </div>
   `;
