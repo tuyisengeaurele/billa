@@ -127,6 +127,59 @@ describe("BusinessSettings", () => {
     expect(await screen.findByText("Settings saved")).toBeInTheDocument();
   });
 
+  it("offers Classic as a template option and submits it when selected", async () => {
+    let patchBody: unknown = null;
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/business/sequences")) {
+        return new Response(
+          JSON.stringify({
+            sequences: [
+              { type: "INVOICE", prefix: "INV-", nextNumber: 1 },
+              { type: "PROFORMA", prefix: "PRO-", nextNumber: 1 },
+              { type: "DELIVERY_NOTE", prefix: "DN-", nextNumber: 1 },
+              { type: "QUOTE", prefix: "QTE-", nextNumber: 1 },
+              { type: "RECEIPT", prefix: "RCT-", nextNumber: 1 },
+              { type: "CREDIT_NOTE", prefix: "CN-", nextNumber: 1 },
+            ],
+          }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/business") && init?.method === "PATCH") {
+        patchBody = JSON.parse(init.body as string);
+        return new Response(JSON.stringify({ business: {} }), { status: 200 });
+      }
+      if (url.endsWith("/business") || url.endsWith("/auth/me")) {
+        return new Response(
+          JSON.stringify({
+            business: {
+              name: "Kigali Traders",
+              tin: null,
+              industry: null,
+              phone: null,
+              email: null,
+              address: null,
+              rraEbmNumber: null,
+              defaultTemplate: "MINIMAL",
+            },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText("Kigali Traders");
+    await user.click(screen.getByLabelText("Classic"));
+    await user.click(screen.getByRole("button", { name: /^save$/i }));
+
+    await waitFor(() => expect(patchBody).toMatchObject({ defaultTemplate: "CLASSIC" }));
+  });
+
   it("sends null for a field cleared to blank, and the trimmed value for one that's set", async () => {
     let patchBody: unknown = null;
     vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {

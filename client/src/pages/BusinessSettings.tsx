@@ -42,6 +42,7 @@ const COLOR_PRESETS = ["#C2185B", "#2563EB", "#0D9488", "#7C3AED", "#D97706", "#
 const TEMPLATE_OPTIONS: { value: DocumentTemplate; label: string; description: string }[] = [
   { value: "MINIMAL", label: "Minimal", description: "Quiet, a lot of white space." },
   { value: "PREMIUM", label: "Premium", description: "A polished, full-color invoice layout with payment details." },
+  { value: "CLASSIC", label: "Classic", description: "A formal, ruled layout in serif type, for traditional documents." },
 ];
 
 const TEXT_FIELDS: { id: keyof BusinessProfile; label: string; type: "text" | "tel" | "email" }[] = [
