@@ -5,12 +5,21 @@ import { resetDb } from "../test/db.js";
 import * as renderDocumentPdfModule from "../lib/pdf/render-document-pdf.js";
 import * as resendModule from "../lib/resend.js";
 
+const { captureExceptionMock } = vi.hoisted(() => ({ captureExceptionMock: vi.fn() }));
+vi.mock("@sentry/node", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@sentry/node")>();
+  return { ...actual, captureException: captureExceptionMock };
+});
+
 beforeAll(() => {
   process.env.JWT_ACCESS_SECRET ??= "test-secret";
   process.env.JWT_REFRESH_TTL ??= "30d";
 });
 
-beforeEach(resetDb);
+beforeEach(async () => {
+  await resetDb();
+  captureExceptionMock.mockClear();
+});
 
 async function registerAndGetCookies(app: ReturnType<typeof createApp>) {
   const res = await request(app).post("/auth/session").send({
@@ -102,6 +111,19 @@ describe("POST /documents/:id/send", () => {
 
     const getRes = await request(app).get(`/documents/${documentId}`).set("Cookie", cookies);
     expect(getRes.body.document.sentAt).toBeNull();
+  });
+
+  it("reports the real provider error to Sentry instead of swallowing it silently", async () => {
+    const providerError = new Error("You can only send testing emails to your own email address");
+    vi.spyOn(resendModule, "sendDocumentEmail").mockRejectedValue(providerError);
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies, "acme@example.com");
+    const documentId = await createFinalizedInvoice(app, cookies, customerId);
+
+    await request(app).post(`/documents/${documentId}/send`).set("Cookie", cookies);
+
+    expect(captureExceptionMock).toHaveBeenCalledWith(providerError);
   });
 
   it("returns 404 for a document belonging to another business", async () => {

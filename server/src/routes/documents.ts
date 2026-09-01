@@ -1,6 +1,7 @@
 import { Router } from "express";
 import multer from "multer";
 import type { Prisma } from "@prisma/client";
+import * as Sentry from "@sentry/node";
 import {
   createPaymentSchema,
   documentListQuerySchema,
@@ -326,7 +327,8 @@ documentsRouter.get("/:id/pdf", async (req, res) => {
   let pdfBuffer: Buffer;
   try {
     pdfBuffer = await renderDocumentPdf(document.template, data);
-  } catch {
+  } catch (err) {
+    Sentry.captureException(err);
     res.status(500).json({ error: "pdf_render_failed" });
     return;
   }
@@ -373,7 +375,8 @@ documentsRouter.post("/:id/send", async (req, res) => {
   let pdfBuffer: Buffer;
   try {
     pdfBuffer = await renderDocumentPdf(document.template, data);
-  } catch {
+  } catch (err) {
+    Sentry.captureException(err);
     res.status(500).json({ error: "pdf_render_failed" });
     return;
   }
@@ -389,7 +392,8 @@ documentsRouter.post("/:id/send", async (req, res) => {
       attachmentFilename: filename,
       attachmentBuffer: pdfBuffer,
     });
-  } catch {
+  } catch (err) {
+    Sentry.captureException(err);
     res.status(502).json({ error: "email_send_failed" });
     return;
   }

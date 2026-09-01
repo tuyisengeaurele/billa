@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/node";
 import { prisma } from "./prisma.js";
 import { buildPdfRenderData } from "./pdf/render-data.js";
 import { renderDocumentPdf } from "./pdf/render-document-pdf.js";
@@ -45,7 +46,8 @@ export async function sendOverdueReminders(businessId: string): Promise<SentRemi
     let pdfBuffer: Buffer;
     try {
       pdfBuffer = await renderDocumentPdf(doc.template, data);
-    } catch {
+    } catch (err) {
+      Sentry.captureException(err);
       continue;
     }
 
@@ -57,7 +59,8 @@ export async function sendOverdueReminders(businessId: string): Promise<SentRemi
         attachmentFilename: `${doc.number}.pdf`,
         attachmentBuffer: pdfBuffer,
       });
-    } catch {
+    } catch (err) {
+      Sentry.captureException(err);
       continue;
     }
 
