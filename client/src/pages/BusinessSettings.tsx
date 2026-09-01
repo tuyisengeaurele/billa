@@ -5,6 +5,7 @@ import { FormField } from "../components/FormField";
 import { Button } from "../components/Button";
 import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { Modal } from "../components/Modal";
+import { Spinner } from "../components/Spinner";
 import { LogoStep } from "../components/onboarding/LogoStep";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { API_BASE_URL, apiRequest, ApiError } from "../lib/apiClient";
@@ -231,7 +232,11 @@ export default function BusinessSettings() {
   }
 
   if (!profile || isAuthLoading) {
-    return <p className="font-sans text-sm text-neutral-600">Loading…</p>;
+    return (
+      <div className="flex justify-center py-16">
+        <Spinner size="lg" />
+      </div>
+    );
   }
 
   const isOwner = profile.ownerId === user?.id;
