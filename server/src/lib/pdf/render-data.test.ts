@@ -15,6 +15,7 @@ function makeBusiness(overrides: Partial<Business> = {}): Business {
     email: "hi@kigali.rw",
     address: "KG 7 Ave",
     logoUrl: null,
+    signatureUrl: null,
     primaryColor: "#C2185B",
     accentColors: null,
     rraEbmNumber: "EBM-1",
@@ -137,6 +138,11 @@ describe("buildPdfRenderData", () => {
   it("returns a null logo when the business has none", async () => {
     const data = await buildPdfRenderData(makeDocument(), makeBusiness({ logoUrl: null }));
     expect(data.business.logoDataUri).toBeNull();
+  });
+
+  it("returns a null signature when the business has none", async () => {
+    const data = await buildPdfRenderData(makeDocument(), makeBusiness({ signatureUrl: null }));
+    expect(data.business.signatureDataUri).toBeNull();
   });
 
   it("computes the party label and hides the due date label for a delivery note", async () => {

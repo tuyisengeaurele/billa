@@ -9,6 +9,7 @@ export const PREMIUM_STYLES = `
 .signatures { display: flex; gap: 10mm; }
 .signature { text-align: center; min-width: 32mm; }
 .signature-line { border-bottom: 1px solid #ffffff; margin-bottom: 1.5mm; height: 8mm; }
+.signature-image { display: block; max-height: 8mm; max-width: 32mm; margin: 0 auto 1.5mm; object-fit: contain; }
 .signature-name { font-size: 10px; font-weight: 700; }
 .signature-label { font-size: 8px; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85; }
 `;
@@ -44,6 +45,7 @@ export function renderAmountInWordsBox(amountInWordsFormatted: string): string {
 export interface FooterSignature {
   label: string;
   name?: string | null;
+  imageDataUri?: string | null;
 }
 
 interface FooterBusiness {
@@ -56,22 +58,27 @@ interface FooterBusiness {
   bankAccountNumber: string | null;
 }
 
-function renderSignature({ label, name }: FooterSignature): string {
+function renderSignature({ label, name, imageDataUri }: FooterSignature): string {
   return `<div class="signature">
-    <div class="signature-line"></div>
+    ${imageDataUri ? `<img class="signature-image" src="${imageDataUri}" />` : `<div class="signature-line"></div>`}
     ${name ? `<div class="signature-name">${name}</div>` : ""}
     <div class="signature-label">${label}</div>
   </div>`;
 }
 
 export function buildSignatures(
-  business: { signatoryName: string | null; signatoryTitle: string | null },
+  business: { signatoryName: string | null; signatoryTitle: string | null; signatureDataUri?: string | null },
   showTotals: boolean,
 ): FooterSignature[] {
   if (!showTotals) {
-    return [{ label: "Dispatched by", name: business.signatoryName }, { label: "Received by" }];
+    return [
+      { label: "Dispatched by", name: business.signatoryName, imageDataUri: business.signatureDataUri },
+      { label: "Received by" },
+    ];
   }
-  return [{ label: business.signatoryTitle ?? "Authorized signature", name: business.signatoryName }];
+  return [
+    { label: business.signatoryTitle ?? "Authorized signature", name: business.signatoryName, imageDataUri: business.signatureDataUri },
+  ];
 }
 
 export function renderFooterBar(options: {

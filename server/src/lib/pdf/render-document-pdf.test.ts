@@ -18,6 +18,7 @@ function makeData(overrides: Partial<PdfRenderData> = {}): PdfRenderData {
       signatoryName: null,
       signatoryTitle: null,
       logoDataUri: null,
+      signatureDataUri: null,
     },
     customer: { name: "Acme Ltd", tin: null, address: null, phone: null, email: null },
     typeLabel: "Invoice",

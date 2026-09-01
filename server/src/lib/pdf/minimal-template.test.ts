@@ -18,6 +18,7 @@ function makeData(overrides: Partial<PdfRenderData> = {}): PdfRenderData {
       signatoryName: null,
       signatoryTitle: null,
       logoDataUri: null,
+      signatureDataUri: null,
     },
     customer: { name: "Acme Ltd", tin: null, address: null, phone: null, email: null },
     typeLabel: "Invoice",
@@ -78,6 +79,14 @@ describe("renderMinimalHtml", () => {
       makeData({ business: { ...makeData().business, logoDataUri: "data:image/png;base64,abc" } }),
     );
     expect(html).toContain('src="data:image/png;base64,abc"');
+  });
+
+  it("renders the signature image in place of the blank line when present", () => {
+    const html = renderMinimalHtml(
+      makeData({ business: { ...makeData().business, signatureDataUri: "data:image/png;base64,sig" } }),
+    );
+    expect(html).toContain('<img class="signature-image" src="data:image/png;base64,sig"');
+    expect(html).not.toContain('class="signature-line"');
   });
 
   it("uses the business accent color for the header rule", () => {

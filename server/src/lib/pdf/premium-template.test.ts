@@ -18,6 +18,7 @@ function makeData(overrides: Partial<PdfRenderData> = {}): PdfRenderData {
       signatoryName: null,
       signatoryTitle: null,
       logoDataUri: null,
+      signatureDataUri: null,
     },
     customer: { name: "Acme Ltd", tin: null, address: null, phone: null, email: null },
     typeLabel: "Invoice",
@@ -124,6 +125,17 @@ describe("renderPremiumHtml", () => {
     const html = renderPremiumHtml(makeData());
     expect(html).toContain("Authorized signature");
     expect(html).not.toContain("Dispatched by");
+  });
+
+  it("renders the signature image above the sign-off block when present, only on the business side", () => {
+    const html = renderPremiumHtml(
+      makeData({
+        showTotals: false,
+        business: { ...makeData().business, signatureDataUri: "data:image/png;base64,sig" },
+      }),
+    );
+    expect(html.match(/class="sig-image"/g)).toHaveLength(1);
+    expect(html).toContain('src="data:image/png;base64,sig"');
   });
 
   it("shows payment instructions with the bank details when set", () => {

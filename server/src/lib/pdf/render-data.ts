@@ -39,6 +39,7 @@ export interface PdfRenderData {
     signatoryName: string | null;
     signatoryTitle: string | null;
     logoDataUri: string | null;
+    signatureDataUri: string | null;
   };
   customer: {
     name: string;
@@ -82,6 +83,7 @@ export async function buildPdfRenderData(
   business: Business,
 ): Promise<PdfRenderData> {
   const logoDataUri = await readLogoDataUri(business.logoUrl, business.id);
+  const signatureDataUri = await readLogoDataUri(business.signatureUrl, business.id);
   const showTotals = document.type !== "DELIVERY_NOTE";
   const accentColor = business.primaryColor ?? DEFAULT_ACCENT;
   const accentColors = Array.isArray(business.accentColors)
@@ -103,6 +105,7 @@ export async function buildPdfRenderData(
       signatoryName: escapeNullable(business.signatoryName),
       signatoryTitle: escapeNullable(business.signatoryTitle),
       logoDataUri,
+      signatureDataUri,
     },
     customer: {
       name: escapeHtml(document.customer.name),

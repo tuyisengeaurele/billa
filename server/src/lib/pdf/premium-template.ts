@@ -61,6 +61,7 @@ table.items tbody td.r { text-align: right; font-weight: 600; color: #1a1a2e; }
 .ft-bank strong { display: block; font-size: 9.5px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
 .ft-sig { text-align: right; }
 .sig-name { border-top: 1px solid #d1d5db; margin-top: 32px; padding-top: 7px; font-size: 12px; font-weight: 700; color: #1a1a2e; white-space: nowrap; }
+.sig-image { display: block; max-height: 32px; max-width: 140px; margin: 0 0 4px auto; object-fit: contain; }
 .sig-title { font-size: 10.5px; color: #6b7280; margin-top: 2px; }
 .sig-company { font-size: 10.5px; color: #9ca3af; margin-top: 1px; }
 
@@ -113,14 +114,18 @@ export function renderPremiumHtml(data: PdfRenderData): string {
           ${business.rraEbmNumber ?? ""}
         </div>`;
 
+  const signatureImage = business.signatureDataUri ? `<img class="sig-image" src="${business.signatureDataUri}" />` : "";
+
   const signatureBlocks = data.showTotals
     ? `<div class="ft-sig">
+        ${signatureImage}
         <div class="sig-name">${hasSignatory ? business.signatoryName : "Authorized signature"}</div>
         <div class="sig-title">${business.signatoryTitle ?? ""}</div>
         <div class="sig-company">${business.name}</div>
       </div>`
     : `<div style="display:flex; gap:32px;">
         <div class="ft-sig">
+          ${signatureImage}
           <div class="sig-name">${hasSignatory ? business.signatoryName : "&nbsp;"}</div>
           <div class="sig-title">Dispatched by</div>
         </div>

@@ -114,6 +114,18 @@ describe("renderFooterBar", () => {
     expect(html).not.toContain("signature-name");
   });
 
+  it("renders the signature image in place of the blank line when provided", () => {
+    const html = renderFooterBar({
+      business: makeFooterBusiness(),
+      dark: "#111111",
+      documentNumber: "INV-0001",
+      showPaymentInstructions: true,
+      signatures: [{ label: "Authorized signature", imageDataUri: "data:image/png;base64,xyz" }],
+    });
+    expect(html).toContain('<img class="signature-image" src="data:image/png;base64,xyz"');
+    expect(html).not.toContain("signature-line");
+  });
+
   it("omits missing contact fields without stray separators", () => {
     const html = renderFooterBar({
       business: makeFooterBusiness({ email: null, tin: null, rraEbmNumber: null }),
@@ -142,6 +154,17 @@ describe("buildSignatures", () => {
     const signatures = buildSignatures({ signatoryName: "Jane Doe", signatoryTitle: "Managing Director" }, false);
     expect(signatures).toEqual([
       { label: "Dispatched by", name: "Jane Doe" },
+      { label: "Received by" },
+    ]);
+  });
+
+  it("attaches the business's signature image to its own block only, not the customer's", () => {
+    const signatures = buildSignatures(
+      { signatoryName: "Jane Doe", signatoryTitle: "Managing Director", signatureDataUri: "data:image/png;base64,xyz" },
+      false,
+    );
+    expect(signatures).toEqual([
+      { label: "Dispatched by", name: "Jane Doe", imageDataUri: "data:image/png;base64,xyz" },
       { label: "Received by" },
     ]);
   });
