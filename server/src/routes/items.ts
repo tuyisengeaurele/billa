@@ -5,6 +5,7 @@ import type { ItemListQuery } from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/require-auth.js";
 import { requireActiveSubscription } from "../middleware/require-active-subscription.js";
+import { blockAccountantMutations } from "../middleware/block-accountant-mutations.js";
 import { validateBody } from "../middleware/validate.js";
 import { validateQuery } from "../middleware/validate-query.js";
 import { toCsv } from "../lib/csv.js";
@@ -13,6 +14,7 @@ export const itemsRouter = Router();
 
 itemsRouter.use(requireAuth);
 itemsRouter.use(requireActiveSubscription);
+itemsRouter.use(blockAccountantMutations);
 
 itemsRouter.get("/", validateQuery(itemListQuerySchema), async (req, res) => {
   const query = req.listQuery as ItemListQuery;

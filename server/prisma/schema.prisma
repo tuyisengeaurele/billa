@@ -163,11 +163,20 @@ model User {
   notifications              Notification[]
 }
 
+// ACCOUNTANT is read-only: blocked from every mutating request on business
+// data (see blockAccountantMutations), regardless of which route it comes
+// through. MEMBER keeps today's full read/write behavior.
+enum BusinessMemberRole {
+  MEMBER
+  ACCOUNTANT
+}
+
 model BusinessMember {
-  id         String   @id @default(cuid())
+  id         String             @id @default(cuid())
   businessId String
   userId     String
-  createdAt  DateTime @default(now())
+  role       BusinessMemberRole @default(MEMBER)
+  createdAt  DateTime           @default(now())
 
   business Business @relation(fields: [businessId], references: [id])
   user     User     @relation(fields: [userId], references: [id])
@@ -177,13 +186,14 @@ model BusinessMember {
 }
 
 model BusinessInvite {
-  id         String    @id @default(cuid())
+  id         String             @id @default(cuid())
   businessId String
   email      String
-  token      String    @unique @default(cuid())
+  role       BusinessMemberRole @default(MEMBER)
+  token      String             @unique @default(cuid())
   expiresAt  DateTime
   acceptedAt DateTime?
-  createdAt  DateTime  @default(now())
+  createdAt  DateTime           @default(now())
 
   business Business @relation(fields: [businessId], references: [id])
 

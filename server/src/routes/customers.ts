@@ -5,6 +5,7 @@ import type { CustomerListQuery } from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/require-auth.js";
 import { requireActiveSubscription } from "../middleware/require-active-subscription.js";
+import { blockAccountantMutations } from "../middleware/block-accountant-mutations.js";
 import { validateBody } from "../middleware/validate.js";
 import { validateQuery } from "../middleware/validate-query.js";
 import { logActivity } from "../lib/activity-log.js";
@@ -14,6 +15,7 @@ export const customersRouter = Router();
 
 customersRouter.use(requireAuth);
 customersRouter.use(requireActiveSubscription);
+customersRouter.use(blockAccountantMutations);
 
 customersRouter.get("/", validateQuery(customerListQuerySchema), async (req, res) => {
   const query = req.listQuery as CustomerListQuery;

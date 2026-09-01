@@ -36,11 +36,13 @@ import { finalizeDocumentById } from "../lib/finalize-document.js";
 import { createNotification } from "../lib/notifications.js";
 import { detectAllowedImageType } from "../lib/file-sniff.js";
 import { getStorage } from "../lib/storage.js";
+import { blockAccountantMutations } from "../middleware/block-accountant-mutations.js";
 
 export const documentsRouter = Router();
 
 documentsRouter.use(requireAuth);
 documentsRouter.use(requireActiveSubscription);
+documentsRouter.use(blockAccountantMutations);
 
 const uploadPaymentReceipt = multer({
   storage: multer.memoryStorage(),
