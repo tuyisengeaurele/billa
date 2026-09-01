@@ -23,6 +23,25 @@ describe("itemSchema", () => {
   it("rejects a missing unit", () => {
     expect(itemSchema.safeParse({ description: "Printing", unitPrice: 5000 }).success).toBe(false);
   });
+
+  it("defaults the tax rate to 18 when it isn't provided", () => {
+    const result = itemSchema.safeParse({ description: "Printing", unitPrice: 5000, unit: "service" });
+    expect(result.success && result.data.taxRate).toBe(18);
+  });
+
+  it("accepts an explicit tax rate, including 0 for VAT-exempt items", () => {
+    const result = itemSchema.safeParse({ description: "Bread", unitPrice: 500, unit: "piece", taxRate: 0 });
+    expect(result.success && result.data.taxRate).toBe(0);
+  });
+
+  it("rejects a tax rate below 0 or above 100", () => {
+    expect(
+      itemSchema.safeParse({ description: "Printing", unitPrice: 5000, unit: "service", taxRate: -1 }).success,
+    ).toBe(false);
+    expect(
+      itemSchema.safeParse({ description: "Printing", unitPrice: 5000, unit: "service", taxRate: 101 }).success,
+    ).toBe(false);
+  });
 });
 
 describe("itemUpdateSchema", () => {

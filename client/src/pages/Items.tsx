@@ -17,6 +17,7 @@ interface Item {
   description: string;
   unitPrice: number;
   unit: string;
+  taxRate: number;
   isActive: boolean;
 }
 
@@ -177,7 +178,12 @@ export default function Items() {
   const selectedInactiveCount = selectedItems.filter((item) => !item.isActive).length;
   const allOnPageSelected = list.results.length > 0 && list.results.every((item) => selectedIds.has(item.id));
   const editingValues: ItemFormValues | undefined = editingItem
-    ? { description: editingItem.description, unitPrice: editingItem.unitPrice, unit: editingItem.unit }
+    ? {
+        description: editingItem.description,
+        unitPrice: editingItem.unitPrice,
+        unit: editingItem.unit,
+        taxRate: editingItem.taxRate,
+      }
     : undefined;
 
   return (
@@ -252,6 +258,7 @@ export default function Items() {
                 <col style={{ width: 36 }} />
                 <col />
                 <col style={{ width: 120 }} />
+                <col style={{ width: 90 }} />
                 <col style={{ width: 100 }} />
                 <col style={{ width: 100 }} />
                 <col style={{ width: 110 }} />
@@ -276,6 +283,7 @@ export default function Items() {
                       Price {list.sortBy === "unitPrice" && (list.sortOrder === "asc" ? "↑" : "↓")}
                     </button>
                   </th>
+                  <th className="py-2">Tax</th>
                   <th className="py-2">Unit</th>
                   <th className="py-2">Status</th>
                   <th className="py-2" />
@@ -305,6 +313,7 @@ export default function Items() {
                       </button>
                     </td>
                     <td className="py-3 text-neutral-600">{formatRwf(item.unitPrice)}</td>
+                    <td className="py-3 text-neutral-600">{item.taxRate}%</td>
                     <td className="py-3 text-neutral-600">{item.unit}</td>
                     <td className="py-3">
                       <span

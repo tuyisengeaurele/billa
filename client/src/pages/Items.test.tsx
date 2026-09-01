@@ -47,7 +47,7 @@ describe("Items", () => {
       if (url.includes("/items")) {
         return new Response(
           JSON.stringify({
-            results: [{ id: "i1", description: "Printing service", unitPrice: 5000, unit: "service", isActive: true }],
+            results: [{ id: "i1", description: "Printing service", unitPrice: 5000, unit: "service", taxRate: 18, isActive: true }],
             total: 1,
             page: 1,
             pageSize: 20,
@@ -71,7 +71,7 @@ describe("Items", () => {
       if (url.includes("/items")) {
         return new Response(
           JSON.stringify({
-            results: [{ id: "i1", description: "Printing service", unitPrice: 5000, unit: "service", isActive: true }],
+            results: [{ id: "i1", description: "Printing service", unitPrice: 5000, unit: "service", taxRate: 18, isActive: true }],
             total: 1,
             page: 1,
             pageSize: 20,
@@ -110,7 +110,7 @@ describe("Items", () => {
         return new Response(
           JSON.stringify({
             results: created
-              ? [{ id: "i1", description: "New item", unitPrice: 1000, unit: "piece", isActive: true }]
+              ? [{ id: "i1", description: "New item", unitPrice: 1000, unit: "piece", taxRate: 18, isActive: true }]
               : [],
             total: created ? 1 : 0,
             page: 1,
@@ -149,7 +149,7 @@ describe("Items", () => {
         return new Response(
           JSON.stringify({
             results: isActive
-              ? [{ id: "i1", description: "Printing service", unitPrice: 5000, unit: "service", isActive: true }]
+              ? [{ id: "i1", description: "Printing service", unitPrice: 5000, unit: "service", taxRate: 18, isActive: true }]
               : [],
             total: isActive ? 1 : 0,
             page: 1,
@@ -189,7 +189,7 @@ describe("Items", () => {
         return new Response(
           JSON.stringify({
             results: isActive
-              ? [{ id: "i1", description: "Printing service", unitPrice: 5000, unit: "service", isActive: true }]
+              ? [{ id: "i1", description: "Printing service", unitPrice: 5000, unit: "service", taxRate: 18, isActive: true }]
               : [],
             total: isActive ? 1 : 0,
             page: 1,
@@ -246,7 +246,7 @@ describe("Items", () => {
       if (url.includes("/items")) {
         return new Response(
           JSON.stringify({
-            results: [{ id: "i1", description: "Printing service", unitPrice: 5000, unit: "service", isActive: true }],
+            results: [{ id: "i1", description: "Printing service", unitPrice: 5000, unit: "service", taxRate: 18, isActive: true }],
             total: 1,
             page: 1,
             pageSize: 20,
@@ -269,7 +269,7 @@ describe("Items", () => {
     vi.spyOn(global, "fetch").mockImplementation(async () =>
       new Response(
         JSON.stringify({
-          results: [{ id: "i1", description: "Printing service", unitPrice: 5000, unit: "service", isActive: true }],
+          results: [{ id: "i1", description: "Printing service", unitPrice: 5000, unit: "service", taxRate: 18, isActive: true }],
           total: 1,
           page: 1,
           pageSize: 20,
@@ -318,7 +318,7 @@ describe("Items", () => {
         if (shouldFail) return new Response("{}", { status: 500 });
         return new Response(
           JSON.stringify({
-            results: [{ id: "i1", description: "Printing service", unitPrice: 5000, unit: "service", isActive: true }],
+            results: [{ id: "i1", description: "Printing service", unitPrice: 5000, unit: "service", taxRate: 18, isActive: true }],
             total: 1,
             page: 1,
             pageSize: 20,
@@ -354,8 +354,8 @@ describe("Items", () => {
         return new Response(
           JSON.stringify({
             results: [
-              { id: "i1", description: "Printing service", unitPrice: 5000, unit: "service", isActive: activeMap.i1 },
-              { id: "i2", description: "Delivery box", unitPrice: 1000, unit: "piece", isActive: activeMap.i2 },
+              { id: "i1", description: "Printing service", unitPrice: 5000, unit: "service", taxRate: 18, isActive: activeMap.i1 },
+              { id: "i2", description: "Delivery box", unitPrice: 1000, unit: "piece", taxRate: 18, isActive: activeMap.i2 },
             ].filter((item) => activeMap[item.id]),
             total: Object.values(activeMap).filter(Boolean).length,
             page: 1,
@@ -395,8 +395,8 @@ describe("Items", () => {
         return new Response(
           JSON.stringify({
             results: [
-              { id: "i1", description: "Printing service", unitPrice: 5000, unit: "service", isActive: true },
-              { id: "i2", description: "Delivery box", unitPrice: 1000, unit: "piece", isActive: false },
+              { id: "i1", description: "Printing service", unitPrice: 5000, unit: "service", taxRate: 18, isActive: true },
+              { id: "i2", description: "Delivery box", unitPrice: 1000, unit: "piece", taxRate: 18, isActive: false },
             ],
             total: 2,
             page: 1,

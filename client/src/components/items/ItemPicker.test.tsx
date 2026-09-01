@@ -8,11 +8,11 @@ describe("ItemPicker", () => {
     vi.restoreAllMocks();
   });
 
-  it("searches items as the user types and calls onSelect with description and price", async () => {
+  it("searches items as the user types and calls onSelect with description, price, and tax rate", async () => {
     vi.spyOn(global, "fetch").mockResolvedValue(
       new Response(
         JSON.stringify({
-          results: [{ id: "i1", description: "Printing service", unitPrice: 5000, unit: "service" }],
+          results: [{ id: "i1", description: "Printing service", unitPrice: 5000, unit: "service", taxRate: 18 }],
           total: 1,
           page: 1,
           pageSize: 10,
@@ -30,7 +30,37 @@ describe("ItemPicker", () => {
     const option = await screen.findByText("Printing service");
     await user.click(option);
 
-    expect(onSelect).toHaveBeenCalledWith({ id: "i1", description: "Printing service", unitPrice: 5000 });
+    expect(onSelect).toHaveBeenCalledWith({
+      id: "i1",
+      description: "Printing service",
+      unitPrice: 5000,
+      taxRate: 18,
+    });
+  });
+
+  it("carries a VAT-exempt item's zero tax rate through to onSelect", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          results: [{ id: "i2", description: "Bread", unitPrice: 500, unit: "piece", taxRate: 0 }],
+          total: 1,
+          page: 1,
+          pageSize: 10,
+        }),
+        { status: 200 },
+      ),
+    );
+    const onSelect = vi.fn();
+    const user = userEvent.setup();
+    render(<ItemPicker value="" onSelect={onSelect} />);
+
+    await user.click(screen.getByLabelText("Item"));
+    await user.type(screen.getByLabelText("Item"), "Bread");
+
+    const option = await screen.findByText("Bread");
+    await user.click(option);
+
+    expect(onSelect).toHaveBeenCalledWith({ id: "i2", description: "Bread", unitPrice: 500, taxRate: 0 });
   });
 
   it("reports free-typed text so a line can be entered manually without picking a catalog item", async () => {

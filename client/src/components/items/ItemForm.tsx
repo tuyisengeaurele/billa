@@ -11,6 +11,7 @@ export interface ItemFormValues {
   description: string;
   unitPrice: number;
   unit: string;
+  taxRate: number;
 }
 
 interface ItemFormProps {
@@ -36,6 +37,7 @@ export function ItemForm({ initialValues, isSubmitting, apiError, onSubmit }: It
       description: initialValues?.description ?? "",
       unitPrice: initialValues?.unitPrice,
       unit: initialValues?.unit ?? UNIT_OPTIONS[0],
+      taxRate: initialValues?.taxRate ?? 18,
     },
   });
 
@@ -70,6 +72,13 @@ export function ItemForm({ initialValues, isSubmitting, apiError, onSubmit }: It
         type="number"
         error={errors.unitPrice?.message}
         {...register("unitPrice", { valueAsNumber: true })}
+      />
+      <FormField
+        id="taxRate"
+        label="Tax rate (%)"
+        type="number"
+        error={errors.taxRate?.message}
+        {...register("taxRate", { valueAsNumber: true })}
       />
       <div className="flex flex-col gap-1.5">
         <label htmlFor="unitSelect" className="font-sans text-sm font-medium text-neutral-800">

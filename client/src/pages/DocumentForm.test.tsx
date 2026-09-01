@@ -80,6 +80,35 @@ describe("DocumentForm", () => {
     vi.restoreAllMocks();
   });
 
+  it("prefills the line's tax rate from the selected catalog item", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.includes("/items?")) {
+        return new Response(
+          JSON.stringify({
+            results: [{ id: "i1", description: "Exported goods", unitPrice: 5000, unit: "piece", taxRate: 0 }],
+            total: 1,
+            page: 1,
+            pageSize: 10,
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+    const user = userEvent.setup();
+    renderNew();
+
+    await user.click(screen.getByRole("button", { name: /add line/i }));
+    expect(screen.getByLabelText("Tax rate")).toHaveValue(18);
+
+    await user.type(screen.getByLabelText("Item"), "Exported");
+    const option = await screen.findByText("Exported goods");
+    await user.click(option);
+
+    expect(screen.getByLabelText("Tax rate")).toHaveValue(0);
+  });
+
   it("adds and removes line items, updating the live total", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async () => new Response("{}", { status: 401 }));
     const user = userEvent.setup();

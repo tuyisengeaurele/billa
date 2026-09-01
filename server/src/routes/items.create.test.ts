@@ -33,6 +33,30 @@ describe("POST /items", () => {
     expect(res.body.item.isActive).toBe(true);
   });
 
+  it("defaults the tax rate to 18 when not provided", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+
+    const res = await request(app)
+      .post("/items")
+      .set("Cookie", cookies)
+      .send({ description: "Printing service", unitPrice: 5000, unit: "service" });
+
+    expect(Number(res.body.item.taxRate)).toBe(18);
+  });
+
+  it("accepts an explicit tax rate for a VAT-exempt item", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+
+    const res = await request(app)
+      .post("/items")
+      .set("Cookie", cookies)
+      .send({ description: "Bread", unitPrice: 500, unit: "piece", taxRate: 0 });
+
+    expect(Number(res.body.item.taxRate)).toBe(0);
+  });
+
   it("rejects a zero price with 400", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app);

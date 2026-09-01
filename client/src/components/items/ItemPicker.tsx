@@ -7,12 +7,14 @@ interface ItemResult {
   description: string;
   unitPrice: number;
   unit: string;
+  taxRate: number;
 }
 
 export interface ItemSelection {
   id: string;
   description: string;
   unitPrice: number;
+  taxRate: number;
 }
 
 interface ItemPickerProps {
@@ -61,7 +63,12 @@ export function ItemPicker({ value, error, onSelect, onDescriptionChange }: Item
       onSelect={(option) => {
         setQuery(option.label);
         const item = resultsById[option.id];
-        onSelect({ id: option.id, description: option.label, unitPrice: item?.unitPrice ?? 0 });
+        onSelect({
+          id: option.id,
+          description: option.label,
+          unitPrice: item?.unitPrice ?? 0,
+          taxRate: item?.taxRate ?? 18,
+        });
       }}
     />
   );

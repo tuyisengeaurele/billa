@@ -7,6 +7,14 @@ export const itemSchema = z.object({
     .int("Enter a whole number of RWF")
     .positive("Enter a price greater than zero"),
   unit: z.string().trim().min(1, "Enter a unit"),
+  // Remembered so a document line pre-fills the right rate when this item is picked, instead
+  // of a business having to re-enter it (or catch a wrong default) on every single invoice.
+  taxRate: z
+    .number({ invalid_type_error: "Enter a tax rate" })
+    .min(0, "Enter a rate between 0 and 100")
+    .max(100, "Enter a rate between 0 and 100")
+    .optional()
+    .default(18),
 });
 export type ItemInput = z.infer<typeof itemSchema>;
 

@@ -508,6 +508,7 @@ export default function DocumentForm() {
                               setValue(`lines.${index}.itemId`, item.id);
                               setValue(`lines.${index}.description`, item.description);
                               setValue(`lines.${index}.unitPrice`, item.unitPrice);
+                              setValue(`lines.${index}.taxRate`, item.taxRate);
                             }}
                             onDescriptionChange={(text) => {
                               setValue(`lines.${index}.itemId`, undefined);

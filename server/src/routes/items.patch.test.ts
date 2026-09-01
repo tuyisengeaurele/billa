@@ -38,6 +38,17 @@ describe("PATCH /items/:id", () => {
     expect(res.body.item.unitPrice).toBe(6000);
   });
 
+  it("updates the tax rate", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const id = await createItem(app, cookies);
+
+    const res = await request(app).patch(`/items/${id}`).set("Cookie", cookies).send({ taxRate: 0 });
+
+    expect(res.status).toBe(200);
+    expect(Number(res.body.item.taxRate)).toBe(0);
+  });
+
   it("deactivates and reactivates via isActive", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app);
