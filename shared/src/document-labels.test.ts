@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getDueDateLabel, getPartyLabel } from "./document-labels.js";
+import { getPdfLabels } from "./pdf-labels.js";
 
 describe("getDueDateLabel", () => {
   it("returns 'Due date' for an invoice", () => {
@@ -50,5 +51,10 @@ describe("getPartyLabel", () => {
 
   it("returns 'Bill to' for a credit note", () => {
     expect(getPartyLabel("CREDIT_NOTE")).toBe("Bill to");
+  });
+
+  it("returns the French label when French labels are passed", () => {
+    expect(getPartyLabel("INVOICE", getPdfLabels("FR"))).toBe("Facturé à");
+    expect(getPartyLabel("DELIVERY_NOTE", getPdfLabels("FR"))).toBe("Livré à");
   });
 });

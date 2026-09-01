@@ -90,6 +90,34 @@ describe("documentSchema", () => {
     expect(documentSchema.safeParse({ type: "INVOICE", issueDate: "2026-08-19", lines: [] }).success).toBe(false);
   });
 
+  it("defaults language to EN when not provided", () => {
+    const result = documentSchema.safeParse({ type: "INVOICE", customerId: "c1", issueDate: "2026-08-19", lines: [] });
+    expect(result.success && result.data.language).toBe("EN");
+  });
+
+  it("accepts FR as the document language", () => {
+    const result = documentSchema.safeParse({
+      type: "INVOICE",
+      customerId: "c1",
+      issueDate: "2026-08-19",
+      lines: [],
+      language: "FR",
+    });
+    expect(result.success && result.data.language).toBe("FR");
+  });
+
+  it("rejects an unsupported language", () => {
+    expect(
+      documentSchema.safeParse({
+        type: "INVOICE",
+        customerId: "c1",
+        issueDate: "2026-08-19",
+        lines: [],
+        language: "RW",
+      }).success,
+    ).toBe(false);
+  });
+
   it("accepts an optional customerReference", () => {
     expect(
       documentSchema.safeParse({

@@ -18,6 +18,12 @@ export type DocumentStatus = (typeof DOCUMENT_STATUSES)[number];
 export const DOCUMENT_TEMPLATES = ["MINIMAL", "PREMIUM"] as const;
 export type DocumentTemplate = (typeof DOCUMENT_TEMPLATES)[number];
 
+// The language the PDF's own labels render in, independent of the app's UI
+// language. Kinyarwanda deferred until its business/financial terminology
+// can be verified with a native speaker rather than guessed.
+export const DOCUMENT_LANGUAGES = ["EN", "FR"] as const;
+export type DocumentLanguage = (typeof DOCUMENT_LANGUAGES)[number];
+
 export const RECURRENCE_INTERVALS = ["WEEKLY", "MONTHLY", "QUARTERLY", "ANNUALLY"] as const;
 export type RecurrenceInterval = (typeof RECURRENCE_INTERVALS)[number];
 

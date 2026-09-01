@@ -43,6 +43,7 @@ function makeDocument(
     number: "INV-0001",
     status: "FINALIZED",
     template: "MINIMAL",
+    language: "EN",
     customerId: "cust1",
     issueDate: new Date("2026-08-18T00:00:00.000Z"),
     dueDate: null,

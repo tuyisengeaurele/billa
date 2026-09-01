@@ -25,6 +25,13 @@ enum DocumentTemplate {
   PREMIUM
 }
 
+// Kinyarwanda deferred until its business/financial terminology can be
+// verified with a native speaker rather than guessed on a live invoice.
+enum DocumentLanguage {
+  EN
+  FR
+}
+
 enum RecurrenceInterval {
   WEEKLY
   MONTHLY
@@ -354,6 +361,7 @@ model Document {
   number            String?
   status            DocumentStatus   @default(DRAFT)
   template          DocumentTemplate
+  language          DocumentLanguage @default(EN)
   customerId        String
   issueDate         DateTime         @default(now())
   dueDate           DateTime?

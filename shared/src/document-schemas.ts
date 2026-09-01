@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   DISCOUNT_TYPES,
+  DOCUMENT_LANGUAGES,
   DOCUMENT_STATUSES,
   DOCUMENT_TYPES,
   RECURRENCE_INTERVALS,
@@ -52,6 +53,7 @@ export const documentSchema = z
     lines: z.array(documentLineSchema),
     recurrence: recurrenceSchema,
     referencedDocumentId: z.string().trim().min(1).nullable().optional(),
+    language: z.enum(DOCUMENT_LANGUAGES).optional().default("EN"),
   })
   .refine((data) => !REQUIRED_REFERENCE_TYPES.includes(data.type) || Boolean(data.referencedDocumentId), {
     message: "Choose the invoice this document is for",
