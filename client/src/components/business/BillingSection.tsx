@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { apiRequest, ApiError } from "../../lib/apiClient";
 import { LoadErrorBanner } from "../LoadErrorBanner";
+import { Spinner } from "../Spinner";
 
 interface BillingStatus {
   trialEndsAt: string;
@@ -49,7 +50,7 @@ export function BillingSection() {
   }
 
   if (!status) {
-    return <p className="font-sans text-sm text-neutral-600">Loading…</p>;
+    return <Spinner />;
   }
 
   const isActive = new Date(status.activeUntil).getTime() > Date.now();
