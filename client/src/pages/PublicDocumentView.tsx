@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import type { DocumentType } from "@billa/shared";
+import { Spinner } from "../components/Spinner";
 import { apiRequest, ApiError, API_BASE_URL } from "../lib/apiClient";
 import { formatRwf } from "@billa/shared";
 
@@ -94,7 +95,7 @@ export default function PublicDocumentView() {
   if (!document) {
     return (
       <div className="mx-auto flex min-h-screen max-w-2xl items-center justify-center px-6">
-        <p className="font-sans text-sm text-neutral-600">Loading…</p>
+        <Spinner size="lg" />
       </div>
     );
   }
