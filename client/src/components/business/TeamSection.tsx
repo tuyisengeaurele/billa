@@ -5,6 +5,7 @@ import { copyToClipboard } from "../../lib/clipboard";
 import { Button } from "../Button";
 import { FormField } from "../FormField";
 import { LoadErrorBanner } from "../LoadErrorBanner";
+import { Spinner } from "../Spinner";
 
 interface Member {
   id: string;
@@ -169,7 +170,7 @@ export function TeamSection() {
     return (
       <section className="rounded-xl border border-neutral-200 bg-surface p-6">
         <h2 className="font-display text-base font-semibold text-neutral-900">Team</h2>
-        <p className="mt-4 font-sans text-sm text-neutral-600">Loading…</p>
+        <Spinner className="mt-4" />
       </section>
     );
   }
