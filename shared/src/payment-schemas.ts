@@ -7,6 +7,9 @@ export const createPaymentSchema = z.object({
   paidOn: z.string().trim().min(1, "Choose a date"),
   notes: z.string().trim().min(1).optional(),
   generateReceipt: z.boolean().optional().default(false),
+  referenceNumber: z.string().trim().min(1).optional(),
+  payerName: z.string().trim().min(1).optional(),
+  receiptImageUrl: z.string().min(1).optional(),
 });
 export type CreatePaymentInput = z.infer<typeof createPaymentSchema>;
 

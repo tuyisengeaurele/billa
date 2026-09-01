@@ -24,6 +24,25 @@ describe("createPaymentSchema", () => {
     const result = createPaymentSchema.parse({ amount: 5000, method: "CASH", paidOn: "2026-08-27" });
     expect(result.generateReceipt).toBe(false);
   });
+
+  it("accepts and passes through an optional reference number, payer name, and receipt image url", () => {
+    const result = createPaymentSchema.parse({
+      amount: 5000,
+      method: "MOBILE_MONEY",
+      paidOn: "2026-08-27",
+      referenceNumber: "MP240827.1234.A56789",
+      payerName: "Jean Mugisha",
+      receiptImageUrl: "/uploads/b1/receipt.png",
+    });
+    expect(result.referenceNumber).toBe("MP240827.1234.A56789");
+    expect(result.payerName).toBe("Jean Mugisha");
+    expect(result.receiptImageUrl).toBe("/uploads/b1/receipt.png");
+  });
+
+  it("is still valid without a reference number, payer name, or receipt image", () => {
+    const result = createPaymentSchema.safeParse({ amount: 5000, method: "CASH", paidOn: "2026-08-27" });
+    expect(result.success).toBe(true);
+  });
 });
 
 describe("voidPaymentSchema", () => {

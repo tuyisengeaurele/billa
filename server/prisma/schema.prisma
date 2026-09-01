@@ -439,6 +439,9 @@ model InvoicePayment {
   method     PaymentMethod
   paidOn     DateTime
   notes      String?
+  referenceNumber String?
+  payerName       String?
+  receiptImageUrl String?
 
   receiptDocumentId String? @unique
 
