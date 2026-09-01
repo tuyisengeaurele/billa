@@ -13,6 +13,7 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { z } from "zod";
 import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { Modal } from "../components/Modal";
+import { Spinner } from "../components/Spinner";
 import { CustomerPicker } from "../components/customers/CustomerPicker";
 import { ItemPicker } from "../components/items/ItemPicker";
 import { FormField } from "../components/FormField";
@@ -357,7 +358,11 @@ export default function DocumentForm() {
   }
 
   if (!isLoaded) {
-    return <p className="font-sans text-sm text-neutral-600">Loading…</p>;
+    return (
+      <div className="flex justify-center py-16">
+        <Spinner size="lg" />
+      </div>
+    );
   }
 
   return (
