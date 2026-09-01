@@ -69,6 +69,26 @@ describe("POST /documents/:id/finalize", () => {
     expect(res.body.document.number).toBe("INV-0002");
   });
 
+  it("never assigns the same number twice when two documents are finalized at the same instant", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies);
+
+    const firstId = await createDraft(app, cookies, customerId);
+    const secondId = await createDraft(app, cookies, customerId);
+
+    const [firstRes, secondRes] = await Promise.all([
+      request(app).post(`/documents/${firstId}/finalize`).set("Cookie", cookies),
+      request(app).post(`/documents/${secondId}/finalize`).set("Cookie", cookies),
+    ]);
+
+    expect(firstRes.status).toBe(200);
+    expect(secondRes.status).toBe(200);
+    const numbers = [firstRes.body.document.number, secondRes.body.document.number];
+    expect(new Set(numbers).size).toBe(2);
+    expect(numbers.sort()).toEqual(["INV-0001", "INV-0002"]);
+  });
+
   it("rejects finalizing a document with no lines", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app);

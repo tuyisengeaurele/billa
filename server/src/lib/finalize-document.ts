@@ -19,23 +19,23 @@ export async function finalizeDocumentById(businessId: string, id: string): Prom
   }
 
   const finalized = await prisma.$transaction(async (tx) => {
-    const existingSequence = await tx.documentSequence.findUnique({
+    // Increment atomically in the database rather than reading nextNumber, computing the
+    // new value in application code, and writing it back - that read-then-write pattern lets
+    // two documents finalized at the same instant both read the same "current" number before
+    // either write lands, assigning the same number twice. A single `{ increment: 1 }` update
+    // (or the create branch's fixed starting value) is one atomic SQL statement that Postgres
+    // serializes per row, so concurrent finalizes can never collide.
+    const sequence = await tx.documentSequence.upsert({
       where: { businessId_type: { businessId, type: document.type } },
+      create: { businessId, type: document.type, prefix: DEFAULT_PREFIXES[document.type], nextNumber: 2 },
+      update: { nextNumber: { increment: 1 } },
     });
-
-    const assignedNumber = existingSequence ? existingSequence.nextNumber : 1;
-    const prefix = existingSequence ? existingSequence.prefix : DEFAULT_PREFIXES[document.type];
-
-    await tx.documentSequence.upsert({
-      where: { businessId_type: { businessId, type: document.type } },
-      create: { businessId, type: document.type, prefix, nextNumber: assignedNumber + 1 },
-      update: { nextNumber: assignedNumber + 1 },
-    });
+    const assignedNumber = sequence.nextNumber - 1;
 
     return tx.document.update({
       where: { id },
       data: {
-        number: `${prefix}${String(assignedNumber).padStart(4, "0")}`,
+        number: `${sequence.prefix}${String(assignedNumber).padStart(4, "0")}`,
         status: "FINALIZED",
       },
     });
