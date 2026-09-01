@@ -54,6 +54,10 @@ export default function Receivables() {
   const [method, setMethod] = useState<PaymentMethod>("CASH");
   const [paidOn, setPaidOn] = useState(() => new Date().toISOString().slice(0, 10));
   const [generateReceipt, setGenerateReceipt] = useState(true);
+  const [referenceNumber, setReferenceNumber] = useState("");
+  const [payerName, setPayerName] = useState("");
+  const [receiptImageUrl, setReceiptImageUrl] = useState<string | null>(null);
+  const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
   const [isSavingPayment, setIsSavingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
 
@@ -78,7 +82,31 @@ export default function Receivables() {
     setMethod("CASH");
     setPaidOn(new Date().toISOString().slice(0, 10));
     setGenerateReceipt(true);
+    setReferenceNumber("");
+    setPayerName("");
+    setReceiptImageUrl(null);
     setPaymentError(null);
+  }
+
+  async function handleReceiptFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setPaymentError(null);
+    setIsUploadingReceipt(true);
+    try {
+      const formData = new FormData();
+      formData.append("receipt", file);
+      const uploaded = await apiRequest<{ url: string }>("/documents/payments/receipt", {
+        method: "POST",
+        body: formData,
+      });
+      setReceiptImageUrl(uploaded.url);
+    } catch {
+      setPaymentError("Couldn't upload that photo. Try again.");
+    } finally {
+      setIsUploadingReceipt(false);
+    }
   }
 
   async function submitPayment() {
@@ -88,7 +116,15 @@ export default function Receivables() {
     try {
       await apiRequest(`/documents/${paymentTarget.id}/payments`, {
         method: "POST",
-        body: { amount: Number(amount), method, paidOn, generateReceipt },
+        body: {
+          amount: Number(amount),
+          method,
+          paidOn,
+          generateReceipt,
+          referenceNumber: referenceNumber.trim() || undefined,
+          payerName: payerName.trim() || undefined,
+          receiptImageUrl: receiptImageUrl ?? undefined,
+        },
       });
       setPaymentTarget(null);
       load();
@@ -253,6 +289,51 @@ export default function Receivables() {
                 onChange={(event) => setPaidOn(event.target.value)}
                 className="rounded-lg border border-neutral-200 bg-surface px-3.5 py-2.5 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
               />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="payment-reference" className="font-sans text-sm font-medium text-neutral-800">
+                Reference number (optional)
+              </label>
+              <input
+                id="payment-reference"
+                type="text"
+                placeholder="e.g. MoMo transaction ID"
+                value={referenceNumber}
+                onChange={(event) => setReferenceNumber(event.target.value)}
+                className="rounded-lg border border-neutral-200 bg-surface px-3.5 py-2.5 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="payment-payer" className="font-sans text-sm font-medium text-neutral-800">
+                Payer name (optional)
+              </label>
+              <input
+                id="payment-payer"
+                type="text"
+                placeholder="Name on the transaction, if different"
+                value={payerName}
+                onChange={(event) => setPayerName(event.target.value)}
+                className="rounded-lg border border-neutral-200 bg-surface px-3.5 py-2.5 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <span className="font-sans text-sm font-medium text-neutral-800">Confirmation photo (optional)</span>
+              <div className="flex items-center gap-3">
+                {receiptImageUrl && (
+                  <span className="font-sans text-sm text-success">Photo attached</span>
+                )}
+                <label className="cursor-pointer rounded-lg border border-neutral-200 px-3.5 py-2 font-sans text-sm font-semibold text-neutral-700 transition-colors hover:bg-neutral-50">
+                  {isUploadingReceipt ? "Uploading…" : receiptImageUrl ? "Replace photo" : "Attach photo"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={isUploadingReceipt}
+                    onChange={handleReceiptFileChange}
+                    className="sr-only"
+                    aria-label="Attach confirmation photo"
+                  />
+                </label>
+              </div>
             </div>
             <label className="flex items-center gap-2 font-sans text-sm text-neutral-700">
               <input

@@ -118,6 +118,48 @@ describe("Receivables", () => {
     expect(await screen.findByText("Payment recorded")).toBeInTheDocument();
   });
 
+  it("uploads a confirmation photo and sends the reference number, payer name, and photo url", async () => {
+    let paymentBody: unknown = null;
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.includes("/auth/me")) return authMeResponse();
+      if (url.includes("/documents/payments/receipt") && init?.method === "POST") {
+        return new Response(JSON.stringify({ url: "/uploads/b1/receipt.png" }), { status: 201 });
+      }
+      if (url.includes("/documents/inv1/payments") && init?.method === "POST") {
+        paymentBody = JSON.parse(init.body as string);
+        return new Response(JSON.stringify({ payment: { id: "p1" } }), { status: 201 });
+      }
+      if (url.includes("/receivables")) {
+        return new Response(JSON.stringify({ results: [baseRow()], total: 1 }), { status: 200 });
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: /record payment/i }));
+    const paymentDialog = await screen.findByRole("dialog", { name: /record payment/i });
+
+    await user.type(within(paymentDialog).getByLabelText(/reference number/i), "MP240827.1234.A56789");
+    await user.type(within(paymentDialog).getByLabelText(/payer name/i), "Jean Mugisha");
+
+    const file = new File(["fake-bytes"], "receipt.png", { type: "image/png" });
+    await user.upload(within(paymentDialog).getByLabelText(/attach confirmation photo/i), file);
+    await within(paymentDialog).findByText(/photo attached/i);
+
+    await user.click(within(paymentDialog).getByRole("button", { name: /^record payment$/i }));
+
+    await waitFor(() =>
+      expect(paymentBody).toMatchObject({
+        referenceNumber: "MP240827.1234.A56789",
+        payerName: "Jean Mugisha",
+        receiptImageUrl: "/uploads/b1/receipt.png",
+      }),
+    );
+  });
+
   it("writes off an invoice with a reason and refreshes the list", async () => {
     let writeOffBody: unknown = null;
     let receivablesCallCount = 0;
