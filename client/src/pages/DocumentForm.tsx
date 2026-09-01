@@ -1,5 +1,12 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { getDueDateLabel, RECURRENCE_INTERVALS, type DocumentType, type RecurrenceInterval } from "@billa/shared";
+import {
+  DOCUMENT_LANGUAGES,
+  getDueDateLabel,
+  RECURRENCE_INTERVALS,
+  type DocumentLanguage,
+  type DocumentType,
+  type RecurrenceInterval,
+} from "@billa/shared";
 import { useEffect, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -43,12 +50,18 @@ const documentFormSchema = z.object({
   dueDate: z.string().trim(),
   notes: z.string().trim(),
   customerReference: z.string().trim(),
+  language: z.enum(DOCUMENT_LANGUAGES),
   lines: z.array(lineFormSchema),
   recurrenceEnabled: z.boolean(),
   recurrenceInterval: z.string(),
   recurrenceEndDate: z.string(),
 });
 type DocumentFormInput = z.infer<typeof documentFormSchema>;
+
+const LANGUAGE_LABELS: Record<DocumentLanguage, string> = {
+  EN: "English",
+  FR: "French",
+};
 
 const RECURRENCE_INTERVAL_LABELS: Record<RecurrenceInterval, string> = {
   WEEKLY: "Weekly",
@@ -75,6 +88,7 @@ interface DocumentResponse {
   dueDate: string | null;
   notes: string | null;
   customerReference: string | null;
+  language: DocumentLanguage;
   lines: DocumentLineResponse[];
   convertedFrom: { id: string; number: string | null } | null;
   referencedDocument: { id: string; number: string | null } | null;
@@ -170,6 +184,7 @@ export default function DocumentForm() {
       dueDate: "",
       notes: "",
       customerReference: "",
+      language: "EN",
       lines: [],
       recurrenceEnabled: false,
       recurrenceInterval: "MONTHLY",
@@ -196,6 +211,7 @@ export default function DocumentForm() {
           dueDate: doc.dueDate ? doc.dueDate.slice(0, 10) : "",
           notes: doc.notes ?? "",
           customerReference: doc.customerReference ?? "",
+          language: doc.language,
           lines: doc.lines.map((line) => ({
             itemId: line.itemId ?? undefined,
             description: line.description,
@@ -272,6 +288,7 @@ export default function DocumentForm() {
         dueDate: data.dueDate.trim() || undefined,
         notes: data.notes.trim() || undefined,
         customerReference: data.customerReference.trim() || undefined,
+        language: data.language,
         lines: data.lines.map((line) => ({
           ...line,
           discountType: line.discountType || undefined,
@@ -396,6 +413,22 @@ export default function DocumentForm() {
                   {...register("dueDate")}
                 />
               )}
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="language" className="font-sans text-sm font-medium text-neutral-800">
+                  Document language
+                </label>
+                <select
+                  id="language"
+                  {...register("language")}
+                  className="rounded-lg border border-neutral-200 bg-surface px-3.5 py-2.5 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                >
+                  {DOCUMENT_LANGUAGES.map((lang) => (
+                    <option key={lang} value={lang}>
+                      {LANGUAGE_LABELS[lang]}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <FormField id="notes" label="Notes" type="text" error={errors.notes?.message} {...register("notes")} />
               <FormField
                 id="customerReference"

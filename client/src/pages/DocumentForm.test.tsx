@@ -273,6 +273,55 @@ describe("DocumentForm", () => {
     );
   });
 
+  it("defaults the document language to English and sends the selected language in the payload", async () => {
+    let postBody: unknown = null;
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.includes("/customers")) {
+        return new Response(
+          JSON.stringify({ results: [{ id: "c1", name: "Kigali Traders", phone: null }], total: 1, page: 1, pageSize: 10 }),
+          { status: 200 },
+        );
+      }
+      if (url.includes("/documents") && init?.method === "POST") {
+        postBody = JSON.parse(init.body as string);
+        return new Response(JSON.stringify({ document: { id: "d1" } }), { status: 201 });
+      }
+      if (url.endsWith("/documents/d1") && init?.method !== "PATCH") {
+        return new Response(
+          JSON.stringify({
+            document: {
+              id: "d1",
+              type: "INVOICE",
+              customerId: "c1",
+              customer: { name: "Kigali Traders" },
+              issueDate: "2026-08-19T00:00:00.000Z",
+              dueDate: null,
+              notes: null,
+              lines: [],
+            },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderNew();
+
+    expect(await screen.findByLabelText(/document language/i)).toHaveValue("EN");
+
+    await user.click(screen.getByRole("button", { name: /select a customer/i }));
+    await user.type(screen.getByLabelText("Search customers"), "Kigali");
+    await user.click(await screen.findByText("Kigali Traders"));
+
+    await user.selectOptions(screen.getByLabelText(/document language/i), "FR");
+    await user.click(screen.getByRole("button", { name: /save draft/i }));
+
+    await waitFor(() => expect(postBody).toMatchObject({ language: "FR" }));
+  });
+
   it("sends a customerReference in the payload when filled in", async () => {
     let postBody: unknown = null;
     vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
