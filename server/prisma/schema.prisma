@@ -108,6 +108,7 @@ model Business {
   signatureUrl          String?
   remindersEnabled      Boolean          @default(true)
   reminderCadenceDays   Int              @default(7)
+  requireApprovalToFinalize Boolean      @default(false)
   defaultTemplate       DocumentTemplate @default(MINIMAL)
   onboardingCompletedAt DateTime?
   lastDigestSentAt      DateTime?

@@ -19,6 +19,7 @@ export const businessProfileSchema = z
     signatureUrl: z.string().min(1).nullable().optional(),
     remindersEnabled: z.boolean().optional(),
     reminderCadenceDays: z.number().int().min(1).max(90).optional(),
+    requireApprovalToFinalize: z.boolean().optional(),
     defaultTemplate: z.enum(DOCUMENT_TEMPLATES).optional(),
     primaryColor: z.string().regex(hexColorPattern, "Enter a valid hex color").nullable().optional(),
   })

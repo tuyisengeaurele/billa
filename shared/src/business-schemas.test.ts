@@ -77,6 +77,11 @@ describe("businessProfileSchema", () => {
     expect(result.success).toBe(true);
   });
 
+  it("accepts toggling requireApprovalToFinalize", () => {
+    const result = businessProfileSchema.safeParse({ requireApprovalToFinalize: true });
+    expect(result.success).toBe(true);
+  });
+
   it("accepts a valid defaultTemplate", () => {
     const result = businessProfileSchema.safeParse({ defaultTemplate: "PREMIUM" });
     expect(result.success).toBe(true);

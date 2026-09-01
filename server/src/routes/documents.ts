@@ -37,6 +37,7 @@ import { createNotification } from "../lib/notifications.js";
 import { detectAllowedImageType } from "../lib/file-sniff.js";
 import { getStorage } from "../lib/storage.js";
 import { blockAccountantMutations } from "../middleware/block-accountant-mutations.js";
+import { requireFinalizePermission } from "../middleware/require-finalize-permission.js";
 
 export const documentsRouter = Router();
 
@@ -458,7 +459,7 @@ documentsRouter.patch("/:id", validateBody(documentSchema), async (req, res) => 
   res.json({ document });
 });
 
-documentsRouter.post("/:id/finalize", async (req, res) => {
+documentsRouter.post("/:id/finalize", requireFinalizePermission, async (req, res) => {
   const businessId = req.auth!.businessId;
   const { id } = req.params;
 

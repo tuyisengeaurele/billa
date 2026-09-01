@@ -18,6 +18,7 @@ function makeBusiness(overrides: Partial<Business> = {}): Business {
     signatureUrl: null,
     remindersEnabled: true,
     reminderCadenceDays: 7,
+    requireApprovalToFinalize: false,
     primaryColor: "#C2185B",
     accentColors: null,
     rraEbmNumber: "EBM-1",
