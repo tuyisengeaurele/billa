@@ -14,6 +14,7 @@ const FRAUNCES_BASE64 = readFontAsBase64(
 const PLUS_JAKARTA_SANS_BASE64 = readFontAsBase64(
   "@fontsource-variable/plus-jakarta-sans/files/plus-jakarta-sans-latin-wght-normal.woff2",
 );
+const LORA_BASE64 = readFontAsBase64("@fontsource-variable/lora/files/lora-latin-wght-normal.woff2");
 
 export const FONT_FACE_CSS = `
 @font-face {
@@ -26,6 +27,12 @@ export const FONT_FACE_CSS = `
   font-family: "Plus Jakarta Sans";
   src: url(data:font/woff2;base64,${PLUS_JAKARTA_SANS_BASE64}) format("woff2");
   font-weight: 200 800;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Lora";
+  src: url(data:font/woff2;base64,${LORA_BASE64}) format("woff2");
+  font-weight: 400 700;
   font-style: normal;
 }
 `;
