@@ -229,6 +229,50 @@ describe("BusinessSettings", () => {
     await waitFor(() => expect(patchBody).toMatchObject({ remindersEnabled: false }));
   });
 
+  it("sends requireApprovalToFinalize when the approval toggle is checked", async () => {
+    let patchBody: unknown = null;
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/business/sequences")) {
+        return new Response(JSON.stringify({ sequences: [] }), { status: 200 });
+      }
+      if (url.endsWith("/business") && init?.method === "PATCH") {
+        patchBody = JSON.parse(init.body as string);
+        return new Response(JSON.stringify({ business: {} }), { status: 200 });
+      }
+      if (url.endsWith("/business") || url.endsWith("/auth/me")) {
+        return new Response(
+          JSON.stringify({
+            business: {
+              ownerId: "u1",
+              name: "Kigali Traders",
+              tin: null,
+              industry: null,
+              phone: null,
+              email: null,
+              address: null,
+              rraEbmNumber: null,
+              defaultTemplate: "MINIMAL",
+              requireApprovalToFinalize: false,
+            },
+            user: { id: "u1" },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText("Kigali Traders");
+    await user.click(screen.getByLabelText(/require my approval before finalizing/i));
+    await user.click(screen.getByRole("button", { name: /^save$/i }));
+
+    await waitFor(() => expect(patchBody).toMatchObject({ requireApprovalToFinalize: true }));
+  });
+
   it("sends null for a field cleared to blank, and the trimmed value for one that's set", async () => {
     let patchBody: unknown = null;
     vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {

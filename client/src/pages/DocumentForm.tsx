@@ -337,8 +337,14 @@ export default function DocumentForm() {
       await apiRequest(`/documents/${id}/finalize`, { method: "POST" });
       navigate(`/documents/${id}`);
       toast.success("Document finalized");
-    } catch {
-      setApiError("Couldn't finalize this document. Try again.");
+    } catch (err) {
+      const body = err instanceof ApiError ? err.body : null;
+      const errorCode = body && typeof body === "object" && "error" in body ? body.error : null;
+      setApiError(
+        errorCode === "finalize_requires_approval"
+          ? "Only the business owner can finalize this document. Ask them to review and finalize it."
+          : "Couldn't finalize this document. Try again.",
+      );
     } finally {
       setIsFinalizing(false);
     }

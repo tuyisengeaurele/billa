@@ -36,6 +36,7 @@ interface BusinessProfile {
   signatureUrl: string | null;
   remindersEnabled: boolean;
   reminderCadenceDays: number;
+  requireApprovalToFinalize: boolean;
 }
 
 const DEFAULT_BRAND_COLOR = "#27272a";
@@ -209,6 +210,7 @@ export default function BusinessSettings() {
         primaryColor: profile.primaryColor,
         remindersEnabled: profile.remindersEnabled,
         reminderCadenceDays: profile.reminderCadenceDays,
+        requireApprovalToFinalize: profile.requireApprovalToFinalize,
       };
       for (const field of TEXT_FIELDS) {
         const value = profile[field.id];
@@ -421,6 +423,22 @@ export default function BusinessSettings() {
                 />
               </div>
             )}
+          </section>
+
+          <section className="rounded-xl border border-neutral-200 bg-surface p-6">
+            <h2 className="font-display text-base font-semibold text-neutral-900">Document approval</h2>
+            <p className="mt-1 font-sans text-sm text-neutral-500">
+              With this on, team members can still create and edit drafts, but only you can finalize a document.
+            </p>
+            <label className="mt-4 flex items-center gap-2">
+              <input
+                type="checkbox"
+                disabled={!isOwner}
+                checked={profile.requireApprovalToFinalize}
+                onChange={(e) => setProfile({ ...profile, requireApprovalToFinalize: e.target.checked })}
+              />
+              <span className="font-sans text-sm text-neutral-800">Require my approval before finalizing</span>
+            </label>
           </section>
 
           <section className="rounded-xl border border-neutral-200 bg-surface p-6">

@@ -476,6 +476,44 @@ describe("DocumentForm", () => {
     expect(await screen.findByText("Document finalized")).toBeInTheDocument();
   });
 
+  it("shows a specific message when finalizing is blocked pending owner approval", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/documents/d1") && init?.method !== "POST") {
+        return new Response(
+          JSON.stringify({
+            document: {
+              id: "d1",
+              type: "INVOICE",
+              customerId: "c1",
+              customer: { name: "Kigali Traders" },
+              issueDate: "2026-08-19T00:00:00.000Z",
+              dueDate: null,
+              notes: null,
+              lines: [{ id: "l1", itemId: null, description: "Printing", quantity: "1.00", unitPrice: 5000, taxRate: "18.00" }],
+            },
+          }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/documents/d1/finalize") && init?.method === "POST") {
+        return new Response(JSON.stringify({ error: "finalize_requires_approval" }), { status: 403 });
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderEdit("d1");
+
+    await screen.findByDisplayValue("Printing");
+    await user.click(screen.getByRole("button", { name: /finalize/i }));
+
+    const dialog = await screen.findByRole("dialog", { name: /finalize/i });
+    await user.click(within(dialog).getByRole("button", { name: /finalize/i }));
+
+    expect(await screen.findByText(/only the business owner can finalize/i)).toBeInTheDocument();
+  });
+
   it("opens the PDF download URL for an existing draft", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async (input) => {
       const url = urlOf(input);
