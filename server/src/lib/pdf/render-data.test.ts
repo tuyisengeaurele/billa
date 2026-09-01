@@ -16,6 +16,8 @@ function makeBusiness(overrides: Partial<Business> = {}): Business {
     address: "KG 7 Ave",
     logoUrl: null,
     signatureUrl: null,
+    remindersEnabled: true,
+    reminderCadenceDays: 7,
     primaryColor: "#C2185B",
     accentColors: null,
     rraEbmNumber: "EBM-1",

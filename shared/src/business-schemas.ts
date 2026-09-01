@@ -17,6 +17,8 @@ export const businessProfileSchema = z
     signatoryName: z.string().trim().min(1).nullable().optional(),
     signatoryTitle: z.string().trim().min(1).nullable().optional(),
     signatureUrl: z.string().min(1).nullable().optional(),
+    remindersEnabled: z.boolean().optional(),
+    reminderCadenceDays: z.number().int().min(1).max(90).optional(),
     defaultTemplate: z.enum(DOCUMENT_TEMPLATES).optional(),
     primaryColor: z.string().regex(hexColorPattern, "Enter a valid hex color").nullable().optional(),
   })

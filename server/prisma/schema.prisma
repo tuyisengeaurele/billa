@@ -106,6 +106,8 @@ model Business {
   signatoryName         String?
   signatoryTitle        String?
   signatureUrl          String?
+  remindersEnabled      Boolean          @default(true)
+  reminderCadenceDays   Int              @default(7)
   defaultTemplate       DocumentTemplate @default(MINIMAL)
   onboardingCompletedAt DateTime?
   lastDigestSentAt      DateTime?

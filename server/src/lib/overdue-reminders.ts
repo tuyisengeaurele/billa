@@ -4,7 +4,7 @@ import { renderDocumentPdf } from "./pdf/render-document-pdf.js";
 import { sendDocumentEmail } from "./resend.js";
 import { createNotification } from "./notifications.js";
 
-const REMINDER_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface SentReminder {
   documentId: string;
@@ -12,8 +12,11 @@ export interface SentReminder {
 }
 
 export async function sendOverdueReminders(businessId: string): Promise<SentReminder[]> {
+  const business = await prisma.business.findUnique({ where: { id: businessId } });
+  if (!business || !business.remindersEnabled) return [];
+
   const now = new Date();
-  const cooldownCutoff = new Date(now.getTime() - REMINDER_COOLDOWN_MS);
+  const cooldownCutoff = new Date(now.getTime() - business.reminderCadenceDays * DAY_MS);
 
   const overdue = await prisma.document.findMany({
     where: {
@@ -32,14 +35,13 @@ export async function sendOverdueReminders(businessId: string): Promise<SentRemi
     include: { lines: { orderBy: { sortOrder: "asc" } }, customer: true },
   });
 
-  const business = await prisma.business.findUnique({ where: { id: businessId } });
   const sent: SentReminder[] = [];
 
   for (const doc of overdue) {
     const email = doc.customer.email;
     if (!email) continue;
 
-    const data = await buildPdfRenderData(doc, business!);
+    const data = await buildPdfRenderData(doc, business);
     let pdfBuffer: Buffer;
     try {
       pdfBuffer = await renderDocumentPdf(doc.template, data);
@@ -51,7 +53,7 @@ export async function sendOverdueReminders(businessId: string): Promise<SentRemi
       await sendDocumentEmail({
         to: email,
         subject: `Reminder: ${doc.number} is overdue`,
-        html: `<p>Hello ${doc.customer.name},</p><p>This is a reminder that invoice ${doc.number} from ${business!.name} was due on ${doc.dueDate!.toISOString().slice(0, 10)} and is still outstanding.</p>`,
+        html: `<p>Hello ${doc.customer.name},</p><p>This is a reminder that invoice ${doc.number} from ${business.name} was due on ${doc.dueDate!.toISOString().slice(0, 10)} and is still outstanding.</p>`,
         attachmentFilename: `${doc.number}.pdf`,
         attachmentBuffer: pdfBuffer,
       });
@@ -62,7 +64,7 @@ export async function sendOverdueReminders(businessId: string): Promise<SentRemi
     await prisma.document.update({ where: { id: doc.id }, data: { lastReminderSentAt: now } });
 
     await createNotification({
-      userId: business!.ownerId,
+      userId: business.ownerId,
       type: "INVOICE_OVERDUE",
       title: `${doc.number} is overdue`,
       body: `${doc.customer.name} hasn't paid ${doc.number} yet.`,

@@ -183,4 +183,42 @@ describe("sendOverdueReminders", () => {
 
     expect(sent).toHaveLength(1);
   });
+
+  it("does not send any reminders when they're disabled for the business", async () => {
+    const { business, customer } = await setupBusiness();
+    await prisma.business.update({ where: { id: business.id }, data: { remindersEnabled: false } });
+    await createOverdueInvoice(business.id, customer.id, { dueDate: new Date("2020-01-01") });
+
+    const sent = await sendOverdueReminders(business.id);
+
+    expect(sent).toHaveLength(0);
+  });
+
+  it("uses the business's configured cadence instead of the default 7 days", async () => {
+    const { business, customer } = await setupBusiness();
+    await prisma.business.update({ where: { id: business.id }, data: { reminderCadenceDays: 2 } });
+    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+    await createOverdueInvoice(business.id, customer.id, {
+      dueDate: new Date("2020-01-01"),
+      lastReminderSentAt: threeDaysAgo,
+    });
+
+    const sent = await sendOverdueReminders(business.id);
+
+    expect(sent).toHaveLength(1);
+  });
+
+  it("still respects a longer configured cadence even past the old fixed 7-day window", async () => {
+    const { business, customer } = await setupBusiness();
+    await prisma.business.update({ where: { id: business.id }, data: { reminderCadenceDays: 14 } });
+    const tenDaysAgo = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000);
+    await createOverdueInvoice(business.id, customer.id, {
+      dueDate: new Date("2020-01-01"),
+      lastReminderSentAt: tenDaysAgo,
+    });
+
+    const sent = await sendOverdueReminders(business.id);
+
+    expect(sent).toHaveLength(0);
+  });
 });

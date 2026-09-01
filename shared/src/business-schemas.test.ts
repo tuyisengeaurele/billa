@@ -57,6 +57,26 @@ describe("businessProfileSchema", () => {
     expect(result.success).toBe(true);
   });
 
+  it("accepts a valid reminderCadenceDays", () => {
+    const result = businessProfileSchema.safeParse({ reminderCadenceDays: 3 });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a reminderCadenceDays of zero or below", () => {
+    const result = businessProfileSchema.safeParse({ reminderCadenceDays: 0 });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a reminderCadenceDays over 90", () => {
+    const result = businessProfileSchema.safeParse({ reminderCadenceDays: 91 });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts toggling remindersEnabled", () => {
+    const result = businessProfileSchema.safeParse({ remindersEnabled: false });
+    expect(result.success).toBe(true);
+  });
+
   it("accepts a valid defaultTemplate", () => {
     const result = businessProfileSchema.safeParse({ defaultTemplate: "PREMIUM" });
     expect(result.success).toBe(true);

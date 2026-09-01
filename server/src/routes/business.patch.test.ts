@@ -69,6 +69,20 @@ describe("PATCH /business", () => {
     expect(cleared.body.business.signatureUrl).toBeNull();
   });
 
+  it("sets reminder cadence and can disable reminders entirely", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+
+    const cadence = await request(app)
+      .patch("/business")
+      .set("Cookie", cookies)
+      .send({ reminderCadenceDays: 3 });
+    expect(cadence.body.business.reminderCadenceDays).toBe(3);
+
+    const disabled = await request(app).patch("/business").set("Cookie", cookies).send({ remindersEnabled: false });
+    expect(disabled.body.business.remindersEnabled).toBe(false);
+  });
+
   it("rejects an invalid primaryColor with 400", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app);
