@@ -7,9 +7,10 @@ import {
   confirmLogoSchema,
   createInviteSchema,
   logoUrlSchema,
+  updateMemberRoleSchema,
   updateSequencesSchema,
 } from "@billa/shared";
-import type { ActivityListQuery, CreateInviteInput } from "@billa/shared";
+import type { ActivityListQuery, CreateInviteInput, UpdateMemberRoleInput } from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/require-auth.js";
 import { requireOwner } from "../middleware/require-owner.js";
@@ -259,10 +260,37 @@ businessRouter.get("/members", requireOwner, async (req, res) => {
   res.json({
     members: [
       { id: owner.id, email: owner.email, role: "owner", joinedAt: business.createdAt },
-      ...memberships.map((m) => ({ id: m.user.id, email: m.user.email, role: "member", joinedAt: m.createdAt })),
+      ...memberships.map((m) => ({
+        id: m.user.id,
+        email: m.user.email,
+        role: m.role.toLowerCase(),
+        joinedAt: m.createdAt,
+      })),
     ],
   });
 });
+
+businessRouter.patch(
+  "/members/:userId/role",
+  requireOwner,
+  validateBody(updateMemberRoleSchema),
+  async (req, res) => {
+    const businessId = req.auth!.businessId;
+    const { userId } = req.params;
+    const { role } = req.body as UpdateMemberRoleInput;
+
+    const updated = await prisma.businessMember.updateMany({
+      where: { businessId, userId },
+      data: { role },
+    });
+    if (updated.count === 0) {
+      res.status(404).json({ error: "not_found" });
+      return;
+    }
+
+    res.json({ ok: true });
+  },
+);
 
 businessRouter.delete("/members/:userId", requireOwner, async (req, res) => {
   const businessId = req.auth!.businessId;
@@ -310,6 +338,7 @@ businessRouter.get("/invites", requireOwner, async (req, res) => {
     invites: invites.map((i) => ({
       id: i.id,
       email: i.email,
+      role: i.role.toLowerCase(),
       expiresAt: i.expiresAt,
       createdAt: i.createdAt,
       link: `${clientOrigin}/invite/${i.token}`,
@@ -318,7 +347,7 @@ businessRouter.get("/invites", requireOwner, async (req, res) => {
 });
 
 businessRouter.post("/invites", requireOwner, validateBody(createInviteSchema), async (req, res) => {
-  const { email } = req.body as CreateInviteInput;
+  const { email, role } = req.body as CreateInviteInput;
   const businessId = req.auth!.businessId;
   const business = await prisma.business.findUniqueOrThrow({ where: { id: businessId } });
 
@@ -335,7 +364,7 @@ businessRouter.post("/invites", requireOwner, validateBody(createInviteSchema), 
   }
 
   const invite = await prisma.businessInvite.create({
-    data: { businessId, email, expiresAt: new Date(Date.now() + INVITE_TTL_MS) },
+    data: { businessId, email, role, expiresAt: new Date(Date.now() + INVITE_TTL_MS) },
   });
 
   await logActivity({
@@ -351,7 +380,10 @@ businessRouter.post("/invites", requireOwner, validateBody(createInviteSchema), 
   const link = `${clientOrigin}/invite/${invite.token}`;
   await sendInviteEmail(business.name, email, link);
 
-  res.status(201).json({ invite: { id: invite.id, email: invite.email, expiresAt: invite.expiresAt }, link });
+  res.status(201).json({
+    invite: { id: invite.id, email: invite.email, role: invite.role.toLowerCase(), expiresAt: invite.expiresAt },
+    link,
+  });
 });
 
 businessRouter.delete("/invites/:id", requireOwner, async (req, res) => {

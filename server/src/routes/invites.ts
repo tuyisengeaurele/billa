@@ -46,7 +46,7 @@ invitesRouter.post("/:token/accept", requireAuth, async (req, res) => {
   const [membership] = await prisma.$transaction([
     prisma.businessMember.upsert({
       where: { businessId_userId: { businessId: invite.businessId, userId: user.id } },
-      create: { businessId: invite.businessId, userId: user.id },
+      create: { businessId: invite.businessId, userId: user.id, role: invite.role },
       update: {},
     }),
     prisma.businessInvite.update({ where: { id: invite.id }, data: { acceptedAt: new Date() } }),
