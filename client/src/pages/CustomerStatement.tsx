@@ -4,6 +4,7 @@ import { formatRwf, type DocumentType, type InvoicePaymentStatus } from "@billa/
 import { apiRequest } from "../lib/apiClient";
 import { ariaSortValue } from "../lib/ariaSort";
 import { LoadErrorBanner } from "../components/LoadErrorBanner";
+import { Spinner } from "../components/Spinner";
 import { usePageTitle } from "../context/PageTitleContext";
 import { usePaginatedList } from "../lib/usePaginatedList";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
@@ -78,7 +79,11 @@ export default function CustomerStatement() {
   }
 
   if (!customer) {
-    return <p className="font-sans text-sm text-neutral-600">Loading…</p>;
+    return (
+      <div className="flex justify-center py-16">
+        <Spinner size="lg" />
+      </div>
+    );
   }
 
   return (
