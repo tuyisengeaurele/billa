@@ -4,6 +4,7 @@ import { apiRequest, ApiError } from "../../lib/apiClient";
 import { copyToClipboard } from "../../lib/clipboard";
 import { Button } from "../Button";
 import { FormField } from "../FormField";
+import { Spinner } from "../Spinner";
 
 interface SetupResponse {
   secret: string;
@@ -29,7 +30,7 @@ export function TwoFactorSection() {
     return (
       <section className="rounded-xl border border-neutral-200 bg-surface p-6">
         <h2 className="font-display text-base font-semibold text-neutral-900">Two-factor authentication</h2>
-        <p className="mt-4 font-sans text-sm text-neutral-600">Loading…</p>
+        <Spinner className="mt-4" />
       </section>
     );
   }
