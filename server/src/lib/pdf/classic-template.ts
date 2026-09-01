@@ -36,6 +36,9 @@ table.items th { font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-
 td.num, th.num { text-align: right; }
 .totals { display: flex; justify-content: flex-end; margin-top: 6mm; }
 .totals-box { width: 65mm; border: 1px solid #1f2937; }
+.totals-row { display: flex; justify-content: space-between; padding: 2mm 4mm; color: #374151; border-top: 1px solid #e5e7eb; }
+.totals-row:first-child { border-top: none; }
+.totals-row.total { font-weight: 700; color: #ffffff; border-top: 1px solid #1f2937; }
 .notes { margin-top: 8mm; padding-top: 4mm; border-top: 1px solid #d1d5db; color: #4b5563; font-size: 10px; }
 ${PREMIUM_STYLES}
 `;

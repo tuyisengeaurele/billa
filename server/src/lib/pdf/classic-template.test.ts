@@ -135,6 +135,16 @@ describe("renderClassicHtml", () => {
     expect(html).not.toContain("Reference:");
   });
 
+  it("gives the totals rows their own layout and legible text on the dark total row", () => {
+    // Caught by eye in a browser preview: renderTotalsBox's HTML has no CSS of its
+    // own (each template supplies that), and this template's stylesheet had none for
+    // .totals-row - the labels/values ran together unspaced, and the dark total row's
+    // default-black text was invisible against its own dark background.
+    const html = renderClassicHtml(makeData());
+    expect(html).toMatch(/\.totals-row\s*\{[^}]*display:\s*flex/);
+    expect(html).toMatch(/\.totals-row\.total\s*\{[^}]*color:\s*#fff/);
+  });
+
   it("shows the amount in words when totals are shown", () => {
     const html = renderClassicHtml(makeData());
     expect(html).toContain("Amount in words");
