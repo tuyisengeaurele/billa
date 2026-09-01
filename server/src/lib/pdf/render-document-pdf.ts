@@ -1,4 +1,5 @@
 import type { DocumentTemplate } from "@prisma/client";
+import { renderClassicHtml } from "./classic-template.js";
 import { renderMinimalHtml } from "./minimal-template.js";
 import { renderPremiumHtml } from "./premium-template.js";
 import { renderHtmlToPdfBuffer } from "./browser.js";
@@ -10,6 +11,8 @@ export function renderDocumentToHtml(template: DocumentTemplate, data: PdfRender
       return renderMinimalHtml(data);
     case "PREMIUM":
       return renderPremiumHtml(data);
+    case "CLASSIC":
+      return renderClassicHtml(data);
   }
 }
 

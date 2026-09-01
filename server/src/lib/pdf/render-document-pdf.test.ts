@@ -52,4 +52,10 @@ describe("renderDocumentToHtml", () => {
     const html = renderDocumentToHtml("PREMIUM", makeData());
     expect(html).toContain("From (Seller)");
   });
+
+  it("dispatches to the classic template", () => {
+    const html = renderDocumentToHtml("CLASSIC", makeData());
+    expect(html).toContain("Kigali Traders");
+    expect(html).toContain('font-family: "Lora"');
+  });
 });
