@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { AdminPagination } from "../components/admin/AdminPagination";
 import { LoadErrorBanner } from "../components/LoadErrorBanner";
+import { Modal } from "../components/Modal";
 import { usePageTitle } from "../context/PageTitleContext";
+import { useToast } from "../context/ToastContext";
 import { apiRequest, ApiError } from "../lib/apiClient";
 
 interface ContactMessageRow {
@@ -29,6 +31,9 @@ export default function AdminMessages() {
   const [isForbidden, setIsForbidden] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const toast = useToast();
 
   useEffect(() => {
     setIsLoading(true);
@@ -47,6 +52,23 @@ export default function AdminMessages() {
   }, [page, reloadToken]);
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
+
+  async function confirmDelete() {
+    if (!pendingDeleteId) return;
+    setIsDeleting(true);
+    try {
+      await apiRequest(`/contact/${pendingDeleteId}`, { method: "DELETE" });
+      setData((prev) =>
+        prev ? { ...prev, results: prev.results.filter((row) => row.id !== pendingDeleteId), total: prev.total - 1 } : prev,
+      );
+      toast.success("Message deleted");
+      setPendingDeleteId(null);
+    } catch {
+      toast.error("Couldn't delete this message. Try again.");
+    } finally {
+      setIsDeleting(false);
+    }
+  }
 
   return (
       <div className="mx-auto flex max-w-4xl flex-col gap-6">
@@ -87,9 +109,16 @@ export default function AdminMessages() {
                       <p className="font-sans text-sm font-semibold text-neutral-900">
                         {row.name} <span className="font-normal text-neutral-500">({row.email})</span>
                       </p>
-                      <span className="shrink-0 font-sans text-xs text-neutral-400">
-                        {row.createdAt.slice(0, 10)}
-                      </span>
+                      <div className="flex shrink-0 items-center gap-3">
+                        <span className="font-sans text-xs text-neutral-400">{row.createdAt.slice(0, 10)}</span>
+                        <button
+                          type="button"
+                          onClick={() => setPendingDeleteId(row.id)}
+                          className="font-sans text-xs font-medium text-error hover:underline"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
                     <p className="mt-2 font-sans text-sm text-neutral-600">{row.message}</p>
                   </div>
@@ -105,6 +134,27 @@ export default function AdminMessages() {
             </>
           )}
         </div>
+
+        <Modal isOpen={pendingDeleteId !== null} onClose={() => setPendingDeleteId(null)} title="Delete message">
+          <p className="font-sans text-sm text-neutral-600">This permanently deletes this message. This cannot be undone.</p>
+          <div className="mt-6 flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => setPendingDeleteId(null)}
+              className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={isDeleting}
+              onClick={confirmDelete}
+              className="rounded-lg bg-error px-4 py-2 font-sans text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isDeleting ? "Deleting…" : "Confirm delete"}
+            </button>
+          </div>
+        </Modal>
       </div>
   );
 }
