@@ -14,6 +14,7 @@ import {
 } from "recharts";
 import { DOCUMENT_TYPES, type DocumentStatus, type DocumentType, type InvoicePaymentStatus } from "@billa/shared";
 import { LoadErrorBanner } from "../components/LoadErrorBanner";
+import { Spinner } from "../components/Spinner";
 import { useAuth } from "../context/AuthContext";
 import { usePageTitle } from "../context/PageTitleContext";
 import { apiRequest } from "../lib/apiClient";
@@ -182,7 +183,11 @@ export default function Dashboard() {
           <LoadErrorBanner message="Couldn't load your dashboard." onRetry={() => setReloadToken((t) => t + 1)} />
         )}
 
-        {!summary && !loadError && <p className="font-sans text-sm text-neutral-600">Loading…</p>}
+        {!summary && !loadError && (
+          <div className="flex justify-center py-16">
+            <Spinner size="lg" />
+          </div>
+        )}
 
         {summary && hasNoDocuments && (
           <div className="flex flex-col gap-4 rounded-xl border border-neutral-200 bg-surface p-6">
