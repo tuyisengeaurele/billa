@@ -65,15 +65,94 @@ describe("TeamSection", () => {
     renderTeamSection();
 
     expect(await screen.findByText("owner@example.com", { exact: false })).toBeInTheDocument();
-    expect(screen.getByText("staff@example.com", { exact: false })).toBeInTheDocument();
+    expect(screen.getAllByText("staff@example.com", { exact: false }).length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: /remove/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^impersonate$/i })).toBeInTheDocument();
 
     await user.type(screen.getByLabelText(/invite by email/i), "new@example.com");
     await user.click(screen.getByRole("button", { name: /send invite/i }));
 
-    await waitFor(() => expect(inviteBody).toEqual({ email: "new@example.com" }));
+    await waitFor(() => expect(inviteBody).toEqual({ email: "new@example.com", role: "MEMBER" }));
     expect(await screen.findByText(/invite\/tok123/)).toBeInTheDocument();
+  });
+
+  it("sends the ACCOUNTANT role when selected before inviting", async () => {
+    let inviteBody: unknown = null;
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/auth/me")) {
+        return new Response("{}", { status: 401 });
+      }
+      if (url.endsWith("/business/members")) {
+        return new Response(
+          JSON.stringify({
+            members: [{ id: "u1", email: "owner@example.com", role: "owner", joinedAt: "2026-01-01" }],
+          }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/business/invites") && (!init || init.method === undefined || init.method === "GET")) {
+        return new Response(JSON.stringify({ invites: [] }), { status: 200 });
+      }
+      if (url.endsWith("/business/invites") && init?.method === "POST") {
+        inviteBody = JSON.parse(init.body as string);
+        return new Response(
+          JSON.stringify({
+            invite: { id: "inv1", email: "new@example.com", role: "accountant", expiresAt: "2026-02-01" },
+            link: "http://localhost:5173/invite/tok123",
+          }),
+          { status: 201 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderTeamSection();
+
+    await user.type(await screen.findByLabelText(/invite by email/i), "new@example.com");
+    await user.selectOptions(screen.getByLabelText(/^role$/i), "accountant");
+    await user.click(screen.getByRole("button", { name: /send invite/i }));
+
+    await waitFor(() => expect(inviteBody).toEqual({ email: "new@example.com", role: "ACCOUNTANT" }));
+  });
+
+  it("changes a member's role between Member and Accountant", async () => {
+    let roleBody: unknown = null;
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/auth/me")) {
+        return new Response("{}", { status: 401 });
+      }
+      if (url.endsWith("/business/members")) {
+        return new Response(
+          JSON.stringify({
+            members: [
+              { id: "u1", email: "owner@example.com", role: "owner", joinedAt: "2026-01-01" },
+              { id: "u2", email: "staff@example.com", role: "member", joinedAt: "2026-01-02" },
+            ],
+          }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/business/invites")) {
+        return new Response(JSON.stringify({ invites: [] }), { status: 200 });
+      }
+      if (url.endsWith("/business/members/u2/role") && init?.method === "PATCH") {
+        roleBody = JSON.parse(init.body as string);
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderTeamSection();
+
+    await screen.findByLabelText(/role for staff@example.com/i);
+    await user.selectOptions(screen.getByLabelText(/role for staff@example.com/i), "accountant");
+
+    await waitFor(() => expect(roleBody).toEqual({ role: "ACCOUNTANT" }));
+    expect(screen.getByLabelText(/role for staff@example.com/i)).toHaveValue("accountant");
   });
 
   it("shows a read-only message for a member instead of management controls", async () => {

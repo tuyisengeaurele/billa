@@ -9,17 +9,24 @@ import { LoadErrorBanner } from "../LoadErrorBanner";
 interface Member {
   id: string;
   email: string;
-  role: "owner" | "member";
+  role: "owner" | "member" | "accountant";
   joinedAt: string;
 }
 
 interface Invite {
   id: string;
   email: string;
+  role: "member" | "accountant";
   expiresAt: string;
   createdAt: string;
   link: string;
 }
+
+const ROLE_LABELS: Record<Member["role"], string> = {
+  owner: "Owner",
+  member: "Member",
+  accountant: "Accountant",
+};
 
 export function TeamSection() {
   const [members, setMembers] = useState<Member[] | null>(null);
@@ -28,7 +35,9 @@ export function TeamSection() {
   const [loadError, setLoadError] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
   const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<"member" | "accountant">("member");
   const [isInviting, setIsInviting] = useState(false);
+  const [changingRoleId, setChangingRoleId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successLink, setSuccessLink] = useState<string | null>(null);
   const [copiedInviteId, setCopiedInviteId] = useState<string | null>(null);
@@ -64,11 +73,12 @@ export function TeamSection() {
     try {
       const data = await apiRequest<{ invite: Invite; link: string }>("/business/invites", {
         method: "POST",
-        body: { email: inviteEmail.trim() },
+        body: { email: inviteEmail.trim(), role: inviteRole.toUpperCase() },
       });
       setInvites((prev) => [...(prev ?? []), data.invite]);
       setSuccessLink(data.link);
       setInviteEmail("");
+      setInviteRole("member");
     } catch (err) {
       setError(
         err instanceof ApiError && err.status === 409
@@ -83,6 +93,19 @@ export function TeamSection() {
   function requestImpersonation(memberId: string) {
     setImpersonatingMemberId(memberId);
     impersonation.start(memberId);
+  }
+
+  async function changeMemberRole(id: string, role: "member" | "accountant") {
+    setError(null);
+    setChangingRoleId(id);
+    try {
+      await apiRequest(`/business/members/${id}/role`, { method: "PATCH", body: { role: role.toUpperCase() } });
+      setMembers((prev) => prev?.map((m) => (m.id === id ? { ...m, role } : m)) ?? null);
+    } catch {
+      setError("Couldn't change that member's role. Try again.");
+    } finally {
+      setChangingRoleId(null);
+    }
   }
 
   async function removeMember(id: string) {
@@ -189,11 +212,23 @@ export function TeamSection() {
             >
               <div className="flex items-center justify-between">
                 <span className="font-sans text-sm text-neutral-900">
-                  {member.email}{" "}
-                  <span className="text-neutral-400">· {member.role === "owner" ? "Owner" : "Member"}</span>
+                  {member.email} <span className="text-neutral-400">· {ROLE_LABELS[member.role]}</span>
                 </span>
-                {member.role === "member" && (
+                {member.role !== "owner" && (
                   <div className="flex items-center gap-3">
+                    <label className="sr-only" htmlFor={`role-${member.id}`}>
+                      Role for {member.email}
+                    </label>
+                    <select
+                      id={`role-${member.id}`}
+                      value={member.role}
+                      disabled={changingRoleId === member.id}
+                      onChange={(e) => changeMemberRole(member.id, e.target.value as "member" | "accountant")}
+                      className="rounded-lg border border-neutral-200 bg-surface px-2.5 py-1.5 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 disabled:opacity-50"
+                    >
+                      <option value="member">Member</option>
+                      <option value="accountant">Accountant</option>
+                    </select>
                     <button
                       type="button"
                       disabled={isImpersonatingThisMember && (impersonation.status === "pending" || impersonation.status === "redeeming")}
@@ -241,7 +276,9 @@ export function TeamSection() {
                 key={invite.id}
                 className="flex items-center justify-between rounded-lg border border-neutral-200 px-3.5 py-2.5"
               >
-                <span className="font-sans text-sm text-neutral-900">{invite.email}</span>
+                <span className="font-sans text-sm text-neutral-900">
+                  {invite.email} <span className="text-neutral-400">· {ROLE_LABELS[invite.role]}</span>
+                </span>
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
@@ -280,6 +317,20 @@ export function TeamSection() {
           value={inviteEmail}
           onChange={(e) => setInviteEmail(e.target.value)}
         />
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="inviteRole" className="font-sans text-sm font-medium text-neutral-800">
+            Role
+          </label>
+          <select
+            id="inviteRole"
+            value={inviteRole}
+            onChange={(e) => setInviteRole(e.target.value as "member" | "accountant")}
+            className="rounded-lg border border-neutral-200 bg-surface px-3.5 py-2.5 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+          >
+            <option value="member">Member</option>
+            <option value="accountant">Accountant</option>
+          </select>
+        </div>
         <Button type="submit" fullWidth={false} isLoading={isInviting}>
           Send invite
         </Button>
