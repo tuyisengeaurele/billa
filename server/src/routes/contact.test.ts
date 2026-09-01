@@ -132,3 +132,44 @@ describe("GET /contact", () => {
     expect(res.body.results[0]).toMatchObject({ name: "Aline", email: "aline@example.com" });
   });
 });
+
+describe("DELETE /contact/:id", () => {
+  it("returns 401 without a session", async () => {
+    const res = await request(createApp()).delete("/contact/some-id");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 403 for a signed-in user who isn't an admin", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app, "owner@example.com");
+
+    const res = await request(app).delete("/contact/some-id").set("Cookie", cookies);
+
+    expect(res.status).toBe(403);
+  });
+
+  it("deletes a message for an admin user", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app, "admin@example.com");
+    await prisma.user.update({ where: { email: "admin@example.com" }, data: { isAdmin: true } });
+    const message = await prisma.contactMessage.create({
+      data: { name: "Aline", email: "aline@example.com", message: "Need help with templates please." },
+    });
+
+    const res = await request(app).delete(`/contact/${message.id}`).set("Cookie", cookies);
+
+    expect(res.status).toBe(200);
+    const stored = await prisma.contactMessage.findMany();
+    expect(stored).toHaveLength(0);
+  });
+
+  it("returns 404 for an unknown message", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app, "admin@example.com");
+    await prisma.user.update({ where: { email: "admin@example.com" }, data: { isAdmin: true } });
+
+    const res = await request(app).delete("/contact/nonexistent").set("Cookie", cookies);
+
+    expect(res.status).toBe(404);
+  });
+});

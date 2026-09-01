@@ -1,4 +1,5 @@
 import { Router } from "express";
+import * as Sentry from "@sentry/node";
 import { contactListQuerySchema, contactMessageSchema } from "@billa/shared";
 import type { ContactListQuery } from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
@@ -32,8 +33,9 @@ contactRouter.post("/", contactRateLimit, validateBody(contactMessageSchema), as
         subject: `New contact message from ${name}`,
         html: `<p>From: ${name} (${email})</p><p>${message}</p>`,
       });
-    } catch {
+    } catch (err) {
       // The message is already stored; a failed notification shouldn't fail the request.
+      Sentry.captureException(err);
     }
   }
 
@@ -71,3 +73,17 @@ contactRouter.get(
     res.json({ results, total, page: query.page, pageSize: query.pageSize });
   },
 );
+
+contactRouter.delete("/:id", requireAuth, requireAdmin, async (req, res) => {
+  const { id } = req.params;
+
+  const message = await prisma.contactMessage.findUnique({ where: { id } });
+  if (!message) {
+    res.status(404).json({ error: "not_found" });
+    return;
+  }
+
+  await prisma.contactMessage.delete({ where: { id } });
+
+  res.json({ ok: true });
+});
