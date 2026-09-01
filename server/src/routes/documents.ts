@@ -1,4 +1,5 @@
 import { Router } from "express";
+import multer from "multer";
 import type { Prisma } from "@prisma/client";
 import {
   createPaymentSchema,
@@ -33,11 +34,46 @@ import { convertProformaToInvoice } from "../lib/convert-proforma.js";
 import { recomputeInvoicePaymentStatus } from "../lib/invoice-payment-status.js";
 import { finalizeDocumentById } from "../lib/finalize-document.js";
 import { createNotification } from "../lib/notifications.js";
+import { detectAllowedImageType } from "../lib/file-sniff.js";
+import { getStorage } from "../lib/storage.js";
 
 export const documentsRouter = Router();
 
 documentsRouter.use(requireAuth);
 documentsRouter.use(requireActiveSubscription);
+
+const uploadPaymentReceipt = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+}).single("receipt");
+
+documentsRouter.post(
+  "/payments/receipt",
+  (req, res, next) => {
+    uploadPaymentReceipt(req, res, (err) => {
+      if (err) {
+        res.status(400).json({ error: "upload_failed" });
+        return;
+      }
+      next();
+    });
+  },
+  async (req, res) => {
+    if (!req.file) {
+      res.status(400).json({ error: "no_file" });
+      return;
+    }
+
+    const detected = await detectAllowedImageType(req.file.buffer);
+    if (!detected) {
+      res.status(400).json({ error: "invalid_file_type" });
+      return;
+    }
+
+    const { url } = await getStorage().save(req.file.buffer, req.auth!.businessId, detected.ext);
+    res.status(201).json({ url });
+  },
+);
 
 const DOCUMENT_INCLUDE = {
   lines: { orderBy: { sortOrder: "asc" as const } },
@@ -496,6 +532,9 @@ documentsRouter.post("/:id/payments", validateBody(createPaymentSchema), async (
       method: body.method,
       paidOn: new Date(body.paidOn),
       notes: body.notes,
+      referenceNumber: body.referenceNumber,
+      payerName: body.payerName,
+      receiptImageUrl: body.receiptImageUrl,
       createdByUserId: req.auth!.userId,
     },
   });

@@ -55,6 +55,30 @@ describe("POST /documents/:id/payments", () => {
     expect(res.body.document.amountPaid).toBe(40000);
   });
 
+  it("saves the reference number, payer name, and receipt image when provided", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies);
+    const invoice = await createFinalizedInvoice(app, cookies, customerId);
+
+    const res = await request(app)
+      .post(`/documents/${invoice.id}/payments`)
+      .set("Cookie", cookies)
+      .send({
+        amount: 40000,
+        method: "MOBILE_MONEY",
+        paidOn: "2026-08-20",
+        referenceNumber: "MP240820.1234.A56789",
+        payerName: "Jean Mugisha",
+        receiptImageUrl: "/uploads/b1/receipt.png",
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.payment.referenceNumber).toBe("MP240820.1234.A56789");
+    expect(res.body.payment.payerName).toBe("Jean Mugisha");
+    expect(res.body.payment.receiptImageUrl).toBe("/uploads/b1/receipt.png");
+  });
+
   it("notifies the owner in-app when a payment is recorded", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app);
