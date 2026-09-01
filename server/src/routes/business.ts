@@ -48,6 +48,11 @@ const uploadLogo = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
 }).single("logo");
 
+const uploadSignature = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+}).single("signature");
+
 businessRouter.get("/", async (req, res) => {
   const business = await prisma.business.findUnique({ where: { id: req.auth!.businessId } });
   if (!business) {
@@ -113,6 +118,35 @@ businessRouter.post(
   requireOwner,
   (req, res, next) => {
     uploadLogo(req, res, (err) => {
+      if (err) {
+        res.status(400).json({ error: "upload_failed" });
+        return;
+      }
+      next();
+    });
+  },
+  async (req, res) => {
+    if (!req.file) {
+      res.status(400).json({ error: "no_file" });
+      return;
+    }
+
+    const detected = await detectAllowedImageType(req.file.buffer);
+    if (!detected) {
+      res.status(400).json({ error: "invalid_file_type" });
+      return;
+    }
+
+    const { url } = await getStorage().save(req.file.buffer, req.auth!.businessId, detected.ext);
+    res.status(201).json({ url });
+  },
+);
+
+businessRouter.post(
+  "/signature",
+  requireOwner,
+  (req, res, next) => {
+    uploadSignature(req, res, (err) => {
       if (err) {
         res.status(400).json({ error: "upload_failed" });
         return;
