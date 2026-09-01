@@ -34,6 +34,8 @@ interface BusinessProfile {
   primaryColor: string | null;
   logoUrl: string | null;
   signatureUrl: string | null;
+  remindersEnabled: boolean;
+  reminderCadenceDays: number;
 }
 
 const DEFAULT_BRAND_COLOR = "#27272a";
@@ -45,7 +47,19 @@ const TEMPLATE_OPTIONS: { value: DocumentTemplate; label: string; description: s
   { value: "CLASSIC", label: "Classic", description: "A formal, ruled layout in serif type, for traditional documents." },
 ];
 
-const TEXT_FIELDS: { id: keyof BusinessProfile; label: string; type: "text" | "tel" | "email" }[] = [
+type TextProfileFieldId =
+  | "tin"
+  | "industry"
+  | "phone"
+  | "email"
+  | "address"
+  | "rraEbmNumber"
+  | "bankName"
+  | "bankAccountNumber"
+  | "signatoryName"
+  | "signatoryTitle";
+
+const TEXT_FIELDS: { id: TextProfileFieldId; label: string; type: "text" | "tel" | "email" }[] = [
   { id: "tin", label: "TIN", type: "text" },
   { id: "industry", label: "Industry", type: "text" },
   { id: "phone", label: "Phone", type: "tel" },
@@ -190,9 +204,11 @@ export default function BusinessSettings() {
     setApiError(null);
     setIsSaving(true);
     try {
-      const payload: Record<string, string | null> = {
+      const payload: Record<string, string | number | boolean | null> = {
         defaultTemplate: profile.defaultTemplate,
         primaryColor: profile.primaryColor,
+        remindersEnabled: profile.remindersEnabled,
+        reminderCadenceDays: profile.reminderCadenceDays,
       };
       for (const field of TEXT_FIELDS) {
         const value = profile[field.id];
@@ -370,6 +386,39 @@ export default function BusinessSettings() {
                     </button>
                   )}
                 </div>
+              </div>
+            )}
+          </section>
+
+          <section className="rounded-xl border border-neutral-200 bg-surface p-6">
+            <h2 className="font-display text-base font-semibold text-neutral-900">Payment reminders</h2>
+            <p className="mt-1 font-sans text-sm text-neutral-500">
+              Automatic email reminders for overdue invoices, sent to the customer.
+            </p>
+            <label className="mt-4 flex items-center gap-2">
+              <input
+                type="checkbox"
+                disabled={!isOwner}
+                checked={profile.remindersEnabled}
+                onChange={(e) => setProfile({ ...profile, remindersEnabled: e.target.checked })}
+              />
+              <span className="font-sans text-sm text-neutral-800">Send overdue-invoice reminders</span>
+            </label>
+            {profile.remindersEnabled && (
+              <div className="mt-4 flex flex-col gap-1.5">
+                <label htmlFor="reminderCadenceDays" className="font-sans text-sm font-medium text-neutral-800">
+                  Days between reminders
+                </label>
+                <input
+                  id="reminderCadenceDays"
+                  type="number"
+                  min={1}
+                  max={90}
+                  disabled={!isOwner}
+                  value={profile.reminderCadenceDays}
+                  onChange={(e) => setProfile({ ...profile, reminderCadenceDays: Number(e.target.value) })}
+                  className="w-32 rounded-lg border border-neutral-200 bg-surface px-3.5 py-2.5 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                />
               </div>
             )}
           </section>
