@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { formatRwf, type DocumentType, type InvoicePaymentStatus } from "@billa/shared";
+import { Spinner } from "../components/Spinner";
 import { apiRequest, ApiError, API_BASE_URL } from "../lib/apiClient";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
 import { PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS } from "../lib/paymentStatusColors";
@@ -45,7 +46,7 @@ export default function PublicCustomerPortal() {
   if (!documents) {
     return (
       <div className="mx-auto flex min-h-screen max-w-2xl items-center justify-center px-6">
-        <p className="font-sans text-sm text-neutral-600">Loading…</p>
+        <Spinner size="lg" />
       </div>
     );
   }
