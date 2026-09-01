@@ -1,19 +1,18 @@
-import type { Business, Customer, Document, DocumentLine, DocumentType } from "@prisma/client";
-import { amountInWordsRwf, formatRwf, getDueDateLabel, getPartyLabel } from "@billa/shared";
+import type { Business, Customer, Document, DocumentLine } from "@prisma/client";
+import {
+  amountInWordsFr,
+  amountInWordsRwf,
+  formatRwf,
+  getDueDateLabel,
+  getPartyLabel,
+  getPdfLabels,
+  type PdfLabels,
+} from "@billa/shared";
 import { pickStructuralDark } from "../color.js";
 import { escapeHtml } from "./escape-html.js";
 import { readLogoDataUri } from "./logo.js";
 
 const DEFAULT_ACCENT = "#27272a";
-
-const TYPE_LABELS: Record<DocumentType, string> = {
-  INVOICE: "Invoice",
-  PROFORMA: "Proforma Invoice",
-  DELIVERY_NOTE: "Delivery Note",
-  QUOTE: "Quote",
-  RECEIPT: "Receipt",
-  CREDIT_NOTE: "Credit Note",
-};
 
 export interface PdfRenderLine {
   description: string;
@@ -51,6 +50,7 @@ export interface PdfRenderData {
   typeLabel: string;
   partyLabel: string;
   dueDateLabel: string | null;
+  labels: PdfLabels;
   number: string | null;
   status: "DRAFT" | "FINALIZED";
   issueDate: string;
@@ -84,6 +84,8 @@ export async function buildPdfRenderData(
 ): Promise<PdfRenderData> {
   const logoDataUri = await readLogoDataUri(business.logoUrl, business.id);
   const signatureDataUri = await readLogoDataUri(business.signatureUrl, business.id);
+  const labels = getPdfLabels(document.language);
+  const amountInWords = document.language === "FR" ? amountInWordsFr : amountInWordsRwf;
   const showTotals = document.type !== "DELIVERY_NOTE";
   const accentColor = business.primaryColor ?? DEFAULT_ACCENT;
   const accentColors = Array.isArray(business.accentColors)
@@ -114,9 +116,10 @@ export async function buildPdfRenderData(
       phone: escapeNullable(document.customer.phone),
       email: escapeNullable(document.customer.email),
     },
-    typeLabel: TYPE_LABELS[document.type],
-    partyLabel: getPartyLabel(document.type),
-    dueDateLabel: getDueDateLabel(document.type),
+    typeLabel: labels.typeLabels[document.type],
+    partyLabel: getPartyLabel(document.type, labels),
+    dueDateLabel: getDueDateLabel(document.type, labels),
+    labels,
     number: document.number,
     status: document.status,
     issueDate: document.issueDate.toISOString().slice(0, 10),
@@ -137,6 +140,6 @@ export async function buildPdfRenderData(
     taxTotalFormatted: formatRwf(document.taxTotal),
     totalFormatted: formatRwf(document.total),
     showTotals,
-    amountInWordsFormatted: showTotals ? amountInWordsRwf(Number(document.total)) : null,
+    amountInWordsFormatted: showTotals ? amountInWords(Number(document.total)) : null,
   };
 }

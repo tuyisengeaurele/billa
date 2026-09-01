@@ -51,6 +51,24 @@ describe("POST /documents", () => {
     expect(res.body.document.lines).toHaveLength(2);
   });
 
+  it("defaults language to EN and accepts an explicit FR", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies);
+
+    const defaulted = await request(app)
+      .post("/documents")
+      .set("Cookie", cookies)
+      .send({ type: "INVOICE", customerId, issueDate: "2026-08-19", lines: [] });
+    expect(defaulted.body.document.language).toBe("EN");
+
+    const french = await request(app)
+      .post("/documents")
+      .set("Cookie", cookies)
+      .send({ type: "INVOICE", customerId, issueDate: "2026-08-19", lines: [], language: "FR" });
+    expect(french.body.document.language).toBe("FR");
+  });
+
   it("applies a percentage line discount before tax", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app);

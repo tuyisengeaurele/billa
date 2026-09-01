@@ -211,6 +211,7 @@ documentsRouter.post("/", validateBody(documentSchema), async (req, res) => {
       type: body.type,
       status: "DRAFT",
       template: business!.defaultTemplate,
+      language: body.language,
       customerId: body.customerId,
       issueDate: new Date(body.issueDate),
       dueDate: body.dueDate ? new Date(body.dueDate) : null,
@@ -387,6 +388,7 @@ documentsRouter.patch("/:id", validateBody(documentSchema), async (req, res) => 
       where: { id },
       data: {
         type: body.type,
+        language: body.language,
         customerId: body.customerId,
         issueDate: new Date(body.issueDate),
         dueDate: body.dueDate ? new Date(body.dueDate) : null,

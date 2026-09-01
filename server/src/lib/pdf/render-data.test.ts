@@ -164,6 +164,19 @@ describe("buildPdfRenderData", () => {
     expect(data.amountInWordsFormatted).toBe("Seventeen Thousand Seven Hundred Rwandan Francs Only");
   });
 
+  it("uses French labels and amount-in-words for a French-language document", async () => {
+    const data = await buildPdfRenderData(makeDocument({ language: "FR" }), makeBusiness());
+    expect(data.typeLabel).toBe("Facture");
+    expect(data.partyLabel).toBe("Facturé à");
+    expect(data.labels.subtotal).toBe("Sous-total");
+    expect(data.amountInWordsFormatted).toBe("Dix-sept mille sept cents Francs Rwandais Seulement");
+  });
+
+  it("uses the French due-date label for a French-language quote", async () => {
+    const data = await buildPdfRenderData(makeDocument({ type: "QUOTE", language: "FR" }), makeBusiness());
+    expect(data.dueDateLabel).toBe("Valable jusqu'au");
+  });
+
   it("hides totals and amount-in-words for a delivery note", async () => {
     const data = await buildPdfRenderData(makeDocument({ type: "DELIVERY_NOTE" }), makeBusiness());
     expect(data.showTotals).toBe(false);

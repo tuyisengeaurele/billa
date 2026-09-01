@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { renderPremiumHtml } from "./premium-template.js";
+import { getPdfLabels } from "@billa/shared";
 import type { PdfRenderData } from "./render-data.js";
 
 function makeData(overrides: Partial<PdfRenderData> = {}): PdfRenderData {
@@ -22,6 +23,7 @@ function makeData(overrides: Partial<PdfRenderData> = {}): PdfRenderData {
     },
     customer: { name: "Acme Ltd", tin: null, address: null, phone: null, email: null },
     typeLabel: "Invoice",
+    labels: getPdfLabels("EN"),
     partyLabel: "Bill to",
     dueDateLabel: "Due date",
     number: "INV-0001",
