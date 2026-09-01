@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { formatRwf, PAYMENT_METHODS, type PaymentMethod } from "@billa/shared";
 import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { Modal } from "../components/Modal";
+import { Spinner } from "../components/Spinner";
 import { usePageTitle } from "../context/PageTitleContext";
 import { useToast } from "../context/ToastContext";
 import { apiRequest, ApiError } from "../lib/apiClient";
@@ -178,7 +179,11 @@ export default function Receivables() {
 
         {loadError && <LoadErrorBanner message="Couldn't load accounts receivable." onRetry={load} />}
 
-        {!results && !loadError && <p className="font-sans text-sm text-neutral-600">Loading…</p>}
+        {!results && !loadError && (
+          <div className="flex justify-center py-16">
+            <Spinner size="lg" />
+          </div>
+        )}
 
         {results && results.length === 0 && (
           <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-neutral-200 py-16 text-center">
