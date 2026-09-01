@@ -23,6 +23,7 @@ enum DocumentStatus {
 enum DocumentTemplate {
   MINIMAL
   PREMIUM
+  CLASSIC
 }
 
 // Kinyarwanda deferred until its business/financial terminology can be

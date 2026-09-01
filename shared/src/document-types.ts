@@ -15,7 +15,7 @@ export type DocumentType = (typeof DOCUMENT_TYPES)[number];
 export const DOCUMENT_STATUSES = ["DRAFT", "FINALIZED"] as const;
 export type DocumentStatus = (typeof DOCUMENT_STATUSES)[number];
 
-export const DOCUMENT_TEMPLATES = ["MINIMAL", "PREMIUM"] as const;
+export const DOCUMENT_TEMPLATES = ["MINIMAL", "PREMIUM", "CLASSIC"] as const;
 export type DocumentTemplate = (typeof DOCUMENT_TEMPLATES)[number];
 
 // The language the PDF's own labels render in, independent of the app's UI

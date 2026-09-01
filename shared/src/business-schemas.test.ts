@@ -67,6 +67,11 @@ describe("businessProfileSchema", () => {
     expect(result.success).toBe(false);
   });
 
+  it("accepts CLASSIC as a defaultTemplate", () => {
+    const result = businessProfileSchema.safeParse({ defaultTemplate: "CLASSIC" });
+    expect(result.success).toBe(true);
+  });
+
   it("accepts bank and signatory details", () => {
     const result = businessProfileSchema.safeParse({
       bankName: "Bank of Kigali",
