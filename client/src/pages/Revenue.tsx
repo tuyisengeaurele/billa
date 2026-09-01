@@ -3,6 +3,7 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 import { formatRwf } from "@billa/shared";
 import { apiRequest } from "../lib/apiClient";
 import { LoadErrorBanner } from "../components/LoadErrorBanner";
+import { Spinner } from "../components/Spinner";
 import { useTheme } from "../context/ThemeContext";
 import { usePageTitle } from "../context/PageTitleContext";
 
@@ -102,7 +103,11 @@ export default function Revenue() {
       <div className="mx-auto flex max-w-5xl flex-col gap-8">
         {loadError && <LoadErrorBanner message="Couldn't load revenue." onRetry={() => setReloadToken((t) => t + 1)} />}
 
-        {!summary && !loadError && <p className="font-sans text-sm text-neutral-600">Loading…</p>}
+        {!summary && !loadError && (
+          <div className="flex justify-center py-16">
+            <Spinner size="lg" />
+          </div>
+        )}
 
         {summary && !hasRevenue && (
           <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-neutral-200 py-16 text-center">
