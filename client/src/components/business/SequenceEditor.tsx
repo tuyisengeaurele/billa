@@ -6,6 +6,7 @@ import { DOCUMENT_TYPES, updateSequencesSchema, type DocumentSequenceInput } fro
 import { DOCUMENT_TYPE_LABELS } from "../../lib/documentTypeLabels";
 import { apiRequest, ApiError } from "../../lib/apiClient";
 import { LoadErrorBanner } from "../LoadErrorBanner";
+import { Spinner } from "../Spinner";
 
 const sequencesFormSchema = z.object({ sequences: updateSequencesSchema });
 type SequencesFormInput = z.infer<typeof sequencesFormSchema>;
@@ -51,7 +52,7 @@ export function SequenceEditor() {
   }
 
   if (!isLoaded) {
-    return <p className="font-sans text-sm text-neutral-600">Loading…</p>;
+    return <Spinner />;
   }
 
   return (
