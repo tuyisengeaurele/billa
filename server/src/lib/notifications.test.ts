@@ -38,6 +38,40 @@ describe("createNotification", () => {
       readAt: null,
     });
   });
+
+  it("skips writing when the user has turned that notification type off", async () => {
+    const user = await createUser("owner@example.com");
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { notificationPreferences: { PAYMENT_RECEIVED: false } },
+    });
+
+    await createNotification({
+      userId: user.id,
+      type: "PAYMENT_RECEIVED",
+      title: "Payment received",
+    });
+
+    const rows = await prisma.notification.findMany({ where: { userId: user.id } });
+    expect(rows).toHaveLength(0);
+  });
+
+  it("still writes a different type the user hasn't turned off", async () => {
+    const user = await createUser("owner@example.com");
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { notificationPreferences: { PAYMENT_RECEIVED: false } },
+    });
+
+    await createNotification({
+      userId: user.id,
+      type: "INVOICE_OVERDUE",
+      title: "Invoice overdue",
+    });
+
+    const rows = await prisma.notification.findMany({ where: { userId: user.id } });
+    expect(rows).toHaveLength(1);
+  });
 });
 
 describe("notifyAdmins", () => {
@@ -68,5 +102,21 @@ describe("notifyAdmins", () => {
 
     const rows = await prisma.notification.findMany();
     expect(rows).toHaveLength(0);
+  });
+
+  it("skips an admin who has turned that notification type off", async () => {
+    const admin1 = await createUser("admin1@example.com", true);
+    const admin2 = await createUser("admin2@example.com", true);
+    await prisma.user.update({
+      where: { id: admin1.id },
+      data: { notificationPreferences: { CONTACT_MESSAGE_RECEIVED: false } },
+    });
+
+    await notifyAdmins({ type: "CONTACT_MESSAGE_RECEIVED", title: "New message from Fred" });
+
+    const admin1Rows = await prisma.notification.findMany({ where: { userId: admin1.id } });
+    const admin2Rows = await prisma.notification.findMany({ where: { userId: admin2.id } });
+    expect(admin1Rows).toHaveLength(0);
+    expect(admin2Rows).toHaveLength(1);
   });
 });
