@@ -508,5 +508,72 @@ describe("Customers", () => {
     await user.selectOptions(select, "u1");
 
     await waitFor(() => expect(patchedBody).toEqual({ assignedToId: "u1" }));
+    expect(await screen.findByText("Kigali Traders assigned to Jane Uwase")).toBeInTheDocument();
+  });
+
+  it("shows a confirmation when a customer is unassigned", async () => {
+    let patchedBody: unknown = null;
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/customers/team-members")) {
+        return new Response(
+          JSON.stringify({ results: [{ id: "u1", name: "Jane Uwase", email: "jane@example.com" }] }),
+          { status: 200 },
+        );
+      }
+      if (url.includes("/customers/c1") && init?.method === "PATCH") {
+        patchedBody = JSON.parse(init.body as string);
+        return new Response(
+          JSON.stringify({
+            customer: {
+              id: "c1",
+              name: "Kigali Traders",
+              tin: null,
+              address: null,
+              phone: null,
+              email: null,
+              isActive: true,
+              assignedToId: null,
+              assignedTo: null,
+            },
+          }),
+          { status: 200 },
+        );
+      }
+      if (url.includes("/customers")) {
+        return new Response(
+          JSON.stringify({
+            results: [
+              {
+                id: "c1",
+                name: "Kigali Traders",
+                tin: null,
+                address: null,
+                phone: null,
+                email: null,
+                isActive: true,
+                assignedToId: "u1",
+                assignedTo: { id: "u1", name: "Jane Uwase", email: "jane@example.com" },
+              },
+            ],
+            total: 1,
+            page: 1,
+            pageSize: 20,
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderCustomers();
+    await screen.findByText("Kigali Traders");
+
+    const select = await screen.findByLabelText("Assign Kigali Traders");
+    await user.selectOptions(select, "");
+
+    await waitFor(() => expect(patchedBody).toEqual({ assignedToId: null }));
+    expect(await screen.findByText("Kigali Traders unassigned")).toBeInTheDocument();
   });
 });

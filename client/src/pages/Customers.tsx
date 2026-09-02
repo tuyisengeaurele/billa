@@ -63,6 +63,12 @@ export default function Customers() {
         body: { assignedToId: assignedToId || null },
       });
       list.reload();
+      if (assignedToId) {
+        const member = teamMembers.find((m) => m.id === assignedToId);
+        toast.success(`${customer.name} assigned to ${member?.name ?? member?.email ?? "team member"}`);
+      } else {
+        toast.success(`${customer.name} unassigned`);
+      }
     } catch {
       toast.error("Couldn't update the assignment. Try again.");
     }
