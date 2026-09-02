@@ -96,7 +96,7 @@ describe("GET /items/export.csv", () => {
 
     expect(res.status).toBe(200);
     expect(res.headers["content-type"]).toContain("text/csv");
-    expect(res.text).toContain("Description,Unit price,Unit,Status");
+    expect(res.text).toContain("Description,Category,Unit price,Unit,Status");
     expect(res.text).toContain("Cement bag");
   });
 
