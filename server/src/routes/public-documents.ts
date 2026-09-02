@@ -3,6 +3,7 @@ import { prisma } from "../lib/prisma.js";
 import { buildPdfRenderData } from "../lib/pdf/render-data.js";
 import { renderDocumentPdf } from "../lib/pdf/render-document-pdf.js";
 import { convertProformaToInvoice, declineDocument } from "../lib/convert-proforma.js";
+import { createNotification } from "../lib/notifications.js";
 
 export const publicDocumentsRouter = Router();
 
@@ -44,7 +45,10 @@ publicDocumentsRouter.get("/:token/pdf", async (req, res) => {
 publicDocumentsRouter.post("/:token/accept", async (req, res) => {
   const { token } = req.params;
 
-  const document = await prisma.document.findFirst({ where: { publicToken: token } });
+  const document = await prisma.document.findFirst({
+    where: { publicToken: token },
+    include: { customer: { select: { name: true } }, business: { select: { ownerId: true } } },
+  });
   if (!document) {
     res.status(404).json({ error: "not_found" });
     return;
@@ -56,13 +60,24 @@ publicDocumentsRouter.post("/:token/accept", async (req, res) => {
     return;
   }
 
+  await createNotification({
+    userId: document.business.ownerId,
+    type: "DOCUMENT_ACCEPTED",
+    title: `${document.customer.name} accepted ${document.number}`,
+    body: `${document.customer.name} accepted your ${document.type.toLowerCase()} and it's ready to convert to an invoice.`,
+    link: `/documents/${document.id}`,
+  });
+
   res.status(201).json({ accepted: true });
 });
 
 publicDocumentsRouter.post("/:token/decline", async (req, res) => {
   const { token } = req.params;
 
-  const document = await prisma.document.findFirst({ where: { publicToken: token } });
+  const document = await prisma.document.findFirst({
+    where: { publicToken: token },
+    include: { customer: { select: { name: true } }, business: { select: { ownerId: true } } },
+  });
   if (!document) {
     res.status(404).json({ error: "not_found" });
     return;
@@ -73,6 +88,14 @@ publicDocumentsRouter.post("/:token/decline", async (req, res) => {
     res.status(result.status).json({ error: result.error });
     return;
   }
+
+  await createNotification({
+    userId: document.business.ownerId,
+    type: "DOCUMENT_DECLINED",
+    title: `${document.customer.name} declined ${document.number}`,
+    body: `${document.customer.name} declined your ${document.type.toLowerCase()}.`,
+    link: `/documents/${document.id}`,
+  });
 
   res.json({ declined: true });
 });

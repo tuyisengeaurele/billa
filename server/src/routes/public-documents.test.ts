@@ -2,6 +2,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 import { createApp } from "../app.js";
 import { resetDb } from "../test/db.js";
+import { prisma } from "../lib/prisma.js";
 import * as renderDocumentPdfModule from "../lib/pdf/render-document-pdf.js";
 
 beforeAll(() => {
@@ -17,6 +18,17 @@ async function registerAndGetCookies(app: ReturnType<typeof createApp>) {
     businessName: "Kigali Traders",
   });
   return res.headers["set-cookie"] as unknown as string[];
+}
+
+async function registerAndGetIdentity(app: ReturnType<typeof createApp>) {
+  const res = await request(app).post("/auth/session").send({
+    idToken: JSON.stringify({ uid: "owner@example.com", email: "owner@example.com" }),
+    businessName: "Kigali Traders",
+  });
+  return {
+    cookies: res.headers["set-cookie"] as unknown as string[],
+    userId: res.body.user.id as string,
+  };
 }
 
 async function createCustomer(app: ReturnType<typeof createApp>, cookies: string[]) {
@@ -195,6 +207,20 @@ describe("POST /public/documents/:token/accept", () => {
     expect(res.status).toBe(404);
   });
 
+  it("notifies the business owner that the customer accepted", async () => {
+    const app = createApp();
+    const { cookies, userId } = await registerAndGetIdentity(app);
+    const quote = await createFinalizedQuote(app, cookies);
+
+    await request(app).post(`/public/documents/${quote.publicToken}/accept`);
+
+    const notifications = await prisma.notification.findMany({ where: { userId } });
+    expect(notifications).toHaveLength(1);
+    expect(notifications[0]).toMatchObject({ type: "DOCUMENT_ACCEPTED" });
+    expect(notifications[0].title).toContain("Acme Ltd");
+    expect(notifications[0].link).toBe(`/documents/${quote.id}`);
+  });
+
   it("returns 409 for a document already declined", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app);
@@ -270,5 +296,18 @@ describe("POST /public/documents/:token/decline", () => {
   it("returns 404 for an unknown token", async () => {
     const res = await request(createApp()).post("/public/documents/nonexistent-token/decline");
     expect(res.status).toBe(404);
+  });
+
+  it("notifies the business owner that the customer declined", async () => {
+    const app = createApp();
+    const { cookies, userId } = await registerAndGetIdentity(app);
+    const proforma = await createFinalizedProforma(app, cookies);
+
+    await request(app).post(`/public/documents/${proforma.publicToken}/decline`);
+
+    const notifications = await prisma.notification.findMany({ where: { userId } });
+    expect(notifications).toHaveLength(1);
+    expect(notifications[0]).toMatchObject({ type: "DOCUMENT_DECLINED" });
+    expect(notifications[0].title).toContain("Acme Ltd");
   });
 });
