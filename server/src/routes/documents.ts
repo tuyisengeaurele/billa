@@ -8,6 +8,7 @@ import {
   documentSchema,
   DOCUMENT_LANGUAGES,
   getPdfLabels,
+  updateDocumentRemindersSchema,
   voidPaymentSchema,
   writeOffInvoiceSchema,
 } from "@billa/shared";
@@ -15,6 +16,7 @@ import type {
   CreatePaymentInput,
   DocumentInput,
   DocumentListQuery,
+  UpdateDocumentRemindersInput,
   VoidPaymentInput,
   WriteOffInvoiceInput,
 } from "@billa/shared";
@@ -507,6 +509,26 @@ documentsRouter.patch("/:id", validateBody(documentSchema), async (req, res) => 
       },
       include: DOCUMENT_INCLUDE,
     });
+  });
+
+  res.json({ document });
+});
+
+documentsRouter.patch("/:id/reminders", validateBody(updateDocumentRemindersSchema), async (req, res) => {
+  const businessId = req.auth!.businessId;
+  const { id } = req.params;
+  const body = req.body as UpdateDocumentRemindersInput;
+
+  const existing = await prisma.document.findFirst({ where: { id, businessId } });
+  if (!existing) {
+    res.status(404).json({ error: "not_found" });
+    return;
+  }
+
+  const document = await prisma.document.update({
+    where: { id },
+    data: { remindersEnabled: body.enabled },
+    include: DOCUMENT_INCLUDE,
   });
 
   res.json({ document });
