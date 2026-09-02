@@ -373,11 +373,13 @@ model Item {
 }
 
 model DocumentSequence {
-  id         String       @id @default(cuid())
-  businessId String
-  type       DocumentType
-  prefix     String
-  nextNumber Int          @default(1)
+  id            String       @id @default(cuid())
+  businessId    String
+  type          DocumentType
+  prefix        String
+  nextNumber    Int          @default(1)
+  resetYearly   Boolean      @default(false)
+  lastResetYear Int?
 
   business Business @relation(fields: [businessId], references: [id])
 
