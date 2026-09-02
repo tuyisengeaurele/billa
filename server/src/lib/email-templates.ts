@@ -1,5 +1,7 @@
 import type { DocumentLanguage } from "@billa/shared";
 
+const BRAND_PINK = "#c2185b";
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -13,26 +15,57 @@ function paragraphs(lines: string[]): string {
   return lines.map((line) => `<p style="margin:0 0 16px;">${line}</p>`).join("");
 }
 
-function renderEmailShell(bodyHtml: string): string {
+export interface BusinessFooterInput {
+  name: string;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  logoDataUri: string | null;
+}
+
+function renderFooter(business?: BusinessFooterInput): string {
+  if (!business) {
+    return `<p style="margin:0;font-size:12px;color:#a1a1aa;">Billa, invoicing for Rwandan businesses.</p>`;
+  }
+
+  const name = escapeHtml(business.name);
+  const contactLine = [business.address, business.phone, business.email]
+    .filter((part): part is string => Boolean(part))
+    .map(escapeHtml)
+    .join(" &middot; ");
+  const logo = business.logoDataUri
+    ? `<img src="${business.logoDataUri}" alt="${name}" style="height:28px;width:auto;display:block;margin-bottom:10px;">`
+    : "";
+
+  return `
+    ${logo}
+    <p style="margin:0;font-size:13px;font-weight:600;color:#27272a;">${name}</p>
+    ${contactLine ? `<p style="margin:3px 0 0;font-size:12px;color:#71717a;">${contactLine}</p>` : ""}
+    <p style="margin:12px 0 0;font-size:11px;color:#a1a1aa;">Sent with Billa.</p>
+  `;
+}
+
+function renderEmailShell(bodyHtml: string, business?: BusinessFooterInput): string {
   return `<!doctype html>
 <html>
   <body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:32px 16px;">
       <tr>
         <td align="center">
-          <table role="presentation" width="100%" style="max-width:520px;background:#ffffff;border-radius:12px;overflow:hidden;">
+          <table role="presentation" width="100%" style="max-width:520px;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e4e4e7;">
             <tr>
-              <td style="background:#18181b;padding:22px 32px;">
-                <span style="color:#ffffff;font-size:18px;font-weight:600;letter-spacing:-0.01em;">Billa</span>
+              <td style="background:${BRAND_PINK};height:4px;line-height:4px;font-size:0;">&nbsp;</td>
+            </tr>
+            <tr>
+              <td style="padding:24px 32px 8px;">
+                <span style="font-family:Georgia,'Times New Roman',serif;font-size:20px;font-weight:700;color:#18181b;letter-spacing:-0.01em;">Billa</span>
               </td>
             </tr>
             <tr>
-              <td style="padding:32px;font-size:15px;line-height:1.6;color:#3f3f46;">${bodyHtml}</td>
+              <td style="padding:16px 32px 32px;font-size:15px;line-height:1.6;color:#3f3f46;">${bodyHtml}</td>
             </tr>
             <tr>
-              <td style="padding:18px 32px;background:#fafafa;border-top:1px solid #e4e4e7;">
-                <p style="margin:0;font-size:12px;color:#a1a1aa;">Billa, invoicing for Rwandan businesses.</p>
-              </td>
+              <td style="padding:20px 32px;background:#fafafa;border-top:1px solid #e4e4e7;">${renderFooter(business)}</td>
             </tr>
           </table>
         </td>
@@ -48,6 +81,10 @@ export interface DocumentSendEmailInput {
   typeLabel: string;
   number: string | null;
   businessName: string;
+  businessAddress: string | null;
+  businessPhone: string | null;
+  businessEmail: string | null;
+  businessLogoDataUri: string | null;
 }
 
 export function buildDocumentSendEmail(input: DocumentSendEmailInput): { subject: string; html: string } {
@@ -57,6 +94,13 @@ export function buildDocumentSendEmail(input: DocumentSendEmailInput): { subject
   const type = escapeHtml(typeLabel);
   const docNumber = number ? escapeHtml(number) : "";
   const typeLower = type.toLowerCase();
+  const footer: BusinessFooterInput = {
+    name: businessName,
+    address: input.businessAddress,
+    phone: input.businessPhone,
+    email: input.businessEmail,
+    logoDataUri: input.businessLogoDataUri,
+  };
 
   if (language === "FR") {
     return {
@@ -68,6 +112,7 @@ export function buildDocumentSendEmail(input: DocumentSendEmailInput): { subject
           `Pour toute question à ce sujet, il vous suffit de répondre à cet e-mail.`,
           `Cordialement,<br>L'équipe ${business}`,
         ]),
+        footer,
       ),
     };
   }
@@ -81,6 +126,7 @@ export function buildDocumentSendEmail(input: DocumentSendEmailInput): { subject
         `If you have any questions, just reply to this email and we will get back to you.`,
         `Warm regards,<br>The ${business} team`,
       ]),
+      footer,
     ),
   };
 }
@@ -91,6 +137,10 @@ export interface OverdueReminderEmailInput {
   number: string | null;
   businessName: string;
   dueDate: string;
+  businessAddress: string | null;
+  businessPhone: string | null;
+  businessEmail: string | null;
+  businessLogoDataUri: string | null;
 }
 
 export function buildOverdueReminderEmail(input: OverdueReminderEmailInput): { subject: string; html: string } {
@@ -98,6 +148,13 @@ export function buildOverdueReminderEmail(input: OverdueReminderEmailInput): { s
   const customer = escapeHtml(customerName);
   const business = escapeHtml(businessName);
   const docNumber = number ? escapeHtml(number) : "";
+  const footer: BusinessFooterInput = {
+    name: businessName,
+    address: input.businessAddress,
+    phone: input.businessPhone,
+    email: input.businessEmail,
+    logoDataUri: input.businessLogoDataUri,
+  };
 
   if (language === "FR") {
     return {
@@ -109,6 +166,7 @@ export function buildOverdueReminderEmail(input: OverdueReminderEmailInput): { s
           `Si le paiement a déjà été envoyé, merci et veuillez ignorer ce message. Sinon, répondez à cet e-mail à tout moment.`,
           `Cordialement,<br>L'équipe ${business}`,
         ]),
+        footer,
       ),
     };
   }
@@ -122,6 +180,7 @@ export function buildOverdueReminderEmail(input: OverdueReminderEmailInput): { s
         `If you have already sent payment, thank you, and please disregard this note. Otherwise, reply here anytime.`,
         `Best,<br>The ${business} team`,
       ]),
+      footer,
     ),
   };
 }
@@ -163,7 +222,7 @@ export function buildInviteEmail(input: InviteEmailInput): { subject: string; ht
       paragraphs([
         `Hi there,`,
         `You have been invited to join <strong>${business}</strong> on Billa. Once you accept, you will be able to help manage its documents and customers.`,
-        `<a href="${input.link}" style="color:#2563eb;">Accept the invite</a>`,
+        `<a href="${input.link}" style="color:${BRAND_PINK};font-weight:600;">Accept the invite</a>`,
         `If you were not expecting this, feel free to ignore this email.`,
       ]),
     ),

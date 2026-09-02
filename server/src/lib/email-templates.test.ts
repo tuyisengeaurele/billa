@@ -18,6 +18,10 @@ describe("buildDocumentSendEmail", () => {
       typeLabel: "Invoice",
       number: "INV-0001",
       businessName: "Kigali Traders",
+      businessAddress: null,
+      businessPhone: null,
+      businessEmail: null,
+      businessLogoDataUri: null,
     });
 
     expect(subject).toBe("Invoice INV-0001 from Kigali Traders");
@@ -34,11 +38,34 @@ describe("buildDocumentSendEmail", () => {
       typeLabel: "Facture",
       number: "INV-0001",
       businessName: "Kigali Traders",
+      businessAddress: null,
+      businessPhone: null,
+      businessEmail: null,
+      businessLogoDataUri: null,
     });
 
     expect(subject).toBe("Facture INV-0001 de Kigali Traders");
     expect(html).toContain("Bonjour Aline Uwase");
     assertNoEmDash(html);
+  });
+
+  it("includes the sending business's address, phone, and logo in the footer", () => {
+    const { html } = buildDocumentSendEmail({
+      language: "EN",
+      customerName: "Aline Uwase",
+      typeLabel: "Invoice",
+      number: "INV-0001",
+      businessName: "Kigali Traders",
+      businessAddress: "KG 7 Ave, Kigali",
+      businessPhone: "+250788000000",
+      businessEmail: "hello@kigalitraders.rw",
+      businessLogoDataUri: "data:image/png;base64,abc123",
+    });
+
+    expect(html).toContain("KG 7 Ave, Kigali");
+    expect(html).toContain("+250788000000");
+    expect(html).toContain("hello@kigalitraders.rw");
+    expect(html).toContain("data:image/png;base64,abc123");
   });
 });
 
@@ -50,6 +77,10 @@ describe("buildOverdueReminderEmail", () => {
       number: "INV-0001",
       businessName: "Kigali Traders",
       dueDate: "2026-08-01",
+      businessAddress: null,
+      businessPhone: null,
+      businessEmail: null,
+      businessLogoDataUri: null,
     });
 
     expect(subject).toContain("INV-0001");

@@ -58,6 +58,10 @@ export async function sendOverdueReminders(businessId: string): Promise<SentRemi
       number: doc.number,
       businessName: business.name,
       dueDate: doc.dueDate!.toISOString().slice(0, 10),
+      businessAddress: business.address,
+      businessPhone: business.phone,
+      businessEmail: business.email,
+      businessLogoDataUri: data.business.logoDataUri,
     });
 
     try {

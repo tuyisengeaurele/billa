@@ -407,6 +407,10 @@ documentsRouter.post("/:id/send", async (req, res) => {
     typeLabel,
     number: document.number,
     businessName: business!.name,
+    businessAddress: business!.address,
+    businessPhone: business!.phone,
+    businessEmail: business!.email,
+    businessLogoDataUri: data.business.logoDataUri,
   });
 
   try {
