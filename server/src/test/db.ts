@@ -2,6 +2,7 @@ import { prisma } from "../lib/prisma.js";
 
 export async function resetDb() {
   await prisma.contactMessage.deleteMany();
+  await prisma.emailSendLog.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.impersonationRequest.deleteMany();
   await prisma.invoicePayment.deleteMany();

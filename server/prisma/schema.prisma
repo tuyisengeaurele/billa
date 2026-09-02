@@ -250,6 +250,13 @@ model JobRunLog {
   @@index([jobName, ranAt])
 }
 
+model EmailSendLog {
+  id     String   @id @default(cuid())
+  sentAt DateTime @default(now())
+
+  @@index([sentAt])
+}
+
 model Announcement {
   id          String   @id @default(cuid())
   message     String
