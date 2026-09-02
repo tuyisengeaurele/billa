@@ -16,6 +16,8 @@ interface SystemHealthResponse {
   emailConnected: boolean;
   firebaseConnected: boolean;
   pdfRenderingConnected: boolean;
+  emailsSentLast24h: number;
+  emailDailyLimit: number;
   jobs: JobStatus[];
 }
 
@@ -61,6 +63,31 @@ export default function AdminSystemHealth() {
 
         {health && (
           <>
+            {(() => {
+              const sent = health.emailsSentLast24h ?? 0;
+              const limit = health.emailDailyLimit || 500;
+              const usagePercent = Math.min(100, Math.round((sent / limit) * 100));
+              const barTone = usagePercent >= 90 ? "bg-error" : usagePercent >= 70 ? "bg-warning" : "bg-primary-500";
+              return (
+                <div className="rounded-xl border border-neutral-200 bg-surface p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="font-sans text-sm font-medium text-neutral-900">Email volume (24h)</span>
+                    <span className="font-sans text-sm tabular-nums text-neutral-600">
+                      {sent} / {limit}
+                    </span>
+                  </div>
+                  <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-neutral-100">
+                    <div className={`h-full rounded-full ${barTone}`} style={{ width: `${usagePercent}%` }} />
+                  </div>
+                  {usagePercent >= 70 && (
+                    <p className="mt-2 font-sans text-xs text-neutral-500">
+                      Approaching Gmail's daily sending limit.
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
+
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-surface p-4">
                 <span className="font-sans text-sm font-medium text-neutral-900">Database:</span>
