@@ -80,6 +80,54 @@ customersRouter.get("/:id", async (req, res) => {
   res.json({ customer });
 });
 
+customersRouter.get("/:id/payment-stats", async (req, res) => {
+  const businessId = req.auth!.businessId;
+  const { id } = req.params;
+
+  const customer = await prisma.customer.findFirst({ where: { id, businessId } });
+  if (!customer) {
+    res.status(404).json({ error: "not_found" });
+    return;
+  }
+
+  const paidInvoices = await prisma.document.findMany({
+    where: {
+      businessId,
+      customerId: id,
+      type: "INVOICE",
+      status: "FINALIZED",
+      paymentStatus: "PAID",
+      dueDate: { not: null },
+    },
+    select: {
+      dueDate: true,
+      payments: {
+        where: { voidedAt: null },
+        orderBy: { paidOn: "desc" },
+        take: 1,
+        select: { paidOn: true },
+      },
+    },
+  });
+
+  const daysToPay = paidInvoices
+    .filter((doc) => doc.payments.length > 0)
+    .map((doc) => {
+      const msPerDay = 24 * 60 * 60 * 1000;
+      return Math.round((doc.payments[0]!.paidOn.getTime() - doc.dueDate!.getTime()) / msPerDay);
+    });
+
+  const paidInvoiceCount = daysToPay.length;
+  const averageDaysToPay =
+    paidInvoiceCount > 0 ? Math.round(daysToPay.reduce((sum, days) => sum + days, 0) / paidInvoiceCount) : null;
+  const onTimeRate =
+    paidInvoiceCount > 0
+      ? Math.round((daysToPay.filter((days) => days <= 0).length / paidInvoiceCount) * 100)
+      : null;
+
+  res.json({ paidInvoiceCount, averageDaysToPay, onTimeRate });
+});
+
 customersRouter.post("/", validateBody(customerSchema), async (req, res) => {
   const customer = await prisma.customer.create({
     data: { ...req.body, businessId: req.auth!.businessId },
