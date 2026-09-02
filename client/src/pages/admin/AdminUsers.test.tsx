@@ -143,4 +143,66 @@ describe("AdminUsers", () => {
 
     expect(await screen.findByText("Couldn't export users. Try again.")).toBeInTheDocument();
   });
+
+  it("bulk-extends the trial for selected users", async () => {
+    const extendedIds: string[] = [];
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      const extendMatch = url.match(/\/admin\/users\/(u1|u2)\/extend-trial$/);
+      if (extendMatch && init?.method === "POST") {
+        extendedIds.push(extendMatch[1]);
+        return new Response(JSON.stringify({ trialEndsAt: "2026-10-01T00:00:00.000Z" }), { status: 200 });
+      }
+      return new Response(
+        JSON.stringify({
+          results: [
+            {
+              id: "u1",
+              name: "Jane Uwase",
+              email: "owner@example.com",
+              isAdmin: false,
+              trialEndsAt: "2026-09-01T00:00:00.000Z",
+              currentPeriodEnd: null,
+              plan: null,
+              createdAt: "2026-08-01T00:00:00.000Z",
+            },
+            {
+              id: "u2",
+              name: null,
+              email: "paying@example.com",
+              isAdmin: false,
+              trialEndsAt: "2026-09-01T00:00:00.000Z",
+              currentPeriodEnd: null,
+              plan: "MONTHLY",
+              createdAt: "2026-08-01T00:00:00.000Z",
+            },
+          ],
+          total: 2,
+          page: 1,
+          pageSize: 20,
+        }),
+        { status: 200 },
+      );
+    });
+
+    const user = userEvent.setup();
+    render(
+      <ToastTestWrapper>
+        <MemoryRouter>
+          <AuthProvider>
+            <AdminUsers />
+          </AuthProvider>
+        </MemoryRouter>
+      </ToastTestWrapper>,
+    );
+
+    await screen.findByText("Jane Uwase");
+    await user.click(screen.getByLabelText("Select all users"));
+    await user.click(screen.getByRole("button", { name: /extend trial \(2\)/i }));
+    await user.type(screen.getByLabelText(/days to extend by/i), "14");
+    await user.click(screen.getByRole("button", { name: /^extend$/i }));
+
+    await vi.waitFor(() => expect(extendedIds.sort()).toEqual(["u1", "u2"]));
+    expect(await screen.findByText(/extended the trial for 2 users/i)).toBeInTheDocument();
+  });
 });
