@@ -124,7 +124,7 @@ export default function PublicDocumentView() {
         )}
 
         {CONVERTIBLE_TYPES.includes(document.type) && (
-          <div className="flex items-center justify-between rounded-xl border border-neutral-200 bg-surface px-5 py-4">
+          <div className="flex flex-col gap-4 rounded-xl border border-neutral-200 bg-surface px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
             {document.accepted ? (
               <p className="font-sans text-sm font-medium text-primary-700">
                 You accepted this {DOCUMENT_TYPE_DISPLAY[document.type].toLowerCase()}.
@@ -141,12 +141,12 @@ export default function PublicDocumentView() {
                     Accepting notifies {document.business.name} to prepare your invoice.
                   </p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
                   <button
                     type="button"
                     onClick={handleDecline}
                     disabled={isAccepting || isDeclining}
-                    className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 transition-colors hover:bg-neutral-50 disabled:opacity-60"
+                    className="w-full rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 transition-colors hover:bg-neutral-50 disabled:opacity-60 sm:w-auto"
                   >
                     {isDeclining ? "Declining…" : "Decline"}
                   </button>
@@ -154,7 +154,7 @@ export default function PublicDocumentView() {
                     type="button"
                     onClick={handleAccept}
                     disabled={isAccepting || isDeclining}
-                    className="rounded-lg bg-primary-500 px-4 py-2 font-sans text-sm font-semibold text-white transition-colors hover:bg-primary-700 disabled:opacity-60"
+                    className="w-full rounded-lg bg-primary-500 px-4 py-2 font-sans text-sm font-semibold text-white transition-colors hover:bg-primary-700 disabled:opacity-60 sm:w-auto"
                   >
                     {isAccepting ? "Accepting…" : `Accept this ${DOCUMENT_TYPE_DISPLAY[document.type].toLowerCase()}`}
                   </button>
