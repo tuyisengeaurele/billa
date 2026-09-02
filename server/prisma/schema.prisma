@@ -132,19 +132,20 @@ model Business {
 }
 
 model User {
-  id                   String            @id @default(cuid())
-  email                String            @unique
-  firebaseUid          String            @unique
-  name                 String?
-  phone                String?
-  avatarUrl            String?
-  productTourSeenAt    DateTime?
-  trialEndsAt          DateTime
-  currentPeriodEnd     DateTime?
-  plan                 SubscriptionPlan?
-  lastActiveBusinessId String?
-  createdAt            DateTime          @default(now())
-  updatedAt            DateTime          @updatedAt
+  id                      String            @id @default(cuid())
+  email                   String            @unique
+  firebaseUid             String            @unique
+  name                    String?
+  phone                   String?
+  avatarUrl               String?
+  notificationPreferences Json?
+  productTourSeenAt       DateTime?
+  trialEndsAt             DateTime
+  currentPeriodEnd        DateTime?
+  plan                    SubscriptionPlan?
+  lastActiveBusinessId    String?
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
 
   totpSecret      String?
   totpEnabled     Boolean  @default(false)
