@@ -95,6 +95,45 @@ describe("CustomerStatement", () => {
     expect(screen.getAllByText(/17,700 rwf/i).length).toBeGreaterThan(0);
   });
 
+  it("shows payment behavior stats when the customer has paid invoices", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.endsWith("/customers/c1")) {
+        return new Response(
+          JSON.stringify({
+            customer: {
+              id: "c1",
+              name: "Acme Ltd",
+              tin: null,
+              address: null,
+              phone: null,
+              email: null,
+              isActive: true,
+            },
+          }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/customers/c1/payment-stats")) {
+        return new Response(
+          JSON.stringify({ paidInvoiceCount: 4, averageDaysToPay: 2, onTimeRate: 75 }),
+          { status: 200 },
+        );
+      }
+      if (url.includes("/documents?")) {
+        return new Response(JSON.stringify({ results: [], total: 0, page: 1, pageSize: 50 }), { status: 200 });
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    renderPageWithLayout();
+
+    expect(await screen.findByText("Payment behavior")).toBeInTheDocument();
+    expect(screen.getByText("4")).toBeInTheDocument();
+    expect(screen.getByText("2 days late on average")).toBeInTheDocument();
+    expect(screen.getByText("75%")).toBeInTheDocument();
+  });
+
   it("marks the sorted column header with aria-sort, flipping direction on repeat clicks", async () => {
     const user = userEvent.setup();
     vi.spyOn(global, "fetch").mockImplementation(async (input) => {

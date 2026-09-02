@@ -34,7 +34,19 @@ interface DocumentRow {
   paymentStatus: InvoicePaymentStatus | null;
 }
 
+interface PaymentStats {
+  paidInvoiceCount: number;
+  averageDaysToPay: number | null;
+  onTimeRate: number | null;
+}
+
 type SortBy = "issueDate" | "total" | "createdAt";
+
+function describeAverageDaysToPay(days: number): string {
+  if (days === 0) return "on time on average";
+  if (days < 0) return `${Math.abs(days)} day${Math.abs(days) === 1 ? "" : "s"} early on average`;
+  return `${days} day${days === 1 ? "" : "s"} late on average`;
+}
 
 export default function CustomerStatement() {
   const { id } = useParams();
@@ -43,6 +55,7 @@ export default function CustomerStatement() {
   const [loadError, setLoadError] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
   const [portalLinkCopied, setPortalLinkCopied] = useState(false);
+  const [paymentStats, setPaymentStats] = useState<PaymentStats | null>(null);
 
   async function handleCopyPortalLink() {
     if (!customer) return;
@@ -59,6 +72,12 @@ export default function CustomerStatement() {
     apiRequest<{ customer: Customer }>(`/customers/${id}`)
       .then((data) => setCustomer(data.customer))
       .catch(() => setLoadError(true));
+  }, [id, reloadToken]);
+
+  useEffect(() => {
+    apiRequest<PaymentStats>(`/customers/${id}/payment-stats`)
+      .then(setPaymentStats)
+      .catch(() => setPaymentStats(null));
   }, [id, reloadToken]);
 
   const list = usePaginatedList<DocumentRow, SortBy>({
@@ -109,6 +128,32 @@ export default function CustomerStatement() {
             {customer.tin && <span>TIN {customer.tin}</span>}
           </div>
         </div>
+
+        {paymentStats && paymentStats.paidInvoiceCount > 0 && (
+          <div className="rounded-xl border border-neutral-200 bg-surface p-6">
+            <h2 className="font-display text-base font-semibold text-neutral-900">Payment behavior</h2>
+            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div>
+                <p className="font-sans text-sm text-neutral-500">Invoices paid</p>
+                <p className="mt-1 font-display text-2xl font-semibold text-neutral-900">
+                  {paymentStats.paidInvoiceCount}
+                </p>
+              </div>
+              <div>
+                <p className="font-sans text-sm text-neutral-500">Typically pays</p>
+                <p className="mt-1 font-display text-2xl font-semibold text-neutral-900">
+                  {describeAverageDaysToPay(paymentStats.averageDaysToPay ?? 0)}
+                </p>
+              </div>
+              <div>
+                <p className="font-sans text-sm text-neutral-500">On-time rate</p>
+                <p className="mt-1 font-display text-2xl font-semibold text-neutral-900">
+                  {paymentStats.onTimeRate}%
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="rounded-xl border border-neutral-200 bg-surface p-6">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-100 pb-4">
