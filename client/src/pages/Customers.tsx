@@ -5,6 +5,7 @@ import { Button } from "../components/Button";
 import { ExportCsvButton } from "../components/ExportCsvButton";
 import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { Modal } from "../components/Modal";
+import { SelectAllCheckbox } from "../components/SelectAllCheckbox";
 import { CustomerForm, type CustomerFormValues, type CustomerSubmitValues } from "../components/customers/CustomerForm";
 import { apiRequest, ApiError } from "../lib/apiClient";
 import { ariaSortValue } from "../lib/ariaSort";
@@ -301,11 +302,11 @@ export default function Customers() {
               <thead>
                 <tr className="border-b border-neutral-200 text-left text-neutral-500">
                   <th className="py-2">
-                    <input
-                      type="checkbox"
+                    <SelectAllCheckbox
                       checked={allOnPageSelected}
+                      indeterminate={selectedIds.size > 0 && !allOnPageSelected}
                       onChange={toggleSelectAll}
-                      aria-label="Select all on this page"
+                      ariaLabel="Select all on this page"
                     />
                   </th>
                   <th className="py-2" aria-sort={ariaSortValue(list.sortBy, "name", list.sortOrder)}>

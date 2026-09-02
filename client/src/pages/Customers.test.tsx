@@ -445,6 +445,44 @@ describe("Customers", () => {
     expect(screen.getByRole("button", { name: "Reactivate (1)" })).toBeInTheDocument();
   });
 
+  it("shows the header checkbox as indeterminate when only some rows are selected", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.endsWith("/customers/team-members")) {
+        return new Response(JSON.stringify({ results: [] }), { status: 200 });
+      }
+      if (url.includes("/customers")) {
+        return new Response(
+          JSON.stringify({
+            results: [
+              { id: "c1", name: "Kigali Traders", tin: null, address: null, phone: null, email: null, isActive: true },
+              { id: "c2", name: "Musanze Supplies", tin: null, address: null, phone: null, email: null, isActive: true },
+            ],
+            total: 2,
+            page: 1,
+            pageSize: 20,
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderCustomers();
+    await screen.findByText("Kigali Traders");
+
+    const selectAll = screen.getByRole("checkbox", { name: "Select all on this page" }) as HTMLInputElement;
+    expect(selectAll.indeterminate).toBe(false);
+
+    await user.click(screen.getByRole("checkbox", { name: "Select Kigali Traders" }));
+    expect(selectAll.indeterminate).toBe(true);
+
+    await user.click(screen.getByRole("checkbox", { name: "Select Musanze Supplies" }));
+    expect(selectAll.indeterminate).toBe(false);
+    expect(selectAll.checked).toBe(true);
+  });
+
   it("assigns a customer to a team member from the list", async () => {
     let patchedBody: unknown = null;
     vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
