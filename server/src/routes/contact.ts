@@ -9,6 +9,7 @@ import { validateBody } from "../middleware/validate.js";
 import { validateQuery } from "../middleware/validate-query.js";
 import { contactRateLimit } from "../middleware/contact-rate-limit.js";
 import { sendEmail } from "../lib/mailer.js";
+import { buildContactNotificationEmail, buildContactReplyEmail } from "../lib/email-templates.js";
 import { notifyAdmins } from "../lib/notifications.js";
 
 export const contactRouter = Router();
@@ -28,11 +29,8 @@ contactRouter.post("/", contactRateLimit, validateBody(contactMessageSchema), as
   const notifyTo = process.env.CONTACT_NOTIFICATION_EMAIL;
   if (notifyTo) {
     try {
-      await sendEmail({
-        to: notifyTo,
-        subject: `New contact message from ${name}`,
-        html: `<p>From: ${name} (${email})</p><p>${message}</p>`,
-      });
+      const { subject, html } = buildContactNotificationEmail({ name, email, message });
+      await sendEmail({ to: notifyTo, subject, html });
     } catch (err) {
       // The message is already stored; a failed notification shouldn't fail the request.
       Sentry.captureException(err);
@@ -86,4 +84,40 @@ contactRouter.delete("/:id", requireAuth, requireAdmin, async (req, res) => {
   await prisma.contactMessage.delete({ where: { id } });
 
   res.json({ ok: true });
+});
+
+contactRouter.post("/:id/reply", requireAuth, requireAdmin, async (req, res) => {
+  const { id } = req.params;
+  const replyMessage = (req.body as { message?: unknown })?.message;
+
+  if (typeof replyMessage !== "string" || replyMessage.trim().length === 0) {
+    res.status(400).json({ error: "message_required" });
+    return;
+  }
+
+  const stored = await prisma.contactMessage.findUnique({ where: { id } });
+  if (!stored) {
+    res.status(404).json({ error: "not_found" });
+    return;
+  }
+
+  try {
+    const { subject, html } = buildContactReplyEmail({
+      recipientName: stored.name,
+      originalMessage: stored.message,
+      replyMessage,
+    });
+    await sendEmail({ to: stored.email, subject, html });
+  } catch (err) {
+    Sentry.captureException(err);
+    res.status(502).json({ error: "email_send_failed" });
+    return;
+  }
+
+  const updated = await prisma.contactMessage.update({
+    where: { id },
+    data: { repliedAt: new Date(), replyMessage },
+  });
+
+  res.json({ message: updated });
 });

@@ -173,3 +173,87 @@ describe("DELETE /contact/:id", () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe("POST /contact/:id/reply", () => {
+  it("returns 401 without a session", async () => {
+    const res = await request(createApp()).post("/contact/some-id/reply").send({ message: "hi" });
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 403 for a signed-in user who isn't an admin", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app, "owner@example.com");
+
+    const res = await request(app).post("/contact/some-id/reply").set("Cookie", cookies).send({ message: "hi" });
+
+    expect(res.status).toBe(403);
+  });
+
+  it("emails the sender and records the reply", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app, "admin@example.com");
+    await prisma.user.update({ where: { email: "admin@example.com" }, data: { isAdmin: true } });
+    const stored = await prisma.contactMessage.create({
+      data: { name: "Aline", email: "aline@example.com", message: "How do I add my TIN number?" },
+    });
+    const sendSpy = vi.spyOn(mailerModule, "sendEmail").mockResolvedValue();
+
+    const res = await request(app)
+      .post(`/contact/${stored.id}/reply`)
+      .set("Cookie", cookies)
+      .send({ message: "You can add it from Business settings." });
+
+    expect(res.status).toBe(200);
+    expect(sendSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ to: "aline@example.com", subject: "Re: your message to Billa" }),
+    );
+    const updated = await prisma.contactMessage.findUniqueOrThrow({ where: { id: stored.id } });
+    expect(updated.repliedAt).not.toBeNull();
+    expect(updated.replyMessage).toBe("You can add it from Business settings.");
+  });
+
+  it("returns 400 for an empty reply", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app, "admin@example.com");
+    await prisma.user.update({ where: { email: "admin@example.com" }, data: { isAdmin: true } });
+    const stored = await prisma.contactMessage.create({
+      data: { name: "Aline", email: "aline@example.com", message: "How do I add my TIN number?" },
+    });
+
+    const res = await request(app).post(`/contact/${stored.id}/reply`).set("Cookie", cookies).send({ message: "" });
+
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 404 for an unknown message", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app, "admin@example.com");
+    await prisma.user.update({ where: { email: "admin@example.com" }, data: { isAdmin: true } });
+
+    const res = await request(app)
+      .post("/contact/nonexistent/reply")
+      .set("Cookie", cookies)
+      .send({ message: "hi" });
+
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 502 and does not record the reply when the email fails", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app, "admin@example.com");
+    await prisma.user.update({ where: { email: "admin@example.com" }, data: { isAdmin: true } });
+    const stored = await prisma.contactMessage.create({
+      data: { name: "Aline", email: "aline@example.com", message: "How do I add my TIN number?" },
+    });
+    vi.spyOn(mailerModule, "sendEmail").mockRejectedValue(new Error("smtp down"));
+
+    const res = await request(app)
+      .post(`/contact/${stored.id}/reply`)
+      .set("Cookie", cookies)
+      .send({ message: "You can add it from Business settings." });
+
+    expect(res.status).toBe(502);
+    const updated = await prisma.contactMessage.findUniqueOrThrow({ where: { id: stored.id } });
+    expect(updated.repliedAt).toBeNull();
+  });
+});
