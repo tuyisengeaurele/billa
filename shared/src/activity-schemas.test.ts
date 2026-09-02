@@ -15,4 +15,10 @@ describe("activityListQuerySchema", () => {
   it("rejects a pageSize over 100", () => {
     expect(activityListQuerySchema.safeParse({ pageSize: "101" }).success).toBe(false);
   });
+
+  it("accepts an optional date range filter", () => {
+    const result = activityListQuerySchema.parse({ dateFrom: "2026-08-01", dateTo: "2026-08-31" });
+    expect(result.dateFrom).toBe("2026-08-01");
+    expect(result.dateTo).toBe("2026-08-31");
+  });
 });
