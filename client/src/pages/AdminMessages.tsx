@@ -12,6 +12,8 @@ interface ContactMessageRow {
   email: string;
   message: string;
   createdAt: string;
+  repliedAt: string | null;
+  replyMessage: string | null;
 }
 
 interface ContactMessageList {
@@ -33,6 +35,9 @@ export default function AdminMessages() {
   const [reloadToken, setReloadToken] = useState(0);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [openReplyId, setOpenReplyId] = useState<string | null>(null);
+  const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
+  const [sendingReplyId, setSendingReplyId] = useState<string | null>(null);
   const toast = useToast();
 
   useEffect(() => {
@@ -67,6 +72,32 @@ export default function AdminMessages() {
       toast.error("Couldn't delete this message. Try again.");
     } finally {
       setIsDeleting(false);
+    }
+  }
+
+  function toggleReply(id: string) {
+    setOpenReplyId((prev) => (prev === id ? null : id));
+  }
+
+  async function sendReply(id: string) {
+    const draft = (replyDrafts[id] ?? "").trim();
+    if (!draft) return;
+    setSendingReplyId(id);
+    try {
+      const response = await apiRequest<{ message: ContactMessageRow }>(`/contact/${id}/reply`, {
+        method: "POST",
+        body: { message: draft },
+      });
+      setData((prev) =>
+        prev ? { ...prev, results: prev.results.map((row) => (row.id === id ? response.message : row)) } : prev,
+      );
+      setReplyDrafts((prev) => ({ ...prev, [id]: "" }));
+      setOpenReplyId(null);
+      toast.success("Reply sent");
+    } catch {
+      toast.error("Couldn't send this reply. Try again.");
+    } finally {
+      setSendingReplyId(null);
     }
   }
 
@@ -113,6 +144,13 @@ export default function AdminMessages() {
                         <span className="font-sans text-xs text-neutral-400">{row.createdAt.slice(0, 10)}</span>
                         <button
                           type="button"
+                          onClick={() => toggleReply(row.id)}
+                          className="font-sans text-xs font-medium text-primary-600 hover:underline"
+                        >
+                          Reply
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => setPendingDeleteId(row.id)}
                           className="font-sans text-xs font-medium text-error hover:underline"
                         >
@@ -121,6 +159,47 @@ export default function AdminMessages() {
                       </div>
                     </div>
                     <p className="mt-2 font-sans text-sm text-neutral-600">{row.message}</p>
+
+                    {row.repliedAt && (
+                      <div className="mt-3 rounded-lg bg-primary-50 p-3">
+                        <p className="font-sans text-xs font-medium text-primary-700">
+                          Replied on {row.repliedAt.slice(0, 10)}
+                        </p>
+                        <p className="mt-1 font-sans text-sm text-neutral-700">{row.replyMessage}</p>
+                      </div>
+                    )}
+
+                    {openReplyId === row.id && (
+                      <div className="mt-3 flex flex-col gap-2">
+                        <textarea
+                          value={replyDrafts[row.id] ?? ""}
+                          onChange={(event) =>
+                            setReplyDrafts((prev) => ({ ...prev, [row.id]: event.target.value }))
+                          }
+                          rows={3}
+                          placeholder="Write your reply…"
+                          aria-label={`Reply to ${row.name}`}
+                          className="w-full rounded-lg border border-neutral-200 bg-surface px-3.5 py-2 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                        />
+                        <div className="flex justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setOpenReplyId(null)}
+                            className="rounded-lg border border-neutral-200 px-3.5 py-1.5 font-sans text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            disabled={!(replyDrafts[row.id] ?? "").trim() || sendingReplyId === row.id}
+                            onClick={() => sendReply(row.id)}
+                            className="rounded-lg bg-primary-500 px-3.5 py-1.5 font-sans text-sm font-semibold text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {sendingReplyId === row.id ? "Sending…" : "Send reply"}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
