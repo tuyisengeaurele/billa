@@ -24,7 +24,7 @@ itemsRouter.get("/", validateQuery(itemListQuerySchema), async (req, res) => {
     businessId,
     ...(query.includeInactive ? {} : { isActive: true }),
     ...(query.search ? { description: { contains: query.search, mode: "insensitive" } } : {}),
-    ...(query.category ? { category: query.category } : {}),
+    ...(query.category ? { category: { equals: query.category, mode: "insensitive" } } : {}),
   };
 
   const [results, total] = await Promise.all([

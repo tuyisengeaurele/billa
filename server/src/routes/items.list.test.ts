@@ -66,6 +66,20 @@ describe("GET /items", () => {
     expect(res.body.results[0].description).toBe("Printing service");
   });
 
+  it("filters by category case-insensitively", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    await request(app)
+      .post("/items")
+      .set("Cookie", cookies)
+      .send({ description: "Printing service", unitPrice: 1000, unit: "piece", category: "Printing" });
+
+    const res = await request(app).get("/items?category=printing").set("Cookie", cookies);
+
+    expect(res.body.total).toBe(1);
+    expect(res.body.results[0].description).toBe("Printing service");
+  });
+
   it("hides inactive items by default and shows them with includeInactive=true", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app);
