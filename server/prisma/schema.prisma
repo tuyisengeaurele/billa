@@ -499,9 +499,11 @@ model Payment {
 }
 
 model ContactMessage {
-  id        String   @id @default(cuid())
-  name      String
-  email     String
-  message   String
-  createdAt DateTime @default(now())
+  id           String    @id @default(cuid())
+  name         String
+  email        String
+  message      String
+  createdAt    DateTime  @default(now())
+  repliedAt    DateTime?
+  replyMessage String?
 }
