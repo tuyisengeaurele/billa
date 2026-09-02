@@ -193,7 +193,7 @@ documentsRouter.get("/", validateQuery(documentListQuerySchema), async (req, res
       orderBy: { [query.sortBy]: query.sortOrder } as Prisma.DocumentOrderByWithRelationInput,
       skip: (query.page - 1) * query.pageSize,
       take: query.pageSize,
-      include: { customer: { select: { name: true } } },
+      include: { customer: { select: { name: true, email: true } } },
     }),
     prisma.document.count({ where }),
   ]);
