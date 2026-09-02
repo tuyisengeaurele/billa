@@ -18,6 +18,7 @@ interface Item {
   unitPrice: number;
   unit: string;
   taxRate: number;
+  category: string | null;
   isActive: boolean;
 }
 
@@ -26,7 +27,12 @@ type SortBy = "description" | "unitPrice" | "createdAt";
 export default function Items() {
   usePageTitle("Items");
   const toast = useToast();
-  const list = usePaginatedList<Item, SortBy>({ resourcePath: "/items", defaultSortBy: "createdAt" });
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const list = usePaginatedList<Item, SortBy>({
+    resourcePath: "/items",
+    defaultSortBy: "createdAt",
+    extraParams: categoryFilter ? { category: categoryFilter } : {},
+  });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -183,6 +189,7 @@ export default function Items() {
         unitPrice: editingItem.unitPrice,
         unit: editingItem.unit,
         taxRate: editingItem.taxRate,
+        category: editingItem.category,
       }
     : undefined;
 
@@ -215,6 +222,17 @@ export default function Items() {
                 aria-label="Search items"
                 value={list.search}
                 onChange={(event) => list.updateSearch(event.target.value)}
+                className="w-full max-w-xs rounded-lg border border-neutral-200 bg-surface px-3.5 py-2 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+              />
+              <input
+                type="text"
+                placeholder="Filter by category"
+                aria-label="Filter by category"
+                value={categoryFilter}
+                onChange={(event) => {
+                  setCategoryFilter(event.target.value);
+                  list.setPage(1);
+                }}
                 className="w-full max-w-xs rounded-lg border border-neutral-200 bg-surface px-3.5 py-2 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
               />
               <label className="flex items-center gap-2 font-sans text-sm text-neutral-600">
@@ -307,9 +325,10 @@ export default function Items() {
                       <button
                         type="button"
                         onClick={() => openEditModal(item)}
-                        className="cursor-pointer text-left font-medium text-neutral-900"
+                        className="flex cursor-pointer flex-col text-left"
                       >
-                        {item.description}
+                        <span className="font-medium text-neutral-900">{item.description}</span>
+                        {item.category && <span className="font-sans text-xs text-neutral-500">{item.category}</span>}
                       </button>
                     </td>
                     <td className="py-3 text-neutral-600">{formatRwf(item.unitPrice)}</td>

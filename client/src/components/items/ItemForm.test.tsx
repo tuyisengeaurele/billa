@@ -41,7 +41,24 @@ describe("ItemForm", () => {
       unitPrice: 5000,
       unit: "service",
       taxRate: 18,
+      category: null,
     });
+  });
+
+  it("submits the entered category", async () => {
+    const onSubmit = vi.fn();
+    const user = userEvent.setup();
+    render(<ItemForm isSubmitting={false} apiError={null} onSubmit={onSubmit} />);
+
+    await user.type(screen.getByLabelText("Description"), "Printing service");
+    await user.type(screen.getByLabelText("Unit price (RWF)"), "5000");
+    fireEvent.change(screen.getByLabelText("Unit"), { target: { value: "service" } });
+    await user.type(screen.getByLabelText(/category/i), "Printing");
+    await user.click(screen.getByRole("button", { name: /save item/i }));
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ description: "Printing service", category: "Printing" }),
+    );
   });
 
   it("submits a custom tax rate for a VAT-exempt item", async () => {
@@ -56,7 +73,13 @@ describe("ItemForm", () => {
     await user.type(taxRateInput, "0");
     await user.click(screen.getByRole("button", { name: /save item/i }));
 
-    expect(onSubmit).toHaveBeenCalledWith({ description: "Bread", unitPrice: 500, unit: "piece", taxRate: 0 });
+    expect(onSubmit).toHaveBeenCalledWith({
+      description: "Bread",
+      unitPrice: 500,
+      unit: "piece",
+      taxRate: 0,
+      category: null,
+    });
   });
 
   it("reveals a custom unit field when 'Other' is selected and submits its value", async () => {
@@ -75,6 +98,7 @@ describe("ItemForm", () => {
       unitPrice: 2000,
       unit: "crate",
       taxRate: 18,
+      category: null,
     });
   });
 
