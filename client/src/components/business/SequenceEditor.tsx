@@ -58,6 +58,10 @@ export function SequenceEditor() {
   return (
     <section className="rounded-xl border border-neutral-200 bg-surface p-6">
       <h2 className="font-display text-base font-semibold text-neutral-900">Document numbering</h2>
+      <p className="mt-1 font-sans text-sm text-neutral-500">
+        Turn on "Reset yearly" to start a type's counter over at 1 every January. The year is added to the
+        number so it never repeats one from a previous year, for example INV-{new Date().getFullYear()}-0001.
+      </p>
 
       {apiError && (
         <div className="mt-4 rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
@@ -67,7 +71,7 @@ export function SequenceEditor() {
 
       <form onSubmit={handleSubmit(onSubmit)} className="mt-4 flex flex-col gap-3">
         {DOCUMENT_TYPES.map((type, index) => (
-          <div key={type} className="flex items-center gap-3">
+          <div key={type} className="flex flex-wrap items-center gap-3">
             <span className="w-40 font-sans text-sm text-neutral-700">{DOCUMENT_TYPE_LABELS[type].plural}</span>
             <input
               aria-label={`${DOCUMENT_TYPE_LABELS[type].plural} prefix`}

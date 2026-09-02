@@ -33,6 +33,16 @@ describe("SequenceEditor", () => {
     expect(screen.getByDisplayValue("RCT-")).toBeInTheDocument();
   });
 
+  it("explains what reset yearly does", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(
+      async () => new Response(JSON.stringify({ sequences: SEQUENCES }), { status: 200 }),
+    );
+
+    render(<SequenceEditor />);
+
+    expect(await screen.findByText(/start a type's counter over at 1 every january/i)).toBeInTheDocument();
+  });
+
   it("submits the edited prefix", async () => {
     let putBody: unknown = null;
     vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
