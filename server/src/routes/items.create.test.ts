@@ -57,6 +57,18 @@ describe("POST /items", () => {
     expect(Number(res.body.item.taxRate)).toBe(0);
   });
 
+  it("saves an optional category", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+
+    const res = await request(app)
+      .post("/items")
+      .set("Cookie", cookies)
+      .send({ description: "Printing service", unitPrice: 5000, unit: "service", category: "Printing" });
+
+    expect(res.body.item.category).toBe("Printing");
+  });
+
   it("rejects a zero price with 400", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app);

@@ -48,6 +48,24 @@ describe("GET /items", () => {
     expect(res.body.results[0].description).toBe("Delivery box");
   });
 
+  it("filters by category", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    await request(app)
+      .post("/items")
+      .set("Cookie", cookies)
+      .send({ description: "Printing service", unitPrice: 1000, unit: "piece", category: "Printing" });
+    await request(app)
+      .post("/items")
+      .set("Cookie", cookies)
+      .send({ description: "Delivery box", unitPrice: 1000, unit: "piece", category: "Delivery" });
+
+    const res = await request(app).get("/items?category=Printing").set("Cookie", cookies);
+
+    expect(res.body.total).toBe(1);
+    expect(res.body.results[0].description).toBe("Printing service");
+  });
+
   it("hides inactive items by default and shows them with includeInactive=true", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app);

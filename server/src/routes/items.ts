@@ -24,6 +24,7 @@ itemsRouter.get("/", validateQuery(itemListQuerySchema), async (req, res) => {
     businessId,
     ...(query.includeInactive ? {} : { isActive: true }),
     ...(query.search ? { description: { contains: query.search, mode: "insensitive" } } : {}),
+    ...(query.category ? { category: query.category } : {}),
   };
 
   const [results, total] = await Promise.all([
@@ -47,12 +48,14 @@ itemsRouter.get("/export.csv", async (req, res) => {
   const csv = toCsv(
     items.map((item) => ({
       description: item.description,
+      category: item.category ?? "",
       unitPrice: item.unitPrice,
       unit: item.unit,
       status: item.isActive ? "Active" : "Inactive",
     })),
     [
       { key: "description", header: "Description" },
+      { key: "category", header: "Category" },
       { key: "unitPrice", header: "Unit price" },
       { key: "unit", header: "Unit" },
       { key: "status", header: "Status" },
