@@ -1,4 +1,5 @@
 import nodemailer, { type Transporter } from "nodemailer";
+import { prisma } from "./prisma.js";
 
 let transporter: Transporter | null = null;
 
@@ -27,6 +28,10 @@ export interface SendDocumentEmailInput {
   attachmentBuffer: Buffer;
 }
 
+async function logEmailSent(): Promise<void> {
+  await prisma.emailSendLog.create({ data: {} }).catch(() => {});
+}
+
 export async function sendDocumentEmail(input: SendDocumentEmailInput): Promise<void> {
   await getTransport().sendMail({
     from: getFromAddress(),
@@ -35,6 +40,7 @@ export async function sendDocumentEmail(input: SendDocumentEmailInput): Promise<
     html: input.html,
     attachments: [{ filename: input.attachmentFilename, content: input.attachmentBuffer }],
   });
+  await logEmailSent();
 }
 
 export interface SendEmailInput {
@@ -50,6 +56,7 @@ export async function sendEmail(input: SendEmailInput): Promise<void> {
     subject: input.subject,
     html: input.html,
   });
+  await logEmailSent();
 }
 
 export async function checkMailerHealth(): Promise<boolean> {

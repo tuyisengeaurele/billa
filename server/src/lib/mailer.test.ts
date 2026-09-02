@@ -1,10 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import nodemailer from "nodemailer";
+import { prisma } from "./prisma.js";
+import { resetDb } from "../test/db.js";
 
 vi.mock("nodemailer");
 
 describe("mailer", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    await resetDb();
     vi.resetModules();
     vi.mocked(nodemailer.createTransport).mockReset();
     process.env.GMAIL_USER = "billarw1@gmail.com";
@@ -37,6 +40,7 @@ describe("mailer", () => {
         attachments: [{ filename: "INV-0001.pdf", content: Buffer.from("pdf-bytes") }],
       }),
     );
+    expect(await prisma.emailSendLog.count()).toBe(1);
   });
 
   it("sends a plain email without an attachment", async () => {
@@ -49,6 +53,7 @@ describe("mailer", () => {
     expect(sendMail).toHaveBeenCalledWith(
       expect.objectContaining({ to: "someone@example.com", subject: "Hello", html: "<p>hi</p>" }),
     );
+    expect(await prisma.emailSendLog.count()).toBe(1);
   });
 
   it("throws when the send fails, instead of swallowing the error", async () => {
@@ -60,6 +65,7 @@ describe("mailer", () => {
     await expect(sendEmail({ to: "someone@example.com", subject: "Hello", html: "<p>hi</p>" })).rejects.toThrow(
       "invalid credentials",
     );
+    expect(await prisma.emailSendLog.count()).toBe(0);
   });
 
   it("throws a clear error when Gmail credentials are not configured", async () => {
