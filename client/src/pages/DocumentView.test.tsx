@@ -91,6 +91,51 @@ describe("DocumentView", () => {
     expect(openSpy).toHaveBeenCalledWith(expect.stringContaining("/documents/d1/pdf?language=FR"), "_blank");
   });
 
+  it("asks for a language, then sends the document by email in that language", async () => {
+    let sendBody: unknown = null;
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = typeof input === "string" ? input : input.toString();
+      if (url.endsWith("/documents/d1/send")) {
+        sendBody = init?.body ? JSON.parse(init.body as string) : null;
+        return new Response(JSON.stringify({ sentAt: "2026-09-02T00:00:00.000Z" }), { status: 200 });
+      }
+      return new Response(
+        JSON.stringify({
+          document: {
+            id: "d1",
+            number: "INV-0001",
+            status: "FINALIZED",
+            customer: { name: "Kigali Traders", email: "billing@kigalitraders.rw" },
+            sentAt: null,
+            lines: [],
+            subtotal: 0,
+            taxTotal: 0,
+            total: 0,
+          },
+        }),
+        { status: 200 },
+      );
+    });
+    const user = userEvent.setup();
+
+    render(
+      <ToastTestWrapper>
+        <MemoryRouter initialEntries={["/documents/d1"]}>
+          <AuthProvider>
+            <Routes>
+              <Route path="/documents/:id" element={<DocumentView />} />
+            </Routes>
+          </AuthProvider>
+        </MemoryRouter>
+      </ToastTestWrapper>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: /send by email/i }));
+    await user.click(await screen.findByRole("button", { name: "French" }));
+
+    await waitFor(() => expect(sendBody).toEqual({ language: "FR" }));
+  });
+
   it("copies the public share link and shows a confirmation", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async () =>
       new Response(
@@ -542,6 +587,7 @@ describe("DocumentView", () => {
     );
 
     await user.click(await screen.findByRole("button", { name: /send by email/i }));
+    await user.click(await screen.findByRole("button", { name: "English" }));
 
     expect(await screen.findByText(/sent to owner@acme.test/i)).toBeInTheDocument();
   });
@@ -585,6 +631,7 @@ describe("DocumentView", () => {
     );
 
     await user.click(await screen.findByRole("button", { name: /send by email/i }));
+    await user.click(await screen.findByRole("button", { name: "English" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/couldn't send this document/i);
   });

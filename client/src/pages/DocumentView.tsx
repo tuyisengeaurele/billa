@@ -71,7 +71,7 @@ export default function DocumentView() {
   const [linkCopied, setLinkCopied] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [isConvertConfirmOpen, setIsConvertConfirmOpen] = useState(false);
-  const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
+  const [languageModalAction, setLanguageModalAction] = useState<"download" | "send" | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
@@ -114,12 +114,16 @@ export default function DocumentView() {
     setTimeout(() => setLinkCopied(false), 3000);
   }
 
-  async function handleSend() {
+  async function handleSend(language: DocumentLanguage) {
     if (!document || !document.customer.email) return;
+    setLanguageModalAction(null);
     setApiError(null);
     setIsSending(true);
     try {
-      const response = await apiRequest<{ sentAt: string }>(`/documents/${document.id}/send`, { method: "POST" });
+      const response = await apiRequest<{ sentAt: string }>(`/documents/${document.id}/send`, {
+        method: "POST",
+        body: { language },
+      });
       setDocument({ ...document, sentAt: response.sentAt });
       toast.success(`Sent to ${document.customer.email}`);
     } catch (err) {
@@ -134,7 +138,7 @@ export default function DocumentView() {
   function downloadPdf(language: DocumentLanguage) {
     if (!document) return;
     window.open(`${API_BASE_URL}/documents/${document.id}/pdf?language=${language}`, "_blank");
-    setIsLanguageModalOpen(false);
+    setLanguageModalAction(null);
   }
 
   async function handleDuplicate() {
@@ -233,7 +237,7 @@ export default function DocumentView() {
             </button>
             <button
               type="button"
-              onClick={() => setIsLanguageModalOpen(true)}
+              onClick={() => setLanguageModalAction("download")}
               className="rounded-lg bg-secondary px-4 py-2 font-sans text-sm font-semibold text-secondary-deep transition-all hover:-translate-y-0.5 hover:brightness-95"
             >
               Download PDF
@@ -242,7 +246,7 @@ export default function DocumentView() {
               <button
                 type="button"
                 disabled={isSending || !document.customer.email}
-                onClick={handleSend}
+                onClick={() => setLanguageModalAction("send")}
                 title={!document.customer.email ? "Add an email to this customer to send it" : undefined}
                 className="rounded-lg bg-primary-100 px-4 py-2 font-sans text-sm font-semibold text-primary-700 transition-all hover:-translate-y-0.5 hover:brightness-95 disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-60"
               >
@@ -388,14 +392,20 @@ export default function DocumentView() {
         </div>
       </Modal>
 
-      <Modal isOpen={isLanguageModalOpen} onClose={() => setIsLanguageModalOpen(false)} title="Download PDF">
-        <p className="font-sans text-sm text-neutral-600">Choose the language for this PDF.</p>
+      <Modal
+        isOpen={languageModalAction !== null}
+        onClose={() => setLanguageModalAction(null)}
+        title={languageModalAction === "send" ? "Send by email" : "Download PDF"}
+      >
+        <p className="font-sans text-sm text-neutral-600">
+          Choose the language for this {languageModalAction === "send" ? "email" : "PDF"}.
+        </p>
         <div className="mt-4 flex flex-col gap-2">
           {DOCUMENT_LANGUAGES.map((language) => (
             <button
               key={language}
               type="button"
-              onClick={() => downloadPdf(language)}
+              onClick={() => (languageModalAction === "send" ? handleSend(language) : downloadPdf(language))}
               className="rounded-lg border border-neutral-200 px-4 py-2.5 text-left font-sans text-sm font-semibold text-neutral-900 hover:bg-neutral-50"
             >
               {LANGUAGE_LABELS[language]}
