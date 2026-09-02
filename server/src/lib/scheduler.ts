@@ -1,6 +1,7 @@
 import { prisma } from "./prisma.js";
 import { generateDueRecurringDocuments } from "./recurring-documents.js";
 import { sendOverdueReminders } from "./overdue-reminders.js";
+import { sendQuoteExpiryReminders } from "./quote-expiry-reminders.js";
 import { sendOwnerPaymentDigestIfDue } from "./owner-digest.js";
 import { recordJobRun } from "./job-run-log.js";
 
@@ -20,9 +21,11 @@ export async function runScheduledJobs(): Promise<void> {
 
   let recurringGenerated = 0;
   let remindersSent = 0;
+  let expiryRemindersSent = 0;
   let digestsSent = 0;
   let recurringFailed = false;
   let remindersFailed = false;
+  let expiryRemindersFailed = false;
   let digestsFailed = false;
 
   for (const { id: businessId } of businesses) {
@@ -49,6 +52,13 @@ export async function runScheduledJobs(): Promise<void> {
     }
 
     try {
+      const sent = await sendQuoteExpiryReminders(businessId);
+      expiryRemindersSent += sent.length;
+    } catch {
+      expiryRemindersFailed = true;
+    }
+
+    try {
       const digest = await sendOwnerPaymentDigestIfDue(businessId);
       if (digest.sent) digestsSent += 1;
     } catch {
@@ -58,6 +68,10 @@ export async function runScheduledJobs(): Promise<void> {
 
   await recordJobRun("recurring-documents", { succeeded: !recurringFailed, resultCount: recurringGenerated });
   await recordJobRun("overdue-reminders", { succeeded: !remindersFailed, resultCount: remindersSent });
+  await recordJobRun("quote-expiry-reminders", {
+    succeeded: !expiryRemindersFailed,
+    resultCount: expiryRemindersSent,
+  });
   await recordJobRun("owner-payment-digest", { succeeded: !digestsFailed, resultCount: digestsSent });
 }
 

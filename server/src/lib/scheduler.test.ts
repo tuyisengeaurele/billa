@@ -142,6 +142,7 @@ describe("runScheduledJobs", () => {
     const jobNames = logs.map((l) => l.jobName);
     expect(jobNames).toContain("recurring-documents");
     expect(jobNames).toContain("overdue-reminders");
+    expect(jobNames).toContain("quote-expiry-reminders");
     expect(jobNames).toContain("owner-payment-digest");
   });
 
