@@ -45,7 +45,7 @@ export default function PrivacyPolicy() {
         </p>
         <p>
           If you choose to email a document to a customer from within Billa, we send that email (with the document
-          attached) using Resend, our email delivery provider. We don't email your customers for any other reason.
+          attached) through Google's email servers. We don't email your customers for any other reason.
         </p>
         <p>We don't sell your data, and we don't use it for advertising.</p>
       </Section>
@@ -54,7 +54,7 @@ export default function PrivacyPolicy() {
         <ul className="list-disc pl-5">
           <li>Firebase Authentication (Google) handles sign-in and password storage.</li>
           <li>Our database provider stores your business, customer, item, and document records.</li>
-          <li>Resend delivers transactional emails, including documents you choose to send to customers.</li>
+          <li>Google (Gmail) delivers transactional emails, including documents you choose to send to customers.</li>
           <li>
             When paid subscriptions launch, a payment processor will handle those transactions; Billa won't see or
             store your card or Mobile Money details directly. We'll name that provider here once billing is live.
