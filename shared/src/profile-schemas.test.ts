@@ -14,4 +14,14 @@ describe("updateProfileSchema", () => {
   it("rejects a name over 100 characters", () => {
     expect(updateProfileSchema.safeParse({ name: "a".repeat(101) }).success).toBe(false);
   });
+
+  it("accepts an optional phone number", () => {
+    expect(updateProfileSchema.safeParse({ name: "Ange Aurele", phone: "+250788000000" }).success).toBe(true);
+    expect(updateProfileSchema.safeParse({ name: "Ange Aurele" }).success).toBe(true);
+    expect(updateProfileSchema.safeParse({ name: "Ange Aurele", phone: null }).success).toBe(true);
+  });
+
+  it("rejects a blank phone string", () => {
+    expect(updateProfileSchema.safeParse({ name: "Ange Aurele", phone: "" }).success).toBe(false);
+  });
 });

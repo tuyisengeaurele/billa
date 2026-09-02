@@ -27,9 +27,11 @@ profileRouter.patch("/", validateBody(updateProfileSchema), async (req, res) => 
   const body = req.body as UpdateProfileInput;
   const user = await prisma.user.update({
     where: { id: req.auth!.userId },
-    data: { name: body.name },
+    data: { name: body.name, ...(body.phone !== undefined ? { phone: body.phone } : {}) },
   });
-  res.json({ user: { id: user.id, name: user.name, email: user.email, avatarUrl: user.avatarUrl } });
+  res.json({
+    user: { id: user.id, name: user.name, phone: user.phone, email: user.email, avatarUrl: user.avatarUrl },
+  });
 });
 
 profileRouter.post(

@@ -48,6 +48,32 @@ describe("PATCH /profile", () => {
     expect(res.status).toBe(400);
   });
 
+  it("updates the caller's phone number", async () => {
+    const app = createApp();
+    const { cookies, userId } = await registerAndGetCookies(app);
+
+    const res = await request(app)
+      .patch("/profile")
+      .set("Cookie", cookies)
+      .send({ name: "Ange Aurele", phone: "+250788000000" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.user.phone).toBe("+250788000000");
+    const updated = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+    expect(updated.phone).toBe("+250788000000");
+  });
+
+  it("clears the phone number when null is sent", async () => {
+    const app = createApp();
+    const { cookies, userId } = await registerAndGetCookies(app);
+    await prisma.user.update({ where: { id: userId }, data: { phone: "+250788000000" } });
+
+    const res = await request(app).patch("/profile").set("Cookie", cookies).send({ name: "Ange Aurele", phone: null });
+
+    expect(res.status).toBe(200);
+    expect(res.body.user.phone).toBeNull();
+  });
+
   it("returns 401 without a session", async () => {
     const res = await request(createApp()).patch("/profile").send({ name: "Someone" });
     expect(res.status).toBe(401);

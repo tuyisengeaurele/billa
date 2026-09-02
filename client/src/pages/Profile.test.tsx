@@ -16,11 +16,12 @@ function urlOf(input: RequestInfo | URL): string {
   return typeof input === "string" ? input : input.toString();
 }
 
-function baseUser(overrides: Partial<{ name: string | null; avatarUrl: string | null }> = {}) {
+function baseUser(overrides: Partial<{ name: string | null; phone: string | null; avatarUrl: string | null }> = {}) {
   return {
     id: "u1",
     email: "owner@example.com",
     name: overrides.name ?? "Ange Aurele",
+    phone: overrides.phone ?? null,
     avatarUrl: overrides.avatarUrl ?? null,
     totpEnabled: false,
     isAdmin: false,
@@ -72,8 +73,38 @@ describe("Profile", () => {
     await user.type(nameField, "New Name");
     await user.click(screen.getByRole("button", { name: /save name/i }));
 
-    await waitFor(() => expect(patchedBody).toEqual({ name: "New Name" }));
+    await waitFor(() => expect(patchedBody).toEqual({ name: "New Name", phone: null }));
     expect(await screen.findByText(/^saved\.$/i)).toBeInTheDocument();
+  });
+
+  it("saves a phone number alongside the name", async () => {
+    let patchedBody: unknown = null;
+    const user = userEvent.setup();
+    renderProfile(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/auth/me")) {
+        return new Response(
+          JSON.stringify({ user: baseUser(), business: { id: "b1", name: "Kigali Traders" }, impersonating: false }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/profile/sessions")) {
+        return new Response(JSON.stringify({ results: [] }), { status: 200 });
+      }
+      if (url.endsWith("/profile") && init?.method === "PATCH") {
+        patchedBody = JSON.parse(init.body as string);
+        return new Response(JSON.stringify({ user: baseUser({ phone: "+250788000000" }) }), { status: 200 });
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const phoneField = await screen.findByLabelText(/^phone$/i);
+    await user.type(phoneField, "+250788000000");
+    await user.click(screen.getByRole("button", { name: /save name/i }));
+
+    await waitFor(() =>
+      expect(patchedBody).toEqual({ name: "Ange Aurele", phone: "+250788000000" }),
+    );
   });
 
   it("uploads a new avatar", async () => {

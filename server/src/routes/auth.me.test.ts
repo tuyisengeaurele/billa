@@ -23,6 +23,7 @@ describe("GET /auth/me", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.user.email).toBe("owner@example.com");
+    expect(res.body.user).toHaveProperty("phone");
     expect(res.body.business.name).toBe("Kigali Traders");
   });
 

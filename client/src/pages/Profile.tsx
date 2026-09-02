@@ -21,6 +21,7 @@ export default function Profile() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState(user?.name ?? "");
+  const [phone, setPhone] = useState(user?.phone ?? "");
   const [isSavingName, setIsSavingName] = useState(false);
   const [nameSaved, setNameSaved] = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
@@ -42,7 +43,8 @@ export default function Profile() {
 
   useEffect(() => {
     setName(user?.name ?? "");
-  }, [user?.name]);
+    setPhone(user?.phone ?? "");
+  }, [user?.name, user?.phone]);
 
   function loadSessions() {
     apiRequest<{ results: SessionRow[] }>("/profile/sessions")
@@ -58,7 +60,11 @@ export default function Profile() {
     setNameSaved(false);
     setIsSavingName(true);
     try {
-      await apiRequest("/profile", { method: "PATCH", body: { name: name.trim() } });
+      const trimmedPhone = phone.trim();
+      await apiRequest("/profile", {
+        method: "PATCH",
+        body: { name: name.trim(), phone: trimmedPhone || null },
+      });
       await refreshAuth();
       setNameSaved(true);
     } catch {
@@ -215,6 +221,13 @@ export default function Profile() {
 
         <form onSubmit={saveName} className="mt-6 flex flex-col gap-4">
           <FormField id="profileName" label="Name" value={name} onChange={(e) => setName(e.target.value)} />
+          <FormField
+            id="profilePhone"
+            label="Phone"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="+250 788 000 000"
+          />
           <div className="flex flex-col gap-1.5">
             <label className="font-sans text-sm font-medium text-neutral-800">Email</label>
             <p className="rounded-lg border border-neutral-100 bg-neutral-50 px-3.5 py-2.5 font-sans text-sm text-neutral-500">
