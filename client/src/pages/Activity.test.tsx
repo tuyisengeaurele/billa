@@ -106,4 +106,31 @@ describe("Activity", () => {
     await new Promise((resolve) => setTimeout(resolve, 350));
     expect(lastUrl).toContain("actorUserId=u1");
   });
+
+  it("refetches with a date range when the date filters are set", async () => {
+    let lastUrl = "";
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      lastUrl = url;
+      if (url.endsWith("/auth/me")) {
+        return new Response(
+          JSON.stringify({ user: { id: "u1", email: "owner@example.com" }, business: { id: "b1", name: "Kigali Traders" } }),
+          { status: 200 },
+        );
+      }
+      if (url.includes("/business/activity")) {
+        return new Response(JSON.stringify({ results: [], total: 0, page: 1, pageSize: 20 }), { status: 200 });
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByText(/no activity yet/i);
+
+    await user.type(screen.getByLabelText("From date"), "2026-08-01");
+
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    expect(lastUrl).toContain("dateFrom=2026-08-01");
+  });
 });

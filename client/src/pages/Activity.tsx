@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ExportCsvButton } from "../components/ExportCsvButton";
 import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { useAuth } from "../context/AuthContext";
 import { usePageTitle } from "../context/PageTitleContext";
@@ -21,35 +22,67 @@ export default function Activity() {
   usePageTitle("Activity");
   const { user } = useAuth();
   const [showMineOnly, setShowMineOnly] = useState(false);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const extraParams: Record<string, string> = {};
+  if (showMineOnly && user) extraParams.actorUserId = user.id;
+  if (dateFrom) extraParams.dateFrom = dateFrom;
+  if (dateTo) extraParams.dateTo = dateTo;
   const list = usePaginatedList<ActivityEntry, SortBy>({
     resourcePath: "/business/activity",
     defaultSortBy: "createdAt",
-    extraParams: showMineOnly && user ? { actorUserId: user.id } : undefined,
+    extraParams,
   });
 
   const totalPages = Math.max(1, Math.ceil(list.total / list.pageSize));
 
   return (
       <div className="mx-auto flex max-w-3xl flex-col gap-6">
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => setShowMineOnly(false)}
-            className={`rounded-lg px-4 py-2 font-sans text-sm font-medium ${
-              !showMineOnly ? "bg-primary-100 text-primary-700" : "text-neutral-600 hover:bg-neutral-100"
-            }`}
-          >
-            Team activity
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowMineOnly(true)}
-            className={`rounded-lg px-4 py-2 font-sans text-sm font-medium ${
-              showMineOnly ? "bg-primary-100 text-primary-700" : "text-neutral-600 hover:bg-neutral-100"
-            }`}
-          >
-            My activity
-          </button>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setShowMineOnly(false)}
+              className={`rounded-lg px-4 py-2 font-sans text-sm font-medium ${
+                !showMineOnly ? "bg-primary-100 text-primary-700" : "text-neutral-600 hover:bg-neutral-100"
+              }`}
+            >
+              Team activity
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowMineOnly(true)}
+              className={`rounded-lg px-4 py-2 font-sans text-sm font-medium ${
+                showMineOnly ? "bg-primary-100 text-primary-700" : "text-neutral-600 hover:bg-neutral-100"
+              }`}
+            >
+              My activity
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              aria-label="From date"
+              value={dateFrom}
+              onChange={(event) => {
+                setDateFrom(event.target.value);
+                list.setPage(1);
+              }}
+              className="rounded-lg border border-neutral-200 bg-surface px-3 py-2 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+            />
+            <span className="font-sans text-sm text-neutral-400">to</span>
+            <input
+              type="date"
+              aria-label="To date"
+              value={dateTo}
+              onChange={(event) => {
+                setDateTo(event.target.value);
+                list.setPage(1);
+              }}
+              className="rounded-lg border border-neutral-200 bg-surface px-3 py-2 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+            />
+            <ExportCsvButton path="/business/activity/export.csv" filename="activity.csv" />
+          </div>
         </div>
 
         <div className="rounded-xl border border-neutral-200 bg-surface p-6">
