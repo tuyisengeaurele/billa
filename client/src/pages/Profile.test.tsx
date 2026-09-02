@@ -264,4 +264,59 @@ describe("Profile", () => {
     );
     expect(await screen.findByText("Other sessions signed out")).toBeInTheDocument();
   });
+
+  it("toggles a notification preference off", async () => {
+    let patchedBody: unknown = null;
+    const user = userEvent.setup();
+    renderProfile(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/auth/me")) {
+        return new Response(
+          JSON.stringify({ user: baseUser(), business: { id: "b1", name: "Kigali Traders" }, impersonating: false }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/profile/sessions")) {
+        return new Response(JSON.stringify({ results: [] }), { status: 200 });
+      }
+      if (url.endsWith("/profile/notification-preferences") && init?.method === "PATCH") {
+        patchedBody = JSON.parse(init.body as string);
+        return new Response(
+          JSON.stringify({
+            preferences: {
+              INVOICE_OVERDUE: true,
+              PAYMENT_RECEIVED: false,
+              MEMBER_JOINED: true,
+              CONTACT_MESSAGE_RECEIVED: true,
+              DOCUMENT_ACCEPTED: true,
+              DOCUMENT_DECLINED: true,
+            },
+          }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/profile/notification-preferences")) {
+        return new Response(
+          JSON.stringify({
+            preferences: {
+              INVOICE_OVERDUE: true,
+              PAYMENT_RECEIVED: true,
+              MEMBER_JOINED: true,
+              CONTACT_MESSAGE_RECEIVED: true,
+              DOCUMENT_ACCEPTED: true,
+              DOCUMENT_DECLINED: true,
+            },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const toggle = await screen.findByLabelText("A payment is recorded");
+    await user.click(toggle);
+
+    await waitFor(() => expect(patchedBody).toEqual({ preferences: { PAYMENT_RECEIVED: false } }));
+    expect(await screen.findByLabelText("A payment is recorded")).not.toBeChecked();
+  });
 });

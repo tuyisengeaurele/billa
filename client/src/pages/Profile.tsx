@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { NOTIFICATION_TYPES, type NotificationType } from "@billa/shared";
 import { useAuth } from "../context/AuthContext";
 import { usePageTitle } from "../context/PageTitleContext";
 import { useToast } from "../context/ToastContext";
@@ -13,6 +14,15 @@ interface SessionRow {
   expiresAt: string;
   isCurrent: boolean;
 }
+
+const NOTIFICATION_LABELS: Record<NotificationType, string> = {
+  INVOICE_OVERDUE: "An invoice becomes overdue",
+  PAYMENT_RECEIVED: "A payment is recorded",
+  MEMBER_JOINED: "A team member joins your business",
+  CONTACT_MESSAGE_RECEIVED: "Someone submits the contact form",
+  DOCUMENT_ACCEPTED: "A customer accepts a quote or proforma",
+  DOCUMENT_DECLINED: "A customer declines a quote or proforma",
+};
 
 export default function Profile() {
   usePageTitle("Profile");
@@ -41,6 +51,12 @@ export default function Profile() {
   const [isRevokingOthers, setIsRevokingOthers] = useState(false);
   const [sessionsError, setSessionsError] = useState<string | null>(null);
 
+  const [notificationPreferences, setNotificationPreferences] = useState<Record<
+    NotificationType,
+    boolean
+  > | null>(null);
+  const [savingPreference, setSavingPreference] = useState<NotificationType | null>(null);
+
   useEffect(() => {
     setName(user?.name ?? "");
     setPhone(user?.phone ?? "");
@@ -53,6 +69,29 @@ export default function Profile() {
   }
 
   useEffect(loadSessions, []);
+
+  useEffect(() => {
+    apiRequest<{ preferences: Record<NotificationType, boolean> }>("/profile/notification-preferences")
+      .then((data) => setNotificationPreferences(data.preferences))
+      .catch(() => {});
+  }, []);
+
+  async function toggleNotificationPreference(type: NotificationType) {
+    if (!notificationPreferences) return;
+    const nextValue = !notificationPreferences[type];
+    setSavingPreference(type);
+    try {
+      const data = await apiRequest<{ preferences: Record<NotificationType, boolean> }>(
+        "/profile/notification-preferences",
+        { method: "PATCH", body: { preferences: { [type]: nextValue } } },
+      );
+      setNotificationPreferences(data.preferences);
+    } catch {
+      toast.error("Couldn't save that preference. Try again.");
+    } finally {
+      setSavingPreference(null);
+    }
+  }
 
   async function saveName(event: FormEvent) {
     event.preventDefault();
@@ -337,6 +376,39 @@ export default function Profile() {
                     {revokingId === session.id ? "Signing out…" : "Sign out"}
                   </button>
                 )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="rounded-xl border border-neutral-200 bg-surface p-6">
+        <h2 className="font-display text-base font-semibold text-neutral-900">Notifications</h2>
+        <p className="mt-1 font-sans text-sm text-neutral-500">Choose which of these you want to be notified about.</p>
+
+        {notificationPreferences === null ? (
+          <div className="mt-4 flex flex-col gap-2" aria-label="Loading notification preferences">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="h-10 animate-pulse rounded-lg bg-neutral-100" />
+            ))}
+          </div>
+        ) : (
+          <ul className="mt-4 flex flex-col divide-y divide-neutral-100">
+            {NOTIFICATION_TYPES.map((type) => (
+              <li key={type} className="flex items-center justify-between gap-4 py-3">
+                <span className="font-sans text-sm text-neutral-700">{NOTIFICATION_LABELS[type]}</span>
+                <label className="relative inline-flex cursor-pointer items-center">
+                  <input
+                    type="checkbox"
+                    checked={notificationPreferences[type]}
+                    disabled={savingPreference === type}
+                    onChange={() => toggleNotificationPreference(type)}
+                    aria-label={NOTIFICATION_LABELS[type]}
+                    className="peer sr-only"
+                  />
+                  <div className="h-6 w-11 rounded-full bg-neutral-200 transition-colors peer-checked:bg-primary-500 peer-disabled:opacity-50" />
+                  <div className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white transition-transform peer-checked:translate-x-5" />
+                </label>
               </li>
             ))}
           </ul>
