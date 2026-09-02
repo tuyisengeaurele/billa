@@ -54,7 +54,7 @@ describe("DocumentView", () => {
     expect(screen.getByText(/total: 11,800 rwf/i)).toBeInTheDocument();
   });
 
-  it("opens the PDF download URL when the button is clicked", async () => {
+  it("asks for a language, then opens the PDF download URL for the chosen one", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async () =>
       new Response(
         JSON.stringify({
@@ -86,8 +86,9 @@ describe("DocumentView", () => {
     );
 
     await user.click(await screen.findByRole("button", { name: /download pdf/i }));
+    await user.click(await screen.findByRole("button", { name: "French" }));
 
-    expect(openSpy).toHaveBeenCalledWith(expect.stringContaining("/documents/d1/pdf"), "_blank");
+    expect(openSpy).toHaveBeenCalledWith(expect.stringContaining("/documents/d1/pdf?language=FR"), "_blank");
   });
 
   it("copies the public share link and shows a confirmation", async () => {
