@@ -2,7 +2,7 @@ import * as Sentry from "@sentry/node";
 import { prisma } from "./prisma.js";
 import { buildPdfRenderData } from "./pdf/render-data.js";
 import { renderDocumentPdf } from "./pdf/render-document-pdf.js";
-import { sendDocumentEmail } from "./resend.js";
+import { sendDocumentEmail } from "./mailer.js";
 import { createNotification } from "./notifications.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;

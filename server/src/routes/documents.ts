@@ -26,7 +26,7 @@ import { calculateDocumentTotals } from "../lib/document-totals.js";
 import { DEFAULT_PREFIXES } from "../lib/document-sequences.js";
 import { buildPdfRenderData } from "../lib/pdf/render-data.js";
 import { renderDocumentPdf } from "../lib/pdf/render-document-pdf.js";
-import { sendDocumentEmail } from "../lib/resend.js";
+import { sendDocumentEmail } from "../lib/mailer.js";
 import { addInterval, generateDueRecurringDocuments } from "../lib/recurring-documents.js";
 import { sendOverdueReminders } from "../lib/overdue-reminders.js";
 import { logActivity } from "../lib/activity-log.js";

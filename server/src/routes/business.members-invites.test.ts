@@ -3,7 +3,7 @@ import request from "supertest";
 import { createApp } from "../app.js";
 import { prisma } from "../lib/prisma.js";
 import { resetDb } from "../test/db.js";
-import * as resendModule from "../lib/resend.js";
+import * as mailerModule from "../lib/mailer.js";
 
 beforeAll(() => {
   process.env.JWT_ACCESS_SECRET ??= "test-secret";
@@ -12,7 +12,7 @@ beforeAll(() => {
 
 beforeEach(resetDb);
 beforeEach(() => {
-  vi.spyOn(resendModule, "sendEmail").mockResolvedValue();
+  vi.spyOn(mailerModule, "sendEmail").mockResolvedValue();
 });
 
 async function registerAndGetCookies(app: ReturnType<typeof createApp>, email: string, businessName: string) {
@@ -27,7 +27,7 @@ describe("POST /business/invites", () => {
   it("creates an invite, emails the invitee, and returns a shareable link", async () => {
     const app = createApp();
     const { cookies } = await registerAndGetCookies(app, "owner@example.com", "Kigali Traders");
-    const sendSpy = vi.spyOn(resendModule, "sendEmail").mockResolvedValue();
+    const sendSpy = vi.spyOn(mailerModule, "sendEmail").mockResolvedValue();
 
     const res = await request(app).post("/business/invites").set("Cookie", cookies).send({
       email: "friend@example.com",
@@ -67,7 +67,7 @@ describe("POST /business/invites", () => {
   it("still creates the invite when the email fails to send", async () => {
     const app = createApp();
     const { cookies } = await registerAndGetCookies(app, "owner@example.com", "Kigali Traders");
-    vi.spyOn(resendModule, "sendEmail").mockRejectedValue(new Error("provider down"));
+    vi.spyOn(mailerModule, "sendEmail").mockRejectedValue(new Error("provider down"));
 
     const res = await request(app).post("/business/invites").set("Cookie", cookies).send({
       email: "friend@example.com",
@@ -248,7 +248,7 @@ describe("POST /business/invites/:id/resend", () => {
     });
     const original = await prisma.businessInvite.findUniqueOrThrow({ where: { id: createRes.body.invite.id } });
     await prisma.businessInvite.update({ where: { id: original.id }, data: { expiresAt: new Date(Date.now() + 1000) } });
-    const sendSpy = vi.spyOn(resendModule, "sendEmail").mockResolvedValue();
+    const sendSpy = vi.spyOn(mailerModule, "sendEmail").mockResolvedValue();
 
     const res = await request(app).post(`/business/invites/${original.id}/resend`).set("Cookie", cookies);
 

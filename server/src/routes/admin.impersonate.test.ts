@@ -3,7 +3,7 @@ import request from "supertest";
 import { createApp } from "../app.js";
 import { prisma } from "../lib/prisma.js";
 import { resetDb } from "../test/db.js";
-import * as resendModule from "../lib/resend.js";
+import * as mailerModule from "../lib/mailer.js";
 
 beforeAll(() => {
   process.env.JWT_ACCESS_SECRET ??= "test-secret";
@@ -13,7 +13,7 @@ beforeAll(() => {
 beforeEach(resetDb);
 
 beforeEach(() => {
-  vi.spyOn(resendModule, "sendEmail").mockResolvedValue();
+  vi.spyOn(mailerModule, "sendEmail").mockResolvedValue();
 });
 
 async function registerAndGetCookies(app: ReturnType<typeof createApp>, email: string, businessName: string, isAdmin = false) {

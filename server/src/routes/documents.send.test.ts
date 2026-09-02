@@ -3,7 +3,7 @@ import request from "supertest";
 import { createApp } from "../app.js";
 import { resetDb } from "../test/db.js";
 import * as renderDocumentPdfModule from "../lib/pdf/render-document-pdf.js";
-import * as resendModule from "../lib/resend.js";
+import * as mailerModule from "../lib/mailer.js";
 
 const { captureExceptionMock } = vi.hoisted(() => ({ captureExceptionMock: vi.fn() }));
 vi.mock("@sentry/node", async (importOriginal) => {
@@ -57,7 +57,7 @@ describe("POST /documents/:id/send", () => {
   });
 
   it("emails the document and records sentAt", async () => {
-    const sendSpy = vi.spyOn(resendModule, "sendDocumentEmail").mockResolvedValue();
+    const sendSpy = vi.spyOn(mailerModule, "sendDocumentEmail").mockResolvedValue();
     const app = createApp();
     const cookies = await registerAndGetCookies(app);
     const customerId = await createCustomer(app, cookies, "acme@example.com");
@@ -99,7 +99,7 @@ describe("POST /documents/:id/send", () => {
   });
 
   it("returns 502 and does not set sentAt when the email provider fails", async () => {
-    vi.spyOn(resendModule, "sendDocumentEmail").mockRejectedValue(new Error("provider down"));
+    vi.spyOn(mailerModule, "sendDocumentEmail").mockRejectedValue(new Error("provider down"));
     const app = createApp();
     const cookies = await registerAndGetCookies(app);
     const customerId = await createCustomer(app, cookies, "acme@example.com");
@@ -115,7 +115,7 @@ describe("POST /documents/:id/send", () => {
 
   it("reports the real provider error to Sentry instead of swallowing it silently", async () => {
     const providerError = new Error("You can only send testing emails to your own email address");
-    vi.spyOn(resendModule, "sendDocumentEmail").mockRejectedValue(providerError);
+    vi.spyOn(mailerModule, "sendDocumentEmail").mockRejectedValue(providerError);
     const app = createApp();
     const cookies = await registerAndGetCookies(app);
     const customerId = await createCustomer(app, cookies, "acme@example.com");

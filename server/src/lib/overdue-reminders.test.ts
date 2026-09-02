@@ -2,14 +2,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "./prisma.js";
 import { resetDb } from "../test/db.js";
 import * as renderDocumentPdfModule from "./pdf/render-document-pdf.js";
-import * as resendModule from "./resend.js";
+import * as mailerModule from "./mailer.js";
 import { sendOverdueReminders } from "./overdue-reminders.js";
 
 beforeEach(resetDb);
 
 beforeEach(() => {
   vi.spyOn(renderDocumentPdfModule, "renderDocumentPdf").mockResolvedValue(Buffer.from("%PDF-fake"));
-  vi.spyOn(resendModule, "sendDocumentEmail").mockResolvedValue();
+  vi.spyOn(mailerModule, "sendDocumentEmail").mockResolvedValue();
 });
 
 let userCounter = 0;
@@ -80,7 +80,7 @@ describe("sendOverdueReminders", () => {
 
     expect(sent).toHaveLength(1);
     expect(sent[0].sentTo).toBe("customer@example.com");
-    expect(resendModule.sendDocumentEmail).toHaveBeenCalledTimes(1);
+    expect(mailerModule.sendDocumentEmail).toHaveBeenCalledTimes(1);
   });
 
   it("notifies the owner in-app when a reminder is sent", async () => {

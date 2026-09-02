@@ -24,7 +24,7 @@ import { validateQuery } from "../middleware/validate-query.js";
 import { logAdminAction } from "../lib/admin-audit-log.js";
 import { toCsv } from "../lib/csv.js";
 import { deleteBusinessCascade, deleteUserCascade } from "../lib/delete-business.js";
-import { checkResendHealth } from "../lib/resend.js";
+import { checkMailerHealth } from "../lib/mailer.js";
 import { checkFirebaseAdminHealth } from "../lib/firebase-admin.js";
 import { checkPdfRenderingHealth } from "../lib/pdf/browser.js";
 
@@ -377,7 +377,7 @@ adminRouter.get("/system-health", async (_req, res) => {
       () => true,
       () => false,
     ),
-    checkResendHealth(),
+    checkMailerHealth(),
     checkFirebaseAdminHealth(),
     checkPdfRenderingHealth(),
   ]);

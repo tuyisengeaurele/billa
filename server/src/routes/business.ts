@@ -23,7 +23,7 @@ import { detectBackground } from "../lib/background-detect.js";
 import { removeBackground } from "../lib/rembg-client.js";
 import { ForbiddenUploadPathError, readUploadedFile } from "../lib/uploaded-file.js";
 import { extractPalette } from "../lib/palette.js";
-import { sendEmail } from "../lib/resend.js";
+import { sendEmail } from "../lib/mailer.js";
 import { logActivity } from "../lib/activity-log.js";
 
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;

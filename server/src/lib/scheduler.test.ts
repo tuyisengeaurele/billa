@@ -2,12 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "./prisma.js";
 import { resetDb } from "../test/db.js";
 import { runScheduledJobs } from "./scheduler.js";
-import * as resendModule from "./resend.js";
+import * as mailerModule from "./mailer.js";
 import * as recurringModule from "./recurring-documents.js";
 
 beforeEach(async () => {
-  vi.spyOn(resendModule, "sendDocumentEmail").mockResolvedValue();
-  vi.spyOn(resendModule, "sendEmail").mockResolvedValue();
+  vi.spyOn(mailerModule, "sendDocumentEmail").mockResolvedValue();
+  vi.spyOn(mailerModule, "sendEmail").mockResolvedValue();
   await resetDb();
 });
 
@@ -152,6 +152,6 @@ describe("runScheduledJobs", () => {
 
     const updated = await prisma.business.findUniqueOrThrow({ where: { id: business.id } });
     expect(updated.lastDigestSentAt).not.toBeNull();
-    expect(resendModule.sendEmail).toHaveBeenCalled();
+    expect(mailerModule.sendEmail).toHaveBeenCalled();
   });
 });

@@ -8,7 +8,7 @@ import { requireAdmin } from "../middleware/require-admin.js";
 import { validateBody } from "../middleware/validate.js";
 import { validateQuery } from "../middleware/validate-query.js";
 import { contactRateLimit } from "../middleware/contact-rate-limit.js";
-import { sendEmail } from "../lib/resend.js";
+import { sendEmail } from "../lib/mailer.js";
 import { notifyAdmins } from "../lib/notifications.js";
 
 export const contactRouter = Router();

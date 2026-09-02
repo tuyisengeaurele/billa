@@ -3,7 +3,7 @@ import request from "supertest";
 import { createApp } from "../app.js";
 import { prisma } from "../lib/prisma.js";
 import { resetDb } from "../test/db.js";
-import * as resendModule from "../lib/resend.js";
+import * as mailerModule from "../lib/mailer.js";
 import * as firebaseAdminModule from "../lib/firebase-admin.js";
 
 beforeAll(() => {
@@ -26,7 +26,7 @@ async function registerAndGetCookies(app: ReturnType<typeof createApp>, email: s
 
 describe("GET /admin/system-health", () => {
   it("returns the latest run per job plus DB, email, firebase, and PDF connectivity", async () => {
-    vi.spyOn(resendModule, "checkResendHealth").mockResolvedValue(true);
+    vi.spyOn(mailerModule, "checkMailerHealth").mockResolvedValue(true);
     vi.spyOn(firebaseAdminModule, "checkFirebaseAdminHealth").mockResolvedValue(true);
     const app = createApp();
     const { cookies: adminCookies } = await registerAndGetCookies(app, "admin@example.com", true);
@@ -56,7 +56,7 @@ describe("GET /admin/system-health", () => {
   });
 
   it("reports a service as disconnected when its check fails", async () => {
-    vi.spyOn(resendModule, "checkResendHealth").mockResolvedValue(false);
+    vi.spyOn(mailerModule, "checkMailerHealth").mockResolvedValue(false);
     vi.spyOn(firebaseAdminModule, "checkFirebaseAdminHealth").mockResolvedValue(false);
     const app = createApp();
     const { cookies: adminCookies } = await registerAndGetCookies(app, "admin@example.com", true);

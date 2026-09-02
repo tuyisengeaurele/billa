@@ -4,7 +4,7 @@ import { createApp } from "../app.js";
 import { prisma } from "../lib/prisma.js";
 import { resetDb } from "../test/db.js";
 import * as renderDocumentPdfModule from "../lib/pdf/render-document-pdf.js";
-import * as resendModule from "../lib/resend.js";
+import * as mailerModule from "../lib/mailer.js";
 import * as overdueRemindersModule from "../lib/overdue-reminders.js";
 
 beforeAll(() => {
@@ -15,7 +15,7 @@ beforeAll(() => {
 beforeEach(resetDb);
 beforeEach(() => {
   vi.spyOn(renderDocumentPdfModule, "renderDocumentPdf").mockResolvedValue(Buffer.from("%PDF-fake"));
-  vi.spyOn(resendModule, "sendDocumentEmail").mockResolvedValue();
+  vi.spyOn(mailerModule, "sendDocumentEmail").mockResolvedValue();
 });
 
 async function registerAndGetCookies(app: ReturnType<typeof createApp>) {

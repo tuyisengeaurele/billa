@@ -3,7 +3,7 @@ import request from "supertest";
 import { createApp } from "../app.js";
 import { resetDb } from "../test/db.js";
 import { prisma } from "../lib/prisma.js";
-import * as resendModule from "../lib/resend.js";
+import * as mailerModule from "../lib/mailer.js";
 
 beforeAll(() => {
   process.env.JWT_ACCESS_SECRET ??= "test-secret";
@@ -52,7 +52,7 @@ describe("POST /contact", () => {
 
   it("emails the admin notification address when one is configured", async () => {
     process.env.CONTACT_NOTIFICATION_EMAIL = "notify@example.com";
-    const sendSpy = vi.spyOn(resendModule, "sendEmail").mockResolvedValue();
+    const sendSpy = vi.spyOn(mailerModule, "sendEmail").mockResolvedValue();
     const app = createApp();
 
     const res = await request(app)
@@ -70,7 +70,7 @@ describe("POST /contact", () => {
 
   it("still stores the message even if the notification email fails", async () => {
     process.env.CONTACT_NOTIFICATION_EMAIL = "notify@example.com";
-    vi.spyOn(resendModule, "sendEmail").mockRejectedValue(new Error("provider down"));
+    vi.spyOn(mailerModule, "sendEmail").mockRejectedValue(new Error("provider down"));
     const app = createApp();
 
     const res = await request(app)

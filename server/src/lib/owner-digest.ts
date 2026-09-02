@@ -1,6 +1,6 @@
 import { formatRwf } from "@billa/shared";
 import { prisma } from "./prisma.js";
-import { sendEmail } from "./resend.js";
+import { sendEmail } from "./mailer.js";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 

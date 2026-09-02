@@ -3,7 +3,7 @@ import request from "supertest";
 import { createApp } from "../app.js";
 import { resetDb } from "../test/db.js";
 import { prisma } from "./prisma.js";
-import * as resendModule from "./resend.js";
+import * as mailerModule from "./mailer.js";
 import { sendOwnerPaymentDigestIfDue } from "./owner-digest.js";
 
 beforeAll(() => {
@@ -14,7 +14,7 @@ beforeAll(() => {
 beforeEach(resetDb);
 
 beforeEach(() => {
-  vi.spyOn(resendModule, "sendEmail").mockResolvedValue();
+  vi.spyOn(mailerModule, "sendEmail").mockResolvedValue();
 });
 
 async function setup() {
@@ -39,7 +39,7 @@ describe("sendOwnerPaymentDigestIfDue", () => {
     const result = await sendOwnerPaymentDigestIfDue(businessId);
 
     expect(result.sent).toBe(true);
-    expect(resendModule.sendEmail).toHaveBeenCalledWith(
+    expect(mailerModule.sendEmail).toHaveBeenCalledWith(
       expect.objectContaining({ to: "owner@example.com" }),
     );
 
@@ -54,7 +54,7 @@ describe("sendOwnerPaymentDigestIfDue", () => {
     const result = await sendOwnerPaymentDigestIfDue(businessId);
 
     expect(result.sent).toBe(false);
-    expect(resendModule.sendEmail).toHaveBeenCalledTimes(1);
+    expect(mailerModule.sendEmail).toHaveBeenCalledTimes(1);
   });
 
   it("sends again once 7 days have passed", async () => {
@@ -88,7 +88,7 @@ describe("sendOwnerPaymentDigestIfDue", () => {
 
     await sendOwnerPaymentDigestIfDue(businessId);
 
-    const [call] = vi.mocked(resendModule.sendEmail).mock.calls;
+    const [call] = vi.mocked(mailerModule.sendEmail).mock.calls;
     expect(call[0].html).toContain("100,000 RWF");
   });
 
