@@ -1,5 +1,6 @@
 import { Router } from "express";
 import multer from "multer";
+import * as Sentry from "@sentry/node";
 import type { DocumentType as PrismaDocumentType, Prisma } from "@prisma/client";
 import {
   activityListQuerySchema,
@@ -24,19 +25,18 @@ import { removeBackground } from "../lib/rembg-client.js";
 import { ForbiddenUploadPathError, readUploadedFile } from "../lib/uploaded-file.js";
 import { extractPalette } from "../lib/palette.js";
 import { sendEmail } from "../lib/mailer.js";
+import { buildInviteEmail } from "../lib/email-templates.js";
 import { logActivity } from "../lib/activity-log.js";
 
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 async function sendInviteEmail(businessName: string, email: string, link: string): Promise<void> {
   try {
-    await sendEmail({
-      to: email,
-      subject: `You've been invited to join ${businessName} on Billa`,
-      html: `<p>You've been invited to join <strong>${businessName}</strong> on Billa.</p><p><a href="${link}">Accept the invite</a></p>`,
-    });
-  } catch {
+    const { subject, html } = buildInviteEmail({ businessName, link });
+    await sendEmail({ to: email, subject, html });
+  } catch (err) {
     // The invite is already saved; the owner can still share the link manually.
+    Sentry.captureException(err);
   }
 }
 
