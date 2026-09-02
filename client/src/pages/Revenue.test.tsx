@@ -91,6 +91,22 @@ describe("Revenue", () => {
     expect(screen.getByText(/850,000 rwf/i)).toBeInTheDocument();
   });
 
+  it("shows the change versus last month next to invoiced this month", async () => {
+    mockFetch(mockRevenue());
+
+    renderPage();
+
+    expect(await screen.findByText("+39% vs last month")).toBeInTheDocument();
+  });
+
+  it("shows a decrease when this month is behind last month", async () => {
+    mockFetch(mockRevenue({ invoicedThisMonth: 90000, invoicedLastMonth: 180000 }));
+
+    renderPage();
+
+    expect(await screen.findByText("-50% vs last month")).toBeInTheDocument();
+  });
+
   it("shows collected, outstanding, and days sales outstanding", async () => {
     mockFetch(mockRevenue());
 

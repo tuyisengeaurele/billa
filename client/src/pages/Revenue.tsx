@@ -14,6 +14,18 @@ interface MonthlyRevenueRow {
   net: number;
 }
 
+function describeRevenueChange(thisMonth: number, lastMonth: number): { text: string; tone: "up" | "down" | "flat" } {
+  if (lastMonth === 0) {
+    return thisMonth === 0
+      ? { text: "No invoices last month either", tone: "flat" }
+      : { text: "Nothing invoiced last month to compare", tone: "flat" };
+  }
+  const diff = thisMonth - lastMonth;
+  if (diff === 0) return { text: "Same as last month", tone: "flat" };
+  const pct = Math.round((diff / lastMonth) * 100);
+  return diff > 0 ? { text: `+${pct}% vs last month`, tone: "up" } : { text: `${pct}% vs last month`, tone: "down" };
+}
+
 interface TopCustomerRow {
   customerId: string;
   name: string;
@@ -123,6 +135,18 @@ export default function Revenue() {
                 <p className="mt-2 font-display text-2xl font-semibold text-neutral-900">
                   {formatRwf(summary.invoicedThisMonth)}
                 </p>
+                {(() => {
+                  const change = describeRevenueChange(summary.invoicedThisMonth, summary.invoicedLastMonth);
+                  return (
+                    <p
+                      className={`mt-1 font-sans text-xs font-medium ${
+                        change.tone === "up" ? "text-success" : change.tone === "down" ? "text-error" : "text-neutral-400"
+                      }`}
+                    >
+                      {change.text}
+                    </p>
+                  );
+                })()}
               </div>
               <div className="rounded-xl border border-neutral-200 bg-surface p-5">
                 <p className="font-sans text-sm text-neutral-500">Invoiced this year</p>
