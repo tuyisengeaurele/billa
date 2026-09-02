@@ -3,6 +3,7 @@ import { prisma } from "./prisma.js";
 import { buildPdfRenderData } from "./pdf/render-data.js";
 import { renderDocumentPdf } from "./pdf/render-document-pdf.js";
 import { sendDocumentEmail } from "./mailer.js";
+import { buildOverdueReminderEmail } from "./email-templates.js";
 import { createNotification } from "./notifications.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -51,11 +52,19 @@ export async function sendOverdueReminders(businessId: string): Promise<SentRemi
       continue;
     }
 
+    const { subject, html } = buildOverdueReminderEmail({
+      language: doc.language,
+      customerName: doc.customer.name,
+      number: doc.number,
+      businessName: business.name,
+      dueDate: doc.dueDate!.toISOString().slice(0, 10),
+    });
+
     try {
       await sendDocumentEmail({
         to: email,
-        subject: `Reminder: ${doc.number} is overdue`,
-        html: `<p>Hello ${doc.customer.name},</p><p>This is a reminder that invoice ${doc.number} from ${business.name} was due on ${doc.dueDate!.toISOString().slice(0, 10)} and is still outstanding.</p>`,
+        subject,
+        html,
         attachmentFilename: `${doc.number}.pdf`,
         attachmentBuffer: pdfBuffer,
       });
