@@ -31,6 +31,7 @@ function baseSummary(overrides: Record<string, unknown> = {}) {
   return {
     draftCount: 0,
     overdueInvoiceCount: 0,
+    expiringQuoteCount: 0,
     recentDocuments: [],
     documentsThisMonth: 0,
     documentsLastMonth: 0,
@@ -135,9 +136,55 @@ describe("Dashboard", () => {
 
     renderDashboard();
 
-    await user.click(await screen.findByRole("button", { name: /send reminders/i }));
+    await user.click(await screen.findByRole("button", { name: /send overdue reminders/i }));
 
     expect(await screen.findByText(/sent 2 reminders/i)).toBeInTheDocument();
+  });
+
+  it("sends expiry reminders and shows a confirmation when clicked", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.includes("/documents/expiring/send-reminders") && init?.method === "POST") {
+        return new Response(JSON.stringify({ sent: [{ documentId: "d1" }] }), { status: 200 });
+      }
+      if (url.includes("/dashboard/summary")) {
+        return new Response(
+          JSON.stringify(
+            baseSummary({
+              expiringQuoteCount: 1,
+              recentDocuments: [
+                {
+                  id: "d1",
+                  type: "QUOTE",
+                  number: "QUO-0001",
+                  status: "FINALIZED",
+                  customerName: "Musanze Supplies",
+                  issueDate: "2026-08-19",
+                },
+              ],
+            }),
+          ),
+          { status: 200 },
+        );
+      }
+      if (url.includes("/auth/me")) {
+        return new Response(
+          JSON.stringify({
+            user: { id: "u1", email: "owner@example.com" },
+            business: { id: "b1", name: "Kigali Traders" },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+    const user = userEvent.setup();
+
+    renderDashboard();
+
+    await user.click(await screen.findByRole("button", { name: /send expiry reminders/i }));
+
+    expect(await screen.findByText(/sent 1 reminder\./i)).toBeInTheDocument();
   });
 
   it("shows attention cards when there are drafts and overdue invoices", async () => {

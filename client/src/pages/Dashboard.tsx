@@ -46,6 +46,7 @@ interface ActivityDay {
 interface DashboardSummary {
   draftCount: number;
   overdueInvoiceCount: number;
+  expiringQuoteCount: number;
   recentDocuments: RecentDocument[];
   documentsThisMonth: number;
   documentsLastMonth: number;
@@ -116,6 +117,9 @@ export default function Dashboard() {
   const [isSendingReminders, setIsSendingReminders] = useState(false);
   const [reminderMessage, setReminderMessage] = useState<string | null>(null);
   const [reminderIsError, setReminderIsError] = useState(false);
+  const [isSendingExpiryReminders, setIsSendingExpiryReminders] = useState(false);
+  const [expiryReminderMessage, setExpiryReminderMessage] = useState<string | null>(null);
+  const [expiryReminderIsError, setExpiryReminderIsError] = useState(false);
 
   useEffect(() => {
     setLoadError(false);
@@ -145,8 +149,30 @@ export default function Dashboard() {
     }
   }
 
+  async function handleSendExpiryReminders() {
+    setExpiryReminderMessage(null);
+    setExpiryReminderIsError(false);
+    setIsSendingExpiryReminders(true);
+    try {
+      const result = await apiRequest<{ sent: { documentId: string }[] }>("/documents/expiring/send-reminders", {
+        method: "POST",
+      });
+      setExpiryReminderMessage(
+        result.sent.length > 0
+          ? `Sent ${result.sent.length} reminder${result.sent.length === 1 ? "" : "s"}.`
+          : "No reminders to send right now.",
+      );
+    } catch {
+      setExpiryReminderIsError(true);
+      setExpiryReminderMessage("Couldn't send reminders. Try again.");
+    } finally {
+      setIsSendingExpiryReminders(false);
+    }
+  }
+
   const hasNoDocuments = summary !== null && summary.recentDocuments.length === 0;
-  const hasAttentionItems = summary !== null && (summary.draftCount > 0 || summary.overdueInvoiceCount > 0);
+  const hasAttentionItems =
+    summary !== null && (summary.draftCount > 0 || summary.overdueInvoiceCount > 0 || summary.expiringQuoteCount > 0);
 
   return (
       <div className="mx-auto flex max-w-5xl flex-col gap-8">
@@ -235,7 +261,25 @@ export default function Dashboard() {
                 onClick={handleSendReminders}
                 className="rounded-lg border border-neutral-200 px-4 py-3 font-sans text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-70"
               >
-                {isSendingReminders ? "Sending…" : "Send reminders"}
+                {isSendingReminders ? "Sending…" : "Send overdue reminders"}
+              </button>
+            )}
+            {summary.expiringQuoteCount > 0 && (
+              <Link
+                to="/documents"
+                className="rounded-lg bg-warning-bg px-4 py-3 font-sans text-sm text-warning transition-transform hover:-translate-y-0.5"
+              >
+                {summary.expiringQuoteCount} quote{summary.expiringQuoteCount === 1 ? "" : "s"} expiring soon
+              </Link>
+            )}
+            {summary.expiringQuoteCount > 0 && (
+              <button
+                type="button"
+                disabled={isSendingExpiryReminders}
+                onClick={handleSendExpiryReminders}
+                className="rounded-lg border border-neutral-200 px-4 py-3 font-sans text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {isSendingExpiryReminders ? "Sending…" : "Send expiry reminders"}
               </button>
             )}
           </div>
@@ -249,6 +293,17 @@ export default function Dashboard() {
             role={reminderIsError ? "alert" : "status"}
           >
             {reminderMessage}
+          </div>
+        )}
+
+        {expiryReminderMessage && (
+          <div
+            className={`rounded-lg px-4 py-3 font-sans text-sm ${
+              expiryReminderIsError ? "bg-error-bg text-error" : "bg-success-bg text-success"
+            }`}
+            role={expiryReminderIsError ? "alert" : "status"}
+          >
+            {expiryReminderMessage}
           </div>
         )}
 
