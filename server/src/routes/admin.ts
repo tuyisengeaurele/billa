@@ -370,8 +370,12 @@ adminRouter.get("/metrics", async (_req, res) => {
   });
 });
 
+const EMAIL_DAILY_LIMIT = 500;
+
 adminRouter.get("/system-health", async (_req, res) => {
-  const [latestRuns, dbCheck, emailCheck, firebaseCheck, pdfCheck] = await Promise.all([
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+  const [latestRuns, dbCheck, emailCheck, firebaseCheck, pdfCheck, emailsSentLast24h] = await Promise.all([
     prisma.jobRunLog.findMany({ orderBy: { ranAt: "desc" } }),
     prisma.$queryRaw`SELECT 1`.then(
       () => true,
@@ -380,6 +384,7 @@ adminRouter.get("/system-health", async (_req, res) => {
     checkMailerHealth(),
     checkFirebaseAdminHealth(),
     checkPdfRenderingHealth(),
+    prisma.emailSendLog.count({ where: { sentAt: { gte: oneDayAgo } } }),
   ]);
 
   const jobs = new Map<string, (typeof latestRuns)[number]>();
@@ -394,6 +399,8 @@ adminRouter.get("/system-health", async (_req, res) => {
     emailConnected: emailCheck,
     firebaseConnected: firebaseCheck,
     pdfRenderingConnected: pdfCheck,
+    emailsSentLast24h,
+    emailDailyLimit: EMAIL_DAILY_LIMIT,
     jobs: Array.from(jobs.values()).map((run) => ({
       jobName: run.jobName,
       ranAt: run.ranAt,

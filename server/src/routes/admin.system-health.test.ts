@@ -55,6 +55,23 @@ describe("GET /admin/system-health", () => {
     expect(overdue).toMatchObject({ succeeded: true, resultCount: 5 });
   });
 
+  it("counts emails sent in the last 24 hours and reports the daily limit", async () => {
+    vi.spyOn(mailerModule, "checkMailerHealth").mockResolvedValue(true);
+    vi.spyOn(firebaseAdminModule, "checkFirebaseAdminHealth").mockResolvedValue(true);
+    const app = createApp();
+    const { cookies: adminCookies } = await registerAndGetCookies(app, "admin@example.com", true);
+
+    await prisma.emailSendLog.create({ data: {} });
+    await prisma.emailSendLog.create({ data: {} });
+    await prisma.emailSendLog.create({ data: { sentAt: new Date(Date.now() - 48 * 60 * 60 * 1000) } });
+
+    const res = await request(app).get("/admin/system-health").set("Cookie", adminCookies);
+
+    expect(res.status).toBe(200);
+    expect(res.body.emailsSentLast24h).toBe(2);
+    expect(res.body.emailDailyLimit).toBe(500);
+  });
+
   it("reports a service as disconnected when its check fails", async () => {
     vi.spyOn(mailerModule, "checkMailerHealth").mockResolvedValue(false);
     vi.spyOn(firebaseAdminModule, "checkFirebaseAdminHealth").mockResolvedValue(false);
