@@ -12,6 +12,12 @@ import { usePageTitle } from "../context/PageTitleContext";
 import { useToast } from "../context/ToastContext";
 import { usePaginatedList } from "../lib/usePaginatedList";
 
+interface TeamMember {
+  id: string;
+  name: string | null;
+  email: string;
+}
+
 interface Customer {
   id: string;
   name: string;
@@ -20,6 +26,8 @@ interface Customer {
   phone: string | null;
   email: string | null;
   isActive: boolean;
+  assignedToId: string | null;
+  assignedTo: TeamMember | null;
 }
 
 type SortBy = "name" | "createdAt";
@@ -36,10 +44,29 @@ export default function Customers() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkAction, setBulkAction] = useState<"deactivate" | "reactivate" | null>(null);
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
 
   useEffect(() => {
     setSelectedIds(new Set());
   }, [list.page]);
+
+  useEffect(() => {
+    apiRequest<{ results: TeamMember[] }>("/customers/team-members")
+      .then((data) => setTeamMembers(data.results))
+      .catch(() => {});
+  }, []);
+
+  async function handleAssign(customer: Customer, assignedToId: string) {
+    try {
+      await apiRequest(`/customers/${customer.id}`, {
+        method: "PATCH",
+        body: { assignedToId: assignedToId || null },
+      });
+      list.reload();
+    } catch {
+      toast.error("Couldn't update the assignment. Try again.");
+    }
+  }
 
   function openCreateModal() {
     setEditingCustomer(null);
@@ -261,6 +288,7 @@ export default function Customers() {
                 <col />
                 <col style={{ width: 140 }} />
                 <col style={{ width: 200 }} />
+                <col style={{ width: 160 }} />
                 <col style={{ width: 100 }} />
                 <col style={{ width: 110 }} />
               </colgroup>
@@ -281,6 +309,7 @@ export default function Customers() {
                   </th>
                   <th className="py-2">Phone</th>
                   <th className="py-2">Email</th>
+                  <th className="py-2">Assigned to</th>
                   <th className="py-2">Status</th>
                   <th className="py-2" />
                 </tr>
@@ -310,6 +339,21 @@ export default function Customers() {
                     </td>
                     <td className="py-3 text-neutral-600">{customer.phone ?? "-"}</td>
                     <td className="py-3 text-neutral-600">{customer.email ?? "-"}</td>
+                    <td className="py-3">
+                      <select
+                        aria-label={`Assign ${customer.name}`}
+                        value={customer.assignedToId ?? ""}
+                        onChange={(event) => handleAssign(customer, event.target.value)}
+                        className="w-full rounded-lg border border-neutral-200 bg-surface px-2 py-1.5 font-sans text-xs text-neutral-700 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                      >
+                        <option value="">Unassigned</option>
+                        {teamMembers.map((member) => (
+                          <option key={member.id} value={member.id}>
+                            {member.name ?? member.email}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
                     <td className="py-3">
                       <span
                         className={`rounded-full px-2.5 py-1 text-xs font-medium ${
