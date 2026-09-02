@@ -60,6 +60,7 @@ function makeDocument(
     recurrenceEndDate: null,
     nextRecurrenceAt: null,
     lastReminderSentAt: null,
+    expiryReminderSentAt: null,
     convertedFromId: null,
     referencedDocumentId: null,
     declinedAt: null,

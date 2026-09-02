@@ -395,7 +395,8 @@ model Document {
   recurrenceEndDate  DateTime?
   nextRecurrenceAt   DateTime?
 
-  lastReminderSentAt DateTime?
+  lastReminderSentAt   DateTime?
+  expiryReminderSentAt DateTime?
 
   convertedFromId String?   @unique
   convertedFrom   Document? @relation("DocumentConversion", fields: [convertedFromId], references: [id])
