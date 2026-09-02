@@ -32,6 +32,7 @@ import { buildDocumentSendEmail } from "../lib/email-templates.js";
 import { buildPublicAssetUrl } from "../lib/asset-url.js";
 import { addInterval, generateDueRecurringDocuments } from "../lib/recurring-documents.js";
 import { sendOverdueReminders } from "../lib/overdue-reminders.js";
+import { sendQuoteExpiryReminders } from "../lib/quote-expiry-reminders.js";
 import { logActivity } from "../lib/activity-log.js";
 import { recordJobRun } from "../lib/job-run-log.js";
 import { toCsv } from "../lib/csv.js";
@@ -153,6 +154,20 @@ documentsRouter.post("/overdue/send-reminders", async (req, res) => {
     res.json({ sent });
   } catch (err) {
     await recordJobRun("overdue-reminders", {
+      succeeded: false,
+      errorMessage: err instanceof Error ? err.message : "Unknown error",
+    });
+    res.status(500).json({ error: "job_failed" });
+  }
+});
+
+documentsRouter.post("/expiring/send-reminders", async (req, res) => {
+  try {
+    const sent = await sendQuoteExpiryReminders(req.auth!.businessId);
+    await recordJobRun("quote-expiry-reminders", { succeeded: true, resultCount: sent.length });
+    res.json({ sent });
+  } catch (err) {
+    await recordJobRun("quote-expiry-reminders", {
       succeeded: false,
       errorMessage: err instanceof Error ? err.message : "Unknown error",
     });
