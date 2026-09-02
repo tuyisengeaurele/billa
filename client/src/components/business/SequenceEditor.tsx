@@ -80,6 +80,14 @@ export function SequenceEditor() {
               className="w-24 rounded-lg border border-neutral-200 bg-surface px-3 py-1.5 font-sans text-sm text-neutral-900"
               {...register(`sequences.${index}.nextNumber`, { valueAsNumber: true })}
             />
+            <label className="flex items-center gap-2 font-sans text-sm text-neutral-600">
+              <input
+                type="checkbox"
+                aria-label={`${DOCUMENT_TYPE_LABELS[type].plural} reset yearly`}
+                {...register(`sequences.${index}.resetYearly`)}
+              />
+              Reset yearly
+            </label>
           </div>
         ))}
         <button
