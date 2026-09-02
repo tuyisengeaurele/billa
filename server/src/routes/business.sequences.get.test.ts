@@ -27,7 +27,7 @@ describe("GET /business/sequences", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.sequences).toHaveLength(6);
-    expect(res.body.sequences).toContainEqual({ type: "INVOICE", prefix: "INV-", nextNumber: 1 });
+    expect(res.body.sequences).toContainEqual({ type: "INVOICE", prefix: "INV-", nextNumber: 1, resetYearly: false });
   });
 
   it("returns 401 without a session", async () => {

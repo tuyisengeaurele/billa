@@ -13,16 +13,17 @@ export interface SequenceView {
   type: DocumentType;
   prefix: string;
   nextNumber: number;
+  resetYearly: boolean;
 }
 
 export function mergeSequences(
-  saved: { type: string; prefix: string; nextNumber: number }[],
+  saved: { type: string; prefix: string; nextNumber: number; resetYearly: boolean }[],
 ): SequenceView[] {
   const savedByType = new Map(saved.map((s) => [s.type, s]));
   return DOCUMENT_TYPES.map((type) => {
     const existing = savedByType.get(type);
     return existing
-      ? { type, prefix: existing.prefix, nextNumber: existing.nextNumber }
-      : { type, prefix: DEFAULT_PREFIXES[type], nextNumber: 1 };
+      ? { type, prefix: existing.prefix, nextNumber: existing.nextNumber, resetYearly: existing.resetYearly }
+      : { type, prefix: DEFAULT_PREFIXES[type], nextNumber: 1, resetYearly: false };
   });
 }

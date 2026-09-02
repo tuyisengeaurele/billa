@@ -86,7 +86,7 @@ businessRouter.post("/onboarding/complete", requireOwner, async (req, res) => {
 });
 
 businessRouter.put("/sequences", requireOwner, validateBody(updateSequencesSchema), async (req, res) => {
-  const updates = req.body as { type: string; prefix: string; nextNumber: number }[];
+  const updates = req.body as { type: string; prefix: string; nextNumber: number; resetYearly: boolean }[];
 
   await prisma.$transaction(
     updates.map((update) =>
@@ -102,10 +102,12 @@ businessRouter.put("/sequences", requireOwner, validateBody(updateSequencesSchem
           type: update.type as PrismaDocumentType,
           prefix: update.prefix,
           nextNumber: update.nextNumber,
+          resetYearly: update.resetYearly,
         },
         update: {
           prefix: update.prefix,
           nextNumber: update.nextNumber,
+          resetYearly: update.resetYearly,
         },
       }),
     ),

@@ -30,8 +30,8 @@ describe("PUT /business/sequences", () => {
       .send([{ type: "INVOICE", prefix: "KGL-", nextNumber: 100 }]);
 
     expect(res.status).toBe(200);
-    expect(res.body.sequences).toContainEqual({ type: "INVOICE", prefix: "KGL-", nextNumber: 100 });
-    expect(res.body.sequences).toContainEqual({ type: "QUOTE", prefix: "QTE-", nextNumber: 1 });
+    expect(res.body.sequences).toContainEqual({ type: "INVOICE", prefix: "KGL-", nextNumber: 100, resetYearly: false });
+    expect(res.body.sequences).toContainEqual({ type: "QUOTE", prefix: "QTE-", nextNumber: 1, resetYearly: false });
 
     const rows = await prisma.documentSequence.findMany();
     expect(rows).toHaveLength(1);
@@ -54,6 +54,22 @@ describe("PUT /business/sequences", () => {
     const rows = await prisma.documentSequence.findMany();
     expect(rows).toHaveLength(1);
     expect(rows[0].nextNumber).toBe(150);
+  });
+
+  it("saves resetYearly for a type", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+
+    const res = await request(app)
+      .put("/business/sequences")
+      .set("Cookie", cookies)
+      .send([{ type: "INVOICE", prefix: "INV-", nextNumber: 1, resetYearly: true }]);
+
+    expect(res.status).toBe(200);
+    expect(res.body.sequences).toContainEqual({ type: "INVOICE", prefix: "INV-", nextNumber: 1, resetYearly: true });
+
+    const rows = await prisma.documentSequence.findMany();
+    expect(rows[0]?.resetYearly).toBe(true);
   });
 
   it("rejects duplicate types in the same request with 400", async () => {
