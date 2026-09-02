@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../context/AuthContext";
+import { ToastTestWrapper } from "../test/ToastTestWrapper";
 import Documents from "./Documents";
 
 function urlOf(input: RequestInfo | URL): string {
@@ -11,31 +12,35 @@ function urlOf(input: RequestInfo | URL): string {
 
 function renderDocuments() {
   return render(
-    <MemoryRouter initialEntries={["/documents?type=INVOICE"]}>
-      <AuthProvider>
-        <Routes>
-          <Route path="/documents" element={<Documents />} />
-          <Route path="/documents/new" element={<div>new document page</div>} />
-          <Route path="/documents/:id/edit" element={<div>edit document page</div>} />
-          <Route path="/documents/:id" element={<div>view document page</div>} />
-        </Routes>
-      </AuthProvider>
-    </MemoryRouter>,
+    <ToastTestWrapper>
+      <MemoryRouter initialEntries={["/documents?type=INVOICE"]}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/documents" element={<Documents />} />
+            <Route path="/documents/new" element={<div>new document page</div>} />
+            <Route path="/documents/:id/edit" element={<div>edit document page</div>} />
+            <Route path="/documents/:id" element={<div>view document page</div>} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    </ToastTestWrapper>,
   );
 }
 
 function renderAllDocuments() {
   return render(
-    <MemoryRouter initialEntries={["/documents"]}>
-      <AuthProvider>
-        <Routes>
-          <Route path="/documents" element={<Documents />} />
-          <Route path="/documents/new" element={<div>new document page</div>} />
-          <Route path="/documents/:id/edit" element={<div>edit document page</div>} />
-          <Route path="/documents/:id" element={<div>view document page</div>} />
-        </Routes>
-      </AuthProvider>
-    </MemoryRouter>,
+    <ToastTestWrapper>
+      <MemoryRouter initialEntries={["/documents"]}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/documents" element={<Documents />} />
+            <Route path="/documents/new" element={<div>new document page</div>} />
+            <Route path="/documents/:id/edit" element={<div>edit document page</div>} />
+            <Route path="/documents/:id" element={<div>view document page</div>} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    </ToastTestWrapper>,
   );
 }
 
@@ -434,5 +439,110 @@ describe("Documents", () => {
     await user.keyboard("{Enter}");
 
     await waitFor(() => expect(screen.getByText("edit document page")).toBeInTheDocument());
+  });
+
+  it("bulk-deletes selected drafts", async () => {
+    let deletedIds: string[] = [];
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (init?.method === "DELETE") {
+        const id = url.split("/").pop()!;
+        deletedIds.push(id);
+        return new Response(null, { status: 204 });
+      }
+      if (url.includes("/documents")) {
+        return new Response(
+          JSON.stringify({
+            results: [
+              {
+                id: "d1",
+                type: "INVOICE",
+                number: null,
+                status: "DRAFT",
+                issueDate: "2026-08-19T00:00:00.000Z",
+                total: 0,
+                customer: { name: "Kigali Traders", email: null },
+              },
+              {
+                id: "d2",
+                type: "INVOICE",
+                number: null,
+                status: "DRAFT",
+                issueDate: "2026-08-19T00:00:00.000Z",
+                total: 0,
+                customer: { name: "Acme Ltd", email: null },
+              },
+            ],
+            total: 2,
+            page: 1,
+            pageSize: 20,
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+    const user = userEvent.setup();
+    renderDocuments();
+    await screen.findByText("Kigali Traders");
+
+    await user.click(screen.getByRole("checkbox", { name: "Select all on this page" }));
+    await user.click(screen.getByRole("button", { name: /delete drafts \(2\)/i }));
+    await user.click(screen.getByRole("button", { name: /^delete$/i }));
+
+    await waitFor(() => expect(deletedIds.sort()).toEqual(["d1", "d2"]));
+    expect(await screen.findByText(/2 drafts deleted/i)).toBeInTheDocument();
+  });
+
+  it("bulk-sends selected finalized documents in the chosen language", async () => {
+    const sentIds: string[] = [];
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/send") && init?.method === "POST") {
+        sentIds.push(url.split("/documents/")[1]!.split("/send")[0]!);
+        return new Response(JSON.stringify({ sentAt: "2026-09-02T00:00:00.000Z" }), { status: 200 });
+      }
+      if (url.includes("/documents")) {
+        return new Response(
+          JSON.stringify({
+            results: [
+              {
+                id: "d1",
+                number: "INV-0001",
+                type: "INVOICE",
+                status: "FINALIZED",
+                issueDate: "2026-08-19T00:00:00.000Z",
+                total: 5900,
+                customer: { name: "Kigali Traders", email: "billing@kigali.rw" },
+              },
+              {
+                id: "d2",
+                number: "INV-0002",
+                type: "INVOICE",
+                status: "FINALIZED",
+                issueDate: "2026-08-19T00:00:00.000Z",
+                total: 5900,
+                customer: { name: "Acme Ltd", email: "acme@example.com" },
+              },
+            ],
+            total: 2,
+            page: 1,
+            pageSize: 20,
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+    const user = userEvent.setup();
+    renderDocuments();
+    await screen.findByText("Kigali Traders");
+
+    await user.click(screen.getByRole("checkbox", { name: "Select all on this page" }));
+    await user.click(screen.getByRole("button", { name: /send \(2\)/i }));
+    await user.click(screen.getByRole("button", { name: "English" }));
+
+    await waitFor(() => expect(sentIds.sort()).toEqual(["d1", "d2"]));
+    expect(await screen.findByText(/2 documents sent/i)).toBeInTheDocument();
   });
 });
