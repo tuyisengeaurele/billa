@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { usePageTitle } from "../context/PageTitleContext";
 import { usePaginatedList } from "../lib/usePaginatedList";
 import { describeActivity } from "../lib/activityLabels";
+import { formatRelativeTime } from "../lib/relativeTime";
 
 interface ActivityEntry {
   id: string;
@@ -106,7 +107,9 @@ export default function Activity() {
                     <span className="font-medium">{entry.actor.email}</span>{" "}
                     {describeActivity(entry.action, entry.metadata)}
                   </span>
-                  <span className="text-neutral-400">{new Date(entry.createdAt).toLocaleString()}</span>
+                  <span className="text-neutral-400" title={new Date(entry.createdAt).toLocaleString()}>
+                    {formatRelativeTime(entry.createdAt)}
+                  </span>
                 </li>
               ))}
             </ul>

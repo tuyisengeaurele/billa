@@ -63,6 +63,46 @@ describe("Activity", () => {
     expect(screen.getByText("owner@example.com")).toBeInTheDocument();
   });
 
+  it("shows a relative timestamp with the exact time available on hover", async () => {
+    const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.endsWith("/auth/me")) {
+        return new Response(
+          JSON.stringify({ user: { id: "u1", email: "owner@example.com" }, business: { id: "b1", name: "Kigali Traders" } }),
+          { status: 200 },
+        );
+      }
+      if (url.includes("/business/activity")) {
+        return new Response(
+          JSON.stringify({
+            results: [
+              {
+                id: "a1",
+                action: "CUSTOMER_CREATED",
+                entityType: "Customer",
+                entityId: "c1",
+                metadata: { name: "Acme Ltd" },
+                createdAt: threeHoursAgo.toISOString(),
+                actor: { id: "u1", email: "owner@example.com" },
+              },
+            ],
+            total: 1,
+            page: 1,
+            pageSize: 20,
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    renderPage();
+
+    const timestamp = await screen.findByText("3h ago");
+    expect(timestamp).toHaveAttribute("title", threeHoursAgo.toLocaleString());
+  });
+
   it("shows an empty state when there is no activity", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async (input) => {
       const url = urlOf(input);

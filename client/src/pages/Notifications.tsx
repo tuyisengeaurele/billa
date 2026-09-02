@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { usePageTitle } from "../context/PageTitleContext";
 import { apiRequest } from "../lib/apiClient";
+import { formatRelativeTime } from "../lib/relativeTime";
 
 interface NotificationRow {
   id: string;
@@ -99,8 +100,8 @@ export default function Notifications() {
                 {notification.body && (
                   <p className="mt-1 font-sans text-sm text-neutral-600">{notification.body}</p>
                 )}
-                <p className="mt-2 font-sans text-xs text-neutral-400">
-                  {new Date(notification.createdAt).toLocaleString()}
+                <p className="mt-2 font-sans text-xs text-neutral-400" title={new Date(notification.createdAt).toLocaleString()}>
+                  {formatRelativeTime(notification.createdAt)}
                 </p>
               </div>
             );
