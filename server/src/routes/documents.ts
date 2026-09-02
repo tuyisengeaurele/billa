@@ -6,6 +6,7 @@ import {
   createPaymentSchema,
   documentListQuerySchema,
   documentSchema,
+  DOCUMENT_LANGUAGES,
   voidPaymentSchema,
   writeOffInvoiceSchema,
 } from "@billa/shared";
@@ -319,6 +320,18 @@ documentsRouter.get("/:id/pdf", async (req, res) => {
   if (!document) {
     res.status(404).json({ error: "not_found" });
     return;
+  }
+
+  const requestedLanguage = req.query.language;
+  if (requestedLanguage !== undefined) {
+    if (typeof requestedLanguage !== "string" || !DOCUMENT_LANGUAGES.includes(requestedLanguage as never)) {
+      res.status(400).json({ error: "invalid_language" });
+      return;
+    }
+    if (requestedLanguage !== document.language) {
+      document.language = requestedLanguage as typeof document.language;
+      await prisma.document.update({ where: { id }, data: { language: document.language } });
+    }
   }
 
   const business = await prisma.business.findUnique({ where: { id: businessId } });

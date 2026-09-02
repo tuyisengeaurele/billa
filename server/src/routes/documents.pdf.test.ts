@@ -2,6 +2,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 import { createApp } from "../app.js";
 import { resetDb } from "../test/db.js";
+import { prisma } from "../lib/prisma.js";
 import * as renderDocumentPdfModule from "../lib/pdf/render-document-pdf.js";
 
 beforeAll(() => {
@@ -92,5 +93,39 @@ describe("GET /documents/:id/pdf", () => {
   it("returns 401 without a session", async () => {
     const res = await request(createApp()).get("/documents/some-id/pdf");
     expect(res.status).toBe(401);
+  });
+
+  it("renders and saves the requested language when one is given", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies);
+    const created = await request(app)
+      .post("/documents")
+      .set("Cookie", cookies)
+      .send({ type: "INVOICE", customerId, issueDate: "2026-08-18", lines: [] });
+
+    const res = await request(app)
+      .get(`/documents/${created.body.document.id}/pdf?language=FR`)
+      .set("Cookie", cookies);
+
+    expect(res.status).toBe(200);
+    const updated = await prisma.document.findUniqueOrThrow({ where: { id: created.body.document.id } });
+    expect(updated.language).toBe("FR");
+  });
+
+  it("returns 400 for an invalid language", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies);
+    const created = await request(app)
+      .post("/documents")
+      .set("Cookie", cookies)
+      .send({ type: "INVOICE", customerId, issueDate: "2026-08-18", lines: [] });
+
+    const res = await request(app)
+      .get(`/documents/${created.body.document.id}/pdf?language=DE`)
+      .set("Cookie", cookies);
+
+    expect(res.status).toBe(400);
   });
 });
