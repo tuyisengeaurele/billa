@@ -29,6 +29,7 @@ import { buildPdfRenderData } from "../lib/pdf/render-data.js";
 import { renderDocumentPdf } from "../lib/pdf/render-document-pdf.js";
 import { sendDocumentEmail } from "../lib/mailer.js";
 import { buildDocumentSendEmail } from "../lib/email-templates.js";
+import { buildPublicAssetUrl } from "../lib/asset-url.js";
 import { addInterval, generateDueRecurringDocuments } from "../lib/recurring-documents.js";
 import { sendOverdueReminders } from "../lib/overdue-reminders.js";
 import { logActivity } from "../lib/activity-log.js";
@@ -403,7 +404,6 @@ documentsRouter.post("/:id/send", async (req, res) => {
   const filename = document.number ? `${document.number}.pdf` : `Draft-${document.id.slice(0, 8)}.pdf`;
   const sender = await prisma.user.findUnique({ where: { id: req.auth!.userId } });
   const clientOrigin = process.env.CLIENT_ORIGIN ?? "http://localhost:5173";
-  const apiUrl = process.env.API_URL ?? "http://localhost:4000";
   const { subject, html } = buildDocumentSendEmail({
     language: document.language,
     customerName: document.customer.name,
@@ -413,7 +413,7 @@ documentsRouter.post("/:id/send", async (req, res) => {
     businessAddress: business!.address,
     businessPhone: business!.phone,
     businessEmail: business!.email,
-    businessLogoUrl: business!.logoUrl ? `${apiUrl}${business!.logoUrl}` : null,
+    businessLogoUrl: buildPublicAssetUrl(business!.logoUrl),
     sender: sender ? { name: sender.name, phone: sender.phone, email: sender.email } : null,
     viewUrl: `${clientOrigin}/view/${document.publicToken}`,
   });

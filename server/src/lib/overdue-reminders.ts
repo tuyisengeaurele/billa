@@ -4,6 +4,7 @@ import { buildPdfRenderData } from "./pdf/render-data.js";
 import { renderDocumentPdf } from "./pdf/render-document-pdf.js";
 import { sendDocumentEmail } from "./mailer.js";
 import { buildOverdueReminderEmail } from "./email-templates.js";
+import { buildPublicAssetUrl } from "./asset-url.js";
 import { createNotification } from "./notifications.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -18,8 +19,7 @@ export async function sendOverdueReminders(businessId: string): Promise<SentRemi
   if (!business || !business.remindersEnabled) return [];
 
   const clientOrigin = process.env.CLIENT_ORIGIN ?? "http://localhost:5173";
-  const apiUrl = process.env.API_URL ?? "http://localhost:4000";
-  const businessLogoUrl = business.logoUrl ? `${apiUrl}${business.logoUrl}` : null;
+  const businessLogoUrl = buildPublicAssetUrl(business.logoUrl);
 
   const now = new Date();
   const cooldownCutoff = new Date(now.getTime() - business.reminderCadenceDays * DAY_MS);
