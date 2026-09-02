@@ -722,4 +722,55 @@ describe("DocumentView", () => {
     await screen.findByText("Kigali Traders");
     expect(screen.queryByRole("button", { name: /^delete$/i })).not.toBeInTheDocument();
   });
+
+  it("toggles automatic reminders on a finalized invoice", async () => {
+    let patchedBody: unknown = null;
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/documents/d1/reminders") && init?.method === "PATCH") {
+        patchedBody = JSON.parse(init.body as string);
+        return new Response(JSON.stringify({ document: { id: "d1", remindersEnabled: false } }), { status: 200 });
+      }
+      if (url.endsWith("/documents/d1")) {
+        return new Response(
+          JSON.stringify({
+            document: {
+              id: "d1",
+              number: "INV-0001",
+              type: "INVOICE",
+              status: "FINALIZED",
+              customer: { name: "Kigali Traders" },
+              sentAt: null,
+              remindersEnabled: true,
+              lines: [],
+              subtotal: 0,
+              taxTotal: 0,
+              total: 0,
+            },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+    const user = userEvent.setup();
+
+    render(
+      <ToastTestWrapper>
+        <MemoryRouter initialEntries={["/documents/d1"]}>
+          <AuthProvider>
+            <Routes>
+              <Route path="/documents/:id" element={<DocumentView />} />
+            </Routes>
+          </AuthProvider>
+        </MemoryRouter>
+      </ToastTestWrapper>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: /reminders on/i }));
+
+    expect(patchedBody).toEqual({ enabled: false });
+    expect(await screen.findByText("Reminders turned off")).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /reminders off/i })).toBeInTheDocument();
+  });
 });

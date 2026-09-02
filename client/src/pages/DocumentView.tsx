@@ -41,9 +41,11 @@ interface DocumentDetail {
   convertedTo: DocumentLink | null;
   referencedDocument: DocumentLink | null;
   declinedAt: string | null;
+  remindersEnabled: boolean;
 }
 
 const CONVERTIBLE_TYPES: DocumentType[] = ["PROFORMA", "QUOTE"];
+const REMINDABLE_TYPES: DocumentType[] = ["INVOICE", "PROFORMA", "QUOTE"];
 
 const LANGUAGE_LABELS: Record<DocumentLanguage, string> = {
   EN: "English",
@@ -159,6 +161,18 @@ export default function DocumentView() {
     }
   }
 
+  async function toggleReminders() {
+    if (!document) return;
+    const enabled = !document.remindersEnabled;
+    try {
+      await apiRequest(`/documents/${document.id}/reminders`, { method: "PATCH", body: { enabled } });
+      setDocument({ ...document, remindersEnabled: enabled });
+      toast.success(enabled ? "Reminders turned on" : "Reminders turned off");
+    } catch {
+      toast.error("Couldn't change reminders. Try again.");
+    }
+  }
+
   async function handleDelete() {
     if (!document) return;
     setDeleteError(null);
@@ -225,6 +239,20 @@ export default function DocumentView() {
                 className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
               >
                 {linkCopied ? "Link copied" : "Copy link"}
+              </button>
+            )}
+            {REMINDABLE_TYPES.includes(document.type) && document.status === "FINALIZED" && (
+              <button
+                type="button"
+                onClick={toggleReminders}
+                title={
+                  document.remindersEnabled
+                    ? "Automatic reminders are on for this document"
+                    : "Automatic reminders are off for this document"
+                }
+                className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+              >
+                {document.remindersEnabled ? "Reminders on" : "Reminders off"}
               </button>
             )}
             <button
