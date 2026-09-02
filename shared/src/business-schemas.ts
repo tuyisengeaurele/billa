@@ -32,6 +32,7 @@ export const documentSequenceSchema = z.object({
   type: z.enum(DOCUMENT_TYPES),
   prefix: z.string().min(1).max(10),
   nextNumber: z.number().int().positive(),
+  resetYearly: z.boolean().optional().default(false),
 });
 export type DocumentSequenceInput = z.infer<typeof documentSequenceSchema>;
 

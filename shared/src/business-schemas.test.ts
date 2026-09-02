@@ -142,6 +142,11 @@ describe("documentSequenceSchema", () => {
     const result = documentSequenceSchema.safeParse({ type: "INVOICE", prefix: "INV-", nextNumber: 0 });
     expect(result.success).toBe(false);
   });
+
+  it("defaults resetYearly to false when omitted", () => {
+    const result = documentSequenceSchema.safeParse({ type: "INVOICE", prefix: "INV-", nextNumber: 1 });
+    expect(result.success && result.data.resetYearly).toBe(false);
+  });
 });
 
 describe("updateSequencesSchema", () => {
