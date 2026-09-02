@@ -87,4 +87,34 @@ describe("GET /business/activity", () => {
     const res = await request(createApp()).get("/business/activity");
     expect(res.status).toBe(401);
   });
+
+  it("filters by date range", async () => {
+    const app = createApp();
+    const { cookies } = await registerAndGetCookies(app, "owner@example.com", "Kigali Traders");
+    await request(app).post("/customers").set("Cookie", cookies).send({ name: "First" });
+
+    const farFuture = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const res = await request(app).get(`/business/activity?dateFrom=${farFuture}`).set("Cookie", cookies);
+
+    expect(res.body.total).toBe(0);
+  });
+});
+
+describe("GET /business/activity/export.csv", () => {
+  it("returns a CSV of the business's own activity", async () => {
+    const app = createApp();
+    const { cookies } = await registerAndGetCookies(app, "owner@example.com", "Kigali Traders");
+    await request(app).post("/customers").set("Cookie", cookies).send({ name: "Musanze Supplies" });
+
+    const res = await request(app).get("/business/activity/export.csv").set("Cookie", cookies);
+
+    expect(res.status).toBe(200);
+    expect(res.headers["content-type"]).toContain("text/csv");
+    expect(res.text).toContain("owner@example.com");
+  });
+
+  it("returns 401 without a session", async () => {
+    const res = await request(createApp()).get("/business/activity/export.csv");
+    expect(res.status).toBe(401);
+  });
 });

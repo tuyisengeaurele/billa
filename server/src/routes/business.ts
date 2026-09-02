@@ -27,6 +27,7 @@ import { extractPalette } from "../lib/palette.js";
 import { sendEmail } from "../lib/mailer.js";
 import { buildInviteEmail } from "../lib/email-templates.js";
 import { logActivity } from "../lib/activity-log.js";
+import { toCsv } from "../lib/csv.js";
 
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -427,6 +428,14 @@ businessRouter.get("/activity", validateQuery(activityListQuerySchema), async (r
   const where: Prisma.ActivityLogEntryWhereInput = {
     businessId,
     ...(query.actorUserId ? { actorUserId: query.actorUserId } : {}),
+    ...(query.dateFrom || query.dateTo
+      ? {
+          createdAt: {
+            ...(query.dateFrom ? { gte: new Date(query.dateFrom) } : {}),
+            ...(query.dateTo ? { lt: new Date(new Date(query.dateTo).getTime() + 24 * 60 * 60 * 1000) } : {}),
+          },
+        }
+      : {}),
   };
 
   const [results, total] = await Promise.all([
@@ -441,4 +450,33 @@ businessRouter.get("/activity", validateQuery(activityListQuerySchema), async (r
   ]);
 
   res.json({ results, total, page: query.page, pageSize: query.pageSize });
+});
+
+businessRouter.get("/activity/export.csv", async (req, res) => {
+  const businessId = req.auth!.businessId;
+
+  const entries = await prisma.activityLogEntry.findMany({
+    where: { businessId },
+    orderBy: { createdAt: "desc" },
+    include: { actor: { select: { email: true } } },
+  });
+
+  const csv = toCsv(
+    entries.map((entry) => ({
+      date: entry.createdAt.toISOString(),
+      actor: entry.actor.email,
+      action: entry.action,
+      entityType: entry.entityType,
+    })),
+    [
+      { key: "date", header: "Date" },
+      { key: "actor", header: "Actor" },
+      { key: "action", header: "Action" },
+      { key: "entityType", header: "Entity" },
+    ],
+  );
+
+  res.setHeader("Content-Type", "text/csv");
+  res.setHeader("Content-Disposition", 'attachment; filename="activity.csv"');
+  res.send(csv);
 });
