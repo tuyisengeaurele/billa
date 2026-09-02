@@ -397,6 +397,7 @@ model Document {
 
   lastReminderSentAt   DateTime?
   expiryReminderSentAt DateTime?
+  remindersEnabled     Boolean   @default(true)
 
   convertedFromId String?   @unique
   convertedFrom   Document? @relation("DocumentConversion", fields: [convertedFromId], references: [id])
