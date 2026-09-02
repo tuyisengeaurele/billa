@@ -1,6 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import request from "supertest";
 import { createApp } from "../app.js";
+import { prisma } from "../lib/prisma.js";
 import { resetDb } from "../test/db.js";
 
 beforeAll(() => {
@@ -139,5 +140,69 @@ describe("POST /documents/:id/finalize", () => {
 
     const invoiceAfter = await request(app).get(`/documents/${invoiceId}`).set("Cookie", cookies);
     expect(invoiceAfter.body.document.paymentStatus).toBe("PAID");
+  });
+
+  describe("yearly numbering reset", () => {
+    it("embeds the current year in the number once yearly reset is enabled", async () => {
+      const app = createApp();
+      const cookies = await registerAndGetCookies(app);
+      const customerId = await createCustomer(app, cookies);
+
+      const sequences = await request(app).get("/business/sequences").set("Cookie", cookies);
+      await request(app)
+        .put("/business/sequences")
+        .set("Cookie", cookies)
+        .send(
+          sequences.body.sequences.map((s: { type: string; prefix: string; nextNumber: number }) => ({
+            ...s,
+            resetYearly: s.type === "INVOICE",
+          })),
+        );
+
+      const id = await createDraft(app, cookies, customerId);
+      const res = await request(app).post(`/documents/${id}/finalize`).set("Cookie", cookies);
+
+      const year = new Date().getFullYear();
+      expect(res.body.document.number).toBe(`INV-${year}-0001`);
+    });
+
+    it("resets the counter back to 1 when the calendar year changes", async () => {
+      const app = createApp();
+      const cookies = await registerAndGetCookies(app);
+      const customerId = await createCustomer(app, cookies);
+
+      const sequences = await request(app).get("/business/sequences").set("Cookie", cookies);
+      await request(app)
+        .put("/business/sequences")
+        .set("Cookie", cookies)
+        .send(
+          sequences.body.sequences.map((s: { type: string; prefix: string; nextNumber: number }) => ({
+            ...s,
+            resetYearly: s.type === "INVOICE",
+          })),
+        );
+
+      await prisma.documentSequence.updateMany({
+        where: { type: "INVOICE" },
+        data: { nextNumber: 6, lastResetYear: new Date().getFullYear() - 1 },
+      });
+
+      const id = await createDraft(app, cookies, customerId);
+      const res = await request(app).post(`/documents/${id}/finalize`).set("Cookie", cookies);
+
+      const year = new Date().getFullYear();
+      expect(res.body.document.number).toBe(`INV-${year}-0001`);
+    });
+
+    it("keeps the plain number format when yearly reset is not enabled", async () => {
+      const app = createApp();
+      const cookies = await registerAndGetCookies(app);
+      const customerId = await createCustomer(app, cookies);
+      const id = await createDraft(app, cookies, customerId);
+
+      const res = await request(app).post(`/documents/${id}/finalize`).set("Cookie", cookies);
+
+      expect(res.body.document.number).toBe("INV-0001");
+    });
   });
 });
