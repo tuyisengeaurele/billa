@@ -349,6 +349,7 @@ model Item {
   unitPrice   Int
   unit        String
   taxRate     Decimal  @default(18) @db.Decimal(5, 2)
+  category    String?
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

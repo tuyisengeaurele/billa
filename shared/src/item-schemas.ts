@@ -15,6 +15,12 @@ export const itemSchema = z.object({
     .max(100, "Enter a rate between 0 and 100")
     .optional()
     .default(18),
+  category: z
+    .string()
+    .trim()
+    .nullable()
+    .optional()
+    .transform((val) => (val ? val : null)),
 });
 export type ItemInput = z.infer<typeof itemSchema>;
 
@@ -26,6 +32,7 @@ export type ItemUpdateInput = z.infer<typeof itemUpdateSchema>;
 
 export const itemListQuerySchema = z.object({
   search: z.string().trim().optional(),
+  category: z.string().trim().optional(),
   sortBy: z.enum(["description", "unitPrice", "createdAt"]).optional().default("createdAt"),
   sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
   page: z.coerce.number().int().positive().optional().default(1),

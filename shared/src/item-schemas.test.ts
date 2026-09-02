@@ -42,6 +42,33 @@ describe("itemSchema", () => {
       itemSchema.safeParse({ description: "Printing", unitPrice: 5000, unit: "service", taxRate: 101 }).success,
     ).toBe(false);
   });
+
+  it("accepts an optional category", () => {
+    const result = itemSchema.safeParse({
+      description: "Printing",
+      unitPrice: 5000,
+      unit: "service",
+      category: "Printing services",
+    });
+    expect(result.success && result.data.category).toBe("Printing services");
+  });
+
+  it("treats a blank category string as no category", () => {
+    const result = itemSchema.safeParse({
+      description: "Printing",
+      unitPrice: 5000,
+      unit: "service",
+      category: "",
+    });
+    expect(result.success && result.data.category).toBeNull();
+  });
+
+  it("allows category to be omitted or null", () => {
+    expect(itemSchema.safeParse({ description: "Printing", unitPrice: 5000, unit: "service" }).success).toBe(true);
+    expect(
+      itemSchema.safeParse({ description: "Printing", unitPrice: 5000, unit: "service", category: null }).success,
+    ).toBe(true);
+  });
 });
 
 describe("itemUpdateSchema", () => {
