@@ -94,6 +94,26 @@ describe("GET /dashboard/summary", () => {
     expect(res.body.overdueInvoiceCount).toBe(0);
   });
 
+  it("counts finalized quotes and proformas expiring within 3 days", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies);
+    const soon = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const farOut = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+    const soonQuoteId = await createDocument(app, cookies, customerId, "QUOTE", soon);
+    await finalizeDocument(app, cookies, soonQuoteId);
+    const soonProformaId = await createDocument(app, cookies, customerId, "PROFORMA", soon);
+    await finalizeDocument(app, cookies, soonProformaId);
+    const farQuoteId = await createDocument(app, cookies, customerId, "QUOTE", farOut);
+    await finalizeDocument(app, cookies, farQuoteId);
+    await createDocument(app, cookies, customerId, "QUOTE", soon);
+
+    const res = await request(app).get("/dashboard/summary").set("Cookie", cookies);
+
+    expect(res.body.expiringQuoteCount).toBe(2);
+  });
+
   it("returns the 6 most recently created documents, newest first", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app);

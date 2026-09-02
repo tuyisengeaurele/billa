@@ -32,9 +32,12 @@ dashboardRouter.get("/summary", async (req, res) => {
   const fourteenDaysAgo = utcMidnight(now);
   fourteenDaysAgo.setUTCDate(fourteenDaysAgo.getUTCDate() - 13);
 
+  const expiryCutoff = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+
   const [
     draftCount,
     overdueInvoiceCount,
+    expiringQuoteCount,
     recentDocuments,
     documentsThisMonth,
     documentsLastMonth,
@@ -46,6 +49,16 @@ dashboardRouter.get("/summary", async (req, res) => {
     prisma.document.count({ where: { businessId, status: "DRAFT" } }),
     prisma.document.count({
       where: { businessId, type: "INVOICE", status: "FINALIZED", dueDate: { lt: new Date() } },
+    }),
+    prisma.document.count({
+      where: {
+        businessId,
+        type: { in: ["QUOTE", "PROFORMA"] },
+        status: "FINALIZED",
+        dueDate: { not: null, lte: expiryCutoff },
+        declinedAt: null,
+        convertedTo: { is: null },
+      },
     }),
     prisma.document.findMany({
       where: { businessId },
@@ -84,6 +97,7 @@ dashboardRouter.get("/summary", async (req, res) => {
   res.json({
     draftCount,
     overdueInvoiceCount,
+    expiringQuoteCount,
     recentDocuments: recentDocuments.map((doc) => ({
       id: doc.id,
       type: doc.type,
