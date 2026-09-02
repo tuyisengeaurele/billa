@@ -135,6 +135,7 @@ dashboardRouter.get("/revenue", async (req, res) => {
       issueDate: true,
       customerId: true,
       customer: { select: { name: true } },
+      lines: { select: { itemId: true, description: true, lineTotal: true } },
     },
   });
 
@@ -146,6 +147,7 @@ dashboardRouter.get("/revenue", async (req, res) => {
   let invoicedYearToDate = 0;
   let creditedYearToDate = 0;
   const customerNet = new Map<string, { name: string; total: number }>();
+  const itemNet = new Map<string, { description: string; total: number }>();
 
   for (const doc of docs) {
     const bucket = monthTotals.get(monthKey(doc.issueDate));
@@ -163,6 +165,14 @@ dashboardRouter.get("/revenue", async (req, res) => {
     const existing = customerNet.get(doc.customerId) ?? { name: doc.customer.name, total: 0 };
     existing.total += signedTotal;
     customerNet.set(doc.customerId, existing);
+
+    for (const line of doc.lines) {
+      const key = line.itemId ?? `desc:${line.description}`;
+      const signedLineTotal = doc.type === "INVOICE" ? line.lineTotal : -line.lineTotal;
+      const existingItem = itemNet.get(key) ?? { description: line.description, total: 0 };
+      existingItem.total += signedLineTotal;
+      itemNet.set(key, existingItem);
+    }
   }
 
   const monthlyRevenue = Array.from(monthTotals.entries()).map(([month, { invoiced, credited }]) => ({
@@ -177,6 +187,10 @@ dashboardRouter.get("/revenue", async (req, res) => {
 
   const topCustomers = Array.from(customerNet.entries())
     .map(([customerId, { name, total }]) => ({ customerId, name, total }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 5);
+
+  const topItems = Array.from(itemNet.values())
     .sort((a, b) => b.total - a.total)
     .slice(0, 5);
 
@@ -219,5 +233,6 @@ dashboardRouter.get("/revenue", async (req, res) => {
     daysSalesOutstanding,
     monthlyRevenue,
     topCustomers,
+    topItems,
   });
 });

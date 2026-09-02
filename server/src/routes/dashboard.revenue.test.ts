@@ -144,6 +144,40 @@ describe("GET /dashboard/revenue", () => {
     expect(res.body.topCustomers[1].name).toBe("Small Spender Ltd");
   });
 
+  it("ranks top items by net invoiced total", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies);
+
+    const cementInvoice = await request(app)
+      .post("/documents")
+      .set("Cookie", cookies)
+      .send({
+        type: "INVOICE",
+        customerId,
+        issueDate: new Date().toISOString().slice(0, 10),
+        lines: [{ description: "Cement", quantity: 1, unitPrice: 500000, taxRate: 0 }],
+      });
+    await finalizeDocument(app, cookies, cementInvoice.body.document.id);
+
+    const sandInvoice = await request(app)
+      .post("/documents")
+      .set("Cookie", cookies)
+      .send({
+        type: "INVOICE",
+        customerId,
+        issueDate: new Date().toISOString().slice(0, 10),
+        lines: [{ description: "Sand", quantity: 1, unitPrice: 20000, taxRate: 0 }],
+      });
+    await finalizeDocument(app, cookies, sandInvoice.body.document.id);
+
+    const res = await request(app).get("/dashboard/revenue").set("Cookie", cookies);
+
+    expect(res.body.topItems[0].description).toBe("Cement");
+    expect(res.body.topItems[0].total).toBe(500000);
+    expect(res.body.topItems[1].description).toBe("Sand");
+  });
+
   it("does not include another business's documents", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app);
