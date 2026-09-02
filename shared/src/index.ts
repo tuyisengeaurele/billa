@@ -17,3 +17,4 @@ export * from "./payment-schemas.js";
 export * from "./impersonation-schemas.js";
 export * from "./profile-schemas.js";
 export * from "./search-schemas.js";
+export * from "./notification-schemas.js";
