@@ -7,6 +7,7 @@ import {
   documentListQuerySchema,
   documentSchema,
   DOCUMENT_LANGUAGES,
+  getPdfLabels,
   voidPaymentSchema,
   writeOffInvoiceSchema,
 } from "@billa/shared";
@@ -27,6 +28,7 @@ import { DEFAULT_PREFIXES } from "../lib/document-sequences.js";
 import { buildPdfRenderData } from "../lib/pdf/render-data.js";
 import { renderDocumentPdf } from "../lib/pdf/render-document-pdf.js";
 import { sendDocumentEmail } from "../lib/mailer.js";
+import { buildDocumentSendEmail } from "../lib/email-templates.js";
 import { addInterval, generateDueRecurringDocuments } from "../lib/recurring-documents.js";
 import { sendOverdueReminders } from "../lib/overdue-reminders.js";
 import { logActivity } from "../lib/activity-log.js";
@@ -352,15 +354,6 @@ documentsRouter.get("/:id/pdf", async (req, res) => {
   res.send(pdfBuffer);
 });
 
-const DOCUMENT_TYPE_DISPLAY: Record<string, string> = {
-  INVOICE: "Invoice",
-  PROFORMA: "Proforma invoice",
-  DELIVERY_NOTE: "Delivery note",
-  QUOTE: "Quote",
-  RECEIPT: "Receipt",
-  CREDIT_NOTE: "Credit note",
-};
-
 documentsRouter.post("/:id/send", async (req, res) => {
   const businessId = req.auth!.businessId;
   const { id } = req.params;
@@ -382,6 +375,18 @@ documentsRouter.post("/:id/send", async (req, res) => {
     return;
   }
 
+  const requestedLanguage = (req.body as { language?: unknown })?.language;
+  if (requestedLanguage !== undefined) {
+    if (typeof requestedLanguage !== "string" || !DOCUMENT_LANGUAGES.includes(requestedLanguage as never)) {
+      res.status(400).json({ error: "invalid_language" });
+      return;
+    }
+    if (requestedLanguage !== document.language) {
+      document.language = requestedLanguage as typeof document.language;
+      await prisma.document.update({ where: { id }, data: { language: document.language } });
+    }
+  }
+
   const business = await prisma.business.findUnique({ where: { id: businessId } });
   const data = await buildPdfRenderData(document, business!);
 
@@ -394,14 +399,21 @@ documentsRouter.post("/:id/send", async (req, res) => {
     return;
   }
 
-  const typeLabel = DOCUMENT_TYPE_DISPLAY[document.type];
+  const typeLabel = getPdfLabels(document.language).typeLabels[document.type];
   const filename = document.number ? `${document.number}.pdf` : `Draft-${document.id.slice(0, 8)}.pdf`;
+  const { subject, html } = buildDocumentSendEmail({
+    language: document.language,
+    customerName: document.customer.name,
+    typeLabel,
+    number: document.number,
+    businessName: business!.name,
+  });
 
   try {
     await sendDocumentEmail({
       to: document.customer.email,
-      subject: `${typeLabel} ${document.number} from ${business!.name}`,
-      html: `<p>Hello ${document.customer.name},</p><p>Please find your ${typeLabel.toLowerCase()} ${document.number} from ${business!.name} attached.</p>`,
+      subject,
+      html,
       attachmentFilename: filename,
       attachmentBuffer: pdfBuffer,
     });

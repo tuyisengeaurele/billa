@@ -126,6 +126,38 @@ describe("POST /documents/:id/send", () => {
     expect(captureExceptionMock).toHaveBeenCalledWith(providerError);
   });
 
+  it("sends and saves the requested language when one is given", async () => {
+    const sendSpy = vi.spyOn(mailerModule, "sendDocumentEmail").mockResolvedValue();
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies, "acme@example.com");
+    const documentId = await createFinalizedInvoice(app, cookies, customerId);
+
+    const res = await request(app)
+      .post(`/documents/${documentId}/send`)
+      .set("Cookie", cookies)
+      .send({ language: "FR" });
+
+    expect(res.status).toBe(200);
+    expect(sendSpy).toHaveBeenCalledWith(expect.objectContaining({ subject: expect.stringContaining("de Kigali") }));
+    const getRes = await request(app).get(`/documents/${documentId}`).set("Cookie", cookies);
+    expect(getRes.body.document.language).toBe("FR");
+  });
+
+  it("returns 400 for an invalid language", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies, "acme@example.com");
+    const documentId = await createFinalizedInvoice(app, cookies, customerId);
+
+    const res = await request(app)
+      .post(`/documents/${documentId}/send`)
+      .set("Cookie", cookies)
+      .send({ language: "DE" });
+
+    expect(res.status).toBe(400);
+  });
+
   it("returns 404 for a document belonging to another business", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app);
