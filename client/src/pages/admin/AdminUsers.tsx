@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { AdminPagination } from "../../components/admin/AdminPagination";
 import { LoadErrorBanner } from "../../components/LoadErrorBanner";
 import { Modal } from "../../components/Modal";
+import { SelectAllCheckbox } from "../../components/SelectAllCheckbox";
 import { usePageTitle } from "../../context/PageTitleContext";
 import { useToast } from "../../context/ToastContext";
 import { apiRequest } from "../../lib/apiClient";
@@ -143,10 +144,10 @@ export default function AdminUsers() {
               <thead>
                 <tr className="border-b border-neutral-200 text-left text-neutral-500">
                   <th className="w-8 py-2">
-                    <input
-                      type="checkbox"
-                      aria-label="Select all users"
+                    <SelectAllCheckbox
+                      ariaLabel="Select all users"
                       checked={selectedIds.size > 0 && selectedIds.size === list.results.length}
+                      indeterminate={selectedIds.size > 0 && selectedIds.size < list.results.length}
                       onChange={toggleSelectAll}
                       className="h-4 w-4 rounded border-neutral-300"
                     />
