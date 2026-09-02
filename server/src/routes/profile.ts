@@ -1,7 +1,7 @@
 import { Router } from "express";
 import multer from "multer";
-import { updateProfileSchema } from "@billa/shared";
-import type { UpdateProfileInput } from "@billa/shared";
+import { NOTIFICATION_TYPES, updateNotificationPreferencesSchema, updateProfileSchema } from "@billa/shared";
+import type { UpdateNotificationPreferencesInput, UpdateProfileInput } from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/require-auth.js";
 import { validateBody } from "../middleware/validate.js";
@@ -21,6 +21,15 @@ const uploadAvatar = multer({
 function currentSessionHash(req: { cookies?: Record<string, string> }): string | null {
   const presented = req.cookies?.refresh_token;
   return presented ? hashRefreshToken(presented) : null;
+}
+
+function withDefaults(stored: unknown): Record<string, boolean> {
+  const preferences = (stored && typeof stored === "object" ? stored : {}) as Record<string, unknown>;
+  const result: Record<string, boolean> = {};
+  for (const type of NOTIFICATION_TYPES) {
+    result[type] = preferences[type] !== false;
+  }
+  return result;
 }
 
 profileRouter.patch("/", validateBody(updateProfileSchema), async (req, res) => {
@@ -122,3 +131,31 @@ profileRouter.post("/sessions/revoke-others", async (req, res) => {
 
   res.json({ ok: true });
 });
+
+profileRouter.get("/notification-preferences", async (req, res) => {
+  const user = await prisma.user.findUniqueOrThrow({
+    where: { id: req.auth!.userId },
+    select: { notificationPreferences: true },
+  });
+  res.json({ preferences: withDefaults(user.notificationPreferences) });
+});
+
+profileRouter.patch(
+  "/notification-preferences",
+  validateBody(updateNotificationPreferencesSchema),
+  async (req, res) => {
+    const body = req.body as UpdateNotificationPreferencesInput;
+    const existing = await prisma.user.findUniqueOrThrow({
+      where: { id: req.auth!.userId },
+      select: { notificationPreferences: true },
+    });
+
+    const merged = { ...withDefaults(existing.notificationPreferences), ...body.preferences };
+    await prisma.user.update({
+      where: { id: req.auth!.userId },
+      data: { notificationPreferences: merged },
+    });
+
+    res.json({ preferences: merged });
+  },
+);

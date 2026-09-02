@@ -204,3 +204,70 @@ describe("POST /profile/sessions/revoke-others", () => {
     expect(refreshWithRevokedSession.status).toBe(401);
   });
 });
+
+describe("GET /profile/notification-preferences", () => {
+  it("defaults every notification type to enabled", async () => {
+    const app = createApp();
+    const { cookies } = await registerAndGetCookies(app);
+
+    const res = await request(app).get("/profile/notification-preferences").set("Cookie", cookies);
+
+    expect(res.status).toBe(200);
+    expect(res.body.preferences).toMatchObject({
+      INVOICE_OVERDUE: true,
+      PAYMENT_RECEIVED: true,
+      MEMBER_JOINED: true,
+      CONTACT_MESSAGE_RECEIVED: true,
+      DOCUMENT_ACCEPTED: true,
+      DOCUMENT_DECLINED: true,
+    });
+  });
+
+  it("returns 401 without a session", async () => {
+    const res = await request(createApp()).get("/profile/notification-preferences");
+    expect(res.status).toBe(401);
+  });
+});
+
+describe("PATCH /profile/notification-preferences", () => {
+  it("turns one notification type off without affecting the others", async () => {
+    const app = createApp();
+    const { cookies } = await registerAndGetCookies(app);
+
+    const res = await request(app)
+      .patch("/profile/notification-preferences")
+      .set("Cookie", cookies)
+      .send({ preferences: { PAYMENT_RECEIVED: false } });
+
+    expect(res.status).toBe(200);
+    expect(res.body.preferences.PAYMENT_RECEIVED).toBe(false);
+    expect(res.body.preferences.INVOICE_OVERDUE).toBe(true);
+
+    const getRes = await request(app).get("/profile/notification-preferences").set("Cookie", cookies);
+    expect(getRes.body.preferences.PAYMENT_RECEIVED).toBe(false);
+  });
+
+  it("merges a second update instead of overwriting the first", async () => {
+    const app = createApp();
+    const { cookies } = await registerAndGetCookies(app);
+    await request(app)
+      .patch("/profile/notification-preferences")
+      .set("Cookie", cookies)
+      .send({ preferences: { PAYMENT_RECEIVED: false } });
+
+    const res = await request(app)
+      .patch("/profile/notification-preferences")
+      .set("Cookie", cookies)
+      .send({ preferences: { MEMBER_JOINED: false } });
+
+    expect(res.body.preferences.PAYMENT_RECEIVED).toBe(false);
+    expect(res.body.preferences.MEMBER_JOINED).toBe(false);
+  });
+
+  it("returns 401 without a session", async () => {
+    const res = await request(createApp())
+      .patch("/profile/notification-preferences")
+      .send({ preferences: { PAYMENT_RECEIVED: false } });
+    expect(res.status).toBe(401);
+  });
+});
