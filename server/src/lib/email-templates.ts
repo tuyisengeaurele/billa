@@ -15,15 +15,33 @@ function paragraphs(lines: string[]): string {
   return lines.map((line) => `<p style="margin:0 0 16px;">${line}</p>`).join("");
 }
 
+function viewOnlineButton(viewUrl: string | null): string {
+  if (!viewUrl) return "";
+  return `
+    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 20px;">
+      <tr>
+        <td style="border-radius:8px;background:${BRAND_PINK};">
+          <a href="${viewUrl}" style="display:inline-block;padding:10px 20px;font-size:13px;font-weight:600;color:#ffffff;text-decoration:none;">View online</a>
+        </td>
+      </tr>
+    </table>`;
+}
+
 export interface BusinessFooterInput {
   name: string;
   address: string | null;
   phone: string | null;
   email: string | null;
-  logoDataUri: string | null;
+  logoUrl: string | null;
 }
 
-function renderFooter(business?: BusinessFooterInput): string {
+export interface SenderInput {
+  name: string | null;
+  phone: string | null;
+  email: string;
+}
+
+function renderFooter(business?: BusinessFooterInput, sender?: SenderInput | null): string {
   if (!business) {
     return `<p style="margin:0;font-size:12px;color:#a1a1aa;">Billa, invoicing for Rwandan businesses.</p>`;
   }
@@ -33,19 +51,42 @@ function renderFooter(business?: BusinessFooterInput): string {
     .filter((part): part is string => Boolean(part))
     .map(escapeHtml)
     .join(" &middot; ");
-  const logo = business.logoDataUri
-    ? `<img src="${business.logoDataUri}" alt="${name}" style="height:28px;width:auto;display:block;margin-bottom:10px;">`
+  const logo = business.logoUrl
+    ? `<img src="${business.logoUrl}" alt="${name}" width="120" style="max-height:32px;width:auto;display:block;margin-bottom:10px;">`
     : "";
 
-  return `
+  const businessBlock = `
     ${logo}
     <p style="margin:0;font-size:13px;font-weight:600;color:#27272a;">${name}</p>
     ${contactLine ? `<p style="margin:3px 0 0;font-size:12px;color:#71717a;">${contactLine}</p>` : ""}
+  `;
+
+  const senderLine = [sender?.phone, sender?.email].filter((part): part is string => Boolean(part)).map(escapeHtml).join(" &middot; ");
+  const senderBlock =
+    sender && sender.name
+      ? `
+    <p style="margin:0;font-size:11px;font-weight:600;letter-spacing:0.02em;text-transform:uppercase;color:#a1a1aa;">Sent by</p>
+    <p style="margin:3px 0 0;font-size:13px;font-weight:600;color:#27272a;">${escapeHtml(sender.name)}</p>
+    ${senderLine ? `<p style="margin:2px 0 0;font-size:12px;color:#71717a;">${senderLine}</p>` : ""}
+  `
+      : "";
+
+  if (!senderBlock) {
+    return `${businessBlock}<p style="margin:12px 0 0;font-size:11px;color:#a1a1aa;">Sent with Billa.</p>`;
+  }
+
+  return `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="vertical-align:top;width:60%;">${businessBlock}</td>
+        <td style="vertical-align:top;width:40%;text-align:right;">${senderBlock}</td>
+      </tr>
+    </table>
     <p style="margin:12px 0 0;font-size:11px;color:#a1a1aa;">Sent with Billa.</p>
   `;
 }
 
-function renderEmailShell(bodyHtml: string, business?: BusinessFooterInput): string {
+function renderEmailShell(bodyHtml: string, business?: BusinessFooterInput, sender?: SenderInput | null): string {
   return `<!doctype html>
 <html>
   <body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
@@ -62,10 +103,10 @@ function renderEmailShell(bodyHtml: string, business?: BusinessFooterInput): str
               </td>
             </tr>
             <tr>
-              <td style="padding:16px 32px 32px;font-size:15px;line-height:1.6;color:#3f3f46;">${bodyHtml}</td>
+              <td style="padding:16px 32px 8px;font-size:15px;line-height:1.6;color:#3f3f46;">${bodyHtml}</td>
             </tr>
             <tr>
-              <td style="padding:20px 32px;background:#fafafa;border-top:1px solid #e4e4e7;">${renderFooter(business)}</td>
+              <td style="padding:20px 32px;background:#fafafa;border-top:1px solid #e4e4e7;">${renderFooter(business, sender)}</td>
             </tr>
           </table>
         </td>
@@ -84,11 +125,13 @@ export interface DocumentSendEmailInput {
   businessAddress: string | null;
   businessPhone: string | null;
   businessEmail: string | null;
-  businessLogoDataUri: string | null;
+  businessLogoUrl: string | null;
+  sender: SenderInput | null;
+  viewUrl: string | null;
 }
 
 export function buildDocumentSendEmail(input: DocumentSendEmailInput): { subject: string; html: string } {
-  const { language, customerName, typeLabel, number, businessName } = input;
+  const { language, customerName, typeLabel, number, businessName, viewUrl } = input;
   const customer = escapeHtml(customerName);
   const business = escapeHtml(businessName);
   const type = escapeHtml(typeLabel);
@@ -99,7 +142,7 @@ export function buildDocumentSendEmail(input: DocumentSendEmailInput): { subject
     address: input.businessAddress,
     phone: input.businessPhone,
     email: input.businessEmail,
-    logoDataUri: input.businessLogoDataUri,
+    logoUrl: input.businessLogoUrl,
   };
 
   if (language === "FR") {
@@ -111,8 +154,9 @@ export function buildDocumentSendEmail(input: DocumentSendEmailInput): { subject
           `Merci de faire confiance à ${business}. Vous trouverez ci-joint votre ${typeLower} ${docNumber} au format PDF.`,
           `Pour toute question à ce sujet, il vous suffit de répondre à cet e-mail.`,
           `Cordialement,<br>L'équipe ${business}`,
-        ]),
+        ]) + viewOnlineButton(viewUrl),
         footer,
+        input.sender,
       ),
     };
   }
@@ -125,8 +169,9 @@ export function buildDocumentSendEmail(input: DocumentSendEmailInput): { subject
         `Thank you for choosing ${business}. Your ${typeLower} ${docNumber} is attached to this email as a PDF.`,
         `If you have any questions, just reply to this email and we will get back to you.`,
         `Warm regards,<br>The ${business} team`,
-      ]),
+      ]) + viewOnlineButton(viewUrl),
       footer,
+      input.sender,
     ),
   };
 }
@@ -140,11 +185,12 @@ export interface OverdueReminderEmailInput {
   businessAddress: string | null;
   businessPhone: string | null;
   businessEmail: string | null;
-  businessLogoDataUri: string | null;
+  businessLogoUrl: string | null;
+  viewUrl: string | null;
 }
 
 export function buildOverdueReminderEmail(input: OverdueReminderEmailInput): { subject: string; html: string } {
-  const { language, customerName, number, businessName, dueDate } = input;
+  const { language, customerName, number, businessName, dueDate, viewUrl } = input;
   const customer = escapeHtml(customerName);
   const business = escapeHtml(businessName);
   const docNumber = number ? escapeHtml(number) : "";
@@ -153,7 +199,7 @@ export function buildOverdueReminderEmail(input: OverdueReminderEmailInput): { s
     address: input.businessAddress,
     phone: input.businessPhone,
     email: input.businessEmail,
-    logoDataUri: input.businessLogoDataUri,
+    logoUrl: input.businessLogoUrl,
   };
 
   if (language === "FR") {
@@ -165,7 +211,7 @@ export function buildOverdueReminderEmail(input: OverdueReminderEmailInput): { s
           `Ceci est un rappel amical : la facture ${docNumber} de ${business}, échue le ${dueDate}, n'a pas encore été réglée. Vous la trouverez de nouveau en pièce jointe.`,
           `Si le paiement a déjà été envoyé, merci et veuillez ignorer ce message. Sinon, répondez à cet e-mail à tout moment.`,
           `Cordialement,<br>L'équipe ${business}`,
-        ]),
+        ]) + viewOnlineButton(viewUrl),
         footer,
       ),
     };
@@ -179,7 +225,7 @@ export function buildOverdueReminderEmail(input: OverdueReminderEmailInput): { s
         `This is a friendly reminder that invoice ${docNumber} from ${business}, due on ${dueDate}, has not been paid yet. A copy is attached again for convenience.`,
         `If you have already sent payment, thank you, and please disregard this note. Otherwise, reply here anytime.`,
         `Best,<br>The ${business} team`,
-      ]),
+      ]) + viewOnlineButton(viewUrl),
       footer,
     ),
   };

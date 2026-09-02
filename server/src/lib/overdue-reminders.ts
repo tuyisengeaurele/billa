@@ -17,6 +17,10 @@ export async function sendOverdueReminders(businessId: string): Promise<SentRemi
   const business = await prisma.business.findUnique({ where: { id: businessId } });
   if (!business || !business.remindersEnabled) return [];
 
+  const clientOrigin = process.env.CLIENT_ORIGIN ?? "http://localhost:5173";
+  const apiUrl = process.env.API_URL ?? "http://localhost:4000";
+  const businessLogoUrl = business.logoUrl ? `${apiUrl}${business.logoUrl}` : null;
+
   const now = new Date();
   const cooldownCutoff = new Date(now.getTime() - business.reminderCadenceDays * DAY_MS);
 
@@ -61,7 +65,8 @@ export async function sendOverdueReminders(businessId: string): Promise<SentRemi
       businessAddress: business.address,
       businessPhone: business.phone,
       businessEmail: business.email,
-      businessLogoDataUri: data.business.logoDataUri,
+      businessLogoUrl,
+      viewUrl: `${clientOrigin}/view/${doc.publicToken}`,
     });
 
     try {

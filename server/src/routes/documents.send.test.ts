@@ -2,6 +2,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 import { createApp } from "../app.js";
 import { resetDb } from "../test/db.js";
+import { prisma } from "../lib/prisma.js";
 import * as renderDocumentPdfModule from "../lib/pdf/render-document-pdf.js";
 import * as mailerModule from "../lib/mailer.js";
 
@@ -70,6 +71,26 @@ describe("POST /documents/:id/send", () => {
     expect(sendSpy).toHaveBeenCalledWith(
       expect.objectContaining({ to: "acme@example.com", attachmentFilename: "INV-0001.pdf" }),
     );
+  });
+
+  it("includes the sender's name and a view-online link, with no embedded images", async () => {
+    const sendSpy = vi.spyOn(mailerModule, "sendDocumentEmail").mockResolvedValue();
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    await prisma.user.update({
+      where: { email: "owner@example.com" },
+      data: { name: "Jean Mugisha", phone: "+250788111222" },
+    });
+    const customerId = await createCustomer(app, cookies, "acme@example.com");
+    const documentId = await createFinalizedInvoice(app, cookies, customerId);
+
+    await request(app).post(`/documents/${documentId}/send`).set("Cookie", cookies);
+
+    const call = sendSpy.mock.calls[0]![0];
+    expect(call.html).toContain("Jean Mugisha");
+    expect(call.html).toContain("+250788111222");
+    expect(call.html).toContain("/view/");
+    expect(call.html).not.toContain("base64");
   });
 
   it("returns 409 when the document is still a draft", async () => {

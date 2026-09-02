@@ -401,6 +401,9 @@ documentsRouter.post("/:id/send", async (req, res) => {
 
   const typeLabel = getPdfLabels(document.language).typeLabels[document.type];
   const filename = document.number ? `${document.number}.pdf` : `Draft-${document.id.slice(0, 8)}.pdf`;
+  const sender = await prisma.user.findUnique({ where: { id: req.auth!.userId } });
+  const clientOrigin = process.env.CLIENT_ORIGIN ?? "http://localhost:5173";
+  const apiUrl = process.env.API_URL ?? "http://localhost:4000";
   const { subject, html } = buildDocumentSendEmail({
     language: document.language,
     customerName: document.customer.name,
@@ -410,7 +413,9 @@ documentsRouter.post("/:id/send", async (req, res) => {
     businessAddress: business!.address,
     businessPhone: business!.phone,
     businessEmail: business!.email,
-    businessLogoDataUri: data.business.logoDataUri,
+    businessLogoUrl: business!.logoUrl ? `${apiUrl}${business!.logoUrl}` : null,
+    sender: sender ? { name: sender.name, phone: sender.phone, email: sender.email } : null,
+    viewUrl: `${clientOrigin}/view/${document.publicToken}`,
   });
 
   try {

@@ -10,6 +10,13 @@ function assertNoEmDash(html: string) {
   expect(html).not.toContain("—");
 }
 
+const BLANK_BUSINESS = {
+  businessAddress: null,
+  businessPhone: null,
+  businessEmail: null,
+  businessLogoUrl: null,
+};
+
 describe("buildDocumentSendEmail", () => {
   it("writes a warm English email with the customer's name and document details", () => {
     const { subject, html } = buildDocumentSendEmail({
@@ -18,10 +25,9 @@ describe("buildDocumentSendEmail", () => {
       typeLabel: "Invoice",
       number: "INV-0001",
       businessName: "Kigali Traders",
-      businessAddress: null,
-      businessPhone: null,
-      businessEmail: null,
-      businessLogoDataUri: null,
+      ...BLANK_BUSINESS,
+      sender: null,
+      viewUrl: null,
     });
 
     expect(subject).toBe("Invoice INV-0001 from Kigali Traders");
@@ -38,10 +44,9 @@ describe("buildDocumentSendEmail", () => {
       typeLabel: "Facture",
       number: "INV-0001",
       businessName: "Kigali Traders",
-      businessAddress: null,
-      businessPhone: null,
-      businessEmail: null,
-      businessLogoDataUri: null,
+      ...BLANK_BUSINESS,
+      sender: null,
+      viewUrl: null,
     });
 
     expect(subject).toBe("Facture INV-0001 de Kigali Traders");
@@ -49,7 +54,7 @@ describe("buildDocumentSendEmail", () => {
     assertNoEmDash(html);
   });
 
-  it("includes the sending business's address, phone, and logo in the footer", () => {
+  it("includes the sending business's address, phone, and a hosted logo URL in the footer", () => {
     const { html } = buildDocumentSendEmail({
       language: "EN",
       customerName: "Aline Uwase",
@@ -59,13 +64,67 @@ describe("buildDocumentSendEmail", () => {
       businessAddress: "KG 7 Ave, Kigali",
       businessPhone: "+250788000000",
       businessEmail: "hello@kigalitraders.rw",
-      businessLogoDataUri: "data:image/png;base64,abc123",
+      businessLogoUrl: "https://api.billa.rw/uploads/b1/logo.png",
+      sender: null,
+      viewUrl: null,
     });
 
     expect(html).toContain("KG 7 Ave, Kigali");
     expect(html).toContain("+250788000000");
     expect(html).toContain("hello@kigalitraders.rw");
-    expect(html).toContain("data:image/png;base64,abc123");
+    expect(html).toContain('src="https://api.billa.rw/uploads/b1/logo.png"');
+    expect(html).not.toContain("base64");
+  });
+
+  it("includes the sender's own name, phone, and email when provided", () => {
+    const { html } = buildDocumentSendEmail({
+      language: "EN",
+      customerName: "Aline Uwase",
+      typeLabel: "Invoice",
+      number: "INV-0001",
+      businessName: "Kigali Traders",
+      ...BLANK_BUSINESS,
+      sender: { name: "Jean Mugisha", phone: "+250788111222", email: "jean@kigalitraders.rw" },
+      viewUrl: null,
+    });
+
+    expect(html).toContain("Jean Mugisha");
+    expect(html).toContain("+250788111222");
+    expect(html).toContain("jean@kigalitraders.rw");
+  });
+
+  it("includes a link to view the document online when a view URL is given", () => {
+    const { html } = buildDocumentSendEmail({
+      language: "EN",
+      customerName: "Aline Uwase",
+      typeLabel: "Invoice",
+      number: "INV-0001",
+      businessName: "Kigali Traders",
+      ...BLANK_BUSINESS,
+      sender: null,
+      viewUrl: "https://billa.rw/view/abc123",
+    });
+
+    expect(html).toContain("https://billa.rw/view/abc123");
+  });
+
+  it("keeps the HTML small enough to avoid Gmail's clipping limit", () => {
+    const { html } = buildDocumentSendEmail({
+      language: "EN",
+      customerName: "Aline Uwase",
+      typeLabel: "Invoice",
+      number: "INV-0001",
+      businessName: "Kigali Traders",
+      businessAddress: "KG 7 Ave, Kigali",
+      businessPhone: "+250788000000",
+      businessEmail: "hello@kigalitraders.rw",
+      businessLogoUrl: "https://api.billa.rw/uploads/b1/logo.png",
+      sender: { name: "Jean Mugisha", phone: "+250788111222", email: "jean@kigalitraders.rw" },
+      viewUrl: "https://billa.rw/view/abc123",
+    });
+
+    // Gmail clips messages once the HTML body passes roughly 102KB.
+    expect(Buffer.byteLength(html, "utf8")).toBeLessThan(20_000);
   });
 });
 
@@ -77,10 +136,8 @@ describe("buildOverdueReminderEmail", () => {
       number: "INV-0001",
       businessName: "Kigali Traders",
       dueDate: "2026-08-01",
-      businessAddress: null,
-      businessPhone: null,
-      businessEmail: null,
-      businessLogoDataUri: null,
+      ...BLANK_BUSINESS,
+      viewUrl: null,
     });
 
     expect(subject).toContain("INV-0001");
