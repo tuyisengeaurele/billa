@@ -65,6 +65,9 @@ export const documentSchema = z
   });
 export type DocumentInput = z.infer<typeof documentSchema>;
 
+export const updateDocumentRemindersSchema = z.object({ enabled: z.boolean() });
+export type UpdateDocumentRemindersInput = z.infer<typeof updateDocumentRemindersSchema>;
+
 export const documentListQuerySchema = z.object({
   type: z
     .string()
