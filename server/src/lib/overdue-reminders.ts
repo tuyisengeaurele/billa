@@ -30,6 +30,7 @@ export async function sendOverdueReminders(businessId: string): Promise<SentRemi
       type: "INVOICE",
       status: "FINALIZED",
       dueDate: { lt: now },
+      remindersEnabled: true,
       customer: { email: { not: null } },
       AND: [
         { OR: [{ lastReminderSentAt: null }, { lastReminderSentAt: { lt: cooldownCutoff } }] },

@@ -33,6 +33,7 @@ export async function sendQuoteExpiryReminders(businessId: string): Promise<Sent
       dueDate: { not: null, lte: expiryCutoff },
       declinedAt: null,
       expiryReminderSentAt: null,
+      remindersEnabled: true,
       customer: { email: { not: null } },
       convertedTo: { is: null },
     },

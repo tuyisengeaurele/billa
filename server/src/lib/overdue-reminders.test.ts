@@ -44,6 +44,7 @@ async function createOverdueInvoice(
     lastReminderSentAt?: Date | null;
     status?: "DRAFT" | "FINALIZED";
     paymentStatus?: "UNPAID" | "PARTIALLY_PAID" | "PAID" | "WRITTEN_OFF" | null;
+    remindersEnabled?: boolean;
   },
 ) {
   return prisma.document.create({
@@ -58,6 +59,7 @@ async function createOverdueInvoice(
       dueDate: overrides.dueDate,
       lastReminderSentAt: overrides.lastReminderSentAt ?? null,
       paymentStatus: overrides.paymentStatus ?? null,
+      remindersEnabled: overrides.remindersEnabled ?? true,
       subtotal: 5000,
       taxTotal: 900,
       total: 5900,
@@ -81,6 +83,18 @@ describe("sendOverdueReminders", () => {
     expect(sent).toHaveLength(1);
     expect(sent[0].sentTo).toBe("customer@example.com");
     expect(mailerModule.sendDocumentEmail).toHaveBeenCalledTimes(1);
+  });
+
+  it("skips an invoice with reminders turned off for that document", async () => {
+    const { business, customer } = await setupBusiness("customer@example.com");
+    await createOverdueInvoice(business.id, customer.id, {
+      dueDate: new Date("2020-01-01"),
+      remindersEnabled: false,
+    });
+
+    const sent = await sendOverdueReminders(business.id);
+
+    expect(sent).toHaveLength(0);
   });
 
   it("notifies the owner in-app when a reminder is sent", async () => {

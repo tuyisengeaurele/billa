@@ -131,6 +131,16 @@ describe("sendQuoteExpiryReminders", () => {
     expect(sent).toHaveLength(0);
   });
 
+  it("skips a quote with reminders turned off for that document", async () => {
+    const { business, customer } = await setupBusiness("customer@example.com");
+    const quote = await createQuote(business.id, customer.id, { dueDate: SOON });
+    await prisma.document.update({ where: { id: quote.id }, data: { remindersEnabled: false } });
+
+    const sent = await sendQuoteExpiryReminders(business.id);
+
+    expect(sent).toHaveLength(0);
+  });
+
   it("skips a quote whose customer has no email on file", async () => {
     const { business, customer } = await setupBusiness(null);
     await createQuote(business.id, customer.id, { dueDate: SOON });
