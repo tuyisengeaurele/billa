@@ -26,6 +26,11 @@ function describeRevenueChange(thisMonth: number, lastMonth: number): { text: st
   return diff > 0 ? { text: `+${pct}% vs last month`, tone: "up" } : { text: `${pct}% vs last month`, tone: "down" };
 }
 
+interface TopItemRow {
+  description: string;
+  total: number;
+}
+
 interface TopCustomerRow {
   customerId: string;
   name: string;
@@ -43,6 +48,7 @@ interface RevenueSummary {
   daysSalesOutstanding: number | null;
   monthlyRevenue: MonthlyRevenueRow[];
   topCustomers: TopCustomerRow[];
+  topItems: TopItemRow[];
 }
 
 interface TaxRateRow {
@@ -221,22 +227,43 @@ export default function Revenue() {
               </ResponsiveContainer>
             </div>
 
-            <div className="rounded-xl border border-neutral-200 bg-surface p-6">
-              <p className="font-sans text-sm font-semibold text-neutral-900">Top customers</p>
-              <div className="mt-4 flex flex-col gap-1">
-                {summary.topCustomers.length === 0 ? (
-                  <p className="font-sans text-sm text-neutral-500">No finalized invoices yet.</p>
-                ) : (
-                  summary.topCustomers.map((customer) => (
-                    <div
-                      key={customer.customerId}
-                      className="flex items-center justify-between gap-4 rounded-lg px-3 py-2.5 font-sans text-sm"
-                    >
-                      <span className="text-neutral-900">{customer.name}</span>
-                      <span className="font-medium text-neutral-600">{formatRwf(customer.total)}</span>
-                    </div>
-                  ))
-                )}
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <div className="rounded-xl border border-neutral-200 bg-surface p-6">
+                <p className="font-sans text-sm font-semibold text-neutral-900">Top customers</p>
+                <div className="mt-4 flex flex-col gap-1">
+                  {summary.topCustomers.length === 0 ? (
+                    <p className="font-sans text-sm text-neutral-500">No finalized invoices yet.</p>
+                  ) : (
+                    summary.topCustomers.map((customer) => (
+                      <div
+                        key={customer.customerId}
+                        className="flex items-center justify-between gap-4 rounded-lg px-3 py-2.5 font-sans text-sm"
+                      >
+                        <span className="text-neutral-900">{customer.name}</span>
+                        <span className="font-medium text-neutral-600">{formatRwf(customer.total)}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-neutral-200 bg-surface p-6">
+                <p className="font-sans text-sm font-semibold text-neutral-900">Top items sold</p>
+                <div className="mt-4 flex flex-col gap-1">
+                  {summary.topItems.length === 0 ? (
+                    <p className="font-sans text-sm text-neutral-500">No finalized invoices yet.</p>
+                  ) : (
+                    summary.topItems.map((item) => (
+                      <div
+                        key={item.description}
+                        className="flex items-center justify-between gap-4 rounded-lg px-3 py-2.5 font-sans text-sm"
+                      >
+                        <span className="text-neutral-900">{item.description}</span>
+                        <span className="font-medium text-neutral-600">{formatRwf(item.total)}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             </div>
           </>

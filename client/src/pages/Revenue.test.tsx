@@ -30,6 +30,10 @@ function mockRevenue(overrides: Record<string, unknown> = {}) {
       { customerId: "c1", name: "Acme Ltd", total: 500000 },
       { customerId: "c2", name: "Musanze Supplies", total: 350000 },
     ],
+    topItems: [
+      { description: "Cement", total: 420000 },
+      { description: "Sand", total: 210000 },
+    ],
     ...overrides,
   };
 }
@@ -133,6 +137,15 @@ describe("Revenue", () => {
     expect(await screen.findByText("Acme Ltd")).toBeInTheDocument();
     expect(screen.getByText(/500,000 rwf/i)).toBeInTheDocument();
     expect(screen.getByText("Musanze Supplies")).toBeInTheDocument();
+  });
+
+  it("lists top items sold by net invoiced total", async () => {
+    mockFetch(mockRevenue());
+
+    renderPage();
+
+    expect(await screen.findByText("Cement")).toBeInTheDocument();
+    expect(screen.getByText("Sand")).toBeInTheDocument();
   });
 
   it("shows an empty state when there is no revenue yet", async () => {
