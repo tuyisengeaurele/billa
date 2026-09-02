@@ -75,6 +75,10 @@ html {
 
 body {
   background-color: #ffffff;
+  /* Keeps digits a fixed width so columns of money (line totals, subtotals,
+     revenue figures) line up instead of jittering with a proportional font.
+     Has no effect on non-numeric text. */
+  font-variant-numeric: tabular-nums;
 }
 
 [data-theme="dark"] {
