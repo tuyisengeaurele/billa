@@ -4,6 +4,7 @@ import {
   buildDocumentSendEmail,
   buildInviteEmail,
   buildOverdueReminderEmail,
+  buildQuoteExpiryReminderEmail,
 } from "./email-templates.js";
 
 function assertNoEmDash(html: string) {
@@ -143,6 +144,44 @@ describe("buildOverdueReminderEmail", () => {
     expect(subject).toContain("INV-0001");
     expect(html).toContain("2026-08-01");
     expect(html).toContain("Kigali Traders");
+    assertNoEmDash(html);
+  });
+});
+
+describe("buildQuoteExpiryReminderEmail", () => {
+  it("mentions the quote number and expiry date in English", () => {
+    const { subject, html } = buildQuoteExpiryReminderEmail({
+      language: "EN",
+      customerName: "Aline Uwase",
+      typeLabel: "Quote",
+      number: "QUO-0001",
+      businessName: "Kigali Traders",
+      expiryDate: "2026-09-10",
+      ...BLANK_BUSINESS,
+      viewUrl: null,
+    });
+
+    expect(subject).toContain("QUO-0001");
+    expect(html).toContain("Aline Uwase");
+    expect(html).toContain("2026-09-10");
+    expect(html).toContain("Kigali Traders");
+    assertNoEmDash(html);
+  });
+
+  it("writes the French version when the document language is FR", () => {
+    const { subject, html } = buildQuoteExpiryReminderEmail({
+      language: "FR",
+      customerName: "Aline Uwase",
+      typeLabel: "Devis",
+      number: "QUO-0001",
+      businessName: "Kigali Traders",
+      expiryDate: "2026-09-10",
+      ...BLANK_BUSINESS,
+      viewUrl: null,
+    });
+
+    expect(subject).toContain("QUO-0001");
+    expect(html).toContain("Bonjour Aline Uwase");
     assertNoEmDash(html);
   });
 });

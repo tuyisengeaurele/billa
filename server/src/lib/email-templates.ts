@@ -231,6 +231,64 @@ export function buildOverdueReminderEmail(input: OverdueReminderEmailInput): { s
   };
 }
 
+export interface QuoteExpiryReminderEmailInput {
+  language: DocumentLanguage;
+  customerName: string;
+  typeLabel: string;
+  number: string | null;
+  businessName: string;
+  expiryDate: string;
+  businessAddress: string | null;
+  businessPhone: string | null;
+  businessEmail: string | null;
+  businessLogoUrl: string | null;
+  viewUrl: string | null;
+}
+
+export function buildQuoteExpiryReminderEmail(input: QuoteExpiryReminderEmailInput): { subject: string; html: string } {
+  const { language, customerName, typeLabel, number, businessName, expiryDate, viewUrl } = input;
+  const customer = escapeHtml(customerName);
+  const business = escapeHtml(businessName);
+  const type = escapeHtml(typeLabel);
+  const docNumber = number ? escapeHtml(number) : "";
+  const typeLower = type.toLowerCase();
+  const footer: BusinessFooterInput = {
+    name: businessName,
+    address: input.businessAddress,
+    phone: input.businessPhone,
+    email: input.businessEmail,
+    logoUrl: input.businessLogoUrl,
+  };
+
+  if (language === "FR") {
+    return {
+      subject: `${typeLabel} ${number ?? ""} expire bientôt`.trim(),
+      html: renderEmailShell(
+        paragraphs([
+          `Bonjour ${customer},`,
+          `Ceci est un rappel amical : votre ${typeLower} ${docNumber} de ${business} expire le ${expiryDate}. Si vous souhaitez l'accepter, faites-le avant cette date.`,
+          `Pour toute question, il vous suffit de répondre à cet e-mail.`,
+          `Cordialement,<br>L'équipe ${business}`,
+        ]) + viewOnlineButton(viewUrl),
+        footer,
+      ),
+    };
+  }
+
+  return {
+    subject: `${typeLabel} ${number ?? ""} expires soon`.trim(),
+    html: renderEmailShell(
+      paragraphs([
+        `Hi ${customer},`,
+        `This is a friendly reminder that your ${typeLower} ${docNumber} from ${business} expires on ${expiryDate}. If you would like to accept it, please do so before then.`,
+        `If you have any questions, just reply to this email.`,
+        `Best,<br>The ${business} team`,
+      ]) + viewOnlineButton(viewUrl),
+      footer,
+    ),
+  };
+}
+
 export interface ContactReplyEmailInput {
   recipientName: string;
   originalMessage: string;
