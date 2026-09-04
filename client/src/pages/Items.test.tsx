@@ -4,6 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../context/AuthContext";
 import { ToastTestWrapper } from "../test/ToastTestWrapper";
+import * as downloadFileModule from "../lib/downloadFile";
 import Items from "./Items";
 
 function urlOf(input: RequestInfo | URL): string {
@@ -417,5 +418,21 @@ describe("Items", () => {
 
     expect(screen.getByRole("button", { name: "Deactivate (1)" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Reactivate (1)" })).toBeInTheDocument();
+  });
+
+  it("includes the active category filter in the CSV export", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(
+      async () => new Response(JSON.stringify({ results: [], total: 0, page: 1, pageSize: 20 }), { status: 200 }),
+    );
+    vi.spyOn(downloadFileModule, "downloadFile").mockResolvedValue(undefined);
+
+    const user = userEvent.setup();
+    renderItems();
+    await screen.findByText(/no items yet/i);
+
+    await user.type(screen.getByLabelText(/filter by category/i), "Printing");
+    await user.click(screen.getByRole("button", { name: "Export CSV" }));
+
+    expect(downloadFileModule.downloadFile).toHaveBeenCalledWith("/items/export.csv?category=Printing", "items.csv");
   });
 });

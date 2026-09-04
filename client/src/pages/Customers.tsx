@@ -37,6 +37,10 @@ export default function Customers() {
   usePageTitle("Customers");
   const toast = useToast();
   const list = usePaginatedList<Customer, SortBy>({ resourcePath: "/customers", defaultSortBy: "createdAt" });
+  const exportParams = new URLSearchParams();
+  if (list.search.trim()) exportParams.set("search", list.search.trim());
+  if (list.includeInactive) exportParams.set("includeInactive", "true");
+  const exportPath = `/customers/export.csv${exportParams.toString() ? `?${exportParams}` : ""}`;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -262,7 +266,7 @@ export default function Customers() {
                 Show inactive
               </label>
             </div>
-            <ExportCsvButton path="/customers/export.csv" filename="customers.csv" />
+            <ExportCsvButton path={exportPath} filename="customers.csv" />
           </div>
           )}
 

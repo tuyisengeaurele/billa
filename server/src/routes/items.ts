@@ -16,16 +16,20 @@ itemsRouter.use(requireAuth);
 itemsRouter.use(requireActiveSubscription);
 itemsRouter.use(blockAccountantMutations);
 
-itemsRouter.get("/", validateQuery(itemListQuerySchema), async (req, res) => {
-  const query = req.listQuery as ItemListQuery;
-  const businessId = req.auth!.businessId;
-
-  const where: Prisma.ItemWhereInput = {
+function buildItemsWhere(businessId: string, query: ItemListQuery): Prisma.ItemWhereInput {
+  return {
     businessId,
     ...(query.includeInactive ? {} : { isActive: true }),
     ...(query.search ? { description: { contains: query.search, mode: "insensitive" } } : {}),
     ...(query.category ? { category: { equals: query.category, mode: "insensitive" } } : {}),
   };
+}
+
+itemsRouter.get("/", validateQuery(itemListQuerySchema), async (req, res) => {
+  const query = req.listQuery as ItemListQuery;
+  const businessId = req.auth!.businessId;
+
+  const where = buildItemsWhere(businessId, query);
 
   const [results, total] = await Promise.all([
     prisma.item.findMany({
@@ -40,10 +44,14 @@ itemsRouter.get("/", validateQuery(itemListQuerySchema), async (req, res) => {
   res.json({ results, total, page: query.page, pageSize: query.pageSize });
 });
 
-itemsRouter.get("/export.csv", async (req, res) => {
+itemsRouter.get("/export.csv", validateQuery(itemListQuerySchema), async (req, res) => {
+  const query = req.listQuery as ItemListQuery;
   const businessId = req.auth!.businessId;
 
-  const items = await prisma.item.findMany({ where: { businessId }, orderBy: { description: "asc" } });
+  const items = await prisma.item.findMany({
+    where: buildItemsWhere(businessId, query),
+    orderBy: { description: "asc" },
+  });
 
   const csv = toCsv(
     items.map((item) => ({

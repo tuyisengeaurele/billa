@@ -43,6 +43,35 @@ describe("GET /documents/export.csv", () => {
     expect(res.text).toContain("76700");
   });
 
+  it("only exports documents matching the active type filter", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customer = await request(app).post("/customers").set("Cookie", cookies).send({ name: "Acme Ltd" });
+    await request(app)
+      .post("/documents")
+      .set("Cookie", cookies)
+      .send({
+        type: "INVOICE",
+        customerId: customer.body.customer.id,
+        issueDate: "2026-08-19",
+        lines: [{ description: "Cement", quantity: 5, unitPrice: 13000, taxRate: 18 }],
+      });
+    await request(app)
+      .post("/documents")
+      .set("Cookie", cookies)
+      .send({
+        type: "QUOTE",
+        customerId: customer.body.customer.id,
+        issueDate: "2026-08-19",
+        lines: [{ description: "Sand", quantity: 1, unitPrice: 1000, taxRate: 18 }],
+      });
+
+    const res = await request(app).get("/documents/export.csv?type=INVOICE").set("Cookie", cookies);
+
+    expect(res.text).toContain("INVOICE");
+    expect(res.text).not.toContain("QUOTE");
+  });
+
   it("does not include another business's documents", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app, "owner@example.com");
@@ -77,6 +106,18 @@ describe("GET /customers/export.csv", () => {
     expect(res.text).toContain("Acme Ltd");
   });
 
+  it("only exports customers matching the active search filter", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    await request(app).post("/customers").set("Cookie", cookies).send({ name: "Acme Ltd" });
+    await request(app).post("/customers").set("Cookie", cookies).send({ name: "Musanze Supplies" });
+
+    const res = await request(app).get("/customers/export.csv?search=acme").set("Cookie", cookies);
+
+    expect(res.text).toContain("Acme Ltd");
+    expect(res.text).not.toContain("Musanze Supplies");
+  });
+
   it("returns 401 without a session", async () => {
     const res = await request(createApp()).get("/customers/export.csv");
     expect(res.status).toBe(401);
@@ -98,6 +139,26 @@ describe("GET /items/export.csv", () => {
     expect(res.headers["content-type"]).toContain("text/csv");
     expect(res.text).toContain("Description,Category,Unit price,Unit,Status");
     expect(res.text).toContain("Cement bag");
+  });
+
+  it("only exports items matching the active category filter", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    await request(app)
+      .post("/items")
+      .set("Cookie", cookies)
+      .send({ description: "Cement bag", unitPrice: 13000, unit: "bag", category: "Building materials" });
+    await request(app)
+      .post("/items")
+      .set("Cookie", cookies)
+      .send({ description: "Printing service", unitPrice: 1000, unit: "piece", category: "Services" });
+
+    const res = await request(app)
+      .get("/items/export.csv?category=Building%20materials")
+      .set("Cookie", cookies);
+
+    expect(res.text).toContain("Cement bag");
+    expect(res.text).not.toContain("Printing service");
   });
 
   it("returns 401 without a session", async () => {

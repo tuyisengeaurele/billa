@@ -34,6 +34,8 @@ export default function Activity() {
     defaultSortBy: "createdAt",
     extraParams,
   });
+  const exportParams = new URLSearchParams(extraParams);
+  const exportPath = `/business/activity/export.csv${exportParams.toString() ? `?${exportParams}` : ""}`;
 
   const totalPages = Math.max(1, Math.ceil(list.total / list.pageSize));
 
@@ -82,7 +84,7 @@ export default function Activity() {
               }}
               className="rounded-lg border border-neutral-200 bg-surface px-3 py-2 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
             />
-            <ExportCsvButton path="/business/activity/export.csv" filename="activity.csv" />
+            <ExportCsvButton path={exportPath} filename="activity.csv" />
           </div>
         </div>
 

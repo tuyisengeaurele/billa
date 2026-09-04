@@ -34,6 +34,11 @@ export default function Items() {
     defaultSortBy: "createdAt",
     extraParams: categoryFilter ? { category: categoryFilter } : {},
   });
+  const exportParams = new URLSearchParams();
+  if (list.search.trim()) exportParams.set("search", list.search.trim());
+  if (list.includeInactive) exportParams.set("includeInactive", "true");
+  if (categoryFilter) exportParams.set("category", categoryFilter);
+  const exportPath = `/items/export.csv${exportParams.toString() ? `?${exportParams}` : ""}`;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -245,7 +250,7 @@ export default function Items() {
                 Show inactive
               </label>
             </div>
-            <ExportCsvButton path="/items/export.csv" filename="items.csv" />
+            <ExportCsvButton path={exportPath} filename="items.csv" />
           </div>
           )}
 

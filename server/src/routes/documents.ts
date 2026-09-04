@@ -177,11 +177,8 @@ documentsRouter.post("/expiring/send-reminders", async (req, res) => {
   }
 });
 
-documentsRouter.get("/", validateQuery(documentListQuerySchema), async (req, res) => {
-  const query = req.listQuery as DocumentListQuery;
-  const businessId = req.auth!.businessId;
-
-  const where: Prisma.DocumentWhereInput = {
+function buildDocumentsWhere(businessId: string, query: DocumentListQuery): Prisma.DocumentWhereInput {
+  return {
     businessId,
     ...(query.type && query.type.length > 0 ? { type: { in: query.type } } : {}),
     ...(query.status ? { status: query.status } : {}),
@@ -203,6 +200,13 @@ documentsRouter.get("/", validateQuery(documentListQuerySchema), async (req, res
         }
       : {}),
   };
+}
+
+documentsRouter.get("/", validateQuery(documentListQuerySchema), async (req, res) => {
+  const query = req.listQuery as DocumentListQuery;
+  const businessId = req.auth!.businessId;
+
+  const where = buildDocumentsWhere(businessId, query);
 
   const [results, total] = await Promise.all([
     prisma.document.findMany({
@@ -218,11 +222,12 @@ documentsRouter.get("/", validateQuery(documentListQuerySchema), async (req, res
   res.json({ results, total, page: query.page, pageSize: query.pageSize });
 });
 
-documentsRouter.get("/export.csv", async (req, res) => {
+documentsRouter.get("/export.csv", validateQuery(documentListQuerySchema), async (req, res) => {
+  const query = req.listQuery as DocumentListQuery;
   const businessId = req.auth!.businessId;
 
   const documents = await prisma.document.findMany({
-    where: { businessId },
+    where: buildDocumentsWhere(businessId, query),
     orderBy: { issueDate: "desc" },
     include: { customer: { select: { name: true } } },
   });

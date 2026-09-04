@@ -113,6 +113,33 @@ describe("GET /business/activity/export.csv", () => {
     expect(res.text).toContain("owner@example.com");
   });
 
+  it("only exports entries matching the active actor filter", async () => {
+    const app = createApp();
+    const { cookies, userId, businessId } = await registerAndGetCookies(app, "owner@example.com", "Kigali Traders");
+    const otherMember = await prisma.user.create({
+      data: {
+        email: "member@example.com",
+        firebaseUid: "member@example.com",
+        trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+      },
+    });
+    await prisma.activityLogEntry.create({
+      data: {
+        businessId,
+        actorUserId: otherMember.id,
+        action: "CUSTOMER_CREATED",
+        entityType: "Customer",
+        entityId: "c1",
+      },
+    });
+    await request(app).post("/customers").set("Cookie", cookies).send({ name: "Musanze Supplies" });
+
+    const res = await request(app).get(`/business/activity/export.csv?actorUserId=${userId}`).set("Cookie", cookies);
+
+    expect(res.text).toContain("owner@example.com");
+    expect(res.text).not.toContain("member@example.com");
+  });
+
   it("returns 401 without a session", async () => {
     const res = await request(createApp()).get("/business/activity/export.csv");
     expect(res.status).toBe(401);

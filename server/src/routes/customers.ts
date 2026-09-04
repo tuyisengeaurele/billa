@@ -17,16 +17,20 @@ customersRouter.use(requireAuth);
 customersRouter.use(requireActiveSubscription);
 customersRouter.use(blockAccountantMutations);
 
-customersRouter.get("/", validateQuery(customerListQuerySchema), async (req, res) => {
-  const query = req.listQuery as CustomerListQuery;
-  const businessId = req.auth!.businessId;
-
-  const where: Prisma.CustomerWhereInput = {
+function buildCustomersWhere(businessId: string, query: CustomerListQuery): Prisma.CustomerWhereInput {
+  return {
     businessId,
     ...(query.includeInactive ? {} : { isActive: true }),
     ...(query.search ? { name: { contains: query.search, mode: "insensitive" } } : {}),
     ...(query.assignedToId ? { assignedToId: query.assignedToId } : {}),
   };
+}
+
+customersRouter.get("/", validateQuery(customerListQuerySchema), async (req, res) => {
+  const query = req.listQuery as CustomerListQuery;
+  const businessId = req.auth!.businessId;
+
+  const where = buildCustomersWhere(businessId, query);
 
   const [results, total] = await Promise.all([
     prisma.customer.findMany({
@@ -42,10 +46,14 @@ customersRouter.get("/", validateQuery(customerListQuerySchema), async (req, res
   res.json({ results, total, page: query.page, pageSize: query.pageSize });
 });
 
-customersRouter.get("/export.csv", async (req, res) => {
+customersRouter.get("/export.csv", validateQuery(customerListQuerySchema), async (req, res) => {
+  const query = req.listQuery as CustomerListQuery;
   const businessId = req.auth!.businessId;
 
-  const customers = await prisma.customer.findMany({ where: { businessId }, orderBy: { name: "asc" } });
+  const customers = await prisma.customer.findMany({
+    where: buildCustomersWhere(businessId, query),
+    orderBy: { name: "asc" },
+  });
 
   const csv = toCsv(
     customers.map((c) => ({

@@ -423,11 +423,8 @@ businessRouter.post("/invites/:id/resend", requireOwner, async (req, res) => {
   res.json({ invite: { id: updated.id, email: updated.email, expiresAt: updated.expiresAt }, link });
 });
 
-businessRouter.get("/activity", validateQuery(activityListQuerySchema), async (req, res) => {
-  const query = req.listQuery as ActivityListQuery;
-  const businessId = req.auth!.businessId;
-
-  const where: Prisma.ActivityLogEntryWhereInput = {
+function buildActivityWhere(businessId: string, query: ActivityListQuery): Prisma.ActivityLogEntryWhereInput {
+  return {
     businessId,
     ...(query.actorUserId ? { actorUserId: query.actorUserId } : {}),
     ...(query.dateFrom || query.dateTo
@@ -439,6 +436,13 @@ businessRouter.get("/activity", validateQuery(activityListQuerySchema), async (r
         }
       : {}),
   };
+}
+
+businessRouter.get("/activity", validateQuery(activityListQuerySchema), async (req, res) => {
+  const query = req.listQuery as ActivityListQuery;
+  const businessId = req.auth!.businessId;
+
+  const where = buildActivityWhere(businessId, query);
 
   const [results, total] = await Promise.all([
     prisma.activityLogEntry.findMany({
@@ -454,11 +458,12 @@ businessRouter.get("/activity", validateQuery(activityListQuerySchema), async (r
   res.json({ results, total, page: query.page, pageSize: query.pageSize });
 });
 
-businessRouter.get("/activity/export.csv", async (req, res) => {
+businessRouter.get("/activity/export.csv", validateQuery(activityListQuerySchema), async (req, res) => {
+  const query = req.listQuery as ActivityListQuery;
   const businessId = req.auth!.businessId;
 
   const entries = await prisma.activityLogEntry.findMany({
-    where: { businessId },
+    where: buildActivityWhere(businessId, query),
     orderBy: { createdAt: "desc" },
     include: { actor: { select: { email: true } } },
   });

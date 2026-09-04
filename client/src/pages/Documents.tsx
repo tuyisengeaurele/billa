@@ -62,6 +62,9 @@ export default function Documents() {
     defaultSortBy: "createdAt",
     extraParams,
   });
+  const exportParams = new URLSearchParams(extraParams);
+  if (list.search.trim()) exportParams.set("search", list.search.trim());
+  const exportPath = `/documents/export.csv${exportParams.toString() ? `?${exportParams}` : ""}`;
 
   useEffect(() => {
     setSelectedIds(new Set());
@@ -226,7 +229,7 @@ export default function Documents() {
               />
             </div>
             <div className="ml-auto">
-              <ExportCsvButton path="/documents/export.csv" filename="documents.csv" />
+              <ExportCsvButton path={exportPath} filename="documents.csv" />
             </div>
           </div>
 
