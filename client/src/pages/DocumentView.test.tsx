@@ -54,6 +54,82 @@ describe("DocumentView", () => {
     expect(screen.getByText(/total: 11,800 rwf/i)).toBeInTheDocument();
   });
 
+  it("shows the recurrence schedule when the document repeats", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async () =>
+      new Response(
+        JSON.stringify({
+          document: {
+            id: "d1",
+            number: "INV-0001",
+            type: "INVOICE",
+            status: "FINALIZED",
+            customer: { name: "Kigali Traders" },
+            lines: [],
+            subtotal: 0,
+            taxTotal: 0,
+            total: 0,
+            recurrenceInterval: "MONTHLY",
+            nextRecurrenceAt: "2026-10-04T00:00:00.000Z",
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/documents/d1"]}>
+        <AuthProvider>
+          <Routes>
+            <Route element={<AppLayoutRoute />}>
+              <Route path="/documents/:id" element={<DocumentView />} />
+            </Route>
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText(/repeats monthly/i)).toBeInTheDocument();
+    expect(screen.getByText(/next copy on 2026-10-04/i)).toBeInTheDocument();
+  });
+
+  it("shows no recurrence line for a one-off document", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async () =>
+      new Response(
+        JSON.stringify({
+          document: {
+            id: "d1",
+            number: "INV-0001",
+            type: "INVOICE",
+            status: "FINALIZED",
+            customer: { name: "Kigali Traders" },
+            lines: [],
+            subtotal: 0,
+            taxTotal: 0,
+            total: 0,
+            recurrenceInterval: null,
+            nextRecurrenceAt: null,
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/documents/d1"]}>
+        <AuthProvider>
+          <Routes>
+            <Route element={<AppLayoutRoute />}>
+              <Route path="/documents/:id" element={<DocumentView />} />
+            </Route>
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("Kigali Traders");
+    expect(screen.queryByText(/repeats/i)).not.toBeInTheDocument();
+  });
+
   it("asks for a language, then opens the PDF download URL for the chosen one", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async () =>
       new Response(

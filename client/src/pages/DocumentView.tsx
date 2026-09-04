@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { DOCUMENT_LANGUAGES, type DocumentLanguage, type DocumentType } from "@billa/shared";
+import { DOCUMENT_LANGUAGES, type DocumentLanguage, type DocumentType, type RecurrenceInterval } from "@billa/shared";
 import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { Modal } from "../components/Modal";
 import { Spinner } from "../components/Spinner";
@@ -42,6 +42,8 @@ interface DocumentDetail {
   referencedDocument: DocumentLink | null;
   declinedAt: string | null;
   remindersEnabled: boolean;
+  recurrenceInterval: RecurrenceInterval | null;
+  nextRecurrenceAt: string | null;
 }
 
 const CONVERTIBLE_TYPES: DocumentType[] = ["PROFORMA", "QUOTE"];
@@ -50,6 +52,13 @@ const REMINDABLE_TYPES: DocumentType[] = ["INVOICE", "PROFORMA", "QUOTE"];
 const LANGUAGE_LABELS: Record<DocumentLanguage, string> = {
   EN: "English",
   FR: "French",
+};
+
+const RECURRENCE_INTERVAL_LABELS: Record<RecurrenceInterval, string> = {
+  WEEKLY: "weekly",
+  MONTHLY: "monthly",
+  QUARTERLY: "quarterly",
+  ANNUALLY: "annually",
 };
 
 export default function DocumentView() {
@@ -305,6 +314,13 @@ export default function DocumentView() {
 
         {document.sentAt && (
           <p className="font-sans text-xs text-neutral-400">Sent {document.sentAt.slice(0, 10)}</p>
+        )}
+
+        {document.recurrenceInterval && (
+          <p className="font-sans text-xs text-neutral-500">
+            Repeats {RECURRENCE_INTERVAL_LABELS[document.recurrenceInterval]}
+            {document.nextRecurrenceAt && <> · Next copy on {document.nextRecurrenceAt.slice(0, 10)}</>}
+          </p>
         )}
 
         {apiError && (
