@@ -38,7 +38,12 @@ function SidebarLink({
   icon?: ReactNode;
 }) {
   return (
-    <Link to={to} onClick={onNavigate} className="relative block rounded-lg px-3 py-2 font-sans text-sm font-medium">
+    <Link
+      to={to}
+      onClick={onNavigate}
+      aria-current={isActive ? "page" : undefined}
+      className="relative block rounded-lg px-3 py-2 font-sans text-sm font-medium"
+    >
       {isActive && (
         <motion.span
           layoutId="sidebar-active-pill"

@@ -104,6 +104,13 @@ describe("Sidebar", () => {
     expect(link.querySelector("span.z-10")).not.toHaveClass("text-primary-700");
   });
 
+  it("marks the current page's nav link with aria-current for screen readers", async () => {
+    renderSidebar(undefined, ["/dashboard"]);
+
+    expect(await screen.findByRole("link", { name: "Dashboard" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Items" })).not.toHaveAttribute("aria-current");
+  });
+
   it("highlights a document type link while editing a document of that type", async () => {
     renderSidebarViewingDocumentType("INVOICE");
 
