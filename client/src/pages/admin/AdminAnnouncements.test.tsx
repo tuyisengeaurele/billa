@@ -88,6 +88,26 @@ describe("AdminAnnouncements", () => {
     expect(await screen.findByText("Announcement posted")).toBeInTheDocument();
   });
 
+  it("shows a live character count while composing", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.endsWith("/admin/announcements")) {
+        return new Response(JSON.stringify({ results: [] }), { status: 200 });
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText(/no announcements yet/i);
+    expect(screen.getByText("0/500")).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText(/message/i), "Scheduled maintenance");
+
+    expect(screen.getByText("21/500")).toBeInTheDocument();
+  });
+
   it("deactivates the active announcement when confirmed", async () => {
     let active = true;
     vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {

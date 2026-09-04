@@ -11,6 +11,8 @@ interface AnnouncementRow {
   createdAt: string;
 }
 
+const ANNOUNCEMENT_MAX_LENGTH = 500;
+
 export default function AdminAnnouncements() {
   usePageTitle("Announcements");
   const toast = useToast();
@@ -83,10 +85,21 @@ export default function AdminAnnouncements() {
               id="announcementMessage"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              maxLength={500}
+              maxLength={ANNOUNCEMENT_MAX_LENGTH}
               rows={3}
               className="w-full resize-none rounded-lg border border-neutral-200 bg-surface px-3.5 py-2 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
             />
+            <span
+              className={`self-end font-sans text-xs tabular-nums ${
+                message.length >= ANNOUNCEMENT_MAX_LENGTH
+                  ? "text-error"
+                  : message.length >= ANNOUNCEMENT_MAX_LENGTH * 0.9
+                    ? "text-warning"
+                    : "text-neutral-400"
+              }`}
+            >
+              {message.length}/{ANNOUNCEMENT_MAX_LENGTH}
+            </span>
             <button
               type="submit"
               disabled={isPosting || !message.trim()}
