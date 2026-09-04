@@ -142,6 +142,38 @@ describe("Documents", () => {
     expect(screen.getByText("5,900 RWF")).toBeInTheDocument();
   });
 
+  it("renders the document number as a real link, so it can be opened in a new tab", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.includes("/documents")) {
+        return new Response(
+          JSON.stringify({
+            results: [
+              {
+                id: "d1",
+                number: "INV-0001",
+                status: "FINALIZED",
+                issueDate: "2026-08-19T00:00:00.000Z",
+                total: 5900,
+                customer: { name: "Kigali Traders" },
+              },
+            ],
+            total: 1,
+            page: 1,
+            pageSize: 20,
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    renderDocuments();
+
+    const link = await screen.findByRole("link", { name: "INV-0001" });
+    expect(link).toHaveAttribute("href", "/documents/d1");
+  });
+
   it("shows a payment status badge for an invoice", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async (input) => {
       const url = urlOf(input);

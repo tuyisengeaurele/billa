@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { DOCUMENT_LANGUAGES, DOCUMENT_TYPES, type DocumentLanguage, type DocumentType, type InvoicePaymentStatus } from "@billa/shared";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ExportCsvButton } from "../components/ExportCsvButton";
 import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { Modal } from "../components/Modal";
@@ -78,12 +78,12 @@ export default function Documents() {
       : `No ${labels!.plural.toLowerCase()} yet.`;
   const loadingLabel = isUnified ? "Loading documents" : `Loading ${labels!.plural.toLowerCase()}`;
 
+  function documentHref(document: DocumentRow): string {
+    return document.status === "DRAFT" ? `/documents/${document.id}/edit` : `/documents/${document.id}`;
+  }
+
   function openDocument(document: DocumentRow) {
-    if (document.status === "DRAFT") {
-      navigate(`/documents/${document.id}/edit`);
-    } else {
-      navigate(`/documents/${document.id}`);
-    }
+    navigate(documentHref(document));
   }
 
   function toggleType(type: DocumentType) {
@@ -357,7 +357,11 @@ export default function Documents() {
                         </span>
                       </td>
                     )}
-                    <td className="py-3 font-medium text-neutral-900">{document.number ?? "Draft"}</td>
+                    <td className="py-3 font-medium text-neutral-900" onClick={(event) => event.stopPropagation()}>
+                      <Link to={documentHref(document)} className="hover:underline">
+                        {document.number ?? "Draft"}
+                      </Link>
+                    </td>
                     <td className="py-3 text-neutral-600">{document.customer.name}</td>
                     <td className="py-3 text-neutral-600">{formatRwf(document.total)}</td>
                     <td className="py-3">
