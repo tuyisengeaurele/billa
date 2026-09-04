@@ -22,7 +22,6 @@ function buildCustomersWhere(businessId: string, query: CustomerListQuery): Pris
     businessId,
     ...(query.includeInactive ? {} : { isActive: true }),
     ...(query.search ? { name: { contains: query.search, mode: "insensitive" } } : {}),
-    ...(query.assignedToId ? { assignedToId: query.assignedToId } : {}),
   };
 }
 
@@ -38,7 +37,6 @@ customersRouter.get("/", validateQuery(customerListQuerySchema), async (req, res
       orderBy: { [query.sortBy]: query.sortOrder } as Prisma.CustomerOrderByWithRelationInput,
       skip: (query.page - 1) * query.pageSize,
       take: query.pageSize,
-      include: { assignedTo: { select: { id: true, name: true, email: true } } },
     }),
     prisma.customer.count({ where }),
   ]);
@@ -77,33 +75,11 @@ customersRouter.get("/export.csv", validateQuery(customerListQuerySchema), async
   res.send(csv);
 });
 
-customersRouter.get("/team-members", async (req, res) => {
-  const businessId = req.auth!.businessId;
-
-  const business = await prisma.business.findUniqueOrThrow({ where: { id: businessId } });
-  const owner = await prisma.user.findUniqueOrThrow({ where: { id: business.ownerId } });
-  const memberships = await prisma.businessMember.findMany({
-    where: { businessId },
-    include: { user: { select: { id: true, name: true, email: true } } },
-    orderBy: { createdAt: "asc" },
-  });
-
-  res.json({
-    results: [
-      { id: owner.id, name: owner.name, email: owner.email },
-      ...memberships.map((m) => ({ id: m.user.id, name: m.user.name, email: m.user.email })),
-    ],
-  });
-});
-
 customersRouter.get("/:id", async (req, res) => {
   const businessId = req.auth!.businessId;
   const { id } = req.params;
 
-  const customer = await prisma.customer.findFirst({
-    where: { id, businessId },
-    include: { assignedTo: { select: { id: true, name: true, email: true } } },
-  });
+  const customer = await prisma.customer.findFirst({ where: { id, businessId } });
   if (!customer) {
     res.status(404).json({ error: "not_found" });
     return;
@@ -181,19 +157,6 @@ customersRouter.patch("/:id", validateBody(customerUpdateSchema), async (req, re
   const businessId = req.auth!.businessId;
   const { id } = req.params;
 
-  if (req.body.assignedToId) {
-    const business = await prisma.business.findUniqueOrThrow({ where: { id: businessId } });
-    const isMember =
-      business.ownerId === req.body.assignedToId ||
-      (await prisma.businessMember.findUnique({
-        where: { businessId_userId: { businessId, userId: req.body.assignedToId } },
-      })) !== null;
-    if (!isMember) {
-      res.status(400).json({ error: "not_a_team_member" });
-      return;
-    }
-  }
-
   const result = await prisma.customer.updateMany({
     where: { id, businessId },
     data: req.body,
@@ -204,10 +167,7 @@ customersRouter.patch("/:id", validateBody(customerUpdateSchema), async (req, re
     return;
   }
 
-  const customer = await prisma.customer.findUnique({
-    where: { id },
-    include: { assignedTo: { select: { id: true, name: true, email: true } } },
-  });
+  const customer = await prisma.customer.findUnique({ where: { id } });
 
   if (req.body.isActive === false) {
     await logActivity({
