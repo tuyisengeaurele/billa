@@ -1,12 +1,13 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { RouteLoadingFallback } from "./RouteLoadingFallback";
 
 export function ProtectedRoute() {
   const { user, business, isLoading } = useAuth();
   const { pathname } = useLocation();
 
   if (isLoading) {
-    return null;
+    return <RouteLoadingFallback />;
   }
 
   if (!user) {

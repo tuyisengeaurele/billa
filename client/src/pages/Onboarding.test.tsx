@@ -27,6 +27,14 @@ describe("Onboarding", () => {
     vi.restoreAllMocks();
   });
 
+  it("shows a spinner instead of a blank screen while loading", () => {
+    vi.spyOn(global, "fetch").mockImplementation(() => new Promise(() => {}));
+
+    renderOnboarding();
+
+    expect(screen.getByRole("status")).toBeInTheDocument();
+  });
+
   it("starts on the business details step, prefilled with the current business name", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async (input) => {
       const url = urlOf(input);

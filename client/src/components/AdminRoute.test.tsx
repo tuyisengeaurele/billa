@@ -26,6 +26,14 @@ describe("AdminRoute", () => {
     vi.restoreAllMocks();
   });
 
+  it("shows a spinner instead of a blank screen while the auth check is in flight", () => {
+    vi.spyOn(global, "fetch").mockImplementation(() => new Promise(() => {}));
+
+    renderWithProviders("/admin/users");
+
+    expect(screen.getByRole("status")).toBeInTheDocument();
+  });
+
   it("redirects to /admin/login when unauthenticated", async () => {
     vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 401 }));
 

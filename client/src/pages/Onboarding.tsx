@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { DetailsStep } from "../components/onboarding/DetailsStep";
 import { LogoStep } from "../components/onboarding/LogoStep";
 import { OnboardingLayout } from "../components/onboarding/OnboardingLayout";
+import { RouteLoadingFallback } from "../components/RouteLoadingFallback";
 import { useAuth } from "../context/AuthContext";
 import { apiRequest } from "../lib/apiClient";
 
@@ -24,7 +25,7 @@ export default function Onboarding() {
   }
 
   if (isLoading || !business) {
-    return null;
+    return <RouteLoadingFallback />;
   }
 
   return (

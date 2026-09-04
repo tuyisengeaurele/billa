@@ -36,6 +36,14 @@ describe("RootRoute", () => {
     vi.restoreAllMocks();
   });
 
+  it("shows a spinner instead of a blank screen while the auth check is in flight", () => {
+    vi.spyOn(global, "fetch").mockImplementation(() => new Promise(() => {}));
+
+    renderRootRoute();
+
+    expect(screen.getByRole("status")).toBeInTheDocument();
+  });
+
   it("redirects to the dashboard when logged in", async () => {
     mockFetch(true);
 

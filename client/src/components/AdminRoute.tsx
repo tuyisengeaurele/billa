@@ -1,11 +1,12 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { RouteLoadingFallback } from "./RouteLoadingFallback";
 
 export function AdminRoute() {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
-    return null;
+    return <RouteLoadingFallback />;
   }
 
   if (!user) {
