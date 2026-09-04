@@ -65,7 +65,76 @@ describe("Receivables", () => {
 
     expect(await screen.findByText("Acme Ltd")).toBeInTheDocument();
     expect(screen.getByText("INV-0001")).toBeInTheDocument();
-    expect(screen.getByText("Current")).toBeInTheDocument();
+    expect(screen.getByText("Current", { selector: "span" })).toBeInTheDocument();
+  });
+
+  it("sorts by owed amount when the Owed header is clicked", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.includes("/auth/me")) return authMeResponse();
+      if (url.includes("/receivables")) {
+        return new Response(
+          JSON.stringify({
+            results: [
+              baseRow({ id: "inv1", customerName: "Acme Ltd", amountOwed: 50000 }),
+              baseRow({ id: "inv2", customerName: "Zeta Supplies", amountOwed: 200000 }),
+            ],
+            total: 2,
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByText("Acme Ltd");
+
+    const owedHeader = screen.getByRole("columnheader", { name: /owed/i });
+    expect(owedHeader).toHaveAttribute("aria-sort", "none");
+
+    await user.click(screen.getByRole("button", { name: /^owed/i }));
+    expect(owedHeader).toHaveAttribute("aria-sort", "ascending");
+
+    const rows = screen.getAllByRole("row").slice(1);
+    expect(within(rows[0]).getByText("Acme Ltd")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /^owed/i }));
+    expect(owedHeader).toHaveAttribute("aria-sort", "descending");
+    const descRows = screen.getAllByRole("row").slice(1);
+    expect(within(descRows[0]).getByText("Zeta Supplies")).toBeInTheDocument();
+  });
+
+  it("filters to a single aging bucket and updates the total owed", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.includes("/auth/me")) return authMeResponse();
+      if (url.includes("/receivables")) {
+        return new Response(
+          JSON.stringify({
+            results: [
+              baseRow({ id: "inv1", customerName: "Acme Ltd", amountOwed: 50000, agingBucket: "current" }),
+              baseRow({ id: "inv2", customerName: "Zeta Supplies", amountOwed: 200000, agingBucket: "90+" }),
+            ],
+            total: 2,
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByText("Acme Ltd");
+    expect(screen.getByText(/total owed: 250,000 rwf/i)).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText("Aging"), "90+");
+
+    expect(screen.queryByText("Acme Ltd")).not.toBeInTheDocument();
+    expect(screen.getByText("Zeta Supplies")).toBeInTheDocument();
+    expect(screen.getByText(/total owed: 200,000 rwf/i)).toBeInTheDocument();
   });
 
   it("shows an empty state when nothing is outstanding", async () => {

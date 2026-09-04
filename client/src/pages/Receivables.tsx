@@ -7,6 +7,7 @@ import { Spinner } from "../components/Spinner";
 import { usePageTitle } from "../context/PageTitleContext";
 import { useToast } from "../context/ToastContext";
 import { apiRequest, ApiError } from "../lib/apiClient";
+import { ariaSortValue } from "../lib/ariaSort";
 
 interface ReceivableRow {
   id: string;
@@ -43,6 +44,19 @@ const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   OTHER: "Other",
 };
 
+// Ordered least to most severe, so sorting "Aging" ascending reads as a
+// natural escalation and descending surfaces the most overdue accounts first.
+const BUCKET_SEVERITY: Record<ReceivableRow["agingBucket"], number> = {
+  current: 0,
+  "0-30": 1,
+  "31-60": 2,
+  "61-90": 3,
+  "90+": 4,
+};
+
+type SortBy = "customerName" | "dueDate" | "aging" | "amountOwed";
+type BucketFilter = "all" | ReceivableRow["agingBucket"];
+
 export default function Receivables() {
   usePageTitle("Accounts receivable");
   const toast = useToast();
@@ -65,6 +79,31 @@ export default function Receivables() {
   const [writeOffReason, setWriteOffReason] = useState("");
   const [isSavingWriteOff, setIsSavingWriteOff] = useState(false);
   const [writeOffError, setWriteOffError] = useState<string | null>(null);
+
+  const [bucketFilter, setBucketFilter] = useState<BucketFilter>("all");
+  const [sortBy, setSortBy] = useState<SortBy>("dueDate");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+
+  function toggleSort(column: SortBy) {
+    setSortBy((current) => {
+      if (current === column) {
+        setSortOrder((order) => (order === "asc" ? "desc" : "asc"));
+      } else {
+        setSortOrder("asc");
+      }
+      return column;
+    });
+  }
+
+  const filteredResults = (results ?? []).filter((row) => bucketFilter === "all" || row.agingBucket === bucketFilter);
+  const displayedResults = [...filteredResults].sort((a, b) => {
+    let comparison: number;
+    if (sortBy === "customerName") comparison = a.customerName.localeCompare(b.customerName);
+    else if (sortBy === "dueDate") comparison = (a.dueDate ?? "").localeCompare(b.dueDate ?? "");
+    else if (sortBy === "aging") comparison = BUCKET_SEVERITY[a.agingBucket] - BUCKET_SEVERITY[b.agingBucket];
+    else comparison = a.amountOwed - b.amountOwed;
+    return sortOrder === "asc" ? comparison : -comparison;
+  });
 
   function load() {
     setLoadError(false);
@@ -166,13 +205,28 @@ export default function Receivables() {
     }
   }
 
-  const totalOwed = (results ?? []).reduce((sum, row) => sum + row.amountOwed, 0);
+  const totalOwed = filteredResults.reduce((sum, row) => sum + row.amountOwed, 0);
 
   return (
     <>
       <div className="mx-auto flex max-w-5xl flex-col gap-6">
         {results && results.length > 0 && (
-          <div className="flex justify-end">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <label className="flex items-center gap-2 font-sans text-sm text-neutral-600">
+              Aging
+              <select
+                value={bucketFilter}
+                onChange={(event) => setBucketFilter(event.target.value as BucketFilter)}
+                className="rounded-lg border border-neutral-200 bg-surface px-3 py-1.5 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+              >
+                <option value="all">All</option>
+                {(Object.keys(BUCKET_LABELS) as ReceivableRow["agingBucket"][]).map((bucket) => (
+                  <option key={bucket} value={bucket}>
+                    {BUCKET_LABELS[bucket]}
+                  </option>
+                ))}
+              </select>
+            </label>
             <span className="font-sans text-sm text-neutral-500">Total owed: {formatRwf(totalOwed)}</span>
           </div>
         )}
@@ -191,22 +245,44 @@ export default function Receivables() {
           </div>
         )}
 
-        {results && results.length > 0 && (
+        {results && results.length > 0 && displayedResults.length === 0 && (
+          <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-neutral-200 py-16 text-center">
+            <p className="font-sans text-sm text-neutral-600">No invoices in this aging range.</p>
+          </div>
+        )}
+
+        {results && results.length > 0 && displayedResults.length > 0 && (
           <div className="rounded-xl border border-neutral-200 bg-surface p-6">
             <div className="overflow-x-auto">
             <table className="w-full border-collapse font-sans text-sm">
               <thead>
                 <tr className="border-b border-neutral-200 text-left text-neutral-500">
-                  <th className="py-2">Customer</th>
+                  <th className="py-2" aria-sort={ariaSortValue(sortBy, "customerName", sortOrder)}>
+                    <button type="button" onClick={() => toggleSort("customerName")} className="cursor-pointer">
+                      Customer {sortBy === "customerName" && (sortOrder === "asc" ? "↑" : "↓")}
+                    </button>
+                  </th>
                   <th className="py-2">Invoice</th>
-                  <th className="py-2">Due date</th>
-                  <th className="py-2">Aging</th>
-                  <th className="py-2">Owed</th>
+                  <th className="py-2" aria-sort={ariaSortValue(sortBy, "dueDate", sortOrder)}>
+                    <button type="button" onClick={() => toggleSort("dueDate")} className="cursor-pointer">
+                      Due date {sortBy === "dueDate" && (sortOrder === "asc" ? "↑" : "↓")}
+                    </button>
+                  </th>
+                  <th className="py-2" aria-sort={ariaSortValue(sortBy, "aging", sortOrder)}>
+                    <button type="button" onClick={() => toggleSort("aging")} className="cursor-pointer">
+                      Aging {sortBy === "aging" && (sortOrder === "asc" ? "↑" : "↓")}
+                    </button>
+                  </th>
+                  <th className="py-2" aria-sort={ariaSortValue(sortBy, "amountOwed", sortOrder)}>
+                    <button type="button" onClick={() => toggleSort("amountOwed")} className="cursor-pointer">
+                      Owed {sortBy === "amountOwed" && (sortOrder === "asc" ? "↑" : "↓")}
+                    </button>
+                  </th>
                   <th className="py-2" />
                 </tr>
               </thead>
               <tbody>
-                {results.map((row) => (
+                {displayedResults.map((row) => (
                   <tr key={row.id} className="border-b border-neutral-100">
                     <td className="py-3 text-neutral-900">{row.customerName}</td>
                     <td className="py-3">
