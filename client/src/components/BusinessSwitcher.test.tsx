@@ -85,6 +85,39 @@ describe("BusinessSwitcher", () => {
     expect(screen.queryByRole("button", { name: /add another business/i })).not.toBeInTheDocument();
   });
 
+  it("closes when clicking outside the dropdown", async () => {
+    mockFetch([
+      { id: "b1", name: "Kigali Traders" },
+      { id: "b2", name: "Side Hustle" },
+    ]);
+    const user = userEvent.setup();
+
+    renderSwitcher();
+
+    await user.click(await screen.findByRole("button", { name: /Billa · Kigali Traders/i }));
+    expect(screen.getByRole("button", { name: "Side Hustle" })).toBeInTheDocument();
+
+    await user.click(document.body);
+
+    expect(screen.queryByRole("button", { name: "Side Hustle" })).not.toBeInTheDocument();
+  });
+
+  it("marks the toggle button's expanded state for screen readers", async () => {
+    mockFetch([
+      { id: "b1", name: "Kigali Traders" },
+      { id: "b2", name: "Side Hustle" },
+    ]);
+    const user = userEvent.setup();
+
+    renderSwitcher();
+
+    const toggle = await screen.findByRole("button", { name: /Billa · Kigali Traders/i });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+  });
+
   it("calls switch-business with the selected business id", async () => {
     mockFetch([
       { id: "b1", name: "Kigali Traders" },

@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { BUSINESS_LIMIT } from "@billa/shared";
 import { apiRequest, ApiError } from "../lib/apiClient";
 import { useAuth } from "../context/AuthContext";
@@ -16,12 +16,24 @@ export function BusinessSwitcher() {
   const [newName, setNewName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     apiRequest<{ businesses: BusinessSummary[] }>("/businesses")
       .then((data) => setBusinesses(Array.isArray(data.businesses) ? data.businesses : []))
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isOpen]);
 
   async function switchTo(id: string) {
     if (id === business?.id) {
@@ -56,16 +68,18 @@ export function BusinessSwitcher() {
   }
 
   return (
-    <div className="relative">
+    <div ref={containerRef} className="relative">
       <button
         type="button"
         onClick={() => setIsOpen((open) => !open)}
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
         className="font-display text-lg font-semibold text-neutral-900"
       >
         {label} {isOpen ? "▲" : "▼"}
       </button>
       {isOpen && (
-        <div className="absolute left-0 top-full z-10 mt-1 w-56 rounded-lg border border-neutral-200 bg-surface py-1 shadow-lg">
+        <div role="menu" className="absolute left-0 top-full z-10 mt-1 w-56 rounded-lg border border-neutral-200 bg-surface py-1 shadow-lg">
           {businesses.map((b) => (
             <button
               key={b.id}
