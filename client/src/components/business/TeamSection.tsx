@@ -5,6 +5,7 @@ import { copyToClipboard } from "../../lib/clipboard";
 import { Button } from "../Button";
 import { FormField } from "../FormField";
 import { LoadErrorBanner } from "../LoadErrorBanner";
+import { Modal } from "../Modal";
 import { Spinner } from "../Spinner";
 
 interface Member {
@@ -45,6 +46,8 @@ export function TeamSection() {
   const [resendingId, setResendingId] = useState<string | null>(null);
   const impersonation = useImpersonationRequest();
   const [impersonatingMemberId, setImpersonatingMemberId] = useState<string | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<Member | null>(null);
+  const [isRemoving, setIsRemoving] = useState(false);
 
   useEffect(() => {
     setLoadError(false);
@@ -109,13 +112,19 @@ export function TeamSection() {
     }
   }
 
-  async function removeMember(id: string) {
+  async function confirmRemoveMember() {
+    if (!removeTarget) return;
+    const target = removeTarget;
     setError(null);
+    setIsRemoving(true);
     try {
-      await apiRequest(`/business/members/${id}`, { method: "DELETE" });
-      setMembers((prev) => prev?.filter((m) => m.id !== id) ?? null);
+      await apiRequest(`/business/members/${target.id}`, { method: "DELETE" });
+      setMembers((prev) => prev?.filter((m) => m.id !== target.id) ?? null);
+      setRemoveTarget(null);
     } catch {
       setError("Couldn't remove that member. Try again.");
+    } finally {
+      setIsRemoving(false);
     }
   }
 
@@ -244,7 +253,7 @@ export function TeamSection() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => removeMember(member.id)}
+                      onClick={() => setRemoveTarget(member)}
                       className="font-sans text-sm text-error hover:underline"
                     >
                       Remove
@@ -336,6 +345,29 @@ export function TeamSection() {
           Send invite
         </Button>
       </form>
+
+      <Modal isOpen={removeTarget !== null} onClose={() => setRemoveTarget(null)} title="Remove team member">
+        <p className="font-sans text-sm text-neutral-600">
+          Remove {removeTarget?.email} from the team? They'll immediately lose access to this business.
+        </p>
+        <div className="mt-6 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={() => setRemoveTarget(null)}
+            className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={isRemoving}
+            onClick={confirmRemoveMember}
+            className="rounded-lg bg-error px-4 py-2 font-sans text-sm font-semibold text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {isRemoving ? "Removing…" : "Remove"}
+          </button>
+        </div>
+      </Modal>
     </section>
   );
 }

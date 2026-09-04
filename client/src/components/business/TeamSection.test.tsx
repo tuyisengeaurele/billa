@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -153,6 +153,90 @@ describe("TeamSection", () => {
 
     await waitFor(() => expect(roleBody).toEqual({ role: "ACCOUNTANT" }));
     expect(screen.getByLabelText(/role for staff@example.com/i)).toHaveValue("accountant");
+  });
+
+  it("asks for confirmation before removing a team member", async () => {
+    let removeCalled = false;
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/auth/me")) {
+        return new Response("{}", { status: 401 });
+      }
+      if (url.endsWith("/business/members") && (!init || init.method === undefined || init.method === "GET")) {
+        return new Response(
+          JSON.stringify({
+            members: [
+              { id: "u1", email: "owner@example.com", role: "owner", joinedAt: "2026-01-01" },
+              { id: "u2", email: "staff@example.com", role: "member", joinedAt: "2026-01-02" },
+            ],
+          }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/business/invites")) {
+        return new Response(JSON.stringify({ invites: [] }), { status: 200 });
+      }
+      if (url.endsWith("/business/members/u2") && init?.method === "DELETE") {
+        removeCalled = true;
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderTeamSection();
+
+    await user.click(await screen.findByRole("button", { name: /remove/i }));
+    expect(removeCalled).toBe(false);
+
+    const dialog = await screen.findByRole("dialog", { name: /remove team member/i });
+    expect(within(dialog).getByText(/staff@example\.com/)).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: /^remove$/i }));
+
+    await waitFor(() => expect(removeCalled).toBe(true));
+    await waitFor(() => expect(screen.queryByText("staff@example.com", { exact: false })).not.toBeInTheDocument());
+  });
+
+  it("cancels without removing the member", async () => {
+    let removeCalled = false;
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/auth/me")) {
+        return new Response("{}", { status: 401 });
+      }
+      if (url.endsWith("/business/members") && (!init || init.method === undefined || init.method === "GET")) {
+        return new Response(
+          JSON.stringify({
+            members: [
+              { id: "u1", email: "owner@example.com", role: "owner", joinedAt: "2026-01-01" },
+              { id: "u2", email: "staff@example.com", role: "member", joinedAt: "2026-01-02" },
+            ],
+          }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/business/invites")) {
+        return new Response(JSON.stringify({ invites: [] }), { status: 200 });
+      }
+      if (url.endsWith("/business/members/u2") && init?.method === "DELETE") {
+        removeCalled = true;
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderTeamSection();
+
+    await user.click(await screen.findByRole("button", { name: /remove/i }));
+    const dialog = await screen.findByRole("dialog", { name: /remove team member/i });
+    await user.click(within(dialog).getByRole("button", { name: /cancel/i }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: /remove team member/i })).not.toBeInTheDocument(),
+    );
+    expect(screen.getAllByText("staff@example.com", { exact: false }).length).toBeGreaterThan(0);
+    expect(removeCalled).toBe(false);
   });
 
   it("shows a read-only message for a member instead of management controls", async () => {
