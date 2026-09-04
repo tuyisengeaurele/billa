@@ -11,7 +11,7 @@ export type CustomerInput = z.infer<typeof customerSchema>;
 
 export const customerUpdateSchema = customerSchema
   .partial()
-  .extend({ isActive: z.boolean().optional(), assignedToId: z.string().nullable().optional() })
+  .extend({ isActive: z.boolean().optional() })
   .refine((data) => Object.keys(data).length > 0, { message: "at least one field is required" });
 export type CustomerUpdateInput = z.infer<typeof customerUpdateSchema>;
 
@@ -26,6 +26,5 @@ export const customerListQuerySchema = z.object({
     .optional()
     .default("false")
     .transform((value) => value === "true"),
-  assignedToId: z.string().trim().optional(),
 });
 export type CustomerListQuery = z.infer<typeof customerListQuerySchema>;
