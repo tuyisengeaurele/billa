@@ -50,11 +50,55 @@ describe("AdminMetrics", () => {
     expect(screen.getAllByText("5")).toHaveLength(2);
     expect(screen.getByText("Active trials")).toBeInTheDocument();
     expect(screen.getByText("Signups (7d)")).toBeInTheDocument();
-    expect(screen.getByText("3")).toBeInTheDocument();
+    expect(screen.getAllByText("3")).toHaveLength(2);
     expect(screen.getByText("Paying accounts")).toBeInTheDocument();
     expect(screen.getByText("Signups, last 30 days")).toBeInTheDocument();
     expect(screen.getByText("Documents, last 30 days")).toBeInTheDocument();
     expect(screen.getByText("Plan distribution")).toBeInTheDocument();
+  });
+
+  it("gives each chart an accessible label and a data table for screen readers", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          totalUsers: 5,
+          totalBusinesses: 5,
+          activeTrials: 4,
+          payingAccounts: 1,
+          signups7d: 3,
+          signups30d: 4,
+          documents7d: 1,
+          documents30d: 2,
+          dailySignups30d: [
+            { date: "2026-08-10", count: 1 },
+            { date: "2026-08-22", count: 3 },
+          ],
+          dailyDocuments30d: [
+            { date: "2026-08-10", count: 2 },
+            { date: "2026-08-22", count: 1 },
+          ],
+          planDistribution: [
+            { plan: "NONE", count: 4 },
+            { plan: "MONTHLY", count: 1 },
+          ],
+        }),
+        { status: 200 },
+      ),
+    );
+
+    render(
+      <MemoryRouter>
+        <AuthProvider>
+          <AdminMetrics />
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("Signups, last 30 days");
+    expect(screen.getAllByRole("img").length).toBeGreaterThanOrEqual(3);
+    expect(screen.getAllByText("Daily counts for the last 30 days", { selector: "caption" })).toHaveLength(2);
+    expect(screen.getByText("Accounts by plan", { selector: "caption" })).toBeInTheDocument();
+    expect(screen.getAllByText("Trial").length).toBeGreaterThanOrEqual(1);
   });
 
   it("shows an error message when the request fails", async () => {

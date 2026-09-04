@@ -74,29 +74,50 @@ function DailyLineChart({
     return <p className="font-sans text-sm text-neutral-500">No data in the last 30 days.</p>;
   }
 
+  const total = data.reduce((sum, point) => sum + point.count, 0);
+
   return (
-    <ResponsiveContainer width="100%" height={200}>
-      <LineChart data={data} margin={{ left: 0, right: 12, top: 8, bottom: 0 }}>
-        <CartesianGrid vertical={false} stroke={gridColor} />
-        <XAxis
-          dataKey="date"
-          tickFormatter={(date: string) => date.slice(5)}
-          tick={{ fontSize: 11, fill: tickColor }}
-          axisLine={false}
-          tickLine={false}
-          interval={2}
-        />
-        <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: tickColor }} axisLine={false} tickLine={false} width={28} />
-        <Tooltip
-          formatter={(value) => [value, "Count"]}
-          labelFormatter={(label) => String(label)}
-          contentStyle={tooltipStyle}
-          labelStyle={tooltipLabelStyle}
-          itemStyle={tooltipItemStyle}
-        />
-        <Line type="monotone" dataKey="count" stroke={color} strokeWidth={2} dot={{ r: 3, fill: color }} activeDot={{ r: 5 }} />
-      </LineChart>
-    </ResponsiveContainer>
+    <div role="img" aria-label={`Line chart, ${total} total across the last 30 days. A data table follows for details.`}>
+      <ResponsiveContainer width="100%" height={200}>
+        <LineChart data={data} margin={{ left: 0, right: 12, top: 8, bottom: 0 }}>
+          <CartesianGrid vertical={false} stroke={gridColor} />
+          <XAxis
+            dataKey="date"
+            tickFormatter={(date: string) => date.slice(5)}
+            tick={{ fontSize: 11, fill: tickColor }}
+            axisLine={false}
+            tickLine={false}
+            interval={2}
+          />
+          <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: tickColor }} axisLine={false} tickLine={false} width={28} />
+          <Tooltip
+            formatter={(value) => [value, "Count"]}
+            labelFormatter={(label) => String(label)}
+            contentStyle={tooltipStyle}
+            labelStyle={tooltipLabelStyle}
+            itemStyle={tooltipItemStyle}
+          />
+          <Line type="monotone" dataKey="count" stroke={color} strokeWidth={2} dot={{ r: 3, fill: color }} activeDot={{ r: 5 }} />
+        </LineChart>
+      </ResponsiveContainer>
+      <table className="sr-only">
+        <caption>Daily counts for the last 30 days</caption>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Count</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((point) => (
+            <tr key={point.date}>
+              <td>{point.date}</td>
+              <td>{point.count}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -190,31 +211,50 @@ export default function AdminMetrics() {
 
               <div className="rounded-xl border border-neutral-200 bg-surface p-6 lg:col-span-2">
                 <h2 className="font-display text-base font-semibold text-neutral-900">Plan distribution</h2>
-                <ResponsiveContainer width="100%" height={220}>
-                  <PieChart>
-                    <Pie
-                      data={metrics.planDistribution}
-                      dataKey="count"
-                      nameKey="plan"
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={50}
-                      outerRadius={80}
-                      paddingAngle={2}
-                    >
+                <div role="img" aria-label="Pie chart of accounts by plan. A data table follows for details.">
+                  <ResponsiveContainer width="100%" height={220}>
+                    <PieChart>
+                      <Pie
+                        data={metrics.planDistribution}
+                        dataKey="count"
+                        nameKey="plan"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={50}
+                        outerRadius={80}
+                        paddingAngle={2}
+                      >
+                        {metrics.planDistribution.map((entry) => (
+                          <Cell key={entry.plan} fill={PLAN_CHART_COLORS[entry.plan]} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value, _name, item) => [value, PLAN_LABELS[item.payload.plan as PlanKey]]}
+                        contentStyle={tooltipStyle}
+                        labelStyle={tooltipLabelStyle}
+                        itemStyle={tooltipItemStyle}
+                      />
+                      <Legend formatter={(value) => PLAN_LABELS[value as PlanKey]} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <table className="sr-only">
+                    <caption>Accounts by plan</caption>
+                    <thead>
+                      <tr>
+                        <th>Plan</th>
+                        <th>Count</th>
+                      </tr>
+                    </thead>
+                    <tbody>
                       {metrics.planDistribution.map((entry) => (
-                        <Cell key={entry.plan} fill={PLAN_CHART_COLORS[entry.plan]} />
+                        <tr key={entry.plan}>
+                          <td>{PLAN_LABELS[entry.plan]}</td>
+                          <td>{entry.count}</td>
+                        </tr>
                       ))}
-                    </Pie>
-                    <Tooltip
-                      formatter={(value, _name, item) => [value, PLAN_LABELS[item.payload.plan as PlanKey]]}
-                      contentStyle={tooltipStyle}
-                      labelStyle={tooltipLabelStyle}
-                      itemStyle={tooltipItemStyle}
-                    />
-                    <Legend formatter={(value) => PLAN_LABELS[value as PlanKey]} />
-                  </PieChart>
-                </ResponsiveContainer>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </>
