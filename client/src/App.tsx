@@ -10,6 +10,7 @@ import { AdminLayoutRoute } from "./components/admin/AdminLayoutRoute";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminRoute } from "./components/AdminRoute";
 import { RootRoute } from "./components/RootRoute";
+import { RouteLoadingFallback } from "./components/RouteLoadingFallback";
 
 const Login = lazy(() => import("./pages/Login"));
 const AdminLogin = lazy(() => import("./pages/AdminLogin"));
@@ -56,7 +57,7 @@ export default function App() {
         <ToastProvider>
           <BrowserRouter>
             <AuthProvider>
-              <Suspense fallback={null}>
+              <Suspense fallback={<RouteLoadingFallback />}>
                 <Routes>
                   <Route path="/login" element={<Login />} />
                   <Route path="/admin/login" element={<AdminLogin />} />
