@@ -166,7 +166,6 @@ model User {
   impersonationRequestsMade  ImpersonationRequest[] @relation("ImpersonationRequester")
   impersonationRequestsForMe ImpersonationRequest[] @relation("ImpersonationTarget")
   notifications              Notification[]
-  assignedCustomers          Customer[]              @relation("CustomerAssignments")
 }
 
 // ACCOUNTANT is read-only: blocked from every mutating request on business
@@ -333,25 +332,22 @@ model RefreshToken {
 }
 
 model Customer {
-  id           String   @id @default(cuid())
-  businessId   String
-  name         String
-  tin          String?
-  address      String?
-  phone        String?
-  email        String?
-  isActive     Boolean  @default(true)
-  portalToken  String   @unique @default(dbgenerated("gen_random_uuid()::text"))
-  assignedToId String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id          String   @id @default(cuid())
+  businessId  String
+  name        String
+  tin         String?
+  address     String?
+  phone       String?
+  email       String?
+  isActive    Boolean  @default(true)
+  portalToken String   @unique @default(dbgenerated("gen_random_uuid()::text"))
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  business   Business   @relation(fields: [businessId], references: [id])
-  documents  Document[]
-  assignedTo User?      @relation("CustomerAssignments", fields: [assignedToId], references: [id])
+  business  Business   @relation(fields: [businessId], references: [id])
+  documents Document[]
 
   @@index([businessId])
-  @@index([assignedToId])
 }
 
 model Item {
