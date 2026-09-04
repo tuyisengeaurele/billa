@@ -30,9 +30,6 @@ describe("Customers", () => {
   it("shows the empty state when there are no customers", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async (input) => {
       const url = urlOf(input);
-      if (url.endsWith("/customers/team-members")) {
-        return new Response(JSON.stringify({ results: [] }), { status: 200 });
-      }
       if (url.includes("/customers")) {
         return new Response(JSON.stringify({ results: [], total: 0, page: 1, pageSize: 20 }), { status: 200 });
       }
@@ -47,9 +44,6 @@ describe("Customers", () => {
   it("renders a list of customers", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async (input) => {
       const url = urlOf(input);
-      if (url.endsWith("/customers/team-members")) {
-        return new Response(JSON.stringify({ results: [] }), { status: 200 });
-      }
       if (url.includes("/customers")) {
         return new Response(
           JSON.stringify({
@@ -75,9 +69,6 @@ describe("Customers", () => {
     const user = userEvent.setup();
     vi.spyOn(global, "fetch").mockImplementation(async (input) => {
       const url = urlOf(input);
-      if (url.endsWith("/customers/team-members")) {
-        return new Response(JSON.stringify({ results: [] }), { status: 200 });
-      }
       if (url.includes("/customers")) {
         return new Response(
           JSON.stringify({
@@ -111,9 +102,6 @@ describe("Customers", () => {
     let created = false;
     vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
       const url = urlOf(input);
-      if (url.endsWith("/customers/team-members")) {
-        return new Response(JSON.stringify({ results: [] }), { status: 200 });
-      }
       if (url.includes("/customers") && init?.method === "POST") {
         created = true;
         return new Response(JSON.stringify({ customer: { id: "c1", name: "New Co" } }), { status: 201 });
@@ -150,9 +138,6 @@ describe("Customers", () => {
     let isActive = true;
     vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
       const url = urlOf(input);
-      if (url.endsWith("/customers/team-members")) {
-        return new Response(JSON.stringify({ results: [] }), { status: 200 });
-      }
       if (url.includes("/customers/c1") && init?.method === "PATCH") {
         isActive = false;
         return new Response(JSON.stringify({ customer: { id: "c1", name: "Kigali Traders", isActive } }), {
@@ -202,9 +187,6 @@ describe("Customers", () => {
     let isActive = true;
     vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
       const url = urlOf(input);
-      if (url.endsWith("/customers/team-members")) {
-        return new Response(JSON.stringify({ results: [] }), { status: 200 });
-      }
       if (url.includes("/customers/c1") && init?.method === "PATCH") {
         const body = JSON.parse((init.body as string) ?? "{}");
         isActive = body.isActive;
@@ -280,9 +262,6 @@ describe("Customers", () => {
   it("opens the edit modal when a customer's name button is clicked", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async (input) => {
       const url = urlOf(input);
-      if (url.endsWith("/customers/team-members")) {
-        return new Response(JSON.stringify({ results: [] }), { status: 200 });
-      }
       if (url.includes("/customers")) {
         return new Response(
           JSON.stringify({
@@ -310,9 +289,6 @@ describe("Customers", () => {
   it("sorts by name when the Name header button is clicked", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async (input) => {
       const url = urlOf(input);
-      if (url.endsWith("/customers/team-members")) {
-        return new Response(JSON.stringify({ results: [] }), { status: 200 });
-      }
       return new Response(
         JSON.stringify({
           results: [
@@ -337,9 +313,6 @@ describe("Customers", () => {
   it("shows a subscription message when creating a customer is blocked by a lapsed trial", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
       const url = urlOf(input);
-      if (url.endsWith("/customers/team-members")) {
-        return new Response(JSON.stringify({ results: [] }), { status: 200 });
-      }
       if (url.includes("/customers") && init?.method === "POST") {
         return new Response(JSON.stringify({ error: "subscription_required" }), { status: 402 });
       }
@@ -364,9 +337,6 @@ describe("Customers", () => {
     let activeMap: Record<string, boolean> = { c1: true, c2: true };
     vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
       const url = urlOf(input);
-      if (url.endsWith("/customers/team-members")) {
-        return new Response(JSON.stringify({ results: [] }), { status: 200 });
-      }
       const idMatch = url.match(/\/customers\/(c\d)$/);
       if (idMatch && init?.method === "PATCH") {
         const body = JSON.parse((init.body as string) ?? "{}");
@@ -414,9 +384,6 @@ describe("Customers", () => {
   it("shows both Deactivate and Reactivate when the selection is mixed", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async (input) => {
       const url = urlOf(input);
-      if (url.endsWith("/customers/team-members")) {
-        return new Response(JSON.stringify({ results: [] }), { status: 200 });
-      }
       if (url.includes("/customers")) {
         return new Response(
           JSON.stringify({
@@ -448,9 +415,6 @@ describe("Customers", () => {
   it("shows the header checkbox as indeterminate when only some rows are selected", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async (input) => {
       const url = urlOf(input);
-      if (url.endsWith("/customers/team-members")) {
-        return new Response(JSON.stringify({ results: [] }), { status: 200 });
-      }
       if (url.includes("/customers")) {
         return new Response(
           JSON.stringify({
@@ -483,135 +447,4 @@ describe("Customers", () => {
     expect(selectAll.checked).toBe(true);
   });
 
-  it("assigns a customer to a team member from the list", async () => {
-    let patchedBody: unknown = null;
-    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
-      const url = urlOf(input);
-      if (url.endsWith("/customers/team-members")) {
-        return new Response(
-          JSON.stringify({ results: [{ id: "u1", name: "Jane Uwase", email: "jane@example.com" }] }),
-          { status: 200 },
-        );
-      }
-      if (url.includes("/customers/c1") && init?.method === "PATCH") {
-        patchedBody = JSON.parse(init.body as string);
-        return new Response(
-          JSON.stringify({
-            customer: {
-              id: "c1",
-              name: "Kigali Traders",
-              tin: null,
-              address: null,
-              phone: null,
-              email: null,
-              isActive: true,
-              assignedToId: "u1",
-              assignedTo: { id: "u1", name: "Jane Uwase", email: "jane@example.com" },
-            },
-          }),
-          { status: 200 },
-        );
-      }
-      if (url.includes("/customers")) {
-        return new Response(
-          JSON.stringify({
-            results: [
-              {
-                id: "c1",
-                name: "Kigali Traders",
-                tin: null,
-                address: null,
-                phone: null,
-                email: null,
-                isActive: true,
-                assignedToId: null,
-                assignedTo: null,
-              },
-            ],
-            total: 1,
-            page: 1,
-            pageSize: 20,
-          }),
-          { status: 200 },
-        );
-      }
-      return new Response("{}", { status: 401 });
-    });
-
-    const user = userEvent.setup();
-    renderCustomers();
-    await screen.findByText("Kigali Traders");
-
-    const select = await screen.findByLabelText("Assign Kigali Traders");
-    await user.selectOptions(select, "u1");
-
-    await waitFor(() => expect(patchedBody).toEqual({ assignedToId: "u1" }));
-    expect(await screen.findByText("Kigali Traders assigned to Jane Uwase")).toBeInTheDocument();
-  });
-
-  it("shows a confirmation when a customer is unassigned", async () => {
-    let patchedBody: unknown = null;
-    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
-      const url = urlOf(input);
-      if (url.endsWith("/customers/team-members")) {
-        return new Response(
-          JSON.stringify({ results: [{ id: "u1", name: "Jane Uwase", email: "jane@example.com" }] }),
-          { status: 200 },
-        );
-      }
-      if (url.includes("/customers/c1") && init?.method === "PATCH") {
-        patchedBody = JSON.parse(init.body as string);
-        return new Response(
-          JSON.stringify({
-            customer: {
-              id: "c1",
-              name: "Kigali Traders",
-              tin: null,
-              address: null,
-              phone: null,
-              email: null,
-              isActive: true,
-              assignedToId: null,
-              assignedTo: null,
-            },
-          }),
-          { status: 200 },
-        );
-      }
-      if (url.includes("/customers")) {
-        return new Response(
-          JSON.stringify({
-            results: [
-              {
-                id: "c1",
-                name: "Kigali Traders",
-                tin: null,
-                address: null,
-                phone: null,
-                email: null,
-                isActive: true,
-                assignedToId: "u1",
-                assignedTo: { id: "u1", name: "Jane Uwase", email: "jane@example.com" },
-              },
-            ],
-            total: 1,
-            page: 1,
-            pageSize: 20,
-          }),
-          { status: 200 },
-        );
-      }
-      return new Response("{}", { status: 401 });
-    });
-
-    const user = userEvent.setup();
-    renderCustomers();
-    await screen.findByText("Kigali Traders");
-
-    const select = await screen.findByLabelText("Assign Kigali Traders");
-    await user.selectOptions(select, "");
-
-    await waitFor(() => expect(patchedBody).toEqual({ assignedToId: null }));
-    expect(await screen.findByText("Kigali Traders unassigned")).toBeInTheDocument();
-  });
 });
