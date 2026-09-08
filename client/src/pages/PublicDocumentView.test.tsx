@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import PublicDocumentView from "./PublicDocumentView";
 
 function renderPage(token = "tok-abc123") {
@@ -313,5 +314,124 @@ describe("PublicDocumentView", () => {
     expect(await screen.findByText(/you declined this proforma/i)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /accept/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /decline/i })).not.toBeInTheDocument();
+  });
+
+  describe("MTN MoMo payment", () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+      vi.restoreAllMocks();
+    });
+
+    function invoiceWithMomo(overrides: Record<string, unknown> = {}) {
+      return {
+        id: "d1",
+        type: "INVOICE",
+        number: "INV-0001",
+        business: { name: "Kigali Traders", momoEnabled: true },
+        customer: { name: "Acme Ltd", phone: "+250788000000" },
+        lines: [],
+        subtotal: 0,
+        taxTotal: 0,
+        total: 10000,
+        amountPaid: 0,
+        paymentStatus: "UNPAID",
+        ...overrides,
+      };
+    }
+
+    it("submits a phone number and shows the pending state", async () => {
+      vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+        const url = typeof input === "string" ? input : input.toString();
+        if (url.includes("/momo/request/")) {
+          return new Response(JSON.stringify({ status: "PENDING" }), { status: 200 });
+        }
+        if (url.endsWith("/momo/request")) {
+          return new Response(JSON.stringify({ requestId: "req1" }), { status: 201 });
+        }
+        return new Response(JSON.stringify({ document: invoiceWithMomo() }), { status: 200 });
+      });
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+
+      renderPage("tok-abc123");
+
+      const phoneInput = await screen.findByLabelText(/mtn momo phone number/i);
+      expect(phoneInput).toHaveValue("+250788000000");
+
+      await user.click(screen.getByRole("button", { name: /pay 10,000 rwf with mtn momo/i }));
+
+      expect(await screen.findByText(/check your phone to approve/i)).toBeInTheDocument();
+    });
+
+    it("shows a success message once MTN confirms the payment", async () => {
+      let statusCalls = 0;
+      vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+        const url = typeof input === "string" ? input : input.toString();
+        if (url.includes("/momo/request/")) {
+          statusCalls += 1;
+          return new Response(JSON.stringify({ status: statusCalls < 2 ? "PENDING" : "SUCCESSFUL" }), { status: 200 });
+        }
+        if (url.endsWith("/momo/request")) {
+          return new Response(JSON.stringify({ requestId: "req1" }), { status: 201 });
+        }
+        return new Response(JSON.stringify({ document: invoiceWithMomo() }), { status: 200 });
+      });
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+
+      renderPage("tok-abc123");
+      await user.click(await screen.findByRole("button", { name: /pay 10,000 rwf with mtn momo/i }));
+      await screen.findByText(/check your phone to approve/i);
+
+      await vi.advanceTimersByTimeAsync(3000);
+      await vi.advanceTimersByTimeAsync(3000);
+
+      expect(await screen.findByText(/payment received/i)).toBeInTheDocument();
+    });
+
+    it("shows a failure message and offers to try again", async () => {
+      vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+        const url = typeof input === "string" ? input : input.toString();
+        if (url.includes("/momo/request/")) {
+          return new Response(JSON.stringify({ status: "FAILED", failureReason: "Payer rejected" }), { status: 200 });
+        }
+        if (url.endsWith("/momo/request")) {
+          return new Response(JSON.stringify({ requestId: "req1" }), { status: 201 });
+        }
+        return new Response(JSON.stringify({ document: invoiceWithMomo() }), { status: 200 });
+      });
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+
+      renderPage("tok-abc123");
+      await user.click(await screen.findByRole("button", { name: /pay 10,000 rwf with mtn momo/i }));
+      await vi.advanceTimersByTimeAsync(3000);
+
+      expect(await screen.findByText("Payer rejected")).toBeInTheDocument();
+      expect(await screen.findByRole("button", { name: /try again/i })).toBeInTheDocument();
+    });
+
+    it("does not show the MoMo section when the business hasn't enabled it", async () => {
+      vi.spyOn(global, "fetch").mockImplementation(async () =>
+        new Response(JSON.stringify({ document: invoiceWithMomo({ business: { name: "Kigali Traders", momoEnabled: false } }) }), { status: 200 }),
+      );
+
+      renderPage("tok-abc123");
+
+      await screen.findByText(/invoice inv-0001/i);
+      expect(screen.queryByText(/pay with mtn momo/i)).not.toBeInTheDocument();
+    });
+
+    it("does not show the MoMo section once the invoice is fully paid", async () => {
+      vi.spyOn(global, "fetch").mockImplementation(async () =>
+        new Response(JSON.stringify({ document: invoiceWithMomo({ amountPaid: 10000, paymentStatus: "PAID" }) }), { status: 200 }),
+      );
+
+      renderPage("tok-abc123");
+
+      await screen.findByText(/invoice inv-0001/i);
+      expect(screen.queryByText(/pay with mtn momo/i)).not.toBeInTheDocument();
+    });
   });
 });

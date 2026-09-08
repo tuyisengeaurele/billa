@@ -21,8 +21,10 @@ interface PublicDocumentDetail {
   subtotal: number;
   taxTotal: number;
   total: number;
-  business: { name: string };
-  customer: { name: string };
+  amountPaid: number;
+  paymentStatus: string | null;
+  business: { name: string; momoEnabled: boolean };
+  customer: { name: string; phone: string | null };
   customerReference: string | null;
   accepted: boolean;
   declined: boolean;
@@ -45,16 +47,70 @@ export default function PublicDocumentView() {
   const [isAccepting, setIsAccepting] = useState(false);
   const [isDeclining, setIsDeclining] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [momoPhone, setMomoPhone] = useState("");
+  const [momoRequestId, setMomoRequestId] = useState<string | null>(null);
+  const [momoStatus, setMomoStatus] = useState<"PENDING" | "SUCCESSFUL" | "FAILED" | "EXPIRED" | null>(null);
+  const [momoFailureReason, setMomoFailureReason] = useState<string | null>(null);
+  const [isRequestingMomo, setIsRequestingMomo] = useState(false);
+  const [momoError, setMomoError] = useState<string | null>(null);
 
   useEffect(() => {
     apiRequest<{ document: PublicDocumentDetail }>(`/public/documents/${token}`)
-      .then((data) => setDocument(data.document))
+      .then((data) => {
+        setDocument(data.document);
+        setMomoPhone(data.document.customer.phone ?? "");
+      })
       .catch((err) => {
         if (err instanceof ApiError && err.status === 404) {
           setNotFound(true);
         }
       });
   }, [token]);
+
+  useEffect(() => {
+    if (!momoRequestId || momoStatus !== "PENDING") return;
+    const interval = setInterval(async () => {
+      try {
+        const data = await apiRequest<{
+          status: "PENDING" | "SUCCESSFUL" | "FAILED" | "EXPIRED";
+          failureReason?: string | null;
+        }>(`/public/documents/${token}/momo/request/${momoRequestId}`);
+        setMomoStatus(data.status);
+        setMomoFailureReason(data.failureReason ?? null);
+        if (data.status === "SUCCESSFUL") {
+          const refreshed = await apiRequest<{ document: PublicDocumentDetail }>(`/public/documents/${token}`);
+          setDocument(refreshed.document);
+        }
+      } catch {
+        // transient network error — keep polling on the next tick
+      }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [momoRequestId, momoStatus, token]);
+
+  async function requestMomoPayment() {
+    setMomoError(null);
+    setIsRequestingMomo(true);
+    try {
+      const data = await apiRequest<{ requestId: string }>(`/public/documents/${token}/momo/request`, {
+        method: "POST",
+        body: { phoneNumber: momoPhone },
+      });
+      setMomoRequestId(data.requestId);
+      setMomoStatus("PENDING");
+    } catch {
+      setMomoError("Couldn't start the payment. Check the number and try again.");
+    } finally {
+      setIsRequestingMomo(false);
+    }
+  }
+
+  function retryMomoPayment() {
+    setMomoRequestId(null);
+    setMomoStatus(null);
+    setMomoFailureReason(null);
+    setMomoError(null);
+  }
 
   async function handleAccept() {
     setIsAccepting(true);
@@ -198,6 +254,71 @@ export default function PublicDocumentView() {
           <span>Tax: {formatRwf(document.taxTotal)}</span>
           <span className="font-semibold text-neutral-900">Total: {formatRwf(document.total)}</span>
         </div>
+
+        {document.type === "INVOICE" && document.business.momoEnabled && document.total - document.amountPaid > 0 && (
+          <div className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-surface px-5 py-4">
+            <p className="font-sans text-sm font-medium text-neutral-900">Pay with MTN MoMo</p>
+
+            {momoError && (
+              <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
+                {momoError}
+              </div>
+            )}
+
+            {!momoStatus && (
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:gap-3">
+                <div className="flex flex-1 flex-col gap-1.5">
+                  <label htmlFor="momoPhone" className="font-sans text-sm font-medium text-neutral-800">
+                    MTN MoMo phone number
+                  </label>
+                  <input
+                    id="momoPhone"
+                    type="tel"
+                    value={momoPhone}
+                    onChange={(e) => setMomoPhone(e.target.value)}
+                    className="rounded-lg border border-neutral-200 bg-surface px-3.5 py-2.5 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={requestMomoPayment}
+                  disabled={isRequestingMomo || !momoPhone.trim()}
+                  className="rounded-lg bg-primary-500 px-4 py-2.5 font-sans text-sm font-semibold text-white transition-colors hover:bg-primary-700 disabled:opacity-60"
+                >
+                  {isRequestingMomo ? "Sending…" : `Pay ${formatRwf(document.total - document.amountPaid)} with MTN MoMo`}
+                </button>
+              </div>
+            )}
+
+            {momoStatus === "PENDING" && (
+              <div className="flex items-center gap-2">
+                <Spinner size="sm" />
+                <p className="font-sans text-sm text-neutral-600">Check your phone to approve this payment.</p>
+              </div>
+            )}
+
+            {momoStatus === "SUCCESSFUL" && (
+              <p className="font-sans text-sm font-medium text-primary-700">Payment received. Thank you.</p>
+            )}
+
+            {(momoStatus === "FAILED" || momoStatus === "EXPIRED") && (
+              <div className="flex flex-col gap-2">
+                <p className="font-sans text-sm text-error">
+                  {momoStatus === "EXPIRED"
+                    ? "This payment request expired before it was approved."
+                    : (momoFailureReason ?? "The payment didn't go through.")}
+                </p>
+                <button
+                  type="button"
+                  onClick={retryMomoPayment}
+                  className="w-fit rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+                >
+                  Try again
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
