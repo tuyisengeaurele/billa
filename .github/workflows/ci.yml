@@ -43,6 +43,12 @@ jobs:
 
       - run: npm ci
 
+      # --omit=dev: a critical finding in a dev-only tool (e.g. vitest's UI server, which
+      # this project never runs) isn't a shipped-production risk the way one in a runtime
+      # dependency is. Doesn't fail on the moderate/high findings already triaged below -
+      # only a newly introduced critical CVE in what actually ships should block a merge.
+      - run: npm audit --omit=dev --audit-level=critical
+
       - run: npm run prisma:generate
 
       - run: npx prisma migrate deploy
