@@ -14,6 +14,7 @@ import { usePageTitle } from "../context/PageTitleContext";
 import { useToast } from "../context/ToastContext";
 import { SequenceEditor } from "../components/business/SequenceEditor";
 import { BillingSection } from "../components/business/BillingSection";
+import { MomoSection } from "../components/business/MomoSection";
 import { TwoFactorSection } from "../components/business/TwoFactorSection";
 import { TeamSection } from "../components/business/TeamSection";
 import { ExportCsvButton } from "../components/ExportCsvButton";
@@ -570,6 +571,8 @@ export default function BusinessSettings() {
         <TwoFactorSection />
 
         <BillingSection />
+
+        {isOwner && <MomoSection />}
 
         <section className="rounded-xl border border-neutral-200 bg-surface p-6">
           <div className="flex items-center justify-between">
