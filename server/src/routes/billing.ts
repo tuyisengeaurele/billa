@@ -1,109 +1,116 @@
 import crypto from "node:crypto";
 import { Router } from "express";
-import { billingCheckoutSchema, billingVerifySchema, PLAN_PRICES } from "@billa/shared";
-import type { BillingCheckoutInput, BillingVerifyInput } from "@billa/shared";
+import { billingCheckoutSchema, PLAN_PRICES } from "@billa/shared";
+import type { BillingCheckoutInput } from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/require-auth.js";
 import { validateBody } from "../middleware/validate.js";
-import { initiateCheckout, verifyTransaction } from "../lib/flutterwave.js";
+import { getBillingMomoConfig } from "../lib/billing-momo.js";
+import { getAccessToken, getRequestToPayStatus, requestToPay } from "../lib/momo-client.js";
 
 export const billingRouter = Router();
 
 const PLAN_DAYS: Record<"MONTHLY" | "ANNUAL", number> = { MONTHLY: 30, ANNUAL: 365 };
-
-function safeEqual(a: string, b: string): boolean {
-  const bufA = Buffer.from(a);
-  const bufB = Buffer.from(b);
-  if (bufA.length !== bufB.length) return false;
-  return crypto.timingSafeEqual(bufA, bufB);
-}
+const MOMO_EXPIRY_MS = 5 * 60 * 1000;
 
 billingRouter.post("/checkout", requireAuth, validateBody(billingCheckoutSchema), async (req, res) => {
-  const { plan } = req.body as BillingCheckoutInput;
+  const { plan, phoneNumber } = req.body as BillingCheckoutInput;
   const userId = req.auth!.userId;
-  const user = await prisma.user.findUnique({ where: { id: userId } });
+
+  const existing = await prisma.payment.findFirst({
+    where: { userId, plan, status: "PENDING", createdAt: { gt: new Date(Date.now() - MOMO_EXPIRY_MS) } },
+    orderBy: { createdAt: "desc" },
+  });
+  if (existing) {
+    res.status(201).json({ paymentId: existing.id });
+    return;
+  }
+
   const txRef = `billa-${userId}-${crypto.randomUUID()}`;
-  await prisma.payment.create({
-    data: { userId, plan, amount: PLAN_PRICES[plan], currency: "RWF", txRef, status: "PENDING" },
+  const payment = await prisma.payment.create({
+    data: { userId, plan, amount: PLAN_PRICES[plan], currency: "RWF", txRef, phoneNumber, status: "PENDING" },
   });
-  const clientOrigin = process.env.CLIENT_ORIGIN ?? "http://localhost:5173";
-  const { link } = await initiateCheckout({
-    txRef,
-    amount: PLAN_PRICES[plan],
-    currency: "RWF",
-    redirectUrl: `${clientOrigin}/billing/callback`,
-    customerEmail: user!.email,
-  });
-  res.json({ link });
+
+  const { credentials, currency } = getBillingMomoConfig();
+  try {
+    const token = await getAccessToken(credentials);
+    await requestToPay(credentials, token, {
+      referenceId: txRef,
+      amount: PLAN_PRICES[plan],
+      currency,
+      phoneNumber,
+      externalId: payment.id,
+      payerMessage: `Billa ${plan === "MONTHLY" ? "monthly" : "annual"} subscription`,
+      payeeNote: `Billa subscription (${payment.id})`,
+    });
+  } catch (err) {
+    await prisma.payment.update({
+      where: { id: payment.id },
+      data: { status: "FAILED", failureReason: err instanceof Error ? err.message : "Unknown error" },
+    });
+    res.status(502).json({ error: "momo_request_failed" });
+    return;
+  }
+
+  res.status(201).json({ paymentId: payment.id });
 });
 
-async function verifyAndRecordPayment(
-  txRef: string,
-  transactionId: string,
-): Promise<"success" | "already_processed" | "mismatch"> {
-  const payment = await prisma.payment.findUnique({ where: { txRef } });
-  if (!payment) throw new Error("payment_not_found");
-  if (payment.status === "SUCCESSFUL") return "already_processed";
-  const verified = await verifyTransaction(transactionId);
-  if (
-    verified.txRef !== txRef ||
-    verified.status !== "successful" ||
-    verified.amount < payment.amount ||
-    verified.currency !== payment.currency
-  ) {
-    await prisma.payment.update({ where: { txRef }, data: { status: "FAILED" } });
-    return "mismatch";
-  }
-  const user = await prisma.user.findUnique({ where: { id: payment.userId } });
-  const now = new Date();
-  const base = user!.currentPeriodEnd && user!.currentPeriodEnd > now ? user!.currentPeriodEnd : now;
-  const currentPeriodEnd = new Date(base.getTime() + PLAN_DAYS[payment.plan] * 24 * 60 * 60 * 1000);
-  await prisma.$transaction([
-    prisma.payment.update({ where: { txRef }, data: { status: "SUCCESSFUL", flutterwaveTxId: transactionId } }),
-    prisma.user.update({ where: { id: payment.userId }, data: { currentPeriodEnd, plan: payment.plan } }),
-  ]);
-  return "success";
-}
-
-billingRouter.post("/verify", requireAuth, validateBody(billingVerifySchema), async (req, res) => {
-  const { txRef, transactionId } = req.body as BillingVerifyInput;
+billingRouter.get("/checkout/:paymentId", requireAuth, async (req, res) => {
+  const { paymentId } = req.params;
   const userId = req.auth!.userId;
-  const payment = await prisma.payment.findFirst({ where: { txRef, userId } });
+
+  const payment = await prisma.payment.findFirst({ where: { id: paymentId, userId } });
   if (!payment) {
     res.status(404).json({ error: "not_found" });
     return;
   }
-  try {
-    const result = await verifyAndRecordPayment(txRef, transactionId);
-    if (result === "mismatch") {
-      res.status(400).json({ error: "verification_failed" });
-      return;
-    }
-    res.json({ ok: true });
-  } catch {
-    res.status(400).json({ error: "verification_failed" });
-  }
-});
 
-billingRouter.post("/webhook", async (req, res) => {
-  const signature = req.header("verif-hash");
-  const expected = process.env.FLUTTERWAVE_WEBHOOK_HASH;
-  if (!signature || !expected || !safeEqual(signature, expected)) {
-    res.status(401).json({ error: "invalid_signature" });
+  if (payment.status !== "PENDING") {
+    res.json({ status: payment.status, failureReason: payment.failureReason });
     return;
   }
-  const txRef = req.body?.data?.tx_ref as string | undefined;
-  const transactionId = req.body?.data?.id ? String(req.body.data.id) : undefined;
-  if (!txRef || !transactionId) {
-    res.status(400).json({ error: "invalid_payload" });
+
+  if (Date.now() - payment.createdAt.getTime() > MOMO_EXPIRY_MS) {
+    await prisma.payment.update({ where: { id: payment.id }, data: { status: "EXPIRED" } });
+    res.json({ status: "EXPIRED" });
     return;
   }
+
+  const { credentials } = getBillingMomoConfig();
+  let mtnStatus: { status: "PENDING" | "SUCCESSFUL" | "FAILED"; reason?: string };
   try {
-    await verifyAndRecordPayment(txRef, transactionId);
+    const token = await getAccessToken(credentials);
+    mtnStatus = await getRequestToPayStatus(credentials, token, payment.txRef);
   } catch {
-    /* swallow */
+    res.json({ status: "PENDING" });
+    return;
   }
-  res.json({ ok: true });
+
+  if (mtnStatus.status === "PENDING") {
+    res.json({ status: "PENDING" });
+    return;
+  }
+
+  if (mtnStatus.status === "FAILED") {
+    await prisma.payment.update({
+      where: { id: payment.id },
+      data: { status: "FAILED", failureReason: mtnStatus.reason ?? null },
+    });
+    res.json({ status: "FAILED", failureReason: mtnStatus.reason ?? null });
+    return;
+  }
+
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+  const now = new Date();
+  const base = user.currentPeriodEnd && user.currentPeriodEnd > now ? user.currentPeriodEnd : now;
+  const currentPeriodEnd = new Date(base.getTime() + PLAN_DAYS[payment.plan] * 24 * 60 * 60 * 1000);
+
+  await prisma.$transaction([
+    prisma.payment.update({ where: { id: payment.id }, data: { status: "SUCCESSFUL" } }),
+    prisma.user.update({ where: { id: userId }, data: { currentPeriodEnd, plan: payment.plan } }),
+  ]);
+
+  res.json({ status: "SUCCESSFUL" });
 });
 
 billingRouter.get("/status", requireAuth, async (req, res) => {
