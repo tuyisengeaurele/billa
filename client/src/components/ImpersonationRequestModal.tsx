@@ -9,7 +9,11 @@ interface PendingRequest {
   reason: string | null;
 }
 
-const POLL_INTERVAL_MS = 4000;
+// An impersonation request is a rare event (an admin actively asking to view this
+// account, usually mid support conversation) - every 4s was excessive load for
+// something this infrequent. 20s matches NotificationBell's cadence and is still
+// well within how long a person waits for a "may I look at your account?" prompt.
+const POLL_INTERVAL_MS = 20000;
 
 export function ImpersonationRequestModal() {
   const { user } = useAuth();
