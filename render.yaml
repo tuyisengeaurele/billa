@@ -1,0 +1,120 @@
+databases:
+  - name: billa-db
+    databaseName: billa
+    user: billa
+    plan: free
+
+services:
+  - type: web
+    name: billa-api
+    runtime: node
+    plan: free
+    region: oregon
+    rootDir: .
+    buildCommand: npm ci && npm run prisma:generate && npm run build --workspace=server
+    preDeployCommand: npx prisma migrate deploy --schema=server/prisma/schema.prisma
+    startCommand: node server/dist/index.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: billa-db
+          property: connectionString
+      # Render sets PORT itself; the app already reads it.
+      # Fill these in once both services exist and you know their real URLs
+      # (Render dashboard -> each service -> the URL at the top of its page).
+      - key: CLIENT_ORIGIN
+        sync: false
+      - key: API_URL
+        sync: false
+      # Random secrets Render generates for you - nothing to fill in.
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: MOMO_CREDENTIALS_ENCRYPTION_KEY
+        generateValue: true
+      - key: TOTP_SECRET_ENCRYPTION_KEY
+        generateValue: true
+      - key: JWT_ACCESS_TTL
+        value: 15m
+      - key: JWT_REFRESH_TTL
+        value: 30d
+      # File storage: local disk is wiped on every redeploy, so production needs R2.
+      # Create a bucket at Cloudflare -> R2 first, then fill these in.
+      - key: STORAGE_DRIVER
+        value: r2
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET
+        sync: false
+      - key: R2_PUBLIC_URL
+        sync: false
+      # Firebase Admin SDK - Firebase Console -> Project Settings -> Service Accounts
+      # -> Generate new private key.
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_CLIENT_EMAIL
+        sync: false
+      - key: FIREBASE_PRIVATE_KEY
+        sync: false
+      # Gmail SMTP - a Google Account app password, not the regular login password.
+      - key: GMAIL_USER
+        sync: false
+      - key: GMAIL_APP_PASSWORD
+        sync: false
+      # Who can see the contact-form inbox at /admin - comma-separated emails.
+      - key: ADMIN_EMAILS
+        sync: false
+      - key: CONTACT_NOTIFICATION_EMAIL
+        sync: false
+      # Optional - leave blank to skip. Fill in once billing needs to go live for
+      # real beta users; not required just to deploy and use the app.
+      - key: MOMO_BILLING_SUBSCRIPTION_KEY
+        sync: false
+      - key: MOMO_BILLING_API_USER
+        sync: false
+      - key: MOMO_BILLING_API_KEY
+        sync: false
+      - key: MOMO_BILLING_ENVIRONMENT
+        value: sandbox
+      - key: MOMO_BILLING_TARGET_ENVIRONMENT
+        value: ""
+      # Optional - error monitoring, leave blank to skip for now.
+      - key: SENTRY_DSN
+        sync: false
+      # Optional - background-removal microservice for logo uploads (bg-removal-service/),
+      # deployed separately. Leave unset and that one feature just won't be available yet.
+      - key: REMBG_SERVICE_URL
+        sync: false
+
+  - type: web
+    name: billa-client
+    runtime: static
+    rootDir: .
+    buildCommand: npm ci && npm run build --workspace=client
+    staticPublishPath: client/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      # Fill in once billa-api exists and you have its URL.
+      - key: VITE_API_URL
+        sync: false
+      # Same Firebase project as the server's Admin SDK, but the public client
+      # config - Firebase Console -> Project Settings -> General -> Your apps.
+      - key: VITE_FIREBASE_API_KEY
+        sync: false
+      - key: VITE_FIREBASE_AUTH_DOMAIN
+        sync: false
+      - key: VITE_FIREBASE_PROJECT_ID
+        sync: false
+      - key: VITE_FIREBASE_APP_ID
+        sync: false
+      - key: VITE_SENTRY_DSN
+        sync: false
