@@ -141,7 +141,40 @@ describe("Profile", () => {
     expect(await screen.findByText("Photo updated")).toBeInTheDocument();
   });
 
-  it("shows the password form and changes the password when a password provider is present", async () => {
+  it("shows the password form, changes the password, and signs out every other session", async () => {
+    vi.mocked(hasPasswordProvider).mockReturnValue(true);
+    vi.mocked(changePassword).mockResolvedValue(undefined);
+    let revokedOthers = false;
+    const user = userEvent.setup();
+    renderProfile(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/auth/me")) {
+        return new Response(
+          JSON.stringify({ user: baseUser(), business: { id: "b1", name: "Kigali Traders" }, impersonating: false }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/profile/sessions")) {
+        return new Response(JSON.stringify({ results: [] }), { status: 200 });
+      }
+      if (url.endsWith("/profile/sessions/revoke-others") && init?.method === "POST") {
+        revokedOthers = true;
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    await user.type(await screen.findByLabelText(/current password/i), "oldpass123");
+    await user.type(screen.getByLabelText(/^new password$/i), "newpass123");
+    await user.type(screen.getByLabelText(/confirm new password/i), "newpass123");
+    await user.click(screen.getByRole("button", { name: /update password/i }));
+
+    await waitFor(() => expect(changePassword).toHaveBeenCalledWith("oldpass123", "newpass123"));
+    expect(await screen.findByText(/password changed/i)).toBeInTheDocument();
+    await waitFor(() => expect(revokedOthers).toBe(true));
+  });
+
+  it("still confirms the password change even if signing out other sessions fails", async () => {
     vi.mocked(hasPasswordProvider).mockReturnValue(true);
     vi.mocked(changePassword).mockResolvedValue(undefined);
     const user = userEvent.setup();
@@ -156,6 +189,9 @@ describe("Profile", () => {
       if (url.endsWith("/profile/sessions")) {
         return new Response(JSON.stringify({ results: [] }), { status: 200 });
       }
+      if (url.endsWith("/profile/sessions/revoke-others")) {
+        return new Response(JSON.stringify({ error: "server_error" }), { status: 500 });
+      }
       return new Response("{}", { status: 401 });
     });
 
@@ -164,7 +200,6 @@ describe("Profile", () => {
     await user.type(screen.getByLabelText(/confirm new password/i), "newpass123");
     await user.click(screen.getByRole("button", { name: /update password/i }));
 
-    await waitFor(() => expect(changePassword).toHaveBeenCalledWith("oldpass123", "newpass123"));
     expect(await screen.findByText(/password changed/i)).toBeInTheDocument();
   });
 

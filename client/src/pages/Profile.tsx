@@ -164,6 +164,15 @@ export default function Profile() {
     setIsChangingPassword(true);
     try {
       await changePassword(currentPassword, newPassword);
+      // A password change is often a reaction to "I think someone else has access" -
+      // signing out every other session (this one stays signed in) makes that actually
+      // true, instead of leaving an attacker's existing session valid for up to 30 days.
+      try {
+        await apiRequest("/profile/sessions/revoke-others", { method: "POST" });
+      } catch {
+        // The password itself already changed successfully; a failure here shouldn't
+        // block that or confuse the user with an error about something else.
+      }
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
