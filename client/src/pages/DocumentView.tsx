@@ -1,14 +1,22 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { DOCUMENT_LANGUAGES, type DocumentLanguage, type DocumentType, type RecurrenceInterval } from "@billa/shared";
+import {
+  DOCUMENT_LANGUAGES,
+  type DocumentLanguage,
+  type DocumentType,
+  type InvoicePaymentStatus,
+  type RecurrenceInterval,
+} from "@billa/shared";
 import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { Modal } from "../components/Modal";
+import { RecordPaymentModal } from "../components/RecordPaymentModal";
 import { Spinner } from "../components/Spinner";
 import { useSetActiveDocumentType } from "../context/ActiveDocumentTypeContext";
 import { usePageTitle } from "../context/PageTitleContext";
 import { useToast } from "../context/ToastContext";
 import { apiRequest, ApiError, API_BASE_URL } from "../lib/apiClient";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
+import { PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS } from "../lib/paymentStatusColors";
 import { formatRwf } from "@billa/shared";
 
 interface DocumentLine {
@@ -37,6 +45,8 @@ interface DocumentDetail {
   subtotal: number;
   taxTotal: number;
   total: number;
+  amountPaid: number;
+  paymentStatus: InvoicePaymentStatus | null;
   convertedFrom: DocumentLink | null;
   convertedTo: DocumentLink | null;
   referencedDocument: DocumentLink | null;
@@ -88,6 +98,7 @@ export default function DocumentView() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
   useEffect(() => {
     setLoadError(false);
@@ -285,6 +296,39 @@ export default function DocumentView() {
           </div>
         )}
 
+        {document.type === "INVOICE" && document.status === "FINALIZED" && document.paymentStatus && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-surface px-5 py-4">
+            <div className="flex items-center gap-3">
+              <span
+                className={`rounded-full px-2.5 py-1 text-xs font-medium ${PAYMENT_STATUS_COLORS[document.paymentStatus]}`}
+              >
+                {PAYMENT_STATUS_LABELS[document.paymentStatus]}
+              </span>
+              {document.paymentStatus === "PAID" ? (
+                <p className="font-sans text-sm font-medium text-primary-700">
+                  Paid in full. {formatRwf(document.amountPaid)} received.
+                </p>
+              ) : document.paymentStatus === "WRITTEN_OFF" ? (
+                <p className="font-sans text-sm text-neutral-600">This invoice was written off.</p>
+              ) : (
+                <p className="font-sans text-sm text-neutral-600">
+                  {formatRwf(document.amountPaid)} of {formatRwf(document.total)} received,{" "}
+                  {formatRwf(document.total - document.amountPaid)} outstanding.
+                </p>
+              )}
+            </div>
+            {document.paymentStatus !== "PAID" && document.paymentStatus !== "WRITTEN_OFF" && (
+              <button
+                type="button"
+                onClick={() => setIsPaymentModalOpen(true)}
+                className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+              >
+                Record payment
+              </button>
+            )}
+          </div>
+        )}
+
         {document.sentAt && (
           <p className="font-sans text-xs text-neutral-400">Sent {document.sentAt.slice(0, 10)}</p>
         )}
@@ -348,6 +392,20 @@ export default function DocumentView() {
           <span className="font-semibold text-neutral-900">Total: {formatRwf(document.total)}</span>
         </div>
       </div>
+
+      <RecordPaymentModal
+        isOpen={isPaymentModalOpen}
+        documentId={document.id}
+        documentNumber={document.number}
+        customerName={document.customer.name}
+        amountOwed={document.total - document.amountPaid}
+        onClose={() => setIsPaymentModalOpen(false)}
+        onRecorded={() => {
+          setIsPaymentModalOpen(false);
+          setReloadToken((t) => t + 1);
+          toast.success("Payment recorded");
+        }}
+      />
 
       <Modal
         isOpen={isConvertConfirmOpen}

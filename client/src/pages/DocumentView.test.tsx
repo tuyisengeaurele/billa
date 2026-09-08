@@ -802,4 +802,135 @@ describe("DocumentView", () => {
     expect(await screen.findByText("Reminders turned off")).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: /reminders off/i })).toBeInTheDocument();
   });
+
+  it("shows the outstanding balance and a Record payment button for a partially paid invoice", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async () =>
+      new Response(
+        JSON.stringify({
+          document: {
+            id: "d1",
+            number: "INV-0001",
+            type: "INVOICE",
+            status: "FINALIZED",
+            customer: { name: "Kigali Traders" },
+            lines: [],
+            subtotal: 0,
+            taxTotal: 0,
+            total: 100000,
+            amountPaid: 40000,
+            paymentStatus: "PARTIALLY_PAID",
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/documents/d1"]}>
+        <AuthProvider>
+          <Routes>
+            <Route element={<AppLayoutRoute />}>
+              <Route path="/documents/:id" element={<DocumentView />} />
+            </Route>
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Partially paid")).toBeInTheDocument();
+    expect(screen.getByText(/40,000 rwf of 100,000 rwf received, 60,000 rwf outstanding/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /record payment/i })).toBeInTheDocument();
+  });
+
+  it("shows a paid-in-full confirmation and no Record payment button once fully paid", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async () =>
+      new Response(
+        JSON.stringify({
+          document: {
+            id: "d1",
+            number: "INV-0001",
+            type: "INVOICE",
+            status: "FINALIZED",
+            customer: { name: "Kigali Traders" },
+            lines: [],
+            subtotal: 0,
+            taxTotal: 0,
+            total: 100000,
+            amountPaid: 100000,
+            paymentStatus: "PAID",
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/documents/d1"]}>
+        <AuthProvider>
+          <Routes>
+            <Route element={<AppLayoutRoute />}>
+              <Route path="/documents/:id" element={<DocumentView />} />
+            </Route>
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText(/paid in full\. 100,000 rwf received/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /record payment/i })).not.toBeInTheDocument();
+  });
+
+  it("records a payment from the invoice page and refreshes the payment status shown", async () => {
+    let getCalls = 0;
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/documents/d1/payments") && init?.method === "POST") {
+        return new Response(JSON.stringify({ payment: { id: "p1" } }), { status: 201 });
+      }
+      if (url.endsWith("/documents/d1")) {
+        getCalls += 1;
+        return new Response(
+          JSON.stringify({
+            document: {
+              id: "d1",
+              number: "INV-0001",
+              type: "INVOICE",
+              status: "FINALIZED",
+              customer: { name: "Kigali Traders" },
+              lines: [],
+              subtotal: 0,
+              taxTotal: 0,
+              total: 100000,
+              amountPaid: getCalls < 2 ? 0 : 100000,
+              paymentStatus: getCalls < 2 ? "UNPAID" : "PAID",
+            },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+    const user = userEvent.setup();
+
+    render(
+      <ToastTestWrapper>
+        <MemoryRouter initialEntries={["/documents/d1"]}>
+          <AuthProvider>
+            <Routes>
+              <Route element={<AppLayoutRoute />}>
+                <Route path="/documents/:id" element={<DocumentView />} />
+              </Route>
+            </Routes>
+          </AuthProvider>
+        </MemoryRouter>
+      </ToastTestWrapper>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: /record payment/i }));
+    const dialog = await screen.findByRole("dialog", { name: /record payment/i });
+    await user.click(within(dialog).getByRole("button", { name: /^record payment$/i }));
+
+    expect(await screen.findByText("Payment recorded")).toBeInTheDocument();
+    expect(await screen.findByText(/paid in full\. 100,000 rwf received/i)).toBeInTheDocument();
+  });
 });
