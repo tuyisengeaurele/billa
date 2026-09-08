@@ -90,7 +90,13 @@ export default function CustomerStatement() {
   const totalPages = Math.max(1, Math.ceil(list.total / list.pageSize));
   const documentsTotal = list.results.reduce((sum, doc) => sum + doc.total, 0);
   const outstandingTotal = list.results
-    .filter((doc) => doc.type === "INVOICE" && doc.paymentStatus !== "PAID" && doc.paymentStatus !== "WRITTEN_OFF")
+    .filter(
+      (doc) =>
+        doc.type === "INVOICE" &&
+        doc.status === "FINALIZED" &&
+        doc.paymentStatus !== "PAID" &&
+        doc.paymentStatus !== "WRITTEN_OFF",
+    )
     .reduce((sum, doc) => sum + (doc.total - doc.amountPaid), 0);
 
   if (loadError) {
@@ -224,7 +230,9 @@ export default function CustomerStatement() {
                     </td>
                     <td className="py-3 text-neutral-600">{formatRwf(document.total)}</td>
                     <td className="py-3 text-neutral-600">
-                      {document.type === "INVOICE" ? formatRwf(document.total - document.amountPaid) : "N/A"}
+                      {document.type === "INVOICE" && document.status === "FINALIZED"
+                        ? formatRwf(document.total - document.amountPaid)
+                        : "N/A"}
                     </td>
                     <td className="py-3">
                       <div className="flex flex-wrap gap-1.5">

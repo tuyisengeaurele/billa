@@ -237,6 +237,64 @@ describe("CustomerStatement", () => {
     expect(screen.getByText(/outstanding on this page: 60,000 rwf/i)).toBeInTheDocument();
   });
 
+  it("does not count a draft invoice's total toward the outstanding total", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.endsWith("/customers/c1")) {
+        return new Response(
+          JSON.stringify({
+            customer: { id: "c1", name: "Acme Ltd", tin: null, address: null, phone: null, email: null, isActive: true },
+          }),
+          { status: 200 },
+        );
+      }
+      if (url.includes("/documents?")) {
+        return new Response(
+          JSON.stringify({
+            results: [
+              {
+                id: "d1",
+                type: "INVOICE",
+                number: "INV-0001",
+                status: "FINALIZED",
+                issueDate: "2026-08-19T00:00:00.000Z",
+                total: 50000,
+                amountPaid: 0,
+                paymentStatus: "UNPAID",
+              },
+              {
+                id: "d2",
+                type: "INVOICE",
+                number: null,
+                status: "DRAFT",
+                issueDate: "2026-08-20T00:00:00.000Z",
+                total: 200000,
+                amountPaid: 0,
+                paymentStatus: null,
+              },
+            ],
+            total: 2,
+            page: 1,
+            pageSize: 50,
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    renderPage();
+
+    await screen.findByText("INV-0001");
+
+    // Only the finalized invoice's 50,000 owed should count, not the draft's 200,000 total.
+    expect(screen.getByText(/outstanding on this page: 50,000 rwf/i)).toBeInTheDocument();
+    expect(screen.queryByText(/outstanding on this page: 250,000 rwf/i)).not.toBeInTheDocument();
+
+    const draftRow = screen.getByText("Draft").closest("tr")!;
+    expect(draftRow).toHaveTextContent("N/A");
+  });
+
   it("copies the customer portal link to the clipboard", async () => {
     const copySpy = vi.spyOn(clipboardModule, "copyToClipboard").mockResolvedValue(true);
     vi.spyOn(global, "fetch").mockImplementation(async (input) => {
