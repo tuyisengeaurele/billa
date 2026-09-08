@@ -43,6 +43,7 @@ describe("momo-client", () => {
     const INPUT = {
       referenceId: "ref-1",
       amount: 5000,
+      currency: "RWF",
       phoneNumber: "250788000000",
       externalId: "ext-1",
       payerMessage: "Invoice INV-0001",
@@ -53,6 +54,16 @@ describe("momo-client", () => {
       vi.spyOn(global, "fetch").mockResolvedValue(new Response(null, { status: 202 }));
 
       await expect(requestToPay(CREDS, "token-abc", INPUT)).resolves.toBeUndefined();
+    });
+
+    it("sends the given currency in the request body", async () => {
+      const fetchMock = vi.spyOn(global, "fetch").mockResolvedValue(new Response(null, { status: 202 }));
+
+      await requestToPay(CREDS, "token-abc", { ...INPUT, currency: "EUR" });
+
+      const [, init] = fetchMock.mock.calls[0];
+      const body = JSON.parse(init!.body as string);
+      expect(body.currency).toBe("EUR");
     });
 
     it("throws when MTN reports a processing error", async () => {

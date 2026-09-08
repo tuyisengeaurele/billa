@@ -38,12 +38,16 @@ export async function getAccessToken(creds: MomoCredentials): Promise<string> {
   return body.access_token;
 }
 
+// The caller picks the currency: MTN's sandbox only accepts "EUR" regardless of target
+// market, confirmed by testing directly against the sandbox on 2026-09-08 (RWF returns
+// INVALID_CURRENCY there). Production uses the business's real local currency ("RWF").
 export async function requestToPay(
   creds: MomoCredentials,
   token: string,
   input: {
     referenceId: string;
     amount: number;
+    currency: string;
     phoneNumber: string;
     externalId: string;
     payerMessage: string;
@@ -61,7 +65,7 @@ export async function requestToPay(
     },
     body: JSON.stringify({
       amount: String(input.amount),
-      currency: "RWF",
+      currency: input.currency,
       externalId: input.externalId,
       payer: { partyIdType: "MSISDN", partyId: input.phoneNumber },
       payerMessage: input.payerMessage,

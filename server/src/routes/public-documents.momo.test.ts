@@ -63,6 +63,11 @@ describe("POST /public/documents/:token/momo/request", () => {
     expect(res.status).toBe(201);
     expect(res.body.requestId).toBeTruthy();
     expect(requestToPaySpy).toHaveBeenCalledTimes(1);
+    expect(requestToPaySpy).toHaveBeenCalledWith(
+      expect.anything(),
+      "token-123",
+      expect.objectContaining({ currency: "EUR" }),
+    );
 
     const stored = await prisma.momoPaymentRequest.findUniqueOrThrow({ where: { id: res.body.requestId } });
     expect(stored.status).toBe("PENDING");

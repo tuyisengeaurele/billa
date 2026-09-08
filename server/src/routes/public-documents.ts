@@ -210,9 +210,13 @@ publicDocumentsRouter.post(
 
     try {
       const token = await getAccessToken(credentials);
+      // MTN's sandbox only accepts EUR regardless of target market; production uses the
+      // business's real local currency. See the comment on requestToPay for how this was confirmed.
+      const currency = business.momoEnvironment === "sandbox" ? "EUR" : "RWF";
       await requestToPay(credentials, token, {
         referenceId,
         amount: balance.amountOwed,
+        currency,
         phoneNumber: body.phoneNumber,
         externalId: momoRequest.id,
         payerMessage: `Payment for ${document.number ?? "your invoice"}`,
