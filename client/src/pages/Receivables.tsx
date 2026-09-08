@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { formatRwf, PAYMENT_METHODS, type PaymentMethod } from "@billa/shared";
+import { formatRwf } from "@billa/shared";
 import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { Modal } from "../components/Modal";
+import { RecordPaymentModal } from "../components/RecordPaymentModal";
 import { Spinner } from "../components/Spinner";
 import { usePageTitle } from "../context/PageTitleContext";
 import { useToast } from "../context/ToastContext";
@@ -36,14 +37,6 @@ const BUCKET_COLORS: Record<ReceivableRow["agingBucket"], string> = {
   "90+": "bg-red-200 text-red-800",
 };
 
-const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
-  CASH: "Cash",
-  BANK_TRANSFER: "Bank transfer",
-  MOBILE_MONEY: "Mobile Money",
-  CHEQUE: "Cheque",
-  OTHER: "Other",
-};
-
 // Ordered least to most severe, so sorting "Aging" ascending reads as a
 // natural escalation and descending surfaces the most overdue accounts first.
 const BUCKET_SEVERITY: Record<ReceivableRow["agingBucket"], number> = {
@@ -64,17 +57,6 @@ export default function Receivables() {
   const [loadError, setLoadError] = useState(false);
   const [paymentTarget, setPaymentTarget] = useState<ReceivableRow | null>(null);
   const [writeOffTarget, setWriteOffTarget] = useState<ReceivableRow | null>(null);
-
-  const [amount, setAmount] = useState("");
-  const [method, setMethod] = useState<PaymentMethod>("CASH");
-  const [paidOn, setPaidOn] = useState(() => new Date().toISOString().slice(0, 10));
-  const [generateReceipt, setGenerateReceipt] = useState(true);
-  const [referenceNumber, setReferenceNumber] = useState("");
-  const [payerName, setPayerName] = useState("");
-  const [receiptImageUrl, setReceiptImageUrl] = useState<string | null>(null);
-  const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
-  const [isSavingPayment, setIsSavingPayment] = useState(false);
-  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   const [writeOffReason, setWriteOffReason] = useState("");
   const [isSavingWriteOff, setIsSavingWriteOff] = useState(false);
@@ -115,68 +97,6 @@ export default function Receivables() {
   useEffect(() => {
     load();
   }, []);
-
-  function openPaymentModal(row: ReceivableRow) {
-    setPaymentTarget(row);
-    setAmount(String(row.amountOwed));
-    setMethod("CASH");
-    setPaidOn(new Date().toISOString().slice(0, 10));
-    setGenerateReceipt(true);
-    setReferenceNumber("");
-    setPayerName("");
-    setReceiptImageUrl(null);
-    setPaymentError(null);
-  }
-
-  async function handleReceiptFileChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-    setPaymentError(null);
-    setIsUploadingReceipt(true);
-    try {
-      const formData = new FormData();
-      formData.append("receipt", file);
-      const uploaded = await apiRequest<{ url: string }>("/documents/payments/receipt", {
-        method: "POST",
-        body: formData,
-      });
-      setReceiptImageUrl(uploaded.url);
-    } catch {
-      setPaymentError("Couldn't upload that photo. Try again.");
-    } finally {
-      setIsUploadingReceipt(false);
-    }
-  }
-
-  async function submitPayment() {
-    if (!paymentTarget) return;
-    setIsSavingPayment(true);
-    setPaymentError(null);
-    try {
-      await apiRequest(`/documents/${paymentTarget.id}/payments`, {
-        method: "POST",
-        body: {
-          amount: Number(amount),
-          method,
-          paidOn,
-          generateReceipt,
-          referenceNumber: referenceNumber.trim() || undefined,
-          payerName: payerName.trim() || undefined,
-          receiptImageUrl: receiptImageUrl ?? undefined,
-        },
-      });
-      setPaymentTarget(null);
-      load();
-      toast.success("Payment recorded");
-    } catch (err) {
-      setPaymentError(
-        err instanceof ApiError ? "Couldn't record this payment. Try again." : "Something went wrong. Try again.",
-      );
-    } finally {
-      setIsSavingPayment(false);
-    }
-  }
 
   function openWriteOffModal(row: ReceivableRow) {
     setWriteOffTarget(row);
@@ -301,7 +221,7 @@ export default function Receivables() {
                       <div className="flex justify-end gap-2">
                         <button
                           type="button"
-                          onClick={() => openPaymentModal(row)}
+                          onClick={() => setPaymentTarget(row)}
                           className="rounded-lg border border-neutral-200 px-2.5 py-1 font-sans text-xs font-medium text-neutral-700 transition-colors hover:border-primary-500 hover:text-primary-700"
                         >
                           Record payment
@@ -324,133 +244,19 @@ export default function Receivables() {
         )}
       </div>
 
-      <Modal isOpen={paymentTarget !== null} onClose={() => setPaymentTarget(null)} title="Record payment">
-        {paymentTarget && (
-          <div className="flex flex-col gap-4">
-            <p className="font-sans text-sm text-neutral-600">
-              Against invoice {paymentTarget.number ?? "Draft"} for {paymentTarget.customerName}.
-            </p>
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="payment-amount" className="font-sans text-sm font-medium text-neutral-800">
-                Amount
-              </label>
-              <input
-                id="payment-amount"
-                type="number"
-                value={amount}
-                onChange={(event) => setAmount(event.target.value)}
-                className="rounded-lg border border-neutral-200 bg-surface px-3.5 py-2.5 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="payment-method" className="font-sans text-sm font-medium text-neutral-800">
-                Method
-              </label>
-              <select
-                id="payment-method"
-                value={method}
-                onChange={(event) => setMethod(event.target.value as PaymentMethod)}
-                className="rounded-lg border border-neutral-200 bg-surface px-3.5 py-2.5 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
-              >
-                {PAYMENT_METHODS.map((paymentMethod) => (
-                  <option key={paymentMethod} value={paymentMethod}>
-                    {PAYMENT_METHOD_LABELS[paymentMethod]}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="payment-date" className="font-sans text-sm font-medium text-neutral-800">
-                Date received
-              </label>
-              <input
-                id="payment-date"
-                type="date"
-                value={paidOn}
-                onChange={(event) => setPaidOn(event.target.value)}
-                className="rounded-lg border border-neutral-200 bg-surface px-3.5 py-2.5 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="payment-reference" className="font-sans text-sm font-medium text-neutral-800">
-                Reference number (optional)
-              </label>
-              <input
-                id="payment-reference"
-                type="text"
-                placeholder="e.g. MoMo transaction ID"
-                value={referenceNumber}
-                onChange={(event) => setReferenceNumber(event.target.value)}
-                className="rounded-lg border border-neutral-200 bg-surface px-3.5 py-2.5 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="payment-payer" className="font-sans text-sm font-medium text-neutral-800">
-                Payer name (optional)
-              </label>
-              <input
-                id="payment-payer"
-                type="text"
-                placeholder="Name on the transaction, if different"
-                value={payerName}
-                onChange={(event) => setPayerName(event.target.value)}
-                className="rounded-lg border border-neutral-200 bg-surface px-3.5 py-2.5 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <span className="font-sans text-sm font-medium text-neutral-800">Confirmation photo (optional)</span>
-              <div className="flex items-center gap-3">
-                {receiptImageUrl && (
-                  <span className="font-sans text-sm text-success">Photo attached</span>
-                )}
-                <label className="cursor-pointer rounded-lg border border-neutral-200 px-3.5 py-2 font-sans text-sm font-semibold text-neutral-700 transition-colors hover:bg-neutral-50">
-                  {isUploadingReceipt ? "Uploading…" : receiptImageUrl ? "Replace photo" : "Attach photo"}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    disabled={isUploadingReceipt}
-                    onChange={handleReceiptFileChange}
-                    className="sr-only"
-                    aria-label="Attach confirmation photo"
-                  />
-                </label>
-              </div>
-            </div>
-            <label className="flex items-center gap-2 font-sans text-sm text-neutral-700">
-              <input
-                type="checkbox"
-                checked={generateReceipt}
-                onChange={(event) => setGenerateReceipt(event.target.checked)}
-              />
-              Generate a receipt for this payment
-            </label>
-
-            {paymentError && (
-              <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
-                {paymentError}
-              </div>
-            )}
-
-            <div className="mt-2 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setPaymentTarget(null)}
-                className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={isSavingPayment}
-                onClick={submitPayment}
-                className="rounded-lg bg-primary-500 px-4 py-2 font-sans text-sm font-semibold text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                {isSavingPayment ? "Saving…" : "Record payment"}
-              </button>
-            </div>
-          </div>
-        )}
-      </Modal>
+      <RecordPaymentModal
+        isOpen={paymentTarget !== null}
+        documentId={paymentTarget?.id ?? ""}
+        documentNumber={paymentTarget?.number ?? null}
+        customerName={paymentTarget?.customerName ?? ""}
+        amountOwed={paymentTarget?.amountOwed ?? 0}
+        onClose={() => setPaymentTarget(null)}
+        onRecorded={() => {
+          setPaymentTarget(null);
+          load();
+          toast.success("Payment recorded");
+        }}
+      />
 
       <Modal isOpen={writeOffTarget !== null} onClose={() => setWriteOffTarget(null)} title="Write off invoice">
         {writeOffTarget && (
