@@ -64,15 +64,24 @@ export function DocumentPreviewStack() {
         const slot = SLOTS[slotIndex];
         const isFront = slotIndex === 0;
 
+        const moveDuration = isFront ? 0.6 : 1;
+        const moveDelay = docIndex * 0.15;
+
         return (
           <motion.div
             key={doc.number}
-            initial={{ opacity: 0, y: slot.y + 40, x: slot.x, rotate: slot.rotate }}
-            animate={{ opacity: slot.opacity, y: slot.y, x: slot.x, rotate: slot.rotate }}
+            initial={{ opacity: 0, y: slot.y + 40, x: slot.x, rotate: slot.rotate, zIndex: slot.zIndex }}
+            animate={{ opacity: slot.opacity, y: slot.y, x: slot.x, rotate: slot.rotate, zIndex: slot.zIndex }}
             whileHover={isFront ? { rotate: 0, scale: 1.02 } : undefined}
-            transition={{ duration: isFront ? 0.6 : 1, delay: docIndex * 0.15, ease: "easeInOut" }}
+            transition={{
+              duration: moveDuration,
+              delay: moveDelay,
+              ease: "easeInOut",
+              // Flip the stacking order only once the move is mostly finished, so a card
+              // sliding to the back doesn't pop behind its neighbors mid-transition.
+              zIndex: { delay: moveDelay + moveDuration * 0.7, duration: 0 },
+            }}
             className={isFront ? "absolute" : "absolute hidden sm:block"}
-            style={{ zIndex: slot.zIndex }}
           >
             <DocumentPreviewCard {...doc} />
           </motion.div>
