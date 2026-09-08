@@ -255,7 +255,9 @@ export default function PublicDocumentView() {
           <span className="font-semibold text-neutral-900">Total: {formatRwf(document.total)}</span>
         </div>
 
-        {document.type === "INVOICE" && document.business.momoEnabled && document.total - document.amountPaid > 0 && (
+        {document.type === "INVOICE" &&
+          document.business.momoEnabled &&
+          (document.total - document.amountPaid > 0 || momoStatus === "SUCCESSFUL") && (
           <div className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-surface px-5 py-4">
             <p className="font-sans text-sm font-medium text-neutral-900">Pay with MTN MoMo</p>
 

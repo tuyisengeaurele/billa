@@ -366,7 +366,7 @@ describe("PublicDocumentView", () => {
       expect(await screen.findByText(/check your phone to approve/i)).toBeInTheDocument();
     });
 
-    it("shows a success message once MTN confirms the payment", async () => {
+    it("shows a success message once MTN confirms the payment, even once the balance hits zero", async () => {
       let statusCalls = 0;
       vi.spyOn(global, "fetch").mockImplementation(async (input) => {
         const url = typeof input === "string" ? input : input.toString();
@@ -376,6 +376,10 @@ describe("PublicDocumentView", () => {
         }
         if (url.endsWith("/momo/request")) {
           return new Response(JSON.stringify({ requestId: "req1" }), { status: 201 });
+        }
+        if (url.endsWith("/public/documents/tok-abc123") && statusCalls >= 2) {
+          // the refetch after MTN confirms: the balance is now fully paid
+          return new Response(JSON.stringify({ document: invoiceWithMomo({ amountPaid: 10000, paymentStatus: "PAID" }) }), { status: 200 });
         }
         return new Response(JSON.stringify({ document: invoiceWithMomo() }), { status: 200 });
       });
