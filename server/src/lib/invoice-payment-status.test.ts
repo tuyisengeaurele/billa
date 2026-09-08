@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../app.js";
 import { resetDb } from "../test/db.js";
 import { prisma } from "./prisma.js";
-import { recomputeInvoicePaymentStatus } from "./invoice-payment-status.js";
+import { getInvoiceOutstandingBalance, recomputeInvoicePaymentStatus } from "./invoice-payment-status.js";
 import request from "supertest";
 
 beforeEach(resetDb);
@@ -158,5 +158,41 @@ describe("recomputeInvoicePaymentStatus", () => {
       .send({ type: "QUOTE", customerId, issueDate: "2026-08-19", lines: [] });
 
     await expect(recomputeInvoicePaymentStatus(quote.body.document.id)).resolves.toBeUndefined();
+  });
+});
+
+describe("getInvoiceOutstandingBalance", () => {
+  it("returns the invoice and its full total when nothing has been paid", async () => {
+    const { invoiceId } = await setup();
+
+    const balance = await getInvoiceOutstandingBalance(invoiceId);
+
+    expect(balance).not.toBeNull();
+    expect(balance!.invoice.id).toBe(invoiceId);
+    expect(balance!.amountOwed).toBe(100000);
+  });
+
+  it("subtracts recorded payments and finalized credit notes", async () => {
+    const { app, cookies, invoiceId } = await setup();
+    await request(app)
+      .post(`/documents/${invoiceId}/payments`)
+      .set("Cookie", cookies)
+      .send({ amount: 30000, method: "CASH", paidOn: "2026-08-20" });
+
+    const balance = await getInvoiceOutstandingBalance(invoiceId);
+
+    expect(balance!.amountOwed).toBe(70000);
+  });
+
+  it("returns null for a document that isn't a finalized invoice", async () => {
+    const { app, cookies, customerId } = await setup();
+    const draft = await request(app)
+      .post("/documents")
+      .set("Cookie", cookies)
+      .send({ type: "INVOICE", customerId, issueDate: "2026-08-19", lines: [] });
+
+    const balance = await getInvoiceOutstandingBalance(draft.body.document.id);
+
+    expect(balance).toBeNull();
   });
 });

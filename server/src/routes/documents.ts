@@ -40,8 +40,8 @@ import { recordJobRun } from "../lib/job-run-log.js";
 import { toCsv } from "../lib/csv.js";
 import { convertProformaToInvoice } from "../lib/convert-proforma.js";
 import { recomputeInvoicePaymentStatus } from "../lib/invoice-payment-status.js";
+import { recordInvoicePayment } from "../lib/record-invoice-payment.js";
 import { finalizeDocumentById } from "../lib/finalize-document.js";
-import { createNotification } from "../lib/notifications.js";
 import { detectAllowedImageType } from "../lib/file-sniff.js";
 import { getStorage } from "../lib/storage.js";
 import { blockAccountantMutations } from "../middleware/block-accountant-mutations.js";
@@ -607,19 +607,17 @@ documentsRouter.post("/:id/payments", validateBody(createPaymentSchema), async (
     return;
   }
 
-  const payment = await prisma.invoicePayment.create({
-    data: {
-      businessId,
-      documentId: id,
-      amount: body.amount,
-      method: body.method,
-      paidOn: new Date(body.paidOn),
-      notes: body.notes,
-      referenceNumber: body.referenceNumber,
-      payerName: body.payerName,
-      receiptImageUrl: body.receiptImageUrl,
-      createdByUserId: req.auth!.userId,
-    },
+  const payment = await recordInvoicePayment({
+    businessId,
+    documentId: id,
+    amount: body.amount,
+    method: body.method,
+    paidOn: new Date(body.paidOn),
+    createdByUserId: req.auth!.userId,
+    notes: body.notes,
+    referenceNumber: body.referenceNumber,
+    payerName: body.payerName,
+    receiptImageUrl: body.receiptImageUrl,
   });
 
   let receiptDocumentId: string | null = null;
@@ -658,18 +656,6 @@ documentsRouter.post("/:id/payments", validateBody(createPaymentSchema), async (
       receiptDocumentId = finalizedReceipt.document.id;
       await prisma.invoicePayment.update({ where: { id: payment.id }, data: { receiptDocumentId } });
     }
-  }
-
-  await recomputeInvoicePaymentStatus(id);
-
-  const owningBusiness = await prisma.business.findUnique({ where: { id: businessId }, select: { ownerId: true } });
-  if (owningBusiness) {
-    await createNotification({
-      userId: owningBusiness.ownerId,
-      type: "PAYMENT_RECEIVED",
-      title: `Payment received for ${invoice.number ?? "an invoice"}`,
-      link: `/documents/${id}`,
-    });
   }
 
   const updatedInvoice = await prisma.document.findUnique({ where: { id }, include: DOCUMENT_INCLUDE });

@@ -1,3 +1,4 @@
+import type { Document } from "@prisma/client";
 import { prisma } from "./prisma.js";
 
 export async function recomputeInvoicePaymentStatus(invoiceId: string): Promise<void> {
@@ -22,4 +23,19 @@ export async function recomputeInvoicePaymentStatus(invoiceId: string): Promise<
     where: { id: invoiceId },
     data: { amountPaid, paymentStatus: status },
   });
+}
+
+export async function getInvoiceOutstandingBalance(
+  documentId: string,
+): Promise<{ invoice: Document; amountOwed: number } | null> {
+  const invoice = await prisma.document.findUnique({ where: { id: documentId } });
+  if (!invoice || invoice.type !== "INVOICE" || invoice.status !== "FINALIZED") return null;
+
+  const creditNotes = await prisma.document.findMany({
+    where: { referencedDocumentId: documentId, type: "CREDIT_NOTE", status: "FINALIZED" },
+  });
+  const creditedTotal = creditNotes.reduce((sum, doc) => sum + doc.total, 0);
+  const amountOwed = invoice.total - creditedTotal - invoice.amountPaid;
+
+  return { invoice, amountOwed };
 }
