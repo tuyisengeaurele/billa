@@ -1,27 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { billingCheckoutSchema, billingVerifySchema, PLAN_PRICES } from "./billing-schemas.js";
+import { billingCheckoutSchema, PLAN_PRICES } from "./billing-schemas.js";
 
 describe("billingCheckoutSchema", () => {
-  it("accepts MONTHLY", () => {
-    expect(billingCheckoutSchema.safeParse({ plan: "MONTHLY" }).success).toBe(true);
+  it("accepts MONTHLY with a phone number", () => {
+    expect(billingCheckoutSchema.safeParse({ plan: "MONTHLY", phoneNumber: "250788000000" }).success).toBe(true);
   });
 
-  it("accepts ANNUAL", () => {
-    expect(billingCheckoutSchema.safeParse({ plan: "ANNUAL" }).success).toBe(true);
+  it("accepts ANNUAL with a phone number", () => {
+    expect(billingCheckoutSchema.safeParse({ plan: "ANNUAL", phoneNumber: "250788000000" }).success).toBe(true);
+  });
+
+  it("rejects a missing phone number", () => {
+    expect(billingCheckoutSchema.safeParse({ plan: "MONTHLY" }).success).toBe(false);
   });
 
   it("rejects an unknown plan", () => {
-    expect(billingCheckoutSchema.safeParse({ plan: "WEEKLY" }).success).toBe(false);
-  });
-});
-
-describe("billingVerifySchema", () => {
-  it("accepts a valid payload", () => {
-    expect(billingVerifySchema.safeParse({ txRef: "billa-1-abc", transactionId: "12345" }).success).toBe(true);
-  });
-
-  it("rejects a missing txRef", () => {
-    expect(billingVerifySchema.safeParse({ transactionId: "12345" }).success).toBe(false);
+    expect(billingCheckoutSchema.safeParse({ plan: "WEEKLY", phoneNumber: "250788000000" }).success).toBe(false);
   });
 });
 
