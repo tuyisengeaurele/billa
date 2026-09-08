@@ -1,9 +1,10 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
+import { publicDocumentRateLimit } from "../middleware/public-document-rate-limit.js";
 
 export const publicCustomersRouter = Router();
 
-publicCustomersRouter.get("/:token", async (req, res) => {
+publicCustomersRouter.get("/:token", publicDocumentRateLimit, async (req, res) => {
   const { token } = req.params;
 
   const customer = await prisma.customer.findFirst({

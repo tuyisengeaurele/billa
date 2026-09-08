@@ -8,6 +8,7 @@ import { renderDocumentPdf } from "../lib/pdf/render-document-pdf.js";
 import { convertProformaToInvoice, declineDocument } from "../lib/convert-proforma.js";
 import { createNotification } from "../lib/notifications.js";
 import { validateBody } from "../middleware/validate.js";
+import { momoPollRateLimit, publicDocumentRateLimit } from "../middleware/public-document-rate-limit.js";
 import { getInvoiceOutstandingBalance } from "../lib/invoice-payment-status.js";
 import { decrypt } from "../lib/encryption.js";
 import { getAccessToken, getRequestToPayStatus, MOMO_BASE_URLS, requestToPay } from "../lib/momo-client.js";
@@ -25,7 +26,7 @@ const PUBLIC_DOCUMENT_INCLUDE = {
   convertedTo: { select: { id: true } },
 };
 
-publicDocumentsRouter.get("/:token/pdf", async (req, res) => {
+publicDocumentsRouter.get("/:token/pdf", publicDocumentRateLimit, async (req, res) => {
   const { token } = req.params;
 
   const document = await prisma.document.findFirst({
@@ -53,7 +54,7 @@ publicDocumentsRouter.get("/:token/pdf", async (req, res) => {
   res.send(pdfBuffer);
 });
 
-publicDocumentsRouter.post("/:token/accept", async (req, res) => {
+publicDocumentsRouter.post("/:token/accept", publicDocumentRateLimit, async (req, res) => {
   const { token } = req.params;
 
   const document = await prisma.document.findFirst({
@@ -82,7 +83,7 @@ publicDocumentsRouter.post("/:token/accept", async (req, res) => {
   res.status(201).json({ accepted: true });
 });
 
-publicDocumentsRouter.post("/:token/decline", async (req, res) => {
+publicDocumentsRouter.post("/:token/decline", publicDocumentRateLimit, async (req, res) => {
   const { token } = req.params;
 
   const document = await prisma.document.findFirst({
@@ -111,7 +112,7 @@ publicDocumentsRouter.post("/:token/decline", async (req, res) => {
   res.json({ declined: true });
 });
 
-publicDocumentsRouter.get("/:token", async (req, res) => {
+publicDocumentsRouter.get("/:token", publicDocumentRateLimit, async (req, res) => {
   const { token } = req.params;
 
   const document = await prisma.document.findFirst({
@@ -156,6 +157,7 @@ function buildMomoCredentials(business: {
 
 publicDocumentsRouter.post(
   "/:token/momo/request",
+  publicDocumentRateLimit,
   validateBody(createMomoPaymentRequestSchema),
   async (req, res) => {
     const { token } = req.params;
@@ -235,7 +237,7 @@ publicDocumentsRouter.post(
   },
 );
 
-publicDocumentsRouter.get("/:token/momo/request/:requestId", async (req, res) => {
+publicDocumentsRouter.get("/:token/momo/request/:requestId", momoPollRateLimit, async (req, res) => {
   const { token, requestId } = req.params;
 
   const document = await prisma.document.findFirst({ where: { publicToken: token } });
