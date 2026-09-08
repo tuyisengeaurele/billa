@@ -87,7 +87,6 @@ export default function DocumentView() {
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [isDuplicating, setIsDuplicating] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
@@ -150,24 +149,6 @@ export default function DocumentView() {
     if (!document) return;
     window.open(`${API_BASE_URL}/documents/${document.id}/pdf?language=${language}`, "_blank");
     setLanguageModalAction(null);
-  }
-
-  async function handleDuplicate() {
-    if (!document) return;
-    setApiError(null);
-    setIsDuplicating(true);
-    try {
-      const response = await apiRequest<{ document: { id: string } }>(`/documents/${document.id}/duplicate`, {
-        method: "POST",
-      });
-      navigate(`/documents/${response.document.id}/edit`);
-      toast.success("Document duplicated");
-    } catch (err) {
-      setApiError(
-        err instanceof ApiError ? "Couldn't duplicate this document. Try again." : "Something went wrong. Try again.",
-      );
-      setIsDuplicating(false);
-    }
   }
 
   async function toggleReminders() {
@@ -264,14 +245,6 @@ export default function DocumentView() {
                 {document.remindersEnabled ? "Reminders on" : "Reminders off"}
               </button>
             )}
-            <button
-              type="button"
-              disabled={isDuplicating}
-              onClick={handleDuplicate}
-              className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {isDuplicating ? "Duplicating…" : "Duplicate"}
-            </button>
             <button
               type="button"
               onClick={() => setLanguageModalAction("download")}
