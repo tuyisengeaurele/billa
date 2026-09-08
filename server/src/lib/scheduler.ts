@@ -3,6 +3,7 @@ import { generateDueRecurringDocuments } from "./recurring-documents.js";
 import { sendOverdueReminders } from "./overdue-reminders.js";
 import { sendQuoteExpiryReminders } from "./quote-expiry-reminders.js";
 import { sendOwnerPaymentDigestIfDue } from "./owner-digest.js";
+import { reconcilePendingPayments } from "./payment-reconciliation.js";
 import { recordJobRun } from "./job-run-log.js";
 
 const RUN_INTERVAL_MS = 60 * 60 * 1000;
@@ -73,6 +74,21 @@ export async function runScheduledJobs(): Promise<void> {
     resultCount: expiryRemindersSent,
   });
   await recordJobRun("owner-payment-digest", { succeeded: !digestsFailed, resultCount: digestsSent });
+
+  // Global, not per-business: sweeps every still-pending payment across every
+  // business/user in one pass, rather than one query per business in the loop above.
+  try {
+    const result = await reconcilePendingPayments();
+    await recordJobRun("payment-reconciliation", {
+      succeeded: true,
+      resultCount: result.billingResolved + result.momoResolved,
+    });
+  } catch (err) {
+    await recordJobRun("payment-reconciliation", {
+      succeeded: false,
+      errorMessage: err instanceof Error ? err.message : "Unknown error",
+    });
+  }
 }
 
 let started = false;

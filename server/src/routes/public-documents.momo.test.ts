@@ -91,6 +91,25 @@ describe("POST /public/documents/:token/momo/request", () => {
     expect(requestToPaySpy).toHaveBeenCalledTimes(1);
   });
 
+  it("never creates two requests when two payment requests race each other", async () => {
+    const app = createApp();
+    const { document } = await setUpMomoInvoice(app);
+    vi.spyOn(momoClientModule, "getAccessToken").mockResolvedValue("token-123");
+    const requestToPaySpy = vi.spyOn(momoClientModule, "requestToPay").mockResolvedValue(undefined);
+
+    // Fired together, not one after another - the same double-click/retry scenario the
+    // advisory lock in the route (see idempotent-payment.ts) exists to close.
+    const [first, second] = await Promise.all([
+      request(app).post(`/public/documents/${document.publicToken}/momo/request`).send({ phoneNumber: "250788000000" }),
+      request(app).post(`/public/documents/${document.publicToken}/momo/request`).send({ phoneNumber: "250788000000" }),
+    ]);
+
+    expect(first.body.requestId).toBe(second.body.requestId);
+    expect(requestToPaySpy).toHaveBeenCalledTimes(1);
+    const requests = await prisma.momoPaymentRequest.findMany({ where: { documentId: document.id } });
+    expect(requests).toHaveLength(1);
+  });
+
   it("marks the request FAILED when the MTN call itself fails", async () => {
     const app = createApp();
     const { document } = await setUpMomoInvoice(app);

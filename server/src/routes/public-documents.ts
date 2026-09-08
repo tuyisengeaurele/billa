@@ -10,10 +10,9 @@ import { createNotification } from "../lib/notifications.js";
 import { validateBody } from "../middleware/validate.js";
 import { momoPollRateLimit, publicDocumentRateLimit } from "../middleware/public-document-rate-limit.js";
 import { getInvoiceOutstandingBalance } from "../lib/invoice-payment-status.js";
-import { decrypt } from "../lib/encryption.js";
-import { getAccessToken, getRequestToPayStatus, MOMO_BASE_URLS, requestToPay } from "../lib/momo-client.js";
-import type { MomoCredentials } from "../lib/momo-client.js";
-import { recordInvoicePayment } from "../lib/record-invoice-payment.js";
+import { getAccessToken, requestToPay } from "../lib/momo-client.js";
+import { buildMomoCredentials } from "../lib/business-momo.js";
+import { resolvePendingMomoPaymentRequest } from "../lib/resolve-pending-payment.js";
 
 export const publicDocumentsRouter = Router();
 
@@ -130,31 +129,6 @@ publicDocumentsRouter.get("/:token", publicDocumentRateLimit, async (req, res) =
 
 const MOMO_EXPIRY_MS = 5 * 60 * 1000;
 
-function buildMomoCredentials(business: {
-  momoEnvironment: string | null;
-  momoTargetEnvironment: string | null;
-  momoSubscriptionKeyEnc: string | null;
-  momoApiUserEnc: string | null;
-  momoApiKeyEnc: string | null;
-}): MomoCredentials | null {
-  if (
-    !business.momoEnvironment ||
-    !business.momoTargetEnvironment ||
-    !business.momoSubscriptionKeyEnc ||
-    !business.momoApiUserEnc ||
-    !business.momoApiKeyEnc
-  ) {
-    return null;
-  }
-  return {
-    subscriptionKey: decrypt(business.momoSubscriptionKeyEnc),
-    apiUser: decrypt(business.momoApiUserEnc),
-    apiKey: decrypt(business.momoApiKeyEnc),
-    targetEnvironment: business.momoTargetEnvironment,
-    baseUrl: MOMO_BASE_URLS[business.momoEnvironment as "sandbox" | "production"],
-  };
-}
-
 publicDocumentsRouter.post(
   "/:token/momo/request",
   publicDocumentRateLimit,
@@ -177,38 +151,53 @@ publicDocumentsRouter.post(
       return;
     }
 
-    const existing = await prisma.momoPaymentRequest.findFirst({
-      where: { documentId: document.id, status: "PENDING", createdAt: { gt: new Date(Date.now() - MOMO_EXPIRY_MS) } },
-      orderBy: { createdAt: "desc" },
+    // The existing-check and the create must happen atomically (see idempotent-payment.ts) -
+    // otherwise two near-simultaneous requests for the same invoice can both see "no pending
+    // request yet" and both go on to fire a real MTN prompt to the customer's phone.
+    const cutoff = new Date(Date.now() - MOMO_EXPIRY_MS);
+    const outcome = await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`momo-request:${document.id}`}))`;
+
+      const existing = await tx.momoPaymentRequest.findFirst({
+        where: { documentId: document.id, status: "PENDING", createdAt: { gt: cutoff } },
+        orderBy: { createdAt: "desc" },
+      });
+      if (existing) return { kind: "reused" as const, requestId: existing.id };
+
+      const balance = await getInvoiceOutstandingBalance(document.id);
+      if (!balance || balance.amountOwed <= 0) return { kind: "no_balance" as const };
+
+      const credentials = buildMomoCredentials(business);
+      if (!credentials) return { kind: "no_credentials" as const };
+
+      const momoRequest = await tx.momoPaymentRequest.create({
+        data: {
+          businessId: business.id,
+          documentId: document.id,
+          referenceId: randomUUID(),
+          phoneNumber: body.phoneNumber,
+          amount: balance.amountOwed,
+          status: "PENDING",
+        },
+      });
+      return { kind: "created" as const, momoRequest, credentials };
     });
-    if (existing) {
-      res.status(201).json({ requestId: existing.id });
+
+    if (outcome.kind === "reused") {
+      res.status(201).json({ requestId: outcome.requestId });
       return;
     }
-
-    const balance = await getInvoiceOutstandingBalance(document.id);
-    if (!balance || balance.amountOwed <= 0) {
+    if (outcome.kind === "no_balance") {
       res.status(400).json({ error: "nothing_owed" });
       return;
     }
-
-    const credentials = buildMomoCredentials(business);
-    if (!credentials) {
+    if (outcome.kind === "no_credentials") {
       res.status(400).json({ error: "momo_not_configured" });
       return;
     }
 
-    const referenceId = randomUUID();
-    const momoRequest = await prisma.momoPaymentRequest.create({
-      data: {
-        businessId: business.id,
-        documentId: document.id,
-        referenceId,
-        phoneNumber: body.phoneNumber,
-        amount: balance.amountOwed,
-        status: "PENDING",
-      },
-    });
+    const { momoRequest, credentials } = outcome;
+    const referenceId = momoRequest.referenceId;
 
     try {
       const token = await getAccessToken(credentials);
@@ -217,7 +206,7 @@ publicDocumentsRouter.post(
       const currency = business.momoEnvironment === "sandbox" ? "EUR" : "RWF";
       await requestToPay(credentials, token, {
         referenceId,
-        amount: balance.amountOwed,
+        amount: momoRequest.amount,
         currency,
         phoneNumber: body.phoneNumber,
         externalId: momoRequest.id,
@@ -270,50 +259,6 @@ publicDocumentsRouter.get("/:token/momo/request/:requestId", momoPollRateLimit, 
     return;
   }
 
-  let mtnStatus: { status: "PENDING" | "SUCCESSFUL" | "FAILED"; reason?: string };
-  try {
-    const token = await getAccessToken(credentials);
-    mtnStatus = await getRequestToPayStatus(credentials, token, momoRequest.referenceId);
-  } catch {
-    res.json({ status: "PENDING" });
-    return;
-  }
-
-  if (mtnStatus.status === "PENDING") {
-    res.json({ status: "PENDING" });
-    return;
-  }
-
-  if (mtnStatus.status === "FAILED") {
-    await prisma.momoPaymentRequest.update({
-      where: { id: momoRequest.id },
-      data: { status: "FAILED", failureReason: mtnStatus.reason ?? null },
-    });
-    res.json({ status: "FAILED", failureReason: mtnStatus.reason ?? null });
-    return;
-  }
-
-  const balance = await getInvoiceOutstandingBalance(document.id);
-  if (!balance || balance.amountOwed < momoRequest.amount) {
-    await prisma.momoPaymentRequest.update({
-      where: { id: momoRequest.id },
-      data: { status: "FAILED", failureReason: "already_paid" },
-    });
-    res.json({ status: "FAILED", failureReason: "already_paid" });
-    return;
-  }
-
-  await recordInvoicePayment({
-    businessId: momoRequest.businessId,
-    documentId: momoRequest.documentId,
-    amount: momoRequest.amount,
-    method: "MOBILE_MONEY",
-    paidOn: new Date(),
-    createdByUserId: business.ownerId,
-    referenceNumber: momoRequest.referenceId,
-    momoPaymentRequestId: momoRequest.id,
-  });
-  await prisma.momoPaymentRequest.update({ where: { id: momoRequest.id }, data: { status: "SUCCESSFUL" } });
-
-  res.json({ status: "SUCCESSFUL" });
+  const resolution = await resolvePendingMomoPaymentRequest(momoRequest, credentials, business.ownerId);
+  res.json(resolution);
 });

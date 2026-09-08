@@ -72,6 +72,27 @@ describe("POST /billing/checkout", () => {
     expect(requestToPaySpy).toHaveBeenCalledTimes(1);
   });
 
+  it("never creates two payments when two checkout requests race each other", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    vi.spyOn(momoClientModule, "getAccessToken").mockResolvedValue("token-123");
+    const requestToPaySpy = vi.spyOn(momoClientModule, "requestToPay").mockResolvedValue(undefined);
+
+    // Fired together (not awaited one after another) so both hit the "is one already
+    // pending?" check before either has necessarily committed its own row - the exact
+    // double-click / client-retry scenario the advisory lock in getOrCreatePendingPayment
+    // exists to close.
+    const [first, second] = await Promise.all([
+      request(app).post("/billing/checkout").set("Cookie", cookies).send({ plan: "MONTHLY", phoneNumber: "250788000000" }),
+      request(app).post("/billing/checkout").set("Cookie", cookies).send({ plan: "MONTHLY", phoneNumber: "250788000000" }),
+    ]);
+
+    expect(first.body.paymentId).toBe(second.body.paymentId);
+    expect(requestToPaySpy).toHaveBeenCalledTimes(1);
+    const payments = await prisma.payment.findMany({});
+    expect(payments).toHaveLength(1);
+  });
+
   it("creates a separate payment for a different plan even while one is pending", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app);
