@@ -33,7 +33,7 @@ const FAQS = [
   },
   {
     question: "What happens after my trial ends?",
-    answer: `You can still view and download everything you've already created. Creating new documents will need an active subscription (planned at ${formatRwf(PLAN_PRICES.MONTHLY)} a month or ${formatRwf(PLAN_PRICES.ANNUAL)} a year) once paid plans go live.`,
+    answer: `You can still view and download everything you've already created. Creating new documents needs an active subscription: ${formatRwf(PLAN_PRICES.MONTHLY)} a month or ${formatRwf(PLAN_PRICES.ANNUAL)} a year.`,
   },
   {
     question: "Can I use it for more than one business?",
@@ -42,7 +42,7 @@ const FAQS = [
   {
     question: "How do I pay?",
     answer:
-      "Paid subscriptions aren't open yet. Every account gets full access during the 14-day trial, and we'll announce payment options once they're live.",
+      "With MTN Mobile Money. Enter your phone number, approve the prompt MTN sends you, and you're subscribed. It's a one-time payment per period, not a recurring charge, so nothing is billed again until you choose to pay for the next one.",
   },
 ];
 
@@ -243,7 +243,8 @@ export default function Landing() {
           Simple pricing
         </motion.h2>
         <p className="mx-auto mt-3 max-w-md text-center font-sans text-sm text-neutral-500">
-          Every account gets a 14-day free trial, full access, no card required. Paid billing is launching soon.
+          Every account gets a 14-day free trial, full access, no card required. Pay by MTN Mobile Money whenever
+          your trial ends.
         </p>
         <div className="mt-12 grid grid-cols-1 gap-8 sm:grid-cols-2">
           <motion.div

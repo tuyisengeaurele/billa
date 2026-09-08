@@ -45,4 +45,13 @@ describe("Landing", () => {
     expect(bodyText).not.toMatch(/automatically (report|file|submit).{0,40}(rra|ebm)/i);
     expect(bodyText).not.toMatch(/(rra|ebm) compliant/i);
   });
+
+  it("describes billing as live, not upcoming", () => {
+    renderLanding();
+
+    const bodyText = document.body.textContent ?? "";
+    expect(bodyText).not.toMatch(/launching soon/i);
+    expect(bodyText).not.toMatch(/not (yet )?(open|available)/i);
+    expect(bodyText).toMatch(/mtn mobile money/i);
+  });
 });

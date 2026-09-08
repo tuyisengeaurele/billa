@@ -67,17 +67,17 @@ const GROUPS: FaqGroup[] = [
     items: [
       {
         question: "What happens after my trial ends?",
-        answer: `You can still view and download everything you've already created. Creating new documents will need an active subscription (planned at ${formatRwf(PLAN_PRICES.MONTHLY)} a month or ${formatRwf(PLAN_PRICES.ANNUAL)} a year) once paid plans go live.`,
+        answer: `You can still view and download everything you've already created. Creating new documents needs an active subscription: ${formatRwf(PLAN_PRICES.MONTHLY)} a month or ${formatRwf(PLAN_PRICES.ANNUAL)} a year.`,
       },
       {
         question: "How do I pay?",
         answer:
-          "Paid subscriptions aren't open yet. Every account gets full access during the 14-day trial, and we'll announce payment options (Mobile Money and card) once they're live.",
+          "With MTN Mobile Money, from Settings → Billing. Enter your phone number, approve the prompt MTN sends you, and your subscription is active.",
       },
       {
-        question: "Will my subscription renew automatically once payments are live?",
+        question: "Does my subscription renew automatically?",
         answer:
-          "No. Each payment will cover one billing period. When it ends, you choose whether to pay for another one; there's no automatic recurring charge.",
+          "No. Each payment covers one billing period. When it ends, you choose whether to pay for another one; there's no automatic recurring charge.",
       },
     ],
   },
