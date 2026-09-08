@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../../context/AuthContext";
 import { BillingSection } from "./BillingSection";
 
@@ -54,10 +54,6 @@ function mockFetch(overrides: MockOverrides = {}) {
 }
 
 describe("BillingSection", () => {
-  beforeEach(() => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-  });
-
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
@@ -78,7 +74,7 @@ describe("BillingSection", () => {
 
   it("submits a checkout and shows the pending state", async () => {
     mockFetch();
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const user = userEvent.setup();
 
     render(
       <AuthProvider>
@@ -93,7 +89,8 @@ describe("BillingSection", () => {
 
   it("shows a success message once MTN confirms the payment", async () => {
     mockFetch({ onPoll: (call) => ({ status: call < 2 ? "PENDING" : "SUCCESSFUL" }) });
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    const user = userEvent.setup();
 
     render(
       <AuthProvider>
@@ -112,7 +109,8 @@ describe("BillingSection", () => {
 
   it("shows a failure message and offers to try again", async () => {
     mockFetch({ onPoll: () => ({ status: "FAILED", failureReason: "Payer rejected" }) });
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    const user = userEvent.setup();
 
     render(
       <AuthProvider>
@@ -121,6 +119,8 @@ describe("BillingSection", () => {
     );
 
     await user.click(await screen.findByRole("button", { name: /pay 6,500 rwf \(monthly\)/i }));
+    await screen.findByText(/check your phone to approve/i);
+
     await vi.advanceTimersByTimeAsync(3000);
 
     expect(await screen.findByText("Payer rejected")).toBeInTheDocument();
