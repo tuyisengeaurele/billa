@@ -28,7 +28,6 @@ const DocumentView = lazy(() => import("./pages/DocumentView"));
 const BusinessSettings = lazy(() => import("./pages/BusinessSettings"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Notifications = lazy(() => import("./pages/Notifications"));
-const BillingCallback = lazy(() => import("./pages/BillingCallback"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const HelpCenter = lazy(() => import("./pages/HelpCenter"));
@@ -86,7 +85,6 @@ export default function App() {
                       <Route path="/settings" element={<BusinessSettings />} />
                       <Route path="/profile" element={<Profile />} />
                       <Route path="/notifications" element={<Notifications />} />
-                      <Route path="/billing/callback" element={<BillingCallback />} />
                     </Route>
                   </Route>
                   <Route element={<AdminRoute />}>
