@@ -82,7 +82,7 @@ export default function PublicDocumentView() {
           setDocument(refreshed.document);
         }
       } catch {
-        // transient network error — keep polling on the next tick
+        // transient network error, keep polling on the next tick
       }
     }, 3000);
     return () => clearInterval(interval);

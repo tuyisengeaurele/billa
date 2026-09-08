@@ -9,7 +9,7 @@ export interface MomoCredentials {
 export const MOMO_BASE_URLS: Record<"sandbox" | "production", string> = {
   sandbox: "https://sandbox.momodeveloper.mtn.com",
   // Confirm this against MTN's current Rwanda Collections API onboarding docs before
-  // going live — MTN's production host isn't verified against a live account here.
+  // going live. MTN's production host isn't verified against a live account here.
   production: "https://proxy.momoapi.mtn.com",
 };
 

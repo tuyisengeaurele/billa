@@ -6,8 +6,8 @@ Payment collection has been on hold since the earlier Flutterwave attempt didn't
 
 Billa has two separate places "payment" could mean:
 
-1. **Customers paying a business's invoice** — today this is a manual ledger only (`InvoicePayment`, from the payment-tracking design): the business owner records that they received cash, a bank transfer, or a MoMo transfer, after the fact. There is no live payment collection.
-2. **Businesses paying their own Billa subscription** — the `/billing/checkout` flow, currently non-functional because it was built against Flutterwave.
+1. **Customers paying a business's invoice.** Today this is a manual ledger only (`InvoicePayment`, from the payment-tracking design): the business owner records that they received cash, a bank transfer, or a MoMo transfer, after the fact. There is no live payment collection.
+2. **Businesses paying their own Billa subscription,** the `/billing/checkout` flow, currently non-functional because it was built against Flutterwave.
 
 This spec covers **only the first one**: customers paying an invoice through Billa via MTN MoMo. Reviving Billa's own subscription billing with MoMo is a deliberate, separate follow-up spec once this one has shipped and proven the integration pattern works.
 

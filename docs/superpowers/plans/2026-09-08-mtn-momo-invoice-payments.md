@@ -21,11 +21,11 @@
 - Decryption only ever happens server-side, immediately before a call to MTN. A business's saved settings are never round-tripped back to the client in decrypted form.
 - `momo-client.ts` is the only file that makes an HTTP call to MTN; every route and test depends on it, not on `fetch` directly.
 - No test ever calls MTN's real sandbox. The sandbox is for a human to verify the integration once, by hand, before this ships (see Task 10).
-- Money amounts throughout Billa are plain RWF integers (`Int` columns, no decimals) — `MomoPaymentRequest.amount` and every amount passed to `momo-client.ts` follow that same convention.
+- Money amounts throughout Billa are plain RWF integers (`Int` columns, no decimals): `MomoPaymentRequest.amount` and every amount passed to `momo-client.ts` follow that same convention.
 
 ---
 
-## Task 1: Prisma schema — MoMo fields and the `MomoPaymentRequest` model
+## Task 1: Prisma schema for MoMo fields and the `MomoPaymentRequest` model
 
 **Files:**
 - Modify: `server/prisma/schema.prisma`
@@ -163,11 +163,11 @@ model InvoicePayment {
 }
 ```
 
-(Leave the rest of the model, including `@@index([businessId, documentId])`, exactly as it is today — only the two new lines and the added blank line around them are new.)
+(Leave the rest of the model, including `@@index([businessId, documentId])`, exactly as it is today; only the two new lines and the added blank line around them are new.)
 
 - [ ] **Step 4: Add the reverse relation to `Document`**
 
-`Document` needs a `momoPaymentRequests MomoPaymentRequest[]` field for the relation in Step 2 to resolve. Find the `Document` model's relations block (it already lists `payments InvoicePayment[] @relation("DocumentPayments")` or similar — check the exact existing relation list around the model's closing braces) and add:
+`Document` needs a `momoPaymentRequests MomoPaymentRequest[]` field for the relation in Step 2 to resolve. Find the `Document` model's relations block (it already lists `payments InvoicePayment[] @relation("DocumentPayments")` or similar; check the exact existing relation list around the model's closing braces) and add:
 
 ```prisma
   momoPaymentRequests MomoPaymentRequest[]
@@ -282,7 +282,7 @@ Extracts the payment-recording logic that today lives inline in the manual-payme
 
 - [ ] **Step 1: Write the failing test for `getInvoiceOutstandingBalance`**
 
-Append to `server/src/lib/invoice-payment-status.test.ts` (it already has a `setup()` helper returning `{ app, cookies, invoiceId, customerId }` — reuse it):
+Append to `server/src/lib/invoice-payment-status.test.ts` (it already has a `setup()` helper returning `{ app, cookies, invoiceId, customerId }`, reuse it):
 
 ```ts
 import { getInvoiceOutstandingBalance } from "./invoice-payment-status.js";
@@ -334,7 +334,7 @@ describe("getInvoiceOutstandingBalance", () => {
 cd server && npx vitest run src/lib/invoice-payment-status.test.ts
 ```
 
-Expected: FAIL — `getInvoiceOutstandingBalance` is not exported.
+Expected: FAIL (`getInvoiceOutstandingBalance` is not exported).
 
 - [ ] **Step 3: Implement `getInvoiceOutstandingBalance`**
 
@@ -475,7 +475,7 @@ describe("recordInvoicePayment", () => {
 cd server && npx vitest run src/lib/record-invoice-payment.test.ts
 ```
 
-Expected: FAIL — the module doesn't exist yet.
+Expected: FAIL (the module doesn't exist yet).
 
 - [ ] **Step 7: Implement `recordInvoicePayment`**
 
@@ -650,7 +650,7 @@ This drops the now-redundant `recomputeInvoicePaymentStatus(id)` call and the ma
 cd server && npx vitest run src/routes/documents.payments.test.ts
 ```
 
-Expected: PASS — all existing cases (payment recorded, notification sent, receipt generated, amount-exceeds-owed rejected, credit notes accounted for) still pass unchanged.
+Expected: PASS. All existing cases (payment recorded, notification sent, receipt generated, amount-exceeds-owed rejected, credit notes accounted for) still pass unchanged.
 
 - [ ] **Step 11: Typecheck and commit**
 
@@ -730,7 +730,7 @@ describe("encrypt/decrypt", () => {
 cd server && npx vitest run src/lib/encryption.test.ts
 ```
 
-Expected: FAIL — the module doesn't exist yet.
+Expected: FAIL (the module doesn't exist yet).
 
 - [ ] **Step 3: Implement the module**
 
@@ -911,7 +911,7 @@ describe("createMomoPaymentRequestSchema", () => {
 cd shared && npx vitest run src/momo-schemas.test.ts
 ```
 
-Expected: FAIL — the module doesn't exist yet.
+Expected: FAIL (the module doesn't exist yet).
 
 - [ ] **Step 3: Implement the schemas**
 
@@ -1124,7 +1124,7 @@ describe("momo-client", () => {
 cd server && npx vitest run src/lib/momo-client.test.ts
 ```
 
-Expected: FAIL — the module doesn't exist yet.
+Expected: FAIL (the module doesn't exist yet).
 
 - [ ] **Step 3: Implement the client**
 
@@ -1142,7 +1142,7 @@ export interface MomoCredentials {
 export const MOMO_BASE_URLS: Record<"sandbox" | "production", string> = {
   sandbox: "https://sandbox.momodeveloper.mtn.com",
   // Confirm this against MTN's current Rwanda Collections API onboarding docs before
-  // going live — MTN's production host isn't verified against a live account here.
+  // going live. MTN's production host isn't verified against a live account here.
   production: "https://proxy.momoapi.mtn.com",
 };
 
@@ -1413,7 +1413,7 @@ describe("POST /business/momo-settings/test", () => {
 cd server && npx vitest run src/routes/business.momo-settings.test.ts
 ```
 
-Expected: FAIL — 404s, since the routes don't exist yet.
+Expected: FAIL (404s, since the routes don't exist yet).
 
 - [ ] **Step 3: Implement the routes**
 
@@ -1767,7 +1767,7 @@ describe("GET /public/documents/:token/momo/request/:requestId", () => {
 cd server && npx vitest run src/routes/public-documents.momo.test.ts
 ```
 
-Expected: FAIL — 404s, since the routes don't exist yet.
+Expected: FAIL (404s, since the routes don't exist yet).
 
 - [ ] **Step 3: Implement the routes**
 
@@ -2010,7 +2010,7 @@ git push
 
 ---
 
-## Task 8: Client — Business Settings "MTN Mobile Money" section
+## Task 8: Client Business Settings "MTN Mobile Money" section
 
 **Files:**
 - Create: `client/src/components/business/MomoSection.tsx`
@@ -2129,7 +2129,7 @@ describe("MomoSection", () => {
 cd client && npx vitest run src/components/business/MomoSection.test.tsx
 ```
 
-Expected: FAIL — the module doesn't exist yet.
+Expected: FAIL (the module doesn't exist yet).
 
 - [ ] **Step 3: Implement the component**
 
@@ -2381,7 +2381,7 @@ git push
 
 ---
 
-## Task 9: Client — "Pay with MTN MoMo" on the public invoice view
+## Task 9: Client "Pay with MTN MoMo" button on the public invoice view
 
 **Files:**
 - Modify: `client/src/pages/PublicDocumentView.tsx`
@@ -2526,7 +2526,7 @@ describe("MTN MoMo payment", () => {
 cd client && npx vitest run src/pages/PublicDocumentView.test.tsx
 ```
 
-Expected: FAIL — no phone field, no "Pay with MTN MoMo" button.
+Expected: FAIL (no phone field, no "Pay with MTN MoMo" button).
 
 - [ ] **Step 3: Extend the `PublicDocumentDetail` interface and load logic**
 
@@ -2595,7 +2595,7 @@ export default function PublicDocumentView() {
           setDocument(refreshed.document);
         }
       } catch {
-        // transient network error — keep polling on the next tick
+        // transient network error, keep polling on the next tick
       }
     }, 3000);
     return () => clearInterval(interval);
@@ -2703,7 +2703,7 @@ Add this block right after the totals block (after the `<div className="flex fle
 cd client && npx vitest run src/pages/PublicDocumentView.test.tsx
 ```
 
-Expected: PASS — including all the pre-existing accept/decline/PDF-link tests, which are unaffected since `momoEnabled` and `amountPaid` are `undefined` (falsy/`NaN`) in their fixtures and the new section stays hidden.
+Expected: PASS. All the pre-existing accept/decline/PDF-link tests keep passing, since `momoEnabled` and `amountPaid` are `undefined` (falsy/`NaN`) in their fixtures and the new section stays hidden.
 
 - [ ] **Step 6: Typecheck and commit**
 
@@ -2720,7 +2720,7 @@ git push
 
 **Files:**
 - Modify: `server/.env.example` (confirm the MoMo section reads well end to end; already added in Task 3)
-- No new source files — this task is verification and documentation only.
+- No new source files; this task is verification and documentation only.
 
 - [ ] **Step 1: Run the full server test suite**
 
@@ -2766,13 +2766,13 @@ Copy the output into `server/.env`'s `MOMO_CREDENTIALS_ENCRYPTION_KEY` (do not c
 
 - [ ] **Step 6: Manually verify against MTN's sandbox before any real business uses this**
 
-This step is a human task, not an automated one — no test in this plan calls MTN's real sandbox, per the Global Constraints.
+This step is a human task, not an automated one. No test in this plan calls MTN's real sandbox, per the Global Constraints.
 
 1. Create a free developer account at momodeveloper.mtn.com and subscribe to the Collections product to get a sandbox Subscription Key.
 2. Follow MTN's sandbox provisioning flow to create an API User and API Key under that subscription.
 3. In Billa, open Business Settings → MTN Mobile Money, choose Sandbox, paste in the three values, and click "Test connection." Confirm it reports success.
 4. Save and enable it. Open a finalized invoice's public link, enter one of MTN's documented sandbox test phone numbers (MTN's sandbox docs list numbers that deterministically resolve to `SUCCESSFUL` and to `FAILED`), and confirm both outcomes show correctly in the UI and that a successful one shows up as a recorded payment on the invoice in Billa.
-5. Confirm `MOMO_BASE_URLS.production` in `server/src/lib/momo-client.ts` and the "Target environment" guidance shown on the settings page still match MTN's current Rwanda Collections API onboarding documentation before flipping any business to production — both were written from documentation that wasn't verified against a live account (flagged with comments in Task 5 and in the spec).
+5. Confirm `MOMO_BASE_URLS.production` in `server/src/lib/momo-client.ts` and the "Target environment" guidance shown on the settings page still match MTN's current Rwanda Collections API onboarding documentation before flipping any business to production; both were written from documentation that wasn't verified against a live account (flagged with comments in Task 5 and in the spec).
 
 - [ ] **Step 7: Confirm the git log for this plan is clean**
 
@@ -2786,6 +2786,6 @@ Expected: one commit per task in this plan (schema, shared payment helpers, encr
 
 ## Self-Review Notes
 
-- **Spec coverage:** Context/decision (encoded in Global Constraints and Task 7's no-custody credential flow) — Scope (Task 7's `INVOICE`-only, full-balance-only checks) — §1 Confirmation mechanism (Task 7's 3-second client poll, 5-minute lazy expiry) — §2 Data model (Task 1, field-for-field) — §3 Encryption (Task 3, matching the `iv:authTag:ciphertext` format and required env var) — §4 MoMo API client (Task 5, matching every function signature) — §5 Server routes (Tasks 6 and 7, matching every route path and response shape) — §6 Client UI (Tasks 8 and 9, matching both described surfaces) — §7 Testing (every task's test file, plus Task 10's full-suite run; no test calls MTN's real sandbox) — §8 Rollout (Task 10, Step 6) are all covered.
+- **Spec coverage:** Context/decision (encoded in Global Constraints and Task 7's no-custody credential flow); Scope (Task 7's `INVOICE`-only, full-balance-only checks); §1 Confirmation mechanism (Task 7's 3-second client poll, 5-minute lazy expiry); §2 Data model (Task 1, field-for-field); §3 Encryption (Task 3, matching the `iv:authTag:ciphertext` format and required env var); §4 MoMo API client (Task 5, matching every function signature); §5 Server routes (Tasks 6 and 7, matching every route path and response shape); §6 Client UI (Tasks 8 and 9, matching both described surfaces); §7 Testing (every task's test file, plus Task 10's full-suite run; no test calls MTN's real sandbox); §8 Rollout (Task 10, Step 6). All covered.
 - **Placeholder scan:** no "TBD"/"handle errors appropriately"/"similar to Task N" remain; every step has literal code or an exact command.
-- **Type consistency:** `RecordInvoicePaymentInput`, `MomoCredentials`, `MomoEnvironment`, `MomoSettings`/`UpdateMomoSettingsInput`/`TestMomoSettingsInput`, and the `{ status, failureReason }` polling response shape are each defined once (Tasks 2, 4, 5) and reused with the same field names everywhere they're consumed (Tasks 6, 7, 8, 9) — checked by re-reading every task's Interfaces block against where it's produced.
+- **Type consistency:** `RecordInvoicePaymentInput`, `MomoCredentials`, `MomoEnvironment`, `MomoSettings`/`UpdateMomoSettingsInput`/`TestMomoSettingsInput`, and the `{ status, failureReason }` polling response shape are each defined once (Tasks 2, 4, 5) and reused with the same field names everywhere they're consumed (Tasks 6, 7, 8, 9); checked by re-reading every task's Interfaces block against where it's produced.
