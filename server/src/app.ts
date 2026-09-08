@@ -33,6 +33,11 @@ import { requestLogger } from "./middleware/request-logger.js";
 export function createApp() {
   const app = express();
 
+  // Trust one hop of proxy (the load balancer/reverse proxy every real host puts in
+  // front of the app). Without this, req.ip is always the proxy's own address, which
+  // would put every real visitor into the same IP-keyed rate-limit bucket once deployed.
+  app.set("trust proxy", 1);
+
   app.use(requestLogger);
   app.use(
     helmet({

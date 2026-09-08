@@ -1,11 +1,13 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/require-auth.js";
 import { requireActiveSubscription } from "../middleware/require-active-subscription.js";
+import { generalApiRateLimit } from "../middleware/general-rate-limit.js";
 import { getOutstandingInvoices } from "../lib/accounts-receivable.js";
 
 export const receivablesRouter = Router();
 
 receivablesRouter.use(requireAuth);
+receivablesRouter.use(generalApiRateLimit);
 receivablesRouter.use(requireActiveSubscription);
 
 const DAY_MS = 24 * 60 * 60 * 1000;

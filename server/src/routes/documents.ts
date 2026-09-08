@@ -46,10 +46,12 @@ import { detectAllowedImageType } from "../lib/file-sniff.js";
 import { getStorage } from "../lib/storage.js";
 import { blockAccountantMutations } from "../middleware/block-accountant-mutations.js";
 import { requireFinalizePermission } from "../middleware/require-finalize-permission.js";
+import { expensiveOperationRateLimit, generalApiRateLimit } from "../middleware/general-rate-limit.js";
 
 export const documentsRouter = Router();
 
 documentsRouter.use(requireAuth);
+documentsRouter.use(generalApiRateLimit);
 documentsRouter.use(requireActiveSubscription);
 documentsRouter.use(blockAccountantMutations);
 
@@ -222,7 +224,7 @@ documentsRouter.get("/", validateQuery(documentListQuerySchema), async (req, res
   res.json({ results, total, page: query.page, pageSize: query.pageSize });
 });
 
-documentsRouter.get("/export.csv", validateQuery(documentListQuerySchema), async (req, res) => {
+documentsRouter.get("/export.csv", expensiveOperationRateLimit, validateQuery(documentListQuerySchema), async (req, res) => {
   const query = req.listQuery as DocumentListQuery;
   const businessId = req.auth!.businessId;
 

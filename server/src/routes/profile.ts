@@ -4,6 +4,7 @@ import { NOTIFICATION_TYPES, updateNotificationPreferencesSchema, updateProfileS
 import type { UpdateNotificationPreferencesInput, UpdateProfileInput } from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/require-auth.js";
+import { generalApiRateLimit } from "../middleware/general-rate-limit.js";
 import { validateBody } from "../middleware/validate.js";
 import { detectAllowedImageType } from "../lib/file-sniff.js";
 import { getStorage } from "../lib/storage.js";
@@ -12,6 +13,7 @@ import { hashRefreshToken } from "../lib/tokens.js";
 export const profileRouter = Router();
 
 profileRouter.use(requireAuth);
+profileRouter.use(generalApiRateLimit);
 
 const uploadAvatar = multer({
   storage: multer.memoryStorage(),

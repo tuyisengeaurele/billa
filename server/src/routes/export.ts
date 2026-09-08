@@ -2,10 +2,12 @@ import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/require-auth.js";
 import { requireActiveSubscription } from "../middleware/require-active-subscription.js";
+import { expensiveOperationRateLimit } from "../middleware/general-rate-limit.js";
 
 export const exportRouter = Router();
 
 exportRouter.use(requireAuth);
+exportRouter.use(expensiveOperationRateLimit);
 exportRouter.use(requireActiveSubscription);
 
 exportRouter.get("/all", async (req, res) => {

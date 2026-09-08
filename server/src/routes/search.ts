@@ -5,10 +5,12 @@ import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/require-auth.js";
 import { requireActiveSubscription } from "../middleware/require-active-subscription.js";
 import { validateQuery } from "../middleware/validate-query.js";
+import { generalApiRateLimit } from "../middleware/general-rate-limit.js";
 
 export const searchRouter = Router();
 
 searchRouter.use(requireAuth);
+searchRouter.use(generalApiRateLimit);
 searchRouter.use(requireActiveSubscription);
 
 const RESULT_LIMIT = 5;

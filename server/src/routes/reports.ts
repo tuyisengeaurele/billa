@@ -2,10 +2,12 @@ import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/require-auth.js";
 import { requireActiveSubscription } from "../middleware/require-active-subscription.js";
+import { expensiveOperationRateLimit } from "../middleware/general-rate-limit.js";
 
 export const reportsRouter = Router();
 
 reportsRouter.use(requireAuth);
+reportsRouter.use(expensiveOperationRateLimit);
 reportsRouter.use(requireActiveSubscription);
 
 function endOfDay(date: Date): Date {

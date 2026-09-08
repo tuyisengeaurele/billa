@@ -4,6 +4,7 @@ import { createImpersonationRequestSchema, overrideImpersonationRequestSchema } 
 import type { CreateImpersonationRequestInput, OverrideImpersonationRequestInput } from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/require-auth.js";
+import { generalApiRateLimit } from "../middleware/general-rate-limit.js";
 import { validateBody } from "../middleware/validate.js";
 import { issueSession } from "../lib/session.js";
 import { logAdminAction } from "../lib/admin-audit-log.js";
@@ -12,6 +13,7 @@ import { logActivity } from "../lib/activity-log.js";
 export const impersonationRequestsRouter = Router();
 
 impersonationRequestsRouter.use(requireAuth);
+impersonationRequestsRouter.use(generalApiRateLimit);
 
 const REQUEST_TTL_MS = 2 * 60 * 1000;
 

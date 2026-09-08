@@ -4,10 +4,12 @@ import { requireAuth } from "../middleware/require-auth.js";
 import { issueSession } from "../lib/session.js";
 import { logActivity } from "../lib/activity-log.js";
 import { createNotification } from "../lib/notifications.js";
+import { generalApiRateLimit } from "../middleware/general-rate-limit.js";
+import { publicDocumentRateLimit } from "../middleware/public-document-rate-limit.js";
 
 export const invitesRouter = Router();
 
-invitesRouter.get("/:token", async (req, res) => {
+invitesRouter.get("/:token", publicDocumentRateLimit, async (req, res) => {
   const invite = await prisma.businessInvite.findUnique({ where: { token: req.params.token } });
   if (!invite) {
     res.status(404).json({ error: "not_found" });
@@ -22,7 +24,7 @@ invitesRouter.get("/:token", async (req, res) => {
   });
 });
 
-invitesRouter.post("/:token/accept", requireAuth, async (req, res) => {
+invitesRouter.post("/:token/accept", requireAuth, generalApiRateLimit, async (req, res) => {
   const invite = await prisma.businessInvite.findUnique({ where: { token: req.params.token } });
   if (!invite) {
     res.status(404).json({ error: "not_found" });

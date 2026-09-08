@@ -3,12 +3,14 @@ import { BUSINESS_LIMIT, createBusinessSchema } from "@billa/shared";
 import type { CreateBusinessInput } from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/require-auth.js";
+import { generalApiRateLimit } from "../middleware/general-rate-limit.js";
 import { validateBody } from "../middleware/validate.js";
 import { issueSession } from "../lib/session.js";
 
 export const businessesRouter = Router();
 
 businessesRouter.use(requireAuth);
+businessesRouter.use(generalApiRateLimit);
 
 businessesRouter.get("/", async (req, res) => {
   const userId = req.auth!.userId;

@@ -1,10 +1,12 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/require-auth.js";
+import { generalApiRateLimit } from "../middleware/general-rate-limit.js";
 
 export const announcementsRouter = Router();
 
 announcementsRouter.use(requireAuth);
+announcementsRouter.use(generalApiRateLimit);
 
 announcementsRouter.get("/active", async (_req, res) => {
   const announcement = await prisma.announcement.findFirst({

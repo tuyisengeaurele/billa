@@ -1,10 +1,12 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/require-auth.js";
+import { generalApiRateLimit } from "../middleware/general-rate-limit.js";
 
 export const notificationsRouter = Router();
 
 notificationsRouter.use(requireAuth);
+notificationsRouter.use(generalApiRateLimit);
 
 notificationsRouter.get("/", async (req, res) => {
   const userId = req.auth!.userId;

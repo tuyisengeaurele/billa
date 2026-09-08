@@ -19,6 +19,7 @@ import type {
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/require-auth.js";
 import { requireAdmin } from "../middleware/require-admin.js";
+import { generalApiRateLimit } from "../middleware/general-rate-limit.js";
 import { validateBody } from "../middleware/validate.js";
 import { validateQuery } from "../middleware/validate-query.js";
 import { logAdminAction } from "../lib/admin-audit-log.js";
@@ -32,6 +33,7 @@ export const adminRouter = Router();
 
 adminRouter.use(requireAuth);
 adminRouter.use(requireAdmin);
+adminRouter.use(generalApiRateLimit);
 
 adminRouter.get("/audit-log", validateQuery(adminAuditLogQuerySchema), async (req, res) => {
   const query = req.listQuery as AdminAuditLogQuery;
