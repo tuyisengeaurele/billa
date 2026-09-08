@@ -12,7 +12,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 
 export default function PrivacyPolicy() {
   return (
-    <LegalPageLayout title="Privacy policy" updated="August 26, 2026">
+    <LegalPageLayout title="Privacy policy" updated="September 8, 2026">
       <p className="font-sans text-sm leading-relaxed text-neutral-600">
         This policy explains what information Billa collects when you use the service, why, and how you can control
         it. Billa is built for small businesses in Rwanda, and this policy is written in plain language rather than
@@ -22,9 +22,10 @@ export default function PrivacyPolicy() {
 
       <Section title="What we collect">
         <p>
-          When you create an account, we collect your email address and the business details you provide: name,
-          TIN, industry, phone, address, and RRA EBM number if you add one. If you add bank details or an
-          authorized signatory so they appear on your documents, we store the bank name, account number, and
+          When you create an account, we collect your email address and either a password (if you register directly)
+          or your name and email from Google (if you sign in with Google). We collect the business details you
+          provide: name, TIN, industry, phone, address, and RRA EBM number if you add one. If you add bank details or
+          an authorized signatory so they appear on your documents, we store the bank name, account number, and
           signatory name and title you provide.
         </p>
         <p>
@@ -33,15 +34,21 @@ export default function PrivacyPolicy() {
           belongs to your business, not to Billa.
         </p>
         <p>
-          If you sign in with Google, we receive your name and email address from Google. We never see or store
-          your Google password.
+          If you turn on two-factor authentication, we store the authentication secret needed to check your codes.
+          It's encrypted at rest, separately from the rest of your data, and used only to verify the codes your
+          authenticator app generates.
+        </p>
+        <p>
+          If your business accepts Mobile Money payments through Billa, or if you pay for a Billa subscription, we
+          collect the phone number the payment is sent to or from, and share it with MTN Mobile Money to process
+          that one transaction. See "Who processes it" below.
         </p>
       </Section>
 
       <Section title="How we use it">
         <p>
           We use your data to run the product: generating documents, calculating totals, keeping your numbering
-          sequences correct, and managing your account, trial, and (once available) subscription.
+          sequences correct, and managing your account, trial, and subscription.
         </p>
         <p>
           If you choose to email a document to a customer from within Billa, we send that email (with the document
@@ -52,12 +59,15 @@ export default function PrivacyPolicy() {
 
       <Section title="Who processes it">
         <ul className="list-disc pl-5">
-          <li>Firebase Authentication (Google) handles sign-in and password storage.</li>
+          <li>Firebase Authentication (Google) handles sign-in and, for accounts that register directly, password storage. We never see or store your password ourselves.</li>
           <li>Our database provider stores your business, customer, item, and document records.</li>
           <li>Google (Gmail) delivers transactional emails, including documents you choose to send to customers.</li>
           <li>
-            When paid subscriptions launch, a payment processor will handle those transactions; Billa won't see or
-            store your card or Mobile Money details directly. We'll name that provider here once billing is live.
+            MTN Mobile Money processes Mobile Money payments: the ones your customers send to your business through
+            Billa, and the ones you send us for your own Billa subscription. We pass MTN the phone number and amount
+            needed for that one payment; we never see or store a Mobile Money PIN. If your business connects its own
+            MTN Mobile Money merchant account to accept payments, we encrypt those credentials at rest and use them
+            only to request payments on your behalf.
           </li>
         </ul>
         <p>
@@ -80,7 +90,8 @@ export default function PrivacyPolicy() {
 
       <Section title="Cookies">
         <p>
-          Billa uses a single session cookie to keep you signed in. We don't use tracking or advertising cookies.
+          Billa uses two session cookies to keep you signed in and to renew your session without asking you to log
+          in again. We don't use tracking or advertising cookies.
         </p>
       </Section>
 

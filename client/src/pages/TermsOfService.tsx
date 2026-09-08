@@ -12,7 +12,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 
 export default function TermsOfService() {
   return (
-    <LegalPageLayout title="Terms of service" updated="August 26, 2026">
+    <LegalPageLayout title="Terms of service" updated="September 8, 2026">
       <p className="font-sans text-sm leading-relaxed text-neutral-600">
         These terms form a binding agreement between you and Billa ("we," "us") governing your use of the Billa
         service. By creating an account, you accept them. They're written in plain language, but they're still the
@@ -42,14 +42,19 @@ export default function TermsOfService() {
       <Section title="3. Trial and subscription">
         <p>
           New accounts get a 14-day free trial with full access to every feature. After the trial, an active
-          subscription will be required to create new documents; documents you already created stay viewable and
-          downloadable regardless. Paid subscriptions are not yet available. We'll update this section, and notify
-          active accounts, before introducing charges.
+          subscription is required to create new documents; documents you already created stay viewable and
+          downloadable regardless. Current pricing is shown on our pricing page and in the app when you subscribe.
         </p>
         <p>
-          When subscriptions launch, payment will cover one billing period at a time, not an automatically
-          recurring charge: your access extends by the period you paid for, and you choose when to pay again. We'll
-          publish the accepted payment methods and any refund terms at that time.
+          You pay through MTN Mobile Money: you enter your phone number, approve the prompt MTN sends you, and your
+          access extends by one billing period (a month or a year, depending on the plan you chose) from that
+          moment. This is a one-time payment for that period, not an automatically recurring charge — nothing is
+          billed to you again until you choose to pay for another period.
+        </p>
+        <p>
+          Because payment is confirmed instantly through Mobile Money, we don't offer refunds once a payment
+          succeeds, except where required by law or where we've made an error (for example, charging the wrong
+          plan or amount). If something goes wrong with a payment, contact us and we'll sort it out.
         </p>
       </Section>
 
