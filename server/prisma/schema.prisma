@@ -445,6 +445,7 @@ model Document {
 
   @@unique([businessId, type, number])
   @@index([businessId])
+  @@index([customerId])
   @@index([nextRecurrenceAt])
   @@index([referencedDocumentId])
 }
