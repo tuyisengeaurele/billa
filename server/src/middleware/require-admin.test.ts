@@ -18,16 +18,16 @@ function testApp(userId: string) {
   return app;
 }
 
-async function createUser(email: string, isAdmin: boolean) {
+async function createUser(email: string, isAdmin: boolean, totpEnabled = false) {
   const user = await prisma.user.create({
-    data: { email, firebaseUid: crypto.randomUUID(), trialEndsAt: new Date(), isAdmin },
+    data: { email, firebaseUid: crypto.randomUUID(), trialEndsAt: new Date(), isAdmin, totpEnabled },
   });
   return user.id;
 }
 
 describe("requireAdmin", () => {
-  it("allows a user with isAdmin set", async () => {
-    const userId = await createUser("admin@example.com", true);
+  it("allows an admin with 2FA enabled", async () => {
+    const userId = await createUser("admin@example.com", true, true);
 
     const res = await request(testApp(userId)).get("/probe");
 
@@ -40,6 +40,17 @@ describe("requireAdmin", () => {
     const res = await request(testApp(userId)).get("/probe");
 
     expect(res.status).toBe(403);
+  });
+
+  it("blocks an admin who hasn't enabled 2FA", async () => {
+    // Admin routes reach every business's data, so isAdmin alone isn't enough -
+    // the account also has to have turned on two-factor first.
+    const userId = await createUser("admin@example.com", true, false);
+
+    const res = await request(testApp(userId)).get("/probe");
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe("admin_requires_2fa");
   });
 
   it("blocks a request for a user that no longer exists", async () => {

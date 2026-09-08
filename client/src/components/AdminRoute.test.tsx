@@ -58,11 +58,11 @@ describe("AdminRoute", () => {
     await waitFor(() => expect(screen.getByText("dashboard page")).toBeInTheDocument());
   });
 
-  it("renders the admin route for an admin", async () => {
+  it("renders the admin route for an admin with 2FA enabled", async () => {
     vi.spyOn(global, "fetch").mockResolvedValue(
       new Response(
         JSON.stringify({
-          user: { id: "u1", email: "admin@example.com", isAdmin: true },
+          user: { id: "u1", email: "admin@example.com", isAdmin: true, totpEnabled: true },
           business: { id: "b1", name: "Kigali Traders" },
         }),
         { status: 200 },
@@ -72,5 +72,25 @@ describe("AdminRoute", () => {
     renderWithProviders("/admin/users");
 
     await waitFor(() => expect(screen.getByText("admin users page")).toBeInTheDocument());
+  });
+
+  it("prompts an admin without 2FA to set it up, instead of showing the admin page", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          user: { id: "u1", email: "admin@example.com", isAdmin: true, totpEnabled: false },
+          business: { id: "b1", name: "Kigali Traders" },
+        }),
+        { status: 200 },
+      ),
+    );
+
+    renderWithProviders("/admin/users");
+
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: /two-factor authentication/i })).toBeInTheDocument(),
+    );
+    expect(screen.queryByText("admin users page")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /go to profile/i })).toHaveAttribute("href", "/profile");
   });
 });

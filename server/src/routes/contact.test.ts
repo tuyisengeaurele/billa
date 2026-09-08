@@ -88,7 +88,7 @@ describe("POST /contact", () => {
   it("notifies every admin user in-app", async () => {
     const app = createApp();
     await registerAndGetCookies(app, "admin@example.com");
-    await prisma.user.update({ where: { email: "admin@example.com" }, data: { isAdmin: true } });
+    await prisma.user.update({ where: { email: "admin@example.com" }, data: { isAdmin: true, totpEnabled: true } });
 
     const res = await request(app)
       .post("/contact")
@@ -120,7 +120,7 @@ describe("GET /contact", () => {
   it("lists messages for an admin user", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app, "admin@example.com");
-    await prisma.user.update({ where: { email: "admin@example.com" }, data: { isAdmin: true } });
+    await prisma.user.update({ where: { email: "admin@example.com" }, data: { isAdmin: true, totpEnabled: true } });
     await prisma.contactMessage.create({
       data: { name: "Aline", email: "aline@example.com", message: "Need help with templates please." },
     });
@@ -151,7 +151,7 @@ describe("DELETE /contact/:id", () => {
   it("deletes a message for an admin user", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app, "admin@example.com");
-    await prisma.user.update({ where: { email: "admin@example.com" }, data: { isAdmin: true } });
+    await prisma.user.update({ where: { email: "admin@example.com" }, data: { isAdmin: true, totpEnabled: true } });
     const message = await prisma.contactMessage.create({
       data: { name: "Aline", email: "aline@example.com", message: "Need help with templates please." },
     });
@@ -166,7 +166,7 @@ describe("DELETE /contact/:id", () => {
   it("returns 404 for an unknown message", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app, "admin@example.com");
-    await prisma.user.update({ where: { email: "admin@example.com" }, data: { isAdmin: true } });
+    await prisma.user.update({ where: { email: "admin@example.com" }, data: { isAdmin: true, totpEnabled: true } });
 
     const res = await request(app).delete("/contact/nonexistent").set("Cookie", cookies);
 
@@ -192,7 +192,7 @@ describe("POST /contact/:id/reply", () => {
   it("emails the sender and records the reply", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app, "admin@example.com");
-    await prisma.user.update({ where: { email: "admin@example.com" }, data: { isAdmin: true } });
+    await prisma.user.update({ where: { email: "admin@example.com" }, data: { isAdmin: true, totpEnabled: true } });
     const stored = await prisma.contactMessage.create({
       data: { name: "Aline", email: "aline@example.com", message: "How do I add my TIN number?" },
     });
@@ -215,7 +215,7 @@ describe("POST /contact/:id/reply", () => {
   it("returns 400 for an empty reply", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app, "admin@example.com");
-    await prisma.user.update({ where: { email: "admin@example.com" }, data: { isAdmin: true } });
+    await prisma.user.update({ where: { email: "admin@example.com" }, data: { isAdmin: true, totpEnabled: true } });
     const stored = await prisma.contactMessage.create({
       data: { name: "Aline", email: "aline@example.com", message: "How do I add my TIN number?" },
     });
@@ -228,7 +228,7 @@ describe("POST /contact/:id/reply", () => {
   it("returns 404 for an unknown message", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app, "admin@example.com");
-    await prisma.user.update({ where: { email: "admin@example.com" }, data: { isAdmin: true } });
+    await prisma.user.update({ where: { email: "admin@example.com" }, data: { isAdmin: true, totpEnabled: true } });
 
     const res = await request(app)
       .post("/contact/nonexistent/reply")
@@ -241,7 +241,7 @@ describe("POST /contact/:id/reply", () => {
   it("returns 502 and does not record the reply when the email fails", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app, "admin@example.com");
-    await prisma.user.update({ where: { email: "admin@example.com" }, data: { isAdmin: true } });
+    await prisma.user.update({ where: { email: "admin@example.com" }, data: { isAdmin: true, totpEnabled: true } });
     const stored = await prisma.contactMessage.create({
       data: { name: "Aline", email: "aline@example.com", message: "How do I add my TIN number?" },
     });

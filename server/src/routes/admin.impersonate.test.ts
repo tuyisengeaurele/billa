@@ -22,7 +22,7 @@ async function registerAndGetCookies(app: ReturnType<typeof createApp>, email: s
     businessName,
   });
   if (isAdmin) {
-    await prisma.user.update({ where: { id: res.body.user.id }, data: { isAdmin: true } });
+    await prisma.user.update({ where: { id: res.body.user.id }, data: { isAdmin: true, totpEnabled: true } });
   }
   return {
     cookies: res.headers["set-cookie"] as unknown as string[],
