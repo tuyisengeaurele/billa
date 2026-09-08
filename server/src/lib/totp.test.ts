@@ -1,6 +1,17 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { authenticator } from "otplib";
-import { generateBackupCodes, generateTotpSetup, hashBackupCode, verifyTotpToken } from "./totp.js";
+import {
+  decryptTotpSecret,
+  encryptTotpSecret,
+  generateBackupCodes,
+  generateTotpSetup,
+  hashBackupCode,
+  verifyTotpToken,
+} from "./totp.js";
+
+beforeAll(() => {
+  process.env.TOTP_SECRET_ENCRYPTION_KEY ??= Buffer.alloc(32, 7).toString("base64");
+});
 
 describe("generateTotpSetup", () => {
   it("returns a secret, an otpauth URL, and a scannable QR code data URI", async () => {
@@ -46,5 +57,20 @@ describe("generateBackupCodes", () => {
 describe("hashBackupCode", () => {
   it("is case-insensitive and trims whitespace", () => {
     expect(hashBackupCode("abc123")).toBe(hashBackupCode(" ABC123 "));
+  });
+});
+
+describe("encryptTotpSecret / decryptTotpSecret", () => {
+  it("round-trips a secret and never stores it as plaintext", () => {
+    const encrypted = encryptTotpSecret("JBSWY3DPEHPK3PXP");
+
+    expect(encrypted).not.toBe("JBSWY3DPEHPK3PXP");
+    expect(decryptTotpSecret(encrypted)).toBe("JBSWY3DPEHPK3PXP");
+  });
+
+  it("passes through a legacy plaintext secret unchanged", () => {
+    // Accounts that enabled 2FA before secrets were encrypted at rest have a
+    // base32 value with no colons in the database.
+    expect(decryptTotpSecret("JBSWY3DPEHPK3PXP")).toBe("JBSWY3DPEHPK3PXP");
   });
 });

@@ -1,6 +1,29 @@
 import crypto from "node:crypto";
 import { authenticator } from "otplib";
 import QRCode from "qrcode";
+import { decryptWithKey, encryptWithKey } from "./encryption.js";
+
+const TOTP_KEY_ENV = "TOTP_SECRET_ENCRYPTION_KEY";
+
+// A TOTP secret is a long-lived credential: anyone who reads it can generate valid
+// codes forever, so it's encrypted at rest under its own key (never the MoMo one).
+export function encryptTotpSecret(secret: string): string {
+  return encryptWithKey(secret, TOTP_KEY_ENV);
+}
+
+// Accounts that enabled 2FA before secrets were encrypted at rest have a plaintext
+// value stored (base32, never contains a colon); encrypted values are always three
+// hex segments joined by colons, so that shape is enough to tell them apart.
+export function decryptTotpSecret(stored: string): string {
+  if (stored.split(":").length !== 3) {
+    return stored;
+  }
+  try {
+    return decryptWithKey(stored, TOTP_KEY_ENV);
+  } catch {
+    return stored;
+  }
+}
 
 export interface TotpSetup {
   secret: string;

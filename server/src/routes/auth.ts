@@ -19,7 +19,14 @@ import { generateRefreshToken, hashRefreshToken, signAccessToken } from "../lib/
 import { ttlToMs } from "../lib/ttl.js";
 import { clearAuthCookies, setAccessTokenCookie, setRefreshTokenCookie } from "../lib/cookies.js";
 import { issueSession } from "../lib/session.js";
-import { generateBackupCodes, generateTotpSetup, hashBackupCode, verifyTotpToken } from "../lib/totp.js";
+import {
+  decryptTotpSecret,
+  encryptTotpSecret,
+  generateBackupCodes,
+  generateTotpSetup,
+  hashBackupCode,
+  verifyTotpToken,
+} from "../lib/totp.js";
 import { hasBusinessAccess } from "../lib/business-access.js";
 import { logAdminAction } from "../lib/admin-audit-log.js";
 import { logActivity } from "../lib/activity-log.js";
@@ -294,7 +301,7 @@ authRouter.post("/2fa/setup", requireAuth, async (req, res) => {
   const setup = await generateTotpSetup(user.email);
   await prisma.user.update({
     where: { id: user.id },
-    data: { totpSecret: setup.secret, totpEnabled: false },
+    data: { totpSecret: encryptTotpSecret(setup.secret), totpEnabled: false },
   });
   res.json({ secret: setup.secret, otpauthUrl: setup.otpauthUrl, qrCodeDataUri: setup.qrCodeDataUri });
 });
@@ -303,7 +310,7 @@ authRouter.post("/2fa/verify", requireAuth, validateBody(totpCodeSchema), async 
   const { code } = req.body as TotpCodeInput;
   const user = await prisma.user.findUniqueOrThrow({ where: { id: req.auth!.userId } });
 
-  if (!user.totpSecret || !verifyTotpToken(code, user.totpSecret)) {
+  if (!user.totpSecret || !verifyTotpToken(code, decryptTotpSecret(user.totpSecret))) {
     res.status(400).json({ error: "invalid_code" });
     return;
   }
@@ -325,7 +332,7 @@ authRouter.post("/2fa/disable", requireAuth, validateBody(disableTwoFactorSchema
     return;
   }
 
-  const isValidTotp = verifyTotpToken(code, user.totpSecret);
+  const isValidTotp = verifyTotpToken(code, decryptTotpSecret(user.totpSecret));
   const isValidBackup = user.totpBackupCodes.includes(hashBackupCode(code));
   if (!isValidTotp && !isValidBackup) {
     res.status(400).json({ error: "invalid_code" });
@@ -349,7 +356,7 @@ authRouter.post("/2fa/challenge", authRateLimit, validateBody(twoFactorChallenge
   }
 
   const user = await prisma.user.findUniqueOrThrow({ where: { id: challenge.userId } });
-  const isValidTotp = user.totpSecret ? verifyTotpToken(code, user.totpSecret) : false;
+  const isValidTotp = user.totpSecret ? verifyTotpToken(code, decryptTotpSecret(user.totpSecret)) : false;
   const codeHash = hashBackupCode(code);
   const backupIndex = user.totpBackupCodes.indexOf(codeHash);
   const isValidBackup = backupIndex !== -1;

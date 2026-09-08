@@ -8,6 +8,7 @@ import { resetDb } from "../test/db.js";
 beforeAll(() => {
   process.env.JWT_ACCESS_SECRET ??= "test-secret";
   process.env.JWT_REFRESH_TTL ??= "30d";
+  process.env.TOTP_SECRET_ENCRYPTION_KEY ??= Buffer.alloc(32, 7).toString("base64");
 });
 
 beforeEach(resetDb);
