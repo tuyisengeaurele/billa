@@ -28,10 +28,12 @@ import { notificationsRouter } from "./routes/notifications.js";
 import { getStorage } from "./lib/storage.js";
 import { detectAllowedImageType } from "./lib/file-sniff.js";
 import { errorHandler } from "./middleware/error-handler.js";
+import { requestLogger } from "./middleware/request-logger.js";
 
 export function createApp() {
   const app = express();
 
+  app.use(requestLogger);
   app.use(
     helmet({
       // Uploaded logos and PDFs are served from this API to a client on a different
