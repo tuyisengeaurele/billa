@@ -48,6 +48,16 @@ describe("business settings routes reject members", () => {
     expect(res.body.error).toBe("not_owner");
   });
 
+  it("blocks GET /business/momo-settings for a member", async () => {
+    const app = createApp();
+    const { memberCookies } = await setUpMember(app);
+
+    const res = await request(app).get("/business/momo-settings").set("Cookie", memberCookies);
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe("not_owner");
+  });
+
   it("blocks PUT /business/sequences for a member", async () => {
     const app = createApp();
     const { memberCookies } = await setUpMember(app);

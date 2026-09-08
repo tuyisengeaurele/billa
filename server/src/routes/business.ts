@@ -8,10 +8,18 @@ import {
   confirmLogoSchema,
   createInviteSchema,
   logoUrlSchema,
+  testMomoSettingsSchema,
   updateMemberRoleSchema,
+  updateMomoSettingsSchema,
   updateSequencesSchema,
 } from "@billa/shared";
-import type { ActivityListQuery, CreateInviteInput, UpdateMemberRoleInput } from "@billa/shared";
+import type {
+  ActivityListQuery,
+  CreateInviteInput,
+  TestMomoSettingsInput,
+  UpdateMemberRoleInput,
+  UpdateMomoSettingsInput,
+} from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/require-auth.js";
 import { requireOwner } from "../middleware/require-owner.js";
@@ -28,6 +36,8 @@ import { sendEmail } from "../lib/mailer.js";
 import { buildInviteEmail } from "../lib/email-templates.js";
 import { logActivity } from "../lib/activity-log.js";
 import { toCsv } from "../lib/csv.js";
+import { decrypt, encrypt } from "../lib/encryption.js";
+import { getAccessToken, MOMO_BASE_URLS } from "../lib/momo-client.js";
 
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -487,3 +497,80 @@ businessRouter.get("/activity/export.csv", validateQuery(activityListQuerySchema
   res.setHeader("Content-Disposition", 'attachment; filename="activity.csv"');
   res.send(csv);
 });
+
+function momoSettingsResponse(business: {
+  momoEnabled: boolean;
+  momoEnvironment: string | null;
+  momoTargetEnvironment: string | null;
+  momoSubscriptionKeyEnc: string | null;
+  momoApiUserEnc: string | null;
+  momoApiKeyEnc: string | null;
+}) {
+  return {
+    enabled: business.momoEnabled,
+    environment: business.momoEnvironment,
+    targetEnvironment: business.momoTargetEnvironment,
+    configured: Boolean(business.momoSubscriptionKeyEnc && business.momoApiUserEnc && business.momoApiKeyEnc),
+  };
+}
+
+businessRouter.get("/momo-settings", requireOwner, async (req, res) => {
+  const business = await prisma.business.findUniqueOrThrow({ where: { id: req.auth!.businessId } });
+  res.json(momoSettingsResponse(business));
+});
+
+businessRouter.patch(
+  "/momo-settings",
+  requireOwner,
+  validateBody(updateMomoSettingsSchema),
+  async (req, res) => {
+    const body = req.body as UpdateMomoSettingsInput;
+    const targetEnvironment = body.environment === "sandbox" ? "sandbox" : body.targetEnvironment!;
+
+    const data: Prisma.BusinessUpdateInput = {
+      momoEnabled: body.enabled,
+      momoEnvironment: body.environment,
+      momoTargetEnvironment: targetEnvironment,
+    };
+    if (body.subscriptionKey) data.momoSubscriptionKeyEnc = encrypt(body.subscriptionKey);
+    if (body.apiUser) data.momoApiUserEnc = encrypt(body.apiUser);
+    if (body.apiKey) data.momoApiKeyEnc = encrypt(body.apiKey);
+
+    const business = await prisma.business.update({ where: { id: req.auth!.businessId }, data });
+    res.json(momoSettingsResponse(business));
+  },
+);
+
+businessRouter.post(
+  "/momo-settings/test",
+  requireOwner,
+  validateBody(testMomoSettingsSchema),
+  async (req, res) => {
+    const body = req.body as TestMomoSettingsInput;
+    const business = await prisma.business.findUniqueOrThrow({ where: { id: req.auth!.businessId } });
+
+    const environment = body.environment ?? (business.momoEnvironment as "sandbox" | "production" | null);
+    if (!environment) {
+      res.json({ ok: false, error: "Choose sandbox or production first" });
+      return;
+    }
+    const targetEnvironment =
+      environment === "sandbox" ? "sandbox" : (body.targetEnvironment ?? business.momoTargetEnvironment);
+    const subscriptionKey =
+      body.subscriptionKey ?? (business.momoSubscriptionKeyEnc ? decrypt(business.momoSubscriptionKeyEnc) : null);
+    const apiUser = body.apiUser ?? (business.momoApiUserEnc ? decrypt(business.momoApiUserEnc) : null);
+    const apiKey = body.apiKey ?? (business.momoApiKeyEnc ? decrypt(business.momoApiKeyEnc) : null);
+
+    if (!targetEnvironment || !subscriptionKey || !apiUser || !apiKey) {
+      res.json({ ok: false, error: "Enter your subscription key, API user, and API key first" });
+      return;
+    }
+
+    try {
+      await getAccessToken({ subscriptionKey, apiUser, apiKey, targetEnvironment, baseUrl: MOMO_BASE_URLS[environment] });
+      res.json({ ok: true });
+    } catch (err) {
+      res.json({ ok: false, error: err instanceof Error ? err.message : "Couldn't connect to MTN MoMo" });
+    }
+  },
+);
