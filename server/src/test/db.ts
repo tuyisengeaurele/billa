@@ -6,6 +6,7 @@ export async function resetDb() {
   await prisma.notification.deleteMany();
   await prisma.impersonationRequest.deleteMany();
   await prisma.invoicePayment.deleteMany();
+  await prisma.momoPaymentRequest.deleteMany();
   await prisma.documentLine.deleteMany();
   await prisma.document.deleteMany();
   await prisma.documentSequence.deleteMany();

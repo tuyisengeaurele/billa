@@ -113,6 +113,14 @@ model Business {
   requireApprovalToFinalize Boolean      @default(false)
   defaultTemplate       DocumentTemplate @default(MINIMAL)
   onboardingCompletedAt DateTime?
+
+  momoEnabled            Boolean  @default(false)
+  momoEnvironment        String?
+  momoTargetEnvironment  String?
+  momoSubscriptionKeyEnc String?
+  momoApiUserEnc         String?
+  momoApiKeyEnc          String?
+
   lastDigestSentAt      DateTime?
   createdAt             DateTime         @default(now())
   updatedAt             DateTime         @updatedAt
@@ -127,6 +135,7 @@ model Business {
   activityLog           ActivityLogEntry[]
   invoicePayments       InvoicePayment[]
   impersonationRequests ImpersonationRequest[]
+  momoPaymentRequests    MomoPaymentRequest[]
 
   @@index([ownerId])
 }
@@ -432,6 +441,7 @@ model Document {
   lines             DocumentLine[]
   payments          InvoicePayment[] @relation("DocumentPayments")
   paymentReceiptFor InvoicePayment?  @relation("PaymentReceipt")
+  momoPaymentRequests MomoPaymentRequest[]
 
   @@unique([businessId, type, number])
   @@index([businessId])
@@ -472,6 +482,9 @@ model InvoicePayment {
 
   receiptDocumentId String? @unique
 
+  momoPaymentRequestId String?             @unique
+  momoPaymentRequest   MomoPaymentRequest? @relation("MomoRequestPayment", fields: [momoPaymentRequestId], references: [id])
+
   voidedAt   DateTime?
   voidReason String?
 
@@ -484,6 +497,35 @@ model InvoicePayment {
   createdBy       User      @relation(fields: [createdByUserId], references: [id])
 
   @@index([businessId, documentId])
+}
+
+enum MomoRequestStatus {
+  PENDING
+  SUCCESSFUL
+  FAILED
+  EXPIRED
+}
+
+model MomoPaymentRequest {
+  id            String            @id @default(cuid())
+  businessId    String
+  documentId    String
+  referenceId   String            @unique
+  phoneNumber   String
+  amount        Int
+  status        MomoRequestStatus @default(PENDING)
+  failureReason String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id])
+  document Document @relation(fields: [documentId], references: [id])
+
+  invoicePayment InvoicePayment? @relation("MomoRequestPayment")
+
+  @@index([businessId])
+  @@index([documentId])
+  @@index([status])
 }
 
 enum SubscriptionPlan {
