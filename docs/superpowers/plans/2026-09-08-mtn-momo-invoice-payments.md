@@ -186,7 +186,7 @@ Expected: Prisma prints a new migration under `server/prisma/migrations/`, appli
 - [ ] **Step 6: Apply the same migration to the test database**
 
 ```bash
-cd server && DATABASE_URL="postgresql://postgres:RwandaKigali%40321@localhost:5432/billa_test" npx prisma migrate deploy
+cd server && DATABASE_URL="postgresql://postgres:YOUR_LOCAL_DB_PASSWORD@localhost:5432/billa_test" npx prisma migrate deploy
 ```
 
 Expected: "All migrations have been successfully applied."

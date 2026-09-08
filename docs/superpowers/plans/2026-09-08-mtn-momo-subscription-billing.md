@@ -182,7 +182,7 @@ model Payment {
 The new `phoneNumber` column is required, and existing local `Payment` rows from earlier Flutterwave testing have no valid value to backfill it with. None of this data is real, it's local dev/test data from a payment provider that never worked. Clear it before the migration:
 
 ```bash
-cd server && PGPASSWORD='RwandaKigali@321' psql -h localhost -U postgres -d billa -c 'DELETE FROM "Payment";'
+cd server && PGPASSWORD='YOUR_LOCAL_DB_PASSWORD' psql -h localhost -U postgres -d billa -c 'DELETE FROM "Payment";'
 ```
 
 - [ ] **Step 4: Generate the migration**
@@ -215,7 +215,7 @@ Expected: "All migrations have been successfully applied."
 - [ ] **Step 6: Apply it to the test database**
 
 ```bash
-cd server && DATABASE_URL="postgresql://postgres:RwandaKigali%40321@localhost:5432/billa_test" npx prisma migrate deploy
+cd server && DATABASE_URL="postgresql://postgres:YOUR_LOCAL_DB_PASSWORD@localhost:5432/billa_test" npx prisma migrate deploy
 ```
 
 - [ ] **Step 7: Regenerate the Prisma client**
