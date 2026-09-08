@@ -6,9 +6,11 @@ function getBrowser(): Promise<Browser> {
   if (!browserPromise) {
     browserPromise = puppeteer.launch({
       headless: true,
-      // CI runners don't have a working setuid sandbox; --no-sandbox is safe here
-      // since this browser only ever renders our own generated document HTML.
-      args: process.env.CI ? ["--no-sandbox", "--disable-setuid-sandbox"] : [],
+      // Containers (CI runners, and every PaaS this deploys to - Render, Railway, Fly)
+      // don't have a working setuid sandbox, so Chromium fails to launch at all without
+      // this flag. Safe to apply unconditionally: this browser only ever renders our own
+      // generated, escaped document HTML, never arbitrary or user-supplied content.
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
   }
   return browserPromise;
