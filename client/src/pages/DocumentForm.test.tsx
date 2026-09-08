@@ -153,27 +153,6 @@ describe("DocumentForm", () => {
     await waitFor(() => expect(screen.getByText(/subtotal: 9,000 rwf/i)).toBeInTheDocument());
   });
 
-  it("warns before leaving once a field has been edited, but not on a pristine form", async () => {
-    vi.spyOn(global, "fetch").mockImplementation(async () => new Response("{}", { status: 401 }));
-    const user = userEvent.setup();
-    renderNew();
-
-    function dispatchBeforeUnload(): boolean {
-      const event = new Event("beforeunload", { cancelable: true });
-      window.dispatchEvent(event);
-      return event.defaultPrevented;
-    }
-
-    expect(dispatchBeforeUnload()).toBe(false);
-
-    await user.click(screen.getByRole("button", { name: /add line/i }));
-    const quantityInput = screen.getByLabelText(/quantity/i);
-    await user.clear(quantityInput);
-    await user.type(quantityInput, "2");
-
-    expect(dispatchBeforeUnload()).toBe(true);
-  });
-
   it("saves a new draft and navigates to its edit URL", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
       const url = urlOf(input);
@@ -216,8 +195,8 @@ describe("DocumentForm", () => {
     await user.click(screen.getByRole("button", { name: /save draft/i }));
 
     // Save navigates to /documents/d1/edit, which remounts DocumentForm with isEditing=true;
-    // the Finalize button only renders in edit mode, so its presence confirms the navigation worked.
-    await waitFor(() => expect(screen.getByRole("button", { name: /finalize/i })).toBeInTheDocument());
+    // Download PDF only renders in edit mode, so its presence confirms the navigation worked.
+    await waitFor(() => expect(screen.getByRole("button", { name: /download pdf/i })).toBeInTheDocument());
     expect(await screen.findByText("Document created")).toBeInTheDocument();
   });
 
@@ -873,5 +852,77 @@ describe("DocumentForm", () => {
     await user.click(screen.getByRole("button", { name: /save draft/i }));
 
     expect(await screen.findByText(/trial has ended/i)).toBeInTheDocument();
+  });
+
+  it("autosaves a new draft in the background without clicking Save draft", async () => {
+    let createCalled = false;
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.includes("/customers")) {
+        return new Response(
+          JSON.stringify({ results: [{ id: "c1", name: "Kigali Traders", phone: null }], total: 1, page: 1, pageSize: 10 }),
+          { status: 200 },
+        );
+      }
+      if (url.includes("/documents") && init?.method === "POST") {
+        createCalled = true;
+        return new Response(JSON.stringify({ document: { id: "d1" } }), { status: 201 });
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderNew();
+
+    await user.click(screen.getByRole("button", { name: /select a customer/i }));
+    await user.type(screen.getByLabelText("Search customers"), "Kigali");
+    await user.click(await screen.findByText("Kigali Traders"));
+
+    // The debounce is 1.5s; wait in real time rather than fake timers, since CustomerPicker's
+    // own search debounce (already exercised above) and this autosave debounce would otherwise
+    // compete for the same fake clock.
+    expect(await screen.findByText("All changes saved", {}, { timeout: 3000 })).toBeInTheDocument();
+    expect(createCalled).toBe(true);
+  });
+
+  it("finalizes directly from a new, unsaved document", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.includes("/customers")) {
+        return new Response(
+          JSON.stringify({ results: [{ id: "c1", name: "Kigali Traders", phone: null }], total: 1, page: 1, pageSize: 10 }),
+          { status: 200 },
+        );
+      }
+      if (url.includes("/documents") && init?.method === "POST") {
+        return new Response(JSON.stringify({ document: { id: "d1" } }), { status: 201 });
+      }
+      if (url.endsWith("/documents/d1/finalize") && init?.method === "POST") {
+        return new Response(JSON.stringify({ document: { id: "d1", number: "INV-0001" } }), { status: 200 });
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderNew();
+
+    expect(screen.getByRole("button", { name: /^finalize$/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /select a customer/i }));
+    await user.type(screen.getByLabelText("Search customers"), "Kigali");
+    await user.click(await screen.findByText("Kigali Traders"));
+
+    await user.click(screen.getByRole("button", { name: /add line/i }));
+    await user.type(screen.getByLabelText("Item"), "Cement");
+    const priceInput = screen.getByLabelText(/unit price/i);
+    await user.clear(priceInput);
+    await user.type(priceInput, "5000");
+
+    await user.click(screen.getByRole("button", { name: /^finalize$/i }));
+    const dialog = await screen.findByRole("dialog", { name: /finalize/i });
+    await user.click(within(dialog).getByRole("button", { name: /finalize/i }));
+
+    await waitFor(() => expect(screen.getByText("view document page")).toBeInTheDocument());
+    expect(await screen.findByText("Document finalized")).toBeInTheDocument();
   });
 });

@@ -22,7 +22,6 @@ import { usePageTitle } from "../context/PageTitleContext";
 import { useToast } from "../context/ToastContext";
 import { apiRequest, ApiError, API_BASE_URL } from "../lib/apiClient";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
-import { useUnsavedChangesWarning } from "../lib/useUnsavedChangesWarning";
 import { formatRwf } from "@billa/shared";
 
 const lineFormSchema = z.object({
@@ -165,6 +164,9 @@ export default function DocumentForm() {
   const [invoiceOptions, setInvoiceOptions] = useState<InvoiceOption[]>([]);
   const [referencedDocumentId, setReferencedDocumentId] = useState("");
   const [isFinalizeConfirmOpen, setIsFinalizeConfirmOpen] = useState(false);
+  const [pendingFinalizeData, setPendingFinalizeData] = useState<DocumentFormInput | null>(null);
+  const [documentId, setDocumentId] = useState<string | undefined>(id);
+  const [autosaveStatus, setAutosaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const canReference = REFERENCEABLE_TYPES.includes(type);
   const referenceIsRequired = REQUIRED_REFERENCE_TYPES.includes(type);
 
@@ -174,6 +176,7 @@ export default function DocumentForm() {
     handleSubmit,
     watch,
     setValue,
+    getValues,
     reset,
     formState: { errors, isDirty },
   } = useForm<DocumentFormInput>({
@@ -196,7 +199,7 @@ export default function DocumentForm() {
   const { fields, append, remove } = useFieldArray({ control, name: "lines" });
   const watchedLines = watch("lines");
   const watchedCustomerId = watch("customerId");
-  useUnsavedChangesWarning(isDirty);
+  const watchedAll = watch();
 
   useEffect(() => {
     if (!isEditing) return;
@@ -220,7 +223,7 @@ export default function DocumentForm() {
             unitPrice: line.unitPrice,
             taxRate: Number(line.taxRate),
             discountType: line.discountType ?? "",
-            discountValue: line.discountValue !== null ? Number(line.discountValue) : 0,
+            discountValue: line.discountValue != null ? Number(line.discountValue) : 0,
           })),
           recurrenceEnabled: doc.recurrenceInterval !== null,
           recurrenceInterval: doc.recurrenceInterval ?? "MONTHLY",
@@ -260,8 +263,9 @@ export default function DocumentForm() {
           unitPrice: line.unitPrice,
           taxRate: Number(line.taxRate),
           discountType: line.discountType ?? "",
-          discountValue: line.discountValue !== null ? Number(line.discountValue) : 0,
+          discountValue: line.discountValue != null ? Number(line.discountValue) : 0,
         })),
+        { shouldDirty: true },
       );
     } catch {
       // Keep the current lines if the invoice's own lines can't be fetched.
@@ -274,6 +278,58 @@ export default function DocumentForm() {
     append({ description: "", quantity: 1, unitPrice: 0, taxRate: 18, discountType: "", discountValue: 0 });
   }
 
+  function buildPayload(data: DocumentFormInput) {
+    return {
+      type,
+      customerId: data.customerId,
+      issueDate: data.issueDate,
+      dueDate: data.dueDate.trim() || undefined,
+      notes: data.notes.trim() || undefined,
+      customerReference: data.customerReference.trim() || undefined,
+      language: data.language,
+      lines: data.lines.map((line) => ({
+        ...line,
+        discountType: line.discountType || undefined,
+      })),
+      referencedDocumentId: canReference ? referencedDocumentId || undefined : undefined,
+      recurrence: data.recurrenceEnabled
+        ? {
+            interval: data.recurrenceInterval as RecurrenceInterval,
+            endDate: data.recurrenceEndDate.trim() || undefined,
+          }
+        : null,
+    };
+  }
+
+  // The single place that actually writes to the server, used by autosave, the explicit
+  // Save draft button, and Finalize (which persists the latest data first, since autosave
+  // may not have caught up with the very last keystroke). Returns the document's id.
+  async function persistDocument(data: DocumentFormInput): Promise<string> {
+    const payload = buildPayload(data);
+    const response = documentId
+      ? await apiRequest<{ document: DocumentResponse }>(`/documents/${documentId}`, { method: "PATCH", body: payload })
+      : await apiRequest<{ document: DocumentResponse }>("/documents", { method: "POST", body: payload });
+    if (!documentId) setDocumentId(response.document.id);
+    return response.document.id;
+  }
+
+  useEffect(() => {
+    if (!isDirty) return;
+    if (!watchedCustomerId) return;
+    if (referenceIsRequired && !referencedDocumentId) return;
+    const timeout = setTimeout(async () => {
+      setAutosaveStatus("saving");
+      try {
+        await persistDocument(getValues());
+        setAutosaveStatus("saved");
+      } catch {
+        setAutosaveStatus("error");
+      }
+    }, 1500);
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedAll, isDirty, watchedCustomerId, referenceIsRequired, referencedDocumentId]);
+
   async function saveDraft(data: DocumentFormInput) {
     if (referenceIsRequired && !referencedDocumentId) {
       setApiError("Choose the invoice this document is for.");
@@ -282,31 +338,13 @@ export default function DocumentForm() {
     setApiError(null);
     setIsSaving(true);
     try {
-      const payload = {
-        type,
-        customerId: data.customerId,
-        issueDate: data.issueDate,
-        dueDate: data.dueDate.trim() || undefined,
-        notes: data.notes.trim() || undefined,
-        customerReference: data.customerReference.trim() || undefined,
-        language: data.language,
-        lines: data.lines.map((line) => ({
-          ...line,
-          discountType: line.discountType || undefined,
-        })),
-        referencedDocumentId: canReference ? referencedDocumentId || undefined : undefined,
-        recurrence: data.recurrenceEnabled
-          ? {
-              interval: data.recurrenceInterval as RecurrenceInterval,
-              endDate: data.recurrenceEndDate.trim() || undefined,
-            }
-          : null,
-      };
-      const response = isEditing
-        ? await apiRequest<{ document: DocumentResponse }>(`/documents/${id}`, { method: "PATCH", body: payload })
-        : await apiRequest<{ document: DocumentResponse }>("/documents", { method: "POST", body: payload });
-      navigate(`/documents/${response.document.id}/edit`, { replace: true });
-      toast.success(isEditing ? "Document saved" : "Document created");
+      const hadUrlId = Boolean(id);
+      const newId = await persistDocument(data);
+      if (!hadUrlId) {
+        navigate(`/documents/${newId}/edit`, { replace: true });
+      }
+      setAutosaveStatus("saved");
+      toast.success(hadUrlId ? "Document saved" : "Document created");
     } catch (err) {
       if (err instanceof ApiError && err.status === 402) {
         setApiError("Your trial has ended. Subscribe in Settings to continue.");
@@ -320,23 +358,29 @@ export default function DocumentForm() {
     }
   }
 
-  function handleFinalize() {
-    if (!id) return;
-    if ((watchedLines ?? []).length === 0) {
+  const handleFinalize = handleSubmit((data) => {
+    if (data.lines.length === 0) {
       setApiError("Add at least one line before finalizing.");
       return;
     }
+    if (referenceIsRequired && !referencedDocumentId) {
+      setApiError("Choose the invoice this document is for.");
+      return;
+    }
+    setApiError(null);
+    setPendingFinalizeData(data);
     setIsFinalizeConfirmOpen(true);
-  }
+  });
 
   async function confirmFinalize() {
-    if (!id) return;
+    if (!pendingFinalizeData) return;
     setIsFinalizeConfirmOpen(false);
     setApiError(null);
     setIsFinalizing(true);
     try {
-      await apiRequest(`/documents/${id}/finalize`, { method: "POST" });
-      navigate(`/documents/${id}`);
+      const savedId = await persistDocument(pendingFinalizeData);
+      await apiRequest(`/documents/${savedId}/finalize`, { method: "POST" });
+      navigate(`/documents/${savedId}`);
       toast.success("Document finalized");
     } catch (err) {
       const body = err instanceof ApiError ? err.body : null;
@@ -404,8 +448,8 @@ export default function DocumentForm() {
                     setReferencedDocumentId("");
                     setReferencedDocument(null);
                   }
-                  setValue("customerId", customer.id);
-                  setValue("customerName", customer.name);
+                  setValue("customerId", customer.id, { shouldDirty: true });
+                  setValue("customerName", customer.name, { shouldDirty: true });
                 }}
               />
               <FormField
@@ -549,14 +593,14 @@ export default function DocumentForm() {
                             value={watch(`lines.${index}.description`) ?? ""}
                             error={errors.lines?.[index]?.description?.message}
                             onSelect={(item) => {
-                              setValue(`lines.${index}.itemId`, item.id);
-                              setValue(`lines.${index}.description`, item.description);
-                              setValue(`lines.${index}.unitPrice`, item.unitPrice);
-                              setValue(`lines.${index}.taxRate`, item.taxRate);
+                              setValue(`lines.${index}.itemId`, item.id, { shouldDirty: true });
+                              setValue(`lines.${index}.description`, item.description, { shouldDirty: true });
+                              setValue(`lines.${index}.unitPrice`, item.unitPrice, { shouldDirty: true });
+                              setValue(`lines.${index}.taxRate`, item.taxRate, { shouldDirty: true });
                             }}
                             onDescriptionChange={(text) => {
-                              setValue(`lines.${index}.itemId`, undefined);
-                              setValue(`lines.${index}.description`, text);
+                              setValue(`lines.${index}.itemId`, undefined, { shouldDirty: true });
+                              setValue(`lines.${index}.description`, text, { shouldDirty: true });
                             }}
                           />
                           <div className="mt-1 flex items-center gap-1">
@@ -635,7 +679,7 @@ export default function DocumentForm() {
             </div>
           </section>
 
-          <div className="flex gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <button
               type="submit"
               disabled={isSaving}
@@ -652,15 +696,22 @@ export default function DocumentForm() {
                 Download PDF
               </button>
             )}
-            {isEditing && (
-              <button
-                type="button"
-                disabled={isFinalizing}
-                onClick={handleFinalize}
-                className="flex items-center justify-center rounded-lg bg-[#18181b] px-6 py-2.5 font-sans text-sm font-semibold text-white transition-colors hover:bg-[#3f3f46] disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                {isFinalizing ? "Finalizing…" : "Finalize"}
-              </button>
+            <button
+              type="button"
+              disabled={isFinalizing}
+              onClick={handleFinalize}
+              className="flex items-center justify-center rounded-lg bg-[#18181b] px-6 py-2.5 font-sans text-sm font-semibold text-white transition-colors hover:bg-[#3f3f46] disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {isFinalizing ? "Finalizing…" : "Finalize"}
+            </button>
+            {autosaveStatus === "saving" && (
+              <span className="font-sans text-sm text-neutral-500">Saving…</span>
+            )}
+            {autosaveStatus === "saved" && !isSaving && (
+              <span className="font-sans text-sm text-neutral-400">All changes saved</span>
+            )}
+            {autosaveStatus === "error" && (
+              <span className="font-sans text-sm text-error">Couldn't save automatically</span>
             )}
           </div>
         </form>
