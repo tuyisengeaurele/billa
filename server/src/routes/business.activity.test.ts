@@ -38,6 +38,27 @@ describe("GET /business/activity", () => {
     expect(res.body.results[0].actor.email).toBe("owner@example.com");
   });
 
+  it("includes the actor's name when they have one set", async () => {
+    const app = createApp();
+    const { cookies, userId } = await registerAndGetCookies(app, "owner@example.com", "Kigali Traders");
+    await prisma.user.update({ where: { id: userId }, data: { name: "Ange Aurele" } });
+    await request(app).post("/customers").set("Cookie", cookies).send({ name: "First" });
+
+    const res = await request(app).get("/business/activity").set("Cookie", cookies);
+
+    expect(res.body.results[0].actor.name).toBe("Ange Aurele");
+  });
+
+  it("returns a null actor name when the user hasn't set one", async () => {
+    const app = createApp();
+    const { cookies } = await registerAndGetCookies(app, "owner@example.com", "Kigali Traders");
+    await request(app).post("/customers").set("Cookie", cookies).send({ name: "First" });
+
+    const res = await request(app).get("/business/activity").set("Cookie", cookies);
+
+    expect(res.body.results[0].actor.name).toBeNull();
+  });
+
   it("filters to one actor with actorUserId", async () => {
     const app = createApp();
     const { cookies: ownerCookies } = await registerAndGetCookies(app, "owner@example.com", "Kigali Traders");
@@ -111,6 +132,18 @@ describe("GET /business/activity/export.csv", () => {
     expect(res.status).toBe(200);
     expect(res.headers["content-type"]).toContain("text/csv");
     expect(res.text).toContain("owner@example.com");
+  });
+
+  it("shows the actor's name in the CSV when they have one set", async () => {
+    const app = createApp();
+    const { cookies, userId } = await registerAndGetCookies(app, "owner@example.com", "Kigali Traders");
+    await prisma.user.update({ where: { id: userId }, data: { name: "Ange Aurele" } });
+    await request(app).post("/customers").set("Cookie", cookies).send({ name: "Musanze Supplies" });
+
+    const res = await request(app).get("/business/activity/export.csv").set("Cookie", cookies);
+
+    expect(res.text).toContain("Ange Aurele");
+    expect(res.text).not.toContain("owner@example.com");
   });
 
   it("only exports entries matching the active actor filter", async () => {

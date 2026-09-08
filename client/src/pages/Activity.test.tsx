@@ -63,6 +63,45 @@ describe("Activity", () => {
     expect(screen.getByText("owner@example.com")).toBeInTheDocument();
   });
 
+  it("shows the actor's name instead of their email when they have one set", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.endsWith("/auth/me")) {
+        return new Response(
+          JSON.stringify({ user: { id: "u1", email: "owner@example.com" }, business: { id: "b1", name: "Kigali Traders" } }),
+          { status: 200 },
+        );
+      }
+      if (url.includes("/business/activity")) {
+        return new Response(
+          JSON.stringify({
+            results: [
+              {
+                id: "a1",
+                action: "CUSTOMER_CREATED",
+                entityType: "Customer",
+                entityId: "c1",
+                metadata: { name: "Acme Ltd" },
+                createdAt: "2026-08-25T10:00:00.000Z",
+                actor: { id: "u1", name: "Ange Aurele", email: "owner@example.com" },
+              },
+            ],
+            total: 1,
+            page: 1,
+            pageSize: 20,
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    renderPage();
+
+    expect(await screen.findByText("Ange Aurele")).toBeInTheDocument();
+    expect(screen.queryByText("owner@example.com")).not.toBeInTheDocument();
+  });
+
   it("shows a relative timestamp with the exact time available on hover", async () => {
     const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
     vi.spyOn(global, "fetch").mockImplementation(async (input) => {

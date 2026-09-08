@@ -460,7 +460,7 @@ businessRouter.get("/activity", validateQuery(activityListQuerySchema), async (r
       orderBy: { createdAt: query.sortOrder },
       skip: (query.page - 1) * query.pageSize,
       take: query.pageSize,
-      include: { actor: { select: { id: true, email: true } } },
+      include: { actor: { select: { id: true, name: true, email: true } } },
     }),
     prisma.activityLogEntry.count({ where }),
   ]);
@@ -475,13 +475,13 @@ businessRouter.get("/activity/export.csv", validateQuery(activityListQuerySchema
   const entries = await prisma.activityLogEntry.findMany({
     where: buildActivityWhere(businessId, query),
     orderBy: { createdAt: "desc" },
-    include: { actor: { select: { email: true } } },
+    include: { actor: { select: { name: true, email: true } } },
   });
 
   const csv = toCsv(
     entries.map((entry) => ({
       date: entry.createdAt.toISOString(),
-      actor: entry.actor.email,
+      actor: entry.actor.name ?? entry.actor.email,
       action: entry.action,
       entityType: entry.entityType,
     })),

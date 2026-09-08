@@ -67,7 +67,7 @@ invitesRouter.post("/:token/accept", requireAuth, async (req, res) => {
   await createNotification({
     userId: business.ownerId,
     type: "MEMBER_JOINED",
-    title: `${user.email} joined your team`,
+    title: `${user.name ?? user.email} joined your team`,
     link: "/settings",
   });
 

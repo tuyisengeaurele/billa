@@ -14,7 +14,7 @@ interface ActivityEntry {
   entityId: string;
   metadata: Record<string, unknown> | null;
   createdAt: string;
-  actor: { id: string; email: string };
+  actor: { id: string; name: string | null; email: string };
 }
 
 type SortBy = "createdAt";
@@ -106,7 +106,7 @@ export default function Activity() {
               {list.results.map((entry) => (
                 <li key={entry.id} className="flex items-center justify-between py-3 font-sans text-sm">
                   <span className="text-neutral-900">
-                    <span className="font-medium">{entry.actor.email}</span>{" "}
+                    <span className="font-medium">{entry.actor.name ?? entry.actor.email}</span>{" "}
                     {describeActivity(entry.action, entry.metadata)}
                   </span>
                   <span className="text-neutral-400" title={new Date(entry.createdAt).toLocaleString()}>
