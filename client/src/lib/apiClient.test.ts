@@ -144,6 +144,42 @@ describe("apiRequest", () => {
     vi.useRealTimers();
   });
 
+  it("shares one in-flight refresh across concurrent 401s, instead of rotating the refresh token out from under itself", async () => {
+    // Regression test: the refresh token rotates on every use (see auth.ts), so
+    // two requests calling /auth/refresh separately for the same expiry used to
+    // have the second one present an already-rotated token - the server reads
+    // that as reuse and revokes the whole session, ending it for real instead of
+    // transparently refreshing it.
+    const fetchSpy = vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = typeof input === "string" ? input : input.toString();
+      if (url.endsWith("/auth/refresh")) {
+        return new Response("{}", { status: 200 });
+      }
+      if (url.endsWith("/one") || url.endsWith("/two")) {
+        // Both "original" endpoints 401 once (simulating an expired access token)
+        // then succeed once refreshed.
+        const priorCallsToThisPath = fetchSpy.mock.calls.filter((call) => {
+          const callUrl = typeof call[0] === "string" ? call[0] : call[0].toString();
+          return callUrl === url;
+        }).length;
+        return priorCallsToThisPath <= 1
+          ? new Response("{}", { status: 401 })
+          : new Response(JSON.stringify({ ok: true }), { status: 200 });
+      }
+      throw new Error(`unexpected fetch to ${url}`);
+    });
+
+    const [resultOne, resultTwo] = await Promise.all([apiRequest("/one"), apiRequest("/two")]);
+
+    expect(resultOne).toEqual({ ok: true });
+    expect(resultTwo).toEqual({ ok: true });
+    const refreshCalls = fetchSpy.mock.calls.filter((call) => {
+      const callUrl = typeof call[0] === "string" ? call[0] : call[0].toString();
+      return callUrl.endsWith("/auth/refresh");
+    });
+    expect(refreshCalls).toHaveLength(1);
+  });
+
   it("does not redirect when the refresh attempt fails for a reason other than 401", async () => {
     const fetchSpy = vi.spyOn(global, "fetch");
     fetchSpy
