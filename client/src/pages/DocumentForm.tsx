@@ -138,6 +138,17 @@ function calculateLiveTotals(lines: LiveLine[]) {
   return { subtotal, taxTotal, total: subtotal + taxTotal };
 }
 
+const DEFAULT_DUE_DAYS = 30;
+
+// A blank due date is one more thing to remember on every single document - default
+// it to the most common payment/validity term (30 days) so it's already right for
+// most businesses, and still just as easy to change for the ones it isn't.
+function defaultDueDate(): string {
+  const date = new Date();
+  date.setDate(date.getDate() + DEFAULT_DUE_DAYS);
+  return date.toISOString().slice(0, 10);
+}
+
 export default function DocumentForm() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -185,7 +196,7 @@ export default function DocumentForm() {
       customerId: "",
       customerName: "",
       issueDate: new Date().toISOString().slice(0, 10),
-      dueDate: "",
+      dueDate: dueDateLabel ? defaultDueDate() : "",
       notes: "",
       customerReference: "",
       language: "EN",

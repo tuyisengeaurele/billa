@@ -541,6 +541,15 @@ describe("DocumentForm", () => {
     expect(await screen.findByLabelText("Valid until")).toBeInTheDocument();
   });
 
+  it("defaults a new invoice's due date to 30 days out instead of leaving it blank", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async () => new Response("{}", { status: 401 }));
+    renderNew();
+
+    const expected = new Date();
+    expected.setDate(expected.getDate() + 30);
+    expect(await screen.findByLabelText(/due date/i)).toHaveValue(expected.toISOString().slice(0, 10));
+  });
+
   it("shows a Converted from proforma link when editing a converted invoice", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async (input) => {
       const url = urlOf(input);
