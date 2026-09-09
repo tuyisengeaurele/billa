@@ -354,4 +354,51 @@ describe("Profile", () => {
     await waitFor(() => expect(patchedBody).toEqual({ preferences: { PAYMENT_RECEIVED: false } }));
     expect(await screen.findByLabelText("A payment is recorded")).not.toBeChecked();
   });
+
+  it("shows two-factor setup for an admin, since /admin/profile is the only page they can reach it from", async () => {
+    renderProfile(async (input) => {
+      const url = urlOf(input);
+      if (url.endsWith("/auth/me")) {
+        return new Response(
+          JSON.stringify({
+            user: { ...baseUser(), isAdmin: true },
+            business: { id: "b1", name: "Kigali Traders" },
+            impersonating: false,
+          }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/profile/sessions")) {
+        return new Response(JSON.stringify({ results: [] }), { status: 200 });
+      }
+      if (url.endsWith("/profile/notification-preferences")) {
+        return new Response(JSON.stringify({ preferences: {} }), { status: 200 });
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    expect(await screen.findByRole("button", { name: /set up two-factor authentication/i })).toBeInTheDocument();
+  });
+
+  it("hides two-factor setup for a non-admin, who manages it from Business Settings instead", async () => {
+    renderProfile(async (input) => {
+      const url = urlOf(input);
+      if (url.endsWith("/auth/me")) {
+        return new Response(
+          JSON.stringify({ user: baseUser(), business: { id: "b1", name: "Kigali Traders" }, impersonating: false }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/profile/sessions")) {
+        return new Response(JSON.stringify({ results: [] }), { status: 200 });
+      }
+      if (url.endsWith("/profile/notification-preferences")) {
+        return new Response(JSON.stringify({ preferences: {} }), { status: 200 });
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    await screen.findByLabelText(/^name$/i);
+    expect(screen.queryByRole("button", { name: /set up two-factor authentication/i })).not.toBeInTheDocument();
+  });
 });

@@ -1,4 +1,4 @@
-import { Link, Navigate, Outlet } from "react-router-dom";
+import { Link, Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { RouteLoadingFallback } from "./RouteLoadingFallback";
 
@@ -12,10 +12,10 @@ function AdminRequires2fa() {
           first. Set it up from your profile, then come back here.
         </p>
         <Link
-          to="/settings"
+          to="/admin/profile"
           className="mt-6 inline-block rounded-lg bg-primary-500 px-4 py-2 font-sans text-sm font-semibold text-white transition-colors hover:bg-primary-700"
         >
-          Go to Settings
+          Go to your profile
         </Link>
       </div>
     </div>
@@ -24,6 +24,7 @@ function AdminRequires2fa() {
 
 export function AdminRoute() {
   const { user, isLoading } = useAuth();
+  const { pathname } = useLocation();
 
   if (isLoading) {
     return <RouteLoadingFallback />;
@@ -37,7 +38,11 @@ export function AdminRoute() {
     return <Navigate to="/dashboard" replace />;
   }
 
-  if (!user.totpEnabled) {
+  // /admin/profile is where an admin turns 2FA on in the first place (Profile
+  // shows the setup UI only for admins - see Profile.tsx). Gating it behind
+  // totpEnabled like every other admin route would trap an admin without 2FA
+  // yet: the "go set it up" link would itself bounce back to this same screen.
+  if (!user.totpEnabled && pathname !== "/admin/profile") {
     return <AdminRequires2fa />;
   }
 

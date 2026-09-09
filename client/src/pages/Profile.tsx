@@ -7,6 +7,7 @@ import { apiRequest } from "../lib/apiClient";
 import { changePassword, hasPasswordProvider } from "../lib/firebaseAuth";
 import { FormField } from "../components/FormField";
 import { Button } from "../components/Button";
+import { TwoFactorSection } from "../components/business/TwoFactorSection";
 
 interface SessionRow {
   id: string;
@@ -335,6 +336,15 @@ export default function Profile() {
           </p>
         )}
       </section>
+
+      {/*
+        Only shown for admins here. Regular users manage 2FA from Business
+        Settings, where this same component already lives - an admin has no
+        business to settle into, so this is the only page they can reach it
+        from (the admin route guard requires 2FA before letting them past
+        /admin at all, so it can't live behind that gate either).
+      */}
+      {user.isAdmin && <TwoFactorSection />}
 
       <section className="rounded-xl border border-neutral-200 bg-surface p-6">
         <div className="flex items-center justify-between">

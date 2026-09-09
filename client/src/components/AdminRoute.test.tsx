@@ -14,6 +14,7 @@ function renderWithProviders(initialPath: string) {
           <Route path="/dashboard" element={<div>dashboard page</div>} />
           <Route element={<AdminRoute />}>
             <Route path="/admin/users" element={<div>admin users page</div>} />
+            <Route path="/admin/profile" element={<div>admin profile page</div>} />
           </Route>
         </Routes>
       </AuthProvider>
@@ -91,8 +92,29 @@ describe("AdminRoute", () => {
       expect(screen.getByRole("heading", { name: /two-factor authentication/i })).toBeInTheDocument(),
     );
     expect(screen.queryByText("admin users page")).not.toBeInTheDocument();
-    // The actual 2FA setup UI lives in Business Settings, not Profile - Profile has
-    // no way to enable 2FA at all, so this link would otherwise be a dead end.
-    expect(screen.getByRole("link", { name: /go to settings/i })).toHaveAttribute("href", "/settings");
+    // /admin/profile is the one admin route that must stay reachable without 2FA
+    // yet - it's where an admin turns 2FA on in the first place.
+    expect(screen.getByRole("link", { name: /go to your profile/i })).toHaveAttribute("href", "/admin/profile");
+  });
+
+  it("lets an admin without 2FA reach /admin/profile instead of bouncing them back to this same screen", async () => {
+    // Regression test: /admin/profile is where the 2FA setup UI actually lives for
+    // an admin (see Profile.tsx), so this route can't be gated on totpEnabled like
+    // every other admin route - that would make the "go set it up" link a dead end
+    // that loops back to itself.
+    vi.spyOn(global, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          user: { id: "u1", email: "admin@example.com", isAdmin: true, totpEnabled: false },
+          business: { id: "b1", name: "Kigali Traders" },
+        }),
+        { status: 200 },
+      ),
+    );
+
+    renderWithProviders("/admin/profile");
+
+    await waitFor(() => expect(screen.getByText("admin profile page")).toBeInTheDocument());
+    expect(screen.queryByRole("heading", { name: /two-factor authentication/i })).not.toBeInTheDocument();
   });
 });
