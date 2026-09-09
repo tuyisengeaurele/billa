@@ -91,6 +91,8 @@ describe("AdminRoute", () => {
       expect(screen.getByRole("heading", { name: /two-factor authentication/i })).toBeInTheDocument(),
     );
     expect(screen.queryByText("admin users page")).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /go to profile/i })).toHaveAttribute("href", "/profile");
+    // The actual 2FA setup UI lives in Business Settings, not Profile - Profile has
+    // no way to enable 2FA at all, so this link would otherwise be a dead end.
+    expect(screen.getByRole("link", { name: /go to settings/i })).toHaveAttribute("href", "/settings");
   });
 });

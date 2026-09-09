@@ -12,10 +12,10 @@ function AdminRequires2fa() {
           first. Set it up from your profile, then come back here.
         </p>
         <Link
-          to="/profile"
+          to="/settings"
           className="mt-6 inline-block rounded-lg bg-primary-500 px-4 py-2 font-sans text-sm font-semibold text-white transition-colors hover:bg-primary-700"
         >
-          Go to profile
+          Go to Settings
         </Link>
       </div>
     </div>

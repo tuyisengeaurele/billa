@@ -13,7 +13,7 @@ interface SetupResponse {
 }
 
 export function TwoFactorSection() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, refreshAuth } = useAuth();
   const [setup, setSetup] = useState<SetupResponse | null>(null);
   const [confirmCode, setConfirmCode] = useState("");
   const [backupCodes, setBackupCodes] = useState<string[] | null>(null);
@@ -61,6 +61,10 @@ export function TwoFactorSection() {
       setEnabledOverride(true);
       setSetup(null);
       setConfirmCode("");
+      // enabledOverride makes this component itself show "on" right away, but other
+      // places that gate on user.totpEnabled directly (the admin-2FA route guard)
+      // read it from shared auth state, which this doesn't touch on its own.
+      void refreshAuth();
     } catch {
       setError("That code didn't match. Try again.");
     } finally {
@@ -86,6 +90,7 @@ export function TwoFactorSection() {
       setEnabledOverride(false);
       setDisableCode("");
       setBackupCodes(null);
+      void refreshAuth();
     } catch (err) {
       setError(err instanceof ApiError ? "That code didn't match. Try again." : "Something went wrong. Try again.");
     } finally {

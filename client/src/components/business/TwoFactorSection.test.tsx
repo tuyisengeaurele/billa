@@ -8,10 +8,14 @@ function urlOf(input: RequestInfo | URL): string {
   return typeof input === "string" ? input : input.toString();
 }
 
-function renderSection(meResponse: { user: { id: string; email: string; totpEnabled: boolean } }) {
+function renderSection(
+  meResponse: { user: { id: string; email: string; totpEnabled: boolean } },
+  onMeCalled?: () => void,
+) {
   vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
     const url = urlOf(input);
     if (url.endsWith("/auth/me")) {
+      onMeCalled?.();
       return new Response(
         JSON.stringify({ ...meResponse, business: { id: "b1", name: "Kigali Traders" } }),
         { status: 200 },
@@ -115,6 +119,25 @@ describe("TwoFactorSection", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/didn't match/i);
     expect(screen.getByLabelText(/enter the 6-digit code/i)).toBeInTheDocument();
+  });
+
+  it("refreshes the shared auth state after enabling, not just this component's own view", async () => {
+    // Other places (the admin-2FA route guard) read user.totpEnabled from shared auth
+    // state directly, not from this component - if enabling 2FA only updated this
+    // component's own local "is it on" flag, those other places would still see the
+    // old value immediately afterwards.
+    let meCallCount = 0;
+    const user = userEvent.setup();
+    renderSection({ user: { id: "u1", email: "owner@example.com", totpEnabled: false } }, () => meCallCount++);
+    await waitFor(() => expect(meCallCount).toBeGreaterThan(0));
+    const callsBeforeConfirm = meCallCount;
+
+    await user.click(await screen.findByRole("button", { name: /set up two-factor authentication/i }));
+    await user.type(await screen.findByLabelText(/enter the 6-digit code/i), "654321");
+    await user.click(screen.getByRole("button", { name: /^confirm$/i }));
+    await screen.findByText(/AAAA111111\s+BBBB222222/);
+
+    await waitFor(() => expect(meCallCount).toBeGreaterThan(callsBeforeConfirm));
   });
 
   it("turns off two-factor authentication with a correct code", async () => {
