@@ -11,8 +11,10 @@ services:
     plan: free
     region: oregon
     rootDir: .
-    buildCommand: npm ci && npm run prisma:generate && npm run build --workspace=server
-    preDeployCommand: npx prisma migrate deploy --schema=server/prisma/schema.prisma
+    # Free-tier services can't use a separate pre-deploy step, so the migration runs
+    # as the last part of the build instead - same effect for a single free instance,
+    # since nothing serves traffic until the build finishes either way.
+    buildCommand: npm ci && npm run prisma:generate && npm run build --workspace=server && npx prisma migrate deploy --schema=server/prisma/schema.prisma
     startCommand: node server/dist/index.js
     healthCheckPath: /health
     envVars:
