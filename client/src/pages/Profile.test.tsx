@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../context/AuthContext";
 import { ToastTestWrapper } from "../test/ToastTestWrapper";
@@ -31,11 +32,13 @@ function baseUser(overrides: Partial<{ name: string | null; phone: string | null
 function renderProfile(mock: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>) {
   vi.spyOn(global, "fetch").mockImplementation(mock);
   return render(
-    <ToastTestWrapper>
-      <AuthProvider>
-        <Profile />
-      </AuthProvider>
-    </ToastTestWrapper>,
+    <MemoryRouter>
+      <ToastTestWrapper>
+        <AuthProvider>
+          <Profile />
+        </AuthProvider>
+      </ToastTestWrapper>
+    </MemoryRouter>,
   );
 }
 
@@ -353,6 +356,28 @@ describe("Profile", () => {
 
     await waitFor(() => expect(patchedBody).toEqual({ preferences: { PAYMENT_RECEIVED: false } }));
     expect(await screen.findByLabelText("A payment is recorded")).not.toBeChecked();
+  });
+
+  it("links to the help center and contact form, since logged-in users had no way to reach either before", async () => {
+    renderProfile(async (input) => {
+      const url = urlOf(input);
+      if (url.endsWith("/auth/me")) {
+        return new Response(
+          JSON.stringify({ user: baseUser(), business: { id: "b1", name: "Kigali Traders" }, impersonating: false }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/profile/sessions")) {
+        return new Response(JSON.stringify({ results: [] }), { status: 200 });
+      }
+      if (url.endsWith("/profile/notification-preferences")) {
+        return new Response(JSON.stringify({ preferences: {} }), { status: 200 });
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    expect(await screen.findByRole("link", { name: /help center/i })).toHaveAttribute("href", "/help");
+    expect(screen.getByRole("link", { name: /contact us/i })).toHaveAttribute("href", "/contact");
   });
 
   it("shows two-factor setup for an admin, since /admin/profile is the only page they can reach it from", async () => {
