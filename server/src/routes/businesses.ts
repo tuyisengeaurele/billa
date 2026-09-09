@@ -26,7 +26,10 @@ businessesRouter.get("/", async (req, res) => {
       include: { business: { select: { id: true, name: true } } },
     }),
   ]);
-  const businesses = [...owned, ...memberships.map((m) => m.business)];
+  const businesses = [
+    ...owned.map((b) => ({ ...b, isOwner: true })),
+    ...memberships.map((m) => ({ ...m.business, isOwner: false })),
+  ];
   res.json({ businesses });
 });
 

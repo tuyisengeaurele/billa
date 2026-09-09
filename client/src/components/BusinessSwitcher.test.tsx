@@ -8,7 +8,7 @@ function urlOf(input: RequestInfo | URL): string {
   return typeof input === "string" ? input : input.toString();
 }
 
-function mockFetch(businesses: { id: string; name: string }[]) {
+function mockFetch(businesses: { id: string; name: string; isOwner: boolean }[]) {
   vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
     const url = urlOf(input);
     if (url.includes("/auth/me")) {
@@ -46,19 +46,24 @@ describe("BusinessSwitcher", () => {
     vi.restoreAllMocks();
   });
 
-  it("shows plain branding with one business and no dropdown", async () => {
-    mockFetch([{ id: "b1", name: "Kigali Traders" }]);
+  it("still offers a way to add a business when the account only has one", async () => {
+    mockFetch([{ id: "b1", name: "Kigali Traders", isOwner: true }]);
+    const user = userEvent.setup();
 
     renderSwitcher();
 
-    expect(await screen.findByText("Billa · Kigali Traders")).toBeInTheDocument();
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    const toggle = await screen.findByRole("button", { name: /Billa · Kigali Traders/i });
+    await user.click(toggle);
+
+    expect(screen.getByRole("button", { name: /add another business/i })).toBeInTheDocument();
+    // Nothing to switch to yet, so no business rows besides the add action.
+    expect(screen.queryByRole("button", { name: "Kigali Traders" })).not.toBeInTheDocument();
   });
 
   it("shows a dropdown listing every business when there is more than one", async () => {
     mockFetch([
-      { id: "b1", name: "Kigali Traders" },
-      { id: "b2", name: "Side Hustle" },
+      { id: "b1", name: "Kigali Traders", isOwner: true },
+      { id: "b2", name: "Side Hustle", isOwner: true },
     ]);
     const user = userEvent.setup();
 
@@ -70,11 +75,42 @@ describe("BusinessSwitcher", () => {
     expect(screen.getByRole("button", { name: /add another business/i })).toBeInTheDocument();
   });
 
+  it("labels owned and shared businesses separately when the account has both", async () => {
+    mockFetch([
+      { id: "b1", name: "Kigali Traders", isOwner: true },
+      { id: "b2", name: "Client Co", isOwner: false },
+    ]);
+    const user = userEvent.setup();
+
+    renderSwitcher();
+
+    await user.click(await screen.findByRole("button", { name: /Billa · Kigali Traders/i }));
+
+    expect(screen.getByText("Your businesses")).toBeInTheDocument();
+    expect(screen.getByText("Shared with you")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Client Co" })).toBeInTheDocument();
+  });
+
+  it("does not label the groups when every business is owned", async () => {
+    mockFetch([
+      { id: "b1", name: "Kigali Traders", isOwner: true },
+      { id: "b2", name: "Side Hustle", isOwner: true },
+    ]);
+    const user = userEvent.setup();
+
+    renderSwitcher();
+
+    await user.click(await screen.findByRole("button", { name: /Billa · Kigali Traders/i }));
+
+    expect(screen.queryByText("Your businesses")).not.toBeInTheDocument();
+    expect(screen.queryByText("Shared with you")).not.toBeInTheDocument();
+  });
+
   it("hides the add-business action once the account owns 3 businesses", async () => {
     mockFetch([
-      { id: "b1", name: "Kigali Traders" },
-      { id: "b2", name: "Side Hustle" },
-      { id: "b3", name: "Third Co" },
+      { id: "b1", name: "Kigali Traders", isOwner: true },
+      { id: "b2", name: "Side Hustle", isOwner: true },
+      { id: "b3", name: "Third Co", isOwner: true },
     ]);
     const user = userEvent.setup();
 
@@ -85,10 +121,25 @@ describe("BusinessSwitcher", () => {
     expect(screen.queryByRole("button", { name: /add another business/i })).not.toBeInTheDocument();
   });
 
+  it("still allows adding a business when member-of businesses push the total to 3, since only owned ones count against the cap", async () => {
+    mockFetch([
+      { id: "b1", name: "Kigali Traders", isOwner: true },
+      { id: "b2", name: "Client A", isOwner: false },
+      { id: "b3", name: "Client B", isOwner: false },
+    ]);
+    const user = userEvent.setup();
+
+    renderSwitcher();
+
+    await user.click(await screen.findByRole("button", { name: /Billa · Kigali Traders/i }));
+
+    expect(screen.getByRole("button", { name: /add another business/i })).toBeInTheDocument();
+  });
+
   it("closes when clicking outside the dropdown", async () => {
     mockFetch([
-      { id: "b1", name: "Kigali Traders" },
-      { id: "b2", name: "Side Hustle" },
+      { id: "b1", name: "Kigali Traders", isOwner: true },
+      { id: "b2", name: "Side Hustle", isOwner: true },
     ]);
     const user = userEvent.setup();
 
@@ -104,8 +155,8 @@ describe("BusinessSwitcher", () => {
 
   it("marks the toggle button's expanded state for screen readers", async () => {
     mockFetch([
-      { id: "b1", name: "Kigali Traders" },
-      { id: "b2", name: "Side Hustle" },
+      { id: "b1", name: "Kigali Traders", isOwner: true },
+      { id: "b2", name: "Side Hustle", isOwner: true },
     ]);
     const user = userEvent.setup();
 
@@ -120,8 +171,8 @@ describe("BusinessSwitcher", () => {
 
   it("calls switch-business with the selected business id", async () => {
     mockFetch([
-      { id: "b1", name: "Kigali Traders" },
-      { id: "b2", name: "Side Hustle" },
+      { id: "b1", name: "Kigali Traders", isOwner: true },
+      { id: "b2", name: "Side Hustle", isOwner: true },
     ]);
     const user = userEvent.setup();
 
@@ -139,8 +190,8 @@ describe("BusinessSwitcher", () => {
 
   it("submits a new business name through the add-business form", async () => {
     mockFetch([
-      { id: "b1", name: "Kigali Traders" },
-      { id: "b2", name: "Side Hustle" },
+      { id: "b1", name: "Kigali Traders", isOwner: true },
+      { id: "b2", name: "Side Hustle", isOwner: true },
     ]);
     const user = userEvent.setup();
 

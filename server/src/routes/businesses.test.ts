@@ -64,6 +64,26 @@ describe("GET /businesses", () => {
 
     expect(res.body.businesses.map((b: { name: string }) => b.name)).toEqual(["Kigali Traders", "Other Co"]);
   });
+
+  it("marks owned businesses and member-of businesses distinctly", async () => {
+    const app = createApp();
+    const { cookies, userId } = await registerAndGetCookies(app);
+    const ownerRes = await request(app).post("/auth/session").send({
+      idToken: JSON.stringify({ uid: "other-owner@example.com", email: "other-owner@example.com" }),
+      businessName: "Other Co",
+    });
+    await prisma.businessMember.create({
+      data: { businessId: ownerRes.body.business.id, userId },
+    });
+
+    const res = await request(app).get("/businesses").set("Cookie", cookies);
+
+    const byName = Object.fromEntries(
+      (res.body.businesses as { name: string; isOwner: boolean }[]).map((b) => [b.name, b.isOwner]),
+    );
+    expect(byName["Kigali Traders"]).toBe(true);
+    expect(byName["Other Co"]).toBe(false);
+  });
 });
 
 describe("POST /businesses", () => {

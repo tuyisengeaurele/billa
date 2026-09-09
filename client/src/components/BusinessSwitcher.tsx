@@ -6,6 +6,21 @@ import { useAuth } from "../context/AuthContext";
 interface BusinessSummary {
   id: string;
   name: string;
+  isOwner: boolean;
+}
+
+function BusinessRow({ business, isCurrent, onSelect }: { business: BusinessSummary; isCurrent: boolean; onSelect: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`block w-full px-3 py-2 text-left font-sans text-sm hover:bg-neutral-50 ${
+        isCurrent ? "font-semibold text-primary-700" : "text-neutral-700"
+      }`}
+    >
+      {business.name}
+    </button>
+  );
 }
 
 export function BusinessSwitcher() {
@@ -62,10 +77,11 @@ export function BusinessSwitcher() {
   }
 
   const label = `Billa · ${business?.name ?? ""}`;
-
-  if (businesses.length <= 1) {
-    return <span className="font-display text-lg font-semibold text-neutral-900">{label}</span>;
-  }
+  // Only businesses you own count against the 3-business cap - being a member of
+  // someone else's doesn't use up any of your own slots.
+  const owned = businesses.filter((b) => b.isOwner);
+  const shared = businesses.filter((b) => !b.isOwner);
+  const showGroupLabels = owned.length > 0 && shared.length > 0;
 
   return (
     <div ref={containerRef} className="relative">
@@ -80,21 +96,29 @@ export function BusinessSwitcher() {
       </button>
       {isOpen && (
         <div role="menu" className="absolute left-0 top-full z-10 mt-1 w-56 rounded-lg border border-neutral-200 bg-surface py-1 shadow-lg">
-          {businesses.map((b) => (
-            <button
-              key={b.id}
-              type="button"
-              onClick={() => switchTo(b.id)}
-              className={`block w-full px-3 py-2 text-left font-sans text-sm hover:bg-neutral-50 ${
-                b.id === business?.id ? "font-semibold text-primary-700" : "text-neutral-700"
-              }`}
-            >
-              {b.name}
-            </button>
-          ))}
-          {businesses.length < BUSINESS_LIMIT && (
+          {businesses.length > 1 && (
             <>
+              {showGroupLabels && (
+                <p className="px-3 pb-1 pt-2 font-sans text-xs font-semibold uppercase tracking-wide text-neutral-400">
+                  Your businesses
+                </p>
+              )}
+              {owned.map((b) => (
+                <BusinessRow key={b.id} business={b} isCurrent={b.id === business?.id} onSelect={() => switchTo(b.id)} />
+              ))}
+              {showGroupLabels && (
+                <p className="px-3 pb-1 pt-2 font-sans text-xs font-semibold uppercase tracking-wide text-neutral-400">
+                  Shared with you
+                </p>
+              )}
+              {shared.map((b) => (
+                <BusinessRow key={b.id} business={b} isCurrent={b.id === business?.id} onSelect={() => switchTo(b.id)} />
+              ))}
               <div className="my-1 border-t border-neutral-100" />
+            </>
+          )}
+          {owned.length < BUSINESS_LIMIT && (
+            <>
               {isAdding ? (
                 <form onSubmit={addBusiness} className="flex flex-col gap-2 px-3 py-2">
                   {error && <p className="font-sans text-xs text-error">{error}</p>}
