@@ -5,6 +5,7 @@ import { apiRequest } from "../lib/apiClient";
 import { useAuth } from "../context/AuthContext";
 import { PageTitleProvider } from "../context/PageTitleContext";
 import { AnnouncementBanner } from "./AnnouncementBanner";
+import { BusinessSwitcher } from "./BusinessSwitcher";
 import { DocumentTitleSync } from "./DocumentTitleSync";
 import { IdleTimeoutModal } from "./IdleTimeoutModal";
 import { ImpersonationRequestModal } from "./ImpersonationRequestModal";
@@ -132,6 +133,8 @@ export function AppLayout({ children }: AppLayoutProps) {
               <div className="ml-auto flex shrink-0 items-center gap-2">
                 <SearchPaletteTrigger ref={searchTriggerRef} onClick={() => setIsSearchOpen(true)} />
                 <NotificationBell allHref="/notifications" />
+                <span className="h-6 w-px bg-neutral-200" aria-hidden="true" />
+                <BusinessSwitcher />
                 <UserMenu profileHref="/profile" logoutConfirmMessage="Log out of Billa?" />
               </div>
             </header>

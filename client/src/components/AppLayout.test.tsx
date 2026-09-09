@@ -64,6 +64,34 @@ describe("AppLayout", () => {
     expect(screen.queryByText(/viewing as/i)).not.toBeInTheDocument();
   });
 
+  it("shows the business switcher in the header next to the user menu, not in the sidebar", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      if (url.includes("/auth/me")) {
+        return new Response(
+          JSON.stringify({
+            user: { id: "u1", email: "owner@example.com", productTourSeenAt: "2026-01-01T00:00:00.000Z" },
+            business: { id: "b1", name: "Kigali Traders" },
+            impersonating: false,
+          }),
+          { status: 200 },
+        );
+      }
+      if (url.includes("/businesses")) {
+        return new Response(JSON.stringify({ businesses: [{ id: "b1", name: "Kigali Traders", isOwner: true }] }), {
+          status: 200,
+        });
+      }
+      return new Response("{}", { status: 401 });
+    });
+    renderAppLayout();
+
+    // A dropdown menu it opens (role="menu") means it's the compact header pill,
+    // not the old plain business-name heading that used to sit in the sidebar.
+    const toggle = await screen.findByRole("button", { name: "Kigali Traders" });
+    expect(toggle).toHaveAttribute("aria-haspopup", "menu");
+  });
+
   it("renders nav links and children", async () => {
     vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 401 }));
     renderAppLayout();

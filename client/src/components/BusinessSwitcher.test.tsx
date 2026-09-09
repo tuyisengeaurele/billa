@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../context/AuthContext";
@@ -52,12 +52,15 @@ describe("BusinessSwitcher", () => {
 
     renderSwitcher();
 
-    const toggle = await screen.findByRole("button", { name: /Billa · Kigali Traders/i });
+    const toggle = await screen.findByRole("button", { name: /Kigali Traders/i });
     await user.click(toggle);
 
-    expect(screen.getByRole("button", { name: /add another business/i })).toBeInTheDocument();
-    // Nothing to switch to yet, so no business rows besides the add action.
-    expect(screen.queryByRole("button", { name: "Kigali Traders" })).not.toBeInTheDocument();
+    const menu = screen.getByRole("menu");
+    expect(within(menu).getByRole("button", { name: /add another business/i })).toBeInTheDocument();
+    // Nothing to switch to yet, so no business rows besides the add action - the
+    // toggle button's own accessible name is also "Kigali Traders" now that it's
+    // just the business name, so this has to look inside the menu specifically.
+    expect(within(menu).queryByRole("button", { name: "Kigali Traders" })).not.toBeInTheDocument();
   });
 
   it("shows a dropdown listing every business when there is more than one", async () => {
@@ -69,7 +72,7 @@ describe("BusinessSwitcher", () => {
 
     renderSwitcher();
 
-    await user.click(await screen.findByRole("button", { name: /Billa · Kigali Traders/i }));
+    await user.click(await screen.findByRole("button", { name: /Kigali Traders/i }));
 
     expect(screen.getByRole("button", { name: "Side Hustle" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /add another business/i })).toBeInTheDocument();
@@ -84,7 +87,7 @@ describe("BusinessSwitcher", () => {
 
     renderSwitcher();
 
-    await user.click(await screen.findByRole("button", { name: /Billa · Kigali Traders/i }));
+    await user.click(await screen.findByRole("button", { name: /Kigali Traders/i }));
 
     expect(screen.getByText("Your businesses")).toBeInTheDocument();
     expect(screen.getByText("Shared with you")).toBeInTheDocument();
@@ -100,7 +103,7 @@ describe("BusinessSwitcher", () => {
 
     renderSwitcher();
 
-    await user.click(await screen.findByRole("button", { name: /Billa · Kigali Traders/i }));
+    await user.click(await screen.findByRole("button", { name: /Kigali Traders/i }));
 
     expect(screen.queryByText("Your businesses")).not.toBeInTheDocument();
     expect(screen.queryByText("Shared with you")).not.toBeInTheDocument();
@@ -116,7 +119,7 @@ describe("BusinessSwitcher", () => {
 
     renderSwitcher();
 
-    await user.click(await screen.findByRole("button", { name: /Billa · Kigali Traders/i }));
+    await user.click(await screen.findByRole("button", { name: /Kigali Traders/i }));
 
     expect(screen.queryByRole("button", { name: /add another business/i })).not.toBeInTheDocument();
   });
@@ -131,7 +134,7 @@ describe("BusinessSwitcher", () => {
 
     renderSwitcher();
 
-    await user.click(await screen.findByRole("button", { name: /Billa · Kigali Traders/i }));
+    await user.click(await screen.findByRole("button", { name: /Kigali Traders/i }));
 
     expect(screen.getByRole("button", { name: /add another business/i })).toBeInTheDocument();
   });
@@ -145,7 +148,7 @@ describe("BusinessSwitcher", () => {
 
     renderSwitcher();
 
-    await user.click(await screen.findByRole("button", { name: /Billa · Kigali Traders/i }));
+    await user.click(await screen.findByRole("button", { name: /Kigali Traders/i }));
     expect(screen.getByRole("button", { name: "Side Hustle" })).toBeInTheDocument();
 
     await user.click(document.body);
@@ -162,7 +165,7 @@ describe("BusinessSwitcher", () => {
 
     renderSwitcher();
 
-    const toggle = await screen.findByRole("button", { name: /Billa · Kigali Traders/i });
+    const toggle = await screen.findByRole("button", { name: /Kigali Traders/i });
     expect(toggle).toHaveAttribute("aria-expanded", "false");
 
     await user.click(toggle);
@@ -178,7 +181,7 @@ describe("BusinessSwitcher", () => {
 
     renderSwitcher();
 
-    await user.click(await screen.findByRole("button", { name: /Billa · Kigali Traders/i }));
+    await user.click(await screen.findByRole("button", { name: /Kigali Traders/i }));
     await user.click(screen.getByRole("button", { name: "Side Hustle" }));
 
     const switchCall = vi
@@ -197,7 +200,7 @@ describe("BusinessSwitcher", () => {
 
     renderSwitcher();
 
-    await user.click(await screen.findByRole("button", { name: /Billa · Kigali Traders/i }));
+    await user.click(await screen.findByRole("button", { name: /Kigali Traders/i }));
     await user.click(screen.getByRole("button", { name: /add another business/i }));
     await user.type(screen.getByLabelText("New business name"), "Third Co");
     await user.click(screen.getByRole("button", { name: /^add business$/i }));

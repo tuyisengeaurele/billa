@@ -5,7 +5,6 @@ import { DOCUMENT_TYPES } from "@billa/shared";
 import { useActiveDocumentType } from "../context/ActiveDocumentTypeContext";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
 import { DOCUMENT_TYPE_COLORS } from "../lib/documentTypeColors";
-import { BusinessSwitcher } from "./BusinessSwitcher";
 import { ThemeToggle } from "./ThemeToggle";
 
 interface SidebarProps {
@@ -152,21 +151,19 @@ export function Sidebar({ billingBanner, onNavigate }: SidebarProps) {
 
   return (
     <div className="flex h-full flex-col bg-surface">
-      <div className="flex items-center gap-3 px-4 py-5">
+      <div className="flex items-center gap-2.5 px-4 py-5">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-500">
           <img src="/logo.png" alt="" className="h-5 w-5" style={{ filter: "brightness(0) invert(1)" }} />
         </span>
-        <BusinessSwitcher />
+        <span className="font-display text-lg font-semibold text-neutral-900">Billa</span>
       </div>
 
       {/*
-        Scrolling lives on this nav specifically, not the whole sidebar - putting it on
-        the outer container clipped/scrolled the business-switcher dropdown above
-        instead of letting it float over the page (an element with overflow-y set to
-        anything but visible forces overflow-x to behave the same way, and a 224px-wide
-        dropdown inside a narrower sidebar then has nowhere to go but a scrollbar).
-        min-h-0 is required alongside flex-1 for a flex child to actually respect its
-        own overflow instead of growing to fit its content.
+        Scrolling lives on this nav specifically, not the whole sidebar, so the logo
+        header and the footer (billing banner, theme toggle) stay pinned in place
+        while only the link list scrolls. min-h-0 is required alongside flex-1 for a
+        flex child to actually respect its own overflow instead of growing to fit
+        its content.
       */}
       <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-3 py-2">
         <SidebarLink to="/dashboard" isActive={pathname === "/dashboard"} onNavigate={onNavigate} icon={<DashboardIcon />}>
