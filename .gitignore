@@ -11,9 +11,11 @@ Thumbs.db
 # prisma
 server/prisma/migrations/dev.db*
 
-# uploads (local disk adapter for dev)
+# uploads (local disk adapter for dev) - uploads-test-* covers the isolated
+# UPLOADS_DIR a few tests point at a differently-named folder of their own.
 server/uploads/
 server/uploads-test/
+server/uploads-test-*/
 
 client/.vite/
 
@@ -24,11 +26,6 @@ e2e/blob-report/
 *.tsbuildinfo
 client/vite.config.js
 client/vite.config.d.ts
-
-# python
-bg-removal-service/.venv/
-bg-removal-service/__pycache__/
-*.pyc
 
 # harness state, not project config
 .claude/scheduled_tasks.lock
