@@ -1,6 +1,7 @@
 import { Router } from "express";
 import type { Prisma } from "@prisma/client";
 import {
+  addAdminSchema,
   adminAuditLogQuerySchema,
   adminBusinessListQuerySchema,
   adminUserListQuerySchema,
@@ -9,6 +10,7 @@ import {
   renameBusinessSchema,
 } from "@billa/shared";
 import type {
+  AddAdminInput,
   AdminAuditLogQuery,
   AdminBusinessListQuery,
   AdminUserListQuery,
@@ -31,6 +33,7 @@ import { checkPdfRenderingHealth } from "../lib/pdf/browser.js";
 import { checkStorageHealth } from "../lib/storage.js";
 import { describeError, type HealthCheckResult } from "../lib/health-check.js";
 import { computeRetentionCohorts } from "../lib/retention-cohorts.js";
+import { createPendingFirebaseUid } from "../lib/pending-admin.js";
 
 export const adminRouter = Router();
 
@@ -192,6 +195,40 @@ adminRouter.post("/users/:id/toggle-admin", async (req, res) => {
   });
 
   res.json({ user: { id: updated.id, isAdmin: updated.isAdmin } });
+});
+
+adminRouter.post("/admins", validateBody(addAdminSchema), async (req, res) => {
+  const { email } = req.body as AddAdminInput;
+
+  const alreadyTaken = await prisma.user.findUnique({ where: { email } });
+  if (alreadyTaken) {
+    res.status(409).json({ error: alreadyTaken.isAdmin ? "already_admin" : "email_taken" });
+    return;
+  }
+
+  // No business, no real trial clock - admins never touch business-scoped
+  // routes (see requireBusinessContext) and their own trialEndsAt is never
+  // read outside that, so this placeholder value is never actually consulted.
+  // firebaseUid is claimed the moment this person actually signs in for the
+  // first time - see findPendingAdminByEmail in auth.ts's /session handler.
+  const created = await prisma.user.create({
+    data: {
+      email,
+      firebaseUid: createPendingFirebaseUid(),
+      trialEndsAt: new Date(),
+      isAdmin: true,
+    },
+  });
+
+  await logAdminAction({
+    adminUserId: req.auth!.userId,
+    action: "ADMIN_INVITED",
+    targetType: "User",
+    targetId: created.id,
+    metadata: { email: created.email },
+  });
+
+  res.status(201).json({ user: { id: created.id, email: created.email, isAdmin: created.isAdmin } });
 });
 
 adminRouter.post("/users/:id/extend-trial", validateBody(extendTrialSchema), async (req, res) => {

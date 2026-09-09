@@ -6,7 +6,7 @@ import { Modal } from "../../components/Modal";
 import { SelectAllCheckbox } from "../../components/SelectAllCheckbox";
 import { usePageTitle } from "../../context/PageTitleContext";
 import { useToast } from "../../context/ToastContext";
-import { apiRequest } from "../../lib/apiClient";
+import { apiRequest, ApiError } from "../../lib/apiClient";
 import { downloadFile } from "../../lib/downloadFile";
 import { PlanBadge, PlanLegend, type PlanKey } from "../../lib/planColors";
 import { usePaginatedList } from "../../lib/usePaginatedList";
@@ -33,6 +33,9 @@ export default function AdminUsers() {
   const [isExtendTrialOpen, setIsExtendTrialOpen] = useState(false);
   const [extendDays, setExtendDays] = useState("30");
   const [isExtendingTrial, setIsExtendingTrial] = useState(false);
+  const [isAddAdminOpen, setIsAddAdminOpen] = useState(false);
+  const [newAdminEmail, setNewAdminEmail] = useState("");
+  const [isAddingAdmin, setIsAddingAdmin] = useState(false);
   const toast = useToast();
 
   useEffect(() => {
@@ -87,6 +90,30 @@ export default function AdminUsers() {
     }
   }
 
+  function describeAddAdminError(err: unknown): string {
+    if (err instanceof ApiError && typeof err.body === "object" && err.body !== null) {
+      const code = (err.body as { error?: string }).error;
+      if (code === "already_admin") return "That email is already an admin.";
+      if (code === "email_taken") return "That email already belongs to an existing account.";
+    }
+    return "Couldn't add that admin. Try again.";
+  }
+
+  async function confirmAddAdmin() {
+    setIsAddingAdmin(true);
+    try {
+      await apiRequest("/admin/admins", { method: "POST", body: { email: newAdminEmail } });
+      toast.success(`Added ${newAdminEmail} as an admin`);
+      setNewAdminEmail("");
+      setIsAddAdminOpen(false);
+      list.reload();
+    } catch (err) {
+      toast.error(describeAddAdminError(err));
+    } finally {
+      setIsAddingAdmin(false);
+    }
+  }
+
   return (
       <div className="flex flex-col gap-6">
 
@@ -118,6 +145,13 @@ export default function AdminUsers() {
                 className="shrink-0 rounded-lg border border-neutral-200 px-3.5 py-1.5 font-sans text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isExporting ? "Exporting…" : "Export CSV"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsAddAdminOpen(true)}
+                className="shrink-0 rounded-lg bg-primary-500 px-3.5 py-1.5 font-sans text-sm font-semibold text-white transition-colors hover:bg-primary-600"
+              >
+                Add admin
               </button>
             </div>
           </div>
@@ -239,6 +273,54 @@ export default function AdminUsers() {
                 className="rounded-lg bg-primary-500 px-4 py-2 font-sans text-sm font-semibold text-white transition-colors hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isExtendingTrial ? "Extending…" : "Extend"}
+              </button>
+            </div>
+          </div>
+        </Modal>
+
+        <Modal
+          isOpen={isAddAdminOpen}
+          onClose={() => {
+            setIsAddAdminOpen(false);
+            setNewAdminEmail("");
+          }}
+          title="Add admin"
+        >
+          <div className="flex flex-col gap-4">
+            <p className="font-sans text-sm text-neutral-600">
+              Creates a system admin account with no business and no trial. They sign in themselves, with this exact
+              email, to claim it - Google or a password reset both work.
+            </p>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="newAdminEmail" className="font-sans text-sm font-medium text-neutral-800">
+                Email
+              </label>
+              <input
+                id="newAdminEmail"
+                type="email"
+                value={newAdminEmail}
+                onChange={(event) => setNewAdminEmail(event.target.value)}
+                className="rounded-lg border border-neutral-200 px-3.5 py-2 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+              />
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAddAdminOpen(false);
+                  setNewAdminEmail("");
+                }}
+                className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isAddingAdmin || !newAdminEmail.trim()}
+                onClick={confirmAddAdmin}
+                className="rounded-lg bg-primary-500 px-4 py-2 font-sans text-sm font-semibold text-white transition-colors hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isAddingAdmin ? "Adding…" : "Add"}
               </button>
             </div>
           </div>

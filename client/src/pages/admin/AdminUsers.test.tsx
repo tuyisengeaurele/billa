@@ -205,4 +205,64 @@ describe("AdminUsers", () => {
     await vi.waitFor(() => expect(extendedIds.sort()).toEqual(["u1", "u2"]));
     expect(await screen.findByText(/extended the trial for 2 users/i)).toBeInTheDocument();
   });
+
+  it("adds an admin by email", async () => {
+    let addedBody: unknown = null;
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/admin/admins") && init?.method === "POST") {
+        addedBody = JSON.parse(init.body as string);
+        return new Response(
+          JSON.stringify({ user: { id: "u3", email: "new-admin@example.com", isAdmin: true } }),
+          { status: 201 },
+        );
+      }
+      return new Response(JSON.stringify({ results: [], total: 0, page: 1, pageSize: 20 }), { status: 200 });
+    });
+
+    const user = userEvent.setup();
+    render(
+      <ToastTestWrapper>
+        <MemoryRouter>
+          <AuthProvider>
+            <AdminUsers />
+          </AuthProvider>
+        </MemoryRouter>
+      </ToastTestWrapper>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: /add admin/i }));
+    await user.type(screen.getByLabelText(/^email$/i), "new-admin@example.com");
+    await user.click(screen.getByRole("button", { name: /^add$/i }));
+
+    await vi.waitFor(() => expect(addedBody).toEqual({ email: "new-admin@example.com" }));
+    expect(await screen.findByText(/added new-admin@example\.com as an admin/i)).toBeInTheDocument();
+  });
+
+  it("shows a clear message when the email is already an admin", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/admin/admins") && init?.method === "POST") {
+        return new Response(JSON.stringify({ error: "already_admin" }), { status: 409 });
+      }
+      return new Response(JSON.stringify({ results: [], total: 0, page: 1, pageSize: 20 }), { status: 200 });
+    });
+
+    const user = userEvent.setup();
+    render(
+      <ToastTestWrapper>
+        <MemoryRouter>
+          <AuthProvider>
+            <AdminUsers />
+          </AuthProvider>
+        </MemoryRouter>
+      </ToastTestWrapper>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: /add admin/i }));
+    await user.type(screen.getByLabelText(/^email$/i), "admin@example.com");
+    await user.click(screen.getByRole("button", { name: /^add$/i }));
+
+    expect(await screen.findByText(/that email is already an admin/i)).toBeInTheDocument();
+  });
 });
