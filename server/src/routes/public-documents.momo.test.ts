@@ -74,6 +74,26 @@ describe("POST /public/documents/:token/momo/request", () => {
     expect(stored.amount).toBe(10000);
   });
 
+  it("normalizes a locally formatted phone number before sending it to MTN", async () => {
+    const app = createApp();
+    const { document } = await setUpMomoInvoice(app);
+    vi.spyOn(momoClientModule, "getAccessToken").mockResolvedValue("token-123");
+    const requestToPaySpy = vi.spyOn(momoClientModule, "requestToPay").mockResolvedValue(undefined);
+
+    const res = await request(app)
+      .post(`/public/documents/${document.publicToken}/momo/request`)
+      // How a customer would naturally type their own number, not MTN's MSISDN format.
+      .send({ phoneNumber: "0788123456" });
+
+    expect(requestToPaySpy).toHaveBeenCalledWith(
+      expect.anything(),
+      "token-123",
+      expect.objectContaining({ phoneNumber: "250788123456" }),
+    );
+    const stored = await prisma.momoPaymentRequest.findUniqueOrThrow({ where: { id: res.body.requestId } });
+    expect(stored.phoneNumber).toBe("250788123456");
+  });
+
   it("returns the existing pending request instead of creating a second one", async () => {
     const app = createApp();
     const { document } = await setUpMomoInvoice(app);

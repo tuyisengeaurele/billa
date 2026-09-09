@@ -9,6 +9,7 @@ import { getBillingMomoConfig } from "../lib/billing-momo.js";
 import { getAccessToken, requestToPay } from "../lib/momo-client.js";
 import { getOrCreatePendingPayment } from "../lib/idempotent-payment.js";
 import { resolvePendingBillingPayment } from "../lib/resolve-pending-payment.js";
+import { normalizeRwandaPhoneNumber } from "../lib/phone-number.js";
 import { createGeneralApiRateLimit, generalApiRateLimit } from "../middleware/general-rate-limit.js";
 
 export const billingRouter = Router();
@@ -27,7 +28,9 @@ const checkoutRateLimit = createGeneralApiRateLimit(process.env.NODE_ENV === "te
 const checkoutPollRateLimit = createGeneralApiRateLimit(process.env.NODE_ENV === "test" ? 100000 : 150, 5 * 60 * 1000);
 
 billingRouter.post("/checkout", checkoutRateLimit, validateBody(billingCheckoutSchema), async (req, res) => {
-  const { plan, phoneNumber } = req.body as BillingCheckoutInput;
+  const body = req.body as BillingCheckoutInput;
+  const { plan } = body;
+  const phoneNumber = normalizeRwandaPhoneNumber(body.phoneNumber);
   const userId = req.auth!.userId;
 
   const cutoff = new Date(Date.now() - MOMO_EXPIRY_MS);

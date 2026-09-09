@@ -13,6 +13,7 @@ import { getInvoiceOutstandingBalance } from "../lib/invoice-payment-status.js";
 import { getAccessToken, requestToPay } from "../lib/momo-client.js";
 import { buildMomoCredentials } from "../lib/business-momo.js";
 import { resolvePendingMomoPaymentRequest } from "../lib/resolve-pending-payment.js";
+import { normalizeRwandaPhoneNumber } from "../lib/phone-number.js";
 
 export const publicDocumentsRouter = Router();
 
@@ -136,6 +137,7 @@ publicDocumentsRouter.post(
   async (req, res) => {
     const { token } = req.params;
     const body = req.body as CreateMomoPaymentRequestInput;
+    body.phoneNumber = normalizeRwandaPhoneNumber(body.phoneNumber);
 
     const document = await prisma.document.findFirst({
       where: { publicToken: token, status: "FINALIZED", type: "INVOICE" },

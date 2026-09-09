@@ -276,6 +276,7 @@ export default function PublicDocumentView() {
                   <input
                     id="momoPhone"
                     type="tel"
+                    placeholder="078XXXXXXX"
                     value={momoPhone}
                     onChange={(e) => setMomoPhone(e.target.value)}
                     className="rounded-lg border border-neutral-200 bg-surface px-3.5 py-2.5 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"

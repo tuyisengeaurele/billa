@@ -126,6 +126,7 @@ export function BillingSection() {
             <input
               id="billingPhone"
               type="tel"
+              placeholder="078XXXXXXX"
               value={phoneNumber}
               onChange={(e) => setPhoneNumber(e.target.value)}
               className="rounded-lg border border-neutral-200 bg-surface px-3.5 py-2.5 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"

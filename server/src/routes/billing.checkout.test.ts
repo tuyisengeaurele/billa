@@ -53,6 +53,27 @@ describe("POST /billing/checkout", () => {
     expect(payment.currency).toBe("RWF");
   });
 
+  it("normalizes a locally formatted phone number before sending it to MTN", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    vi.spyOn(momoClientModule, "getAccessToken").mockResolvedValue("token-123");
+    const requestToPaySpy = vi.spyOn(momoClientModule, "requestToPay").mockResolvedValue(undefined);
+
+    const res = await request(app)
+      .post("/billing/checkout")
+      .set("Cookie", cookies)
+      // How someone would naturally type their own number, not MTN's MSISDN format.
+      .send({ plan: "MONTHLY", phoneNumber: "078 812 3456" });
+
+    expect(requestToPaySpy).toHaveBeenCalledWith(
+      expect.anything(),
+      "token-123",
+      expect.objectContaining({ phoneNumber: "250788123456" }),
+    );
+    const payment = await prisma.payment.findUniqueOrThrow({ where: { id: res.body.paymentId } });
+    expect(payment.phoneNumber).toBe("250788123456");
+  });
+
   it("returns the existing pending payment for the same plan instead of creating a second one", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app);
