@@ -122,7 +122,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       googleRedirectIdTokenRef.current = (async () => {
         try {
           return (await consumeGoogleRedirectResult()) ?? null;
-        } catch {
+        } catch (err) {
+          // Swallowed on purpose (see above) - but silently, this hid the one
+          // thing that would explain a redirect that never completes. Logging
+          // it costs nothing and turns "nothing happened" into an actual error
+          // to diagnose.
+          console.error("Google sign-in redirect failed:", err);
           return null;
         }
       })();
