@@ -71,11 +71,31 @@ function redirectToLoginOnSessionExpiry() {
   window.location.href = `${window.location.origin}${loginPath}?expired=true`;
 }
 
+// The refresh token rotates on every use (the server revokes it and issues a new
+// one, see auth.ts's /refresh handler) - if two requests both 401 around the same
+// moment (any page firing more than one API call at once, once the 15-minute
+// access token expires) and each called /auth/refresh separately, the second one
+// would present a token the first had already rotated away. The server reads
+// that as token reuse and revokes the whole family, actually ending the session
+// - the exact bug this caused ("session lasts a few minutes" instead of staying
+// signed in). Sharing one in-flight refresh across every concurrent caller means
+// only one /auth/refresh is ever sent for a given expiry, and everyone else just
+// waits for its result instead of racing it.
+let inFlightRefresh: Promise<Response> | null = null;
+function refreshSession(): Promise<Response> {
+  if (!inFlightRefresh) {
+    inFlightRefresh = rawRequest("/auth/refresh", { method: "POST" }).finally(() => {
+      inFlightRefresh = null;
+    });
+  }
+  return inFlightRefresh;
+}
+
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   let response = await rawRequest(path, options);
 
   if (response.status === 401 && path !== "/auth/session" && path !== "/auth/refresh") {
-    const refreshResponse = await rawRequest("/auth/refresh", { method: "POST" });
+    const refreshResponse = await refreshSession();
     if (refreshResponse.ok) {
       response = await rawRequest(path, options);
     } else if (refreshResponse.status === 401 && !SESSION_EXPIRY_EXEMPT_PATHS.includes(path)) {
