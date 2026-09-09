@@ -39,6 +39,7 @@ import { logActivity } from "../lib/activity-log.js";
 import { toCsv } from "../lib/csv.js";
 import { decrypt, encrypt } from "../lib/encryption.js";
 import { getAccessToken, MOMO_BASE_URLS } from "../lib/momo-client.js";
+import { issueSession } from "../lib/session.js";
 
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -341,6 +342,75 @@ businessRouter.delete("/members/:userId", requireOwner, async (req, res) => {
   });
 
   res.json({ ok: true });
+});
+
+// Self-service, deliberately not requireOwner: any member (or accountant) can
+// remove themselves from a team. The owner can't "leave" their own business -
+// they'd delete it or transfer it, which is a different, more consequential action.
+businessRouter.post("/leave", async (req, res) => {
+  const businessId = req.auth!.businessId;
+  const userId = req.auth!.userId;
+
+  const business = await prisma.business.findUnique({ where: { id: businessId } });
+  if (!business) {
+    res.status(404).json({ error: "not_found" });
+    return;
+  }
+  if (business.ownerId === userId) {
+    res.status(400).json({ error: "owner_cannot_leave" });
+    return;
+  }
+
+  const membership = await prisma.businessMember.findUnique({
+    where: { businessId_userId: { businessId, userId } },
+  });
+  if (!membership) {
+    res.status(404).json({ error: "not_a_member" });
+    return;
+  }
+
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+
+  await prisma.businessMember.delete({ where: { id: membership.id } });
+  await prisma.refreshToken.updateMany({
+    where: { userId, businessId, revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
+
+  await logActivity({
+    businessId,
+    actorUserId: userId,
+    action: "MEMBER_REMOVED",
+    entityType: "BusinessMember",
+    entityId: userId,
+    metadata: { email: user.email, leftVoluntarily: true },
+  });
+
+  const [ownedElsewhere, memberElsewhere] = await Promise.all([
+    prisma.business.findFirst({ where: { ownerId: userId }, orderBy: { createdAt: "asc" } }),
+    prisma.businessMember.findFirst({
+      where: { userId },
+      orderBy: { createdAt: "asc" },
+      include: { business: true },
+    }),
+  ]);
+
+  let nextBusiness = ownedElsewhere ?? memberElsewhere?.business ?? null;
+  let createdReplacement = false;
+  if (!nextBusiness) {
+    // Every session needs a real business to be scoped to - leaving your one and
+    // only business can't leave the account with nowhere to land, so start a fresh
+    // one instead of breaking the session. They can rename or delete it in Settings.
+    nextBusiness = await prisma.business.create({ data: { name: "My Business", ownerId: userId } });
+    createdReplacement = true;
+  }
+
+  await prisma.user.update({ where: { id: userId }, data: { lastActiveBusinessId: nextBusiness.id } });
+  await issueSession(res, userId, nextBusiness.id);
+  res.json({
+    business: { id: nextBusiness.id, name: nextBusiness.name },
+    createdReplacement,
+  });
 });
 
 businessRouter.get("/invites", requireOwner, async (req, res) => {

@@ -239,7 +239,7 @@ describe("TeamSection", () => {
     expect(removeCalled).toBe(false);
   });
 
-  it("shows a read-only message for a member instead of management controls", async () => {
+  it("shows a read-only message and a way to leave for a member instead of management controls", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async (input) => {
       const url = urlOf(input);
       if (url.endsWith("/auth/me")) {
@@ -254,6 +254,81 @@ describe("TeamSection", () => {
     renderTeamSection();
 
     expect(await screen.findByText(/only the business owner can manage/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /leave/i })).toBeInTheDocument();
+  });
+
+  describe("leaving a team", () => {
+    function mockMemberFetch(onLeave: (init?: RequestInit) => Response) {
+      vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+        const url = urlOf(input);
+        if (url.endsWith("/auth/me")) {
+          return new Response(
+            JSON.stringify({
+              user: { id: "u2", email: "staff@example.com", totpEnabled: false, isAdmin: false },
+              business: { id: "b1", name: "Kigali Traders" },
+              impersonating: false,
+            }),
+            { status: 200 },
+          );
+        }
+        if (url.endsWith("/business/members") || url.endsWith("/business/invites")) {
+          return new Response(JSON.stringify({ error: "not_owner" }), { status: 403 });
+        }
+        if (url.endsWith("/business/leave") && init?.method === "POST") {
+          return onLeave(init);
+        }
+        return new Response("{}", { status: 401 });
+      });
+    }
+
+    it("does nothing until the leave action is confirmed", async () => {
+      let leaveCalled = false;
+      mockMemberFetch(() => {
+        leaveCalled = true;
+        return new Response(JSON.stringify({ business: { name: "My Business" }, createdReplacement: false }), {
+          status: 200,
+        });
+      });
+      const user = userEvent.setup();
+      renderTeamSection();
+
+      await user.click(await screen.findByRole("button", { name: /leave kigali traders/i }));
+      const dialog = await screen.findByRole("dialog", { name: /leave team/i });
+      await user.click(within(dialog).getByRole("button", { name: /cancel/i }));
+
+      expect(leaveCalled).toBe(false);
+      await waitFor(() => expect(screen.queryByRole("dialog", { name: /leave team/i })).not.toBeInTheDocument());
+    });
+
+    it("leaves the team and lands on the dashboard when confirmed", async () => {
+      mockMemberFetch(
+        () =>
+          new Response(JSON.stringify({ business: { name: "Side Hustle" }, createdReplacement: false }), {
+            status: 200,
+          }),
+      );
+      const user = userEvent.setup();
+      renderTeamSection();
+
+      await user.click(await screen.findByRole("button", { name: /leave kigali traders/i }));
+      const dialog = await screen.findByRole("dialog", { name: /leave team/i });
+      await user.click(within(dialog).getByRole("button", { name: /^leave team$/i }));
+
+      expect(await screen.findByText("dashboard page")).toBeInTheDocument();
+    });
+
+    it("shows an error and stays put if leaving fails", async () => {
+      mockMemberFetch(() => new Response(JSON.stringify({ error: "server_error" }), { status: 500 }));
+      const user = userEvent.setup();
+      renderTeamSection();
+
+      await user.click(await screen.findByRole("button", { name: /leave kigali traders/i }));
+      const dialog = await screen.findByRole("dialog", { name: /leave team/i });
+      await user.click(within(dialog).getByRole("button", { name: /^leave team$/i }));
+
+      expect(await screen.findByText(/couldn't leave the team/i)).toBeInTheDocument();
+      expect(screen.getByRole("dialog", { name: /leave team/i })).toBeInTheDocument();
+    });
   });
 
   it("copies a pending invite's link", async () => {

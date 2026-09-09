@@ -1,5 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { useImpersonationRequest } from "../../hooks/useImpersonationRequest";
+import { useAuth } from "../../context/AuthContext";
+import { useToast } from "../../context/ToastContext";
 import { apiRequest, ApiError } from "../../lib/apiClient";
 import { copyToClipboard } from "../../lib/clipboard";
 import { Button } from "../Button";
@@ -31,6 +34,9 @@ const ROLE_LABELS: Record<Member["role"], string> = {
 };
 
 export function TeamSection() {
+  const { business, refreshAuth } = useAuth();
+  const { success: toastSuccess } = useToast();
+  const navigate = useNavigate();
   const [members, setMembers] = useState<Member[] | null>(null);
   const [invites, setInvites] = useState<Invite[] | null>(null);
   const [isOwner, setIsOwner] = useState<boolean | null>(null);
@@ -48,6 +54,9 @@ export function TeamSection() {
   const [impersonatingMemberId, setImpersonatingMemberId] = useState<string | null>(null);
   const [removeTarget, setRemoveTarget] = useState<Member | null>(null);
   const [isRemoving, setIsRemoving] = useState(false);
+  const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
+  const [isLeaving, setIsLeaving] = useState(false);
+  const [leaveError, setLeaveError] = useState<string | null>(null);
 
   useEffect(() => {
     setLoadError(false);
@@ -109,6 +118,28 @@ export function TeamSection() {
       setError("Couldn't change that member's role. Try again.");
     } finally {
       setChangingRoleId(null);
+    }
+  }
+
+  async function confirmLeaveTeam() {
+    setLeaveError(null);
+    setIsLeaving(true);
+    try {
+      const data = await apiRequest<{ business: { name: string }; createdReplacement: boolean }>("/business/leave", {
+        method: "POST",
+      });
+      await refreshAuth();
+      setIsLeaveModalOpen(false);
+      toastSuccess(
+        data.createdReplacement
+          ? `You've left the team. We set up "${data.business.name}" for you - rename or remove it in Settings whenever you like.`
+          : `You've left the team. You're now in ${data.business.name}.`,
+      );
+      navigate("/dashboard");
+    } catch {
+      setLeaveError("Couldn't leave the team. Try again.");
+    } finally {
+      setIsLeaving(false);
     }
   }
 
@@ -189,6 +220,42 @@ export function TeamSection() {
       <section className="rounded-xl border border-neutral-200 bg-surface p-6">
         <h2 className="font-display text-base font-semibold text-neutral-900">Team</h2>
         <p className="mt-4 font-sans text-sm text-neutral-600">Only the business owner can manage who has access.</p>
+        <button
+          type="button"
+          onClick={() => setIsLeaveModalOpen(true)}
+          className="mt-4 font-sans text-sm font-semibold text-error hover:underline"
+        >
+          Leave {business?.name ?? "this team"}
+        </button>
+
+        <Modal isOpen={isLeaveModalOpen} onClose={() => setIsLeaveModalOpen(false)} title="Leave team">
+          <p className="font-sans text-sm text-neutral-600">
+            Leave {business?.name}? You'll lose access to its documents, customers, and items right away. You can
+            re-join later if you're invited again.
+          </p>
+          {leaveError && (
+            <div className="mt-3 rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">
+              {leaveError}
+            </div>
+          )}
+          <div className="mt-6 flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => setIsLeaveModalOpen(false)}
+              className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={isLeaving}
+              onClick={confirmLeaveTeam}
+              className="rounded-lg bg-error px-4 py-2 font-sans text-sm font-semibold text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {isLeaving ? "Leaving…" : "Leave team"}
+            </button>
+          </div>
+        </Modal>
       </section>
     );
   }
