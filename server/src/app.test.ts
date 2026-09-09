@@ -94,4 +94,20 @@ describe("GET /health", () => {
     const res = await request(createApp()).get("/health");
     expect(res.headers["cross-origin-resource-policy"]).toBe("cross-origin");
   });
+
+  it("allows the Content-Security-Policy the Firebase Auth SDK actually needs", async () => {
+    // Regression test: helmet's default CSP only ever wrapped this API's own
+    // JSON responses before the client-server merge - once this process also
+    // served the real HTML page, that same default (no explicit connect-src)
+    // silently blocked the page's own login, both email/password (a fetch
+    // straight to Google's identity servers, not this origin) and "Continue
+    // with Google" (which loads apis.google.com as a <script>). Confirmed
+    // against a real browser, not just this header - see the CSP directive
+    // comment in app.ts for the full story.
+    const res = await request(createApp()).get("/health");
+    const csp = res.headers["content-security-policy"];
+    expect(csp).toContain("https://identitytoolkit.googleapis.com");
+    expect(csp).toContain("https://securetoken.googleapis.com");
+    expect(csp).toContain("https://apis.google.com");
+  });
 });

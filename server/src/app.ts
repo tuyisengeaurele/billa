@@ -62,6 +62,30 @@ export function createApp(clientDistDir: string = DEFAULT_CLIENT_DIST_DIR) {
       // default would block the browser from loading them. Harmless in production,
       // where client and API are the same origin anyway.
       crossOriginResourcePolicy: { policy: "cross-origin" },
+      // Helmet's default CSP (default-src 'self', no explicit connect-src) only
+      // ever wrapped this API's own JSON responses before - now that this process
+      // also serves the actual HTML page, that same default silently blocked the
+      // page's own login: the Firebase Auth SDK's network calls (signInWithPassword
+      // et al, straight to Google's identity servers, not this origin) and, for
+      // "Continue with Google", the apis.google.com script it loads to run the
+      // popup. Both are real dependencies of this page, not third parties to be
+      // wary of - CSP is the wrong place to also be firebase's origin allowlist.
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          connectSrc: [
+            "'self'",
+            "https://identitytoolkit.googleapis.com",
+            "https://securetoken.googleapis.com",
+            "https://www.googleapis.com",
+          ],
+          scriptSrc: ["'self'", "https://apis.google.com"],
+          frameSrc: ["'self'", "https://accounts.google.com", "https://*.firebaseapp.com"],
+          // The 2FA setup QR code is a data: URI straight from the server response,
+          // not a file this page loads from anywhere.
+          imgSrc: ["'self'", "data:"],
+        },
+      },
     }),
   );
   app.use(
