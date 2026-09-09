@@ -1,11 +1,10 @@
 import {
   createUserWithEmailAndPassword,
   EmailAuthProvider,
-  getRedirectResult,
   reauthenticateWithCredential,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
-  signInWithRedirect,
+  signInWithPopup,
   signOut,
   updatePassword,
 } from "firebase/auth";
@@ -21,25 +20,18 @@ export async function signUpWithEmail(email: string, password: string): Promise<
   return credential.user.getIdToken();
 }
 
-// A real page navigation to Google and back, not a popup window. A popup needs
-// the browser to let a separate window read/write storage and talk back to its
-// opener, which an increasing share of browsers restrict by default for
-// cross-site windows - the visible symptom is a permanently blank Firebase
-// auth-handler popup, stuck with nothing to click. A redirect sidesteps the
-// problem entirely: there's only ever one browsing context, so there's no
-// window-to-window handoff to block. This never resolves meaningfully itself
-// (the browser navigates away first); the result comes back on the app's next
-// load, via consumeGoogleRedirectResult().
-export async function signInWithGoogle(): Promise<void> {
-  await signInWithRedirect(auth, googleProvider);
-}
-
-// Called once on every app load. Resolves to the signed-in ID token if this load
-// is the browser returning from signInWithGoogle(), or null on an ordinary page
-// load with no pending redirect to consume.
-export async function consumeGoogleRedirectResult(): Promise<string | null> {
-  const result = await getRedirectResult(auth);
-  return result ? result.user.getIdToken() : null;
+// A popup, not a full-page redirect. Popups need Cross-Origin-Opener-Policy to
+// allow the popup to report its result back to this window - see app.ts on the
+// server, which explicitly disables Helmet's default same-origin COOP for
+// exactly this. Redirect was tried first (avoids that window-to-window handoff
+// entirely) but turned out to have its own failure mode: it depends on Firebase
+// persisting "a sign-in is pending" across the full round trip through Google
+// and back, and that state was getting lost somewhere in the middle, with
+// nothing thrown to explain why. Popup resolves synchronously in the same call
+// that opened it - there's no cross-navigation state to lose.
+export async function signInWithGoogle(): Promise<string> {
+  const credential = await signInWithPopup(auth, googleProvider);
+  return credential.user.getIdToken();
 }
 
 export async function signOutFirebase(): Promise<void> {
