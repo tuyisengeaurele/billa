@@ -29,7 +29,13 @@ services:
     # --schema=) because server/prisma.config.ts is what actually supplies the
     # DATABASE_URL for `migrate deploy` in this Prisma version - schema.prisma alone
     # has no datasource url, and that config file is only auto-discovered from cwd.
-    buildCommand: npm ci --include=dev && npm run prisma:generate && npm run build --workspace=server && npm run build --workspace=client && cd server && npx prisma migrate deploy
+    #
+    # PDF rendering (server/src/lib/pdf/browser.ts) launches a real headless
+    # Chrome via puppeteer - `npm ci` alone doesn't reliably download it anymore,
+    # so this installs it explicitly. Render's build and runtime share the same
+    # disk, so whatever lands in the default cache dir here (~/.cache/puppeteer)
+    # is exactly where the running server looks for it.
+    buildCommand: npm ci --include=dev && npm exec --workspace=server -- puppeteer browsers install chrome && npm run prisma:generate && npm run build --workspace=server && npm run build --workspace=client && cd server && npx prisma migrate deploy
     startCommand: node server/dist/index.js
     healthCheckPath: /health
     envVars:
