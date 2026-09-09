@@ -96,10 +96,6 @@ services:
       # Optional - error monitoring, leave blank to skip for now.
       - key: SENTRY_DSN
         sync: false
-      # Optional - background-removal microservice for logo uploads (bg-removal-service/),
-      # deployed separately. Leave unset and that one feature just won't be available yet.
-      - key: REMBG_SERVICE_URL
-        sync: false
 
   - type: web
     name: billa-client

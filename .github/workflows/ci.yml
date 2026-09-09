@@ -31,7 +31,6 @@ jobs:
       JWT_REFRESH_TTL: 30d
       JWT_ACCESS_TTL: 15m
       UPLOADS_DIR: ./uploads-test
-      REMBG_SERVICE_URL: http://localhost:8000/remove-background
 
     steps:
       - uses: actions/checkout@v4
@@ -87,7 +86,6 @@ jobs:
       JWT_REFRESH_TTL: 30d
       JWT_ACCESS_TTL: 15m
       UPLOADS_DIR: ./uploads-e2e
-      REMBG_SERVICE_URL: http://localhost:8000/remove-background
 
     steps:
       - uses: actions/checkout@v4

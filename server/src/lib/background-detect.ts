@@ -1,4 +1,5 @@
 import sharp from "sharp";
+import { colorDistance } from "./pixel-color.js";
 
 export interface BackgroundDetection {
   hasTransparency: boolean;
@@ -52,11 +53,4 @@ function areCornersUniform(data: Buffer, width: number, height: number, channels
 function getPixel(data: Buffer, width: number, channels: number, x: number, y: number) {
   const idx = (y * width + x) * channels;
   return { r: data[idx], g: data[idx + 1], b: data[idx + 2] };
-}
-
-function colorDistance(
-  a: { r: number; g: number; b: number },
-  b: { r: number; g: number; b: number },
-): number {
-  return Math.sqrt((a.r - b.r) ** 2 + (a.g - b.g) ** 2 + (a.b - b.b) ** 2);
 }

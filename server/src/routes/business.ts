@@ -30,7 +30,7 @@ import { mergeSequences } from "../lib/document-sequences.js";
 import { detectAllowedImageType } from "../lib/file-sniff.js";
 import { getStorage } from "../lib/storage.js";
 import { detectBackground } from "../lib/background-detect.js";
-import { removeBackground } from "../lib/rembg-client.js";
+import { removeBackground } from "../lib/background-removal.js";
 import { ForbiddenUploadPathError, readUploadedFile } from "../lib/uploaded-file.js";
 import { extractPalette } from "../lib/palette.js";
 import { sendEmail } from "../lib/mailer.js";
@@ -211,9 +211,18 @@ businessRouter.post("/logo/remove-background", requireOwner, validateBody(logoUr
     return;
   }
 
-  const processed = await removeBackground(buffer);
-  const saved = await getStorage().save(processed, businessId, "png");
-  res.json({ url: saved.url, backgroundRemoved: true, detection });
+  try {
+    const processed = await removeBackground(buffer);
+    const saved = await getStorage().save(processed, businessId, "png");
+    res.json({ url: saved.url, backgroundRemoved: true, detection });
+  } catch (err) {
+    // Background removal is a best-effort enhancement on top of a flood-fill
+    // heuristic - the rest of the logo flow (color extraction, saving the logo)
+    // works fine without it, so an unexpected failure here (a malformed image
+    // sharp can't decode, for instance) shouldn't block the upload entirely.
+    Sentry.captureException(err);
+    res.json({ url, backgroundRemoved: false, detection });
+  }
 });
 
 businessRouter.post("/logo/extract-colors", requireOwner, validateBody(logoUrlSchema), async (req, res) => {
