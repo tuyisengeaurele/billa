@@ -123,6 +123,27 @@ describe("apiRequest", () => {
     expect(window.location.href).toBe("http://localhost/items");
   });
 
+  it("gives up on a request that never resolves, instead of leaving the caller stuck forever", async () => {
+    // Regression test: a hung server route or dead network condition used to leave
+    // every caller's promise pending forever - no error, no way for the page's
+    // existing retry UI to ever kick in.
+    vi.useFakeTimers();
+    vi.spyOn(global, "fetch").mockImplementation(
+      (_url, init) =>
+        new Promise((_resolve, reject) => {
+          const signal = (init as RequestInit).signal;
+          signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
+        }),
+    );
+
+    const promise = apiRequest("/health").catch((err) => err);
+    await vi.advanceTimersByTimeAsync(20000);
+    const result = await promise;
+
+    expect(result).toBeInstanceOf(DOMException);
+    vi.useRealTimers();
+  });
+
   it("does not redirect when the refresh attempt fails for a reason other than 401", async () => {
     const fetchSpy = vi.spyOn(global, "fetch");
     fetchSpy

@@ -17,14 +17,30 @@ interface RequestOptions {
   body?: unknown;
 }
 
+// Without this, a request that never resolves (a hung server route, a network
+// condition that neither succeeds nor fails) left every caller's loading state
+// stuck forever - a spinner with nothing behind it and no way out. Every page in
+// the app already has error + retry UI wired to a rejected apiRequest promise, so
+// turning a hang into a rejection after a wait is enough to put that same escape
+// hatch to use here too, without touching a single one of those call sites.
+const REQUEST_TIMEOUT_MS = 20000;
+
 async function rawRequest(path: string, options: RequestOptions = {}): Promise<Response> {
   const { body } = options;
-  return fetch(`${BASE_URL}${path}`, {
-    method: options.method ?? "GET",
-    credentials: "include",
-    headers: body !== undefined && !(body instanceof FormData) ? { "Content-Type": "application/json" } : undefined,
-    body: body === undefined ? undefined : body instanceof FormData ? body : JSON.stringify(body),
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    return await fetch(`${BASE_URL}${path}`, {
+      method: options.method ?? "GET",
+      credentials: "include",
+      headers:
+        body !== undefined && !(body instanceof FormData) ? { "Content-Type": "application/json" } : undefined,
+      body: body === undefined ? undefined : body instanceof FormData ? body : JSON.stringify(body),
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 async function parseBody(response: Response): Promise<unknown> {
