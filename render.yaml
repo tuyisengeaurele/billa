@@ -85,10 +85,22 @@ services:
         sync: false
       - key: FIREBASE_PRIVATE_KEY
         sync: false
-      # Gmail SMTP - a Google Account app password, not the regular login password.
+      # Gmail, sent over its HTTPS API (server/src/lib/mailer.ts) - Render's free
+      # tier blocks outbound SMTP entirely, so raw SMTP (an app password) never
+      # works here regardless of credentials. One-time setup in Google Cloud
+      # Console for the project behind your Firebase app: enable the Gmail API,
+      # create an OAuth client ID (Desktop app type is simplest), then use
+      # https://developers.google.com/oauthplayground - gear icon -> "Use your
+      # own OAuth credentials" with that client ID/secret -> authorize scope
+      # https://www.googleapis.com/auth/gmail.send as GMAIL_USER's account ->
+      # exchange for a refresh token.
       - key: GMAIL_USER
         sync: false
-      - key: GMAIL_APP_PASSWORD
+      - key: GMAIL_CLIENT_ID
+        sync: false
+      - key: GMAIL_CLIENT_SECRET
+        sync: false
+      - key: GMAIL_REFRESH_TOKEN
         sync: false
       # Who can see the contact-form inbox at /admin - comma-separated emails.
       - key: ADMIN_EMAILS
