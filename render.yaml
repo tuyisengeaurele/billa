@@ -17,7 +17,11 @@ services:
     # --include=dev is required: NODE_ENV=production (set below) makes a plain
     # `npm ci` skip devDependencies, but `tsc` itself and the @types/* packages
     # needed to compile the server (not to run it - just to build it) live there.
-    buildCommand: npm ci --include=dev && npm run prisma:generate && npm run build --workspace=server && npx prisma migrate deploy --schema=server/prisma/schema.prisma
+    # The migration step runs with server/ as its working directory (via `cd`, not
+    # --schema=) because server/prisma.config.ts is what actually supplies the
+    # DATABASE_URL for `migrate deploy` in this Prisma version - schema.prisma alone
+    # has no datasource url, and that config file is only auto-discovered from cwd.
+    buildCommand: npm ci --include=dev && npm run prisma:generate && npm run build --workspace=server && cd server && npx prisma migrate deploy
     startCommand: node server/dist/index.js
     healthCheckPath: /health
     envVars:
