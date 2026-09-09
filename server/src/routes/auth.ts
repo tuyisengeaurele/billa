@@ -29,6 +29,7 @@ import {
   verifyTotpToken,
 } from "../lib/totp.js";
 import { hasBusinessAccess } from "../lib/business-access.js";
+import { findPendingAdminByEmail } from "../lib/pending-admin.js";
 import { logAdminAction } from "../lib/admin-audit-log.js";
 import { logActivity } from "../lib/activity-log.js";
 import { deleteUserCascade } from "../lib/delete-business.js";
@@ -77,7 +78,17 @@ authRouter.post("/session", authRateLimit, validateBody(sessionSchema), async (r
     return;
   }
 
-  const existing = await prisma.user.findUnique({ where: { firebaseUid: firebaseUser.uid } });
+  let existing = await prisma.user.findUnique({ where: { firebaseUid: firebaseUser.uid } });
+  if (!existing) {
+    // A system admin added directly by another admin (see admin.ts's POST
+    // /admins) exists as a row before they've ever signed in - this is where
+    // their first real sign-in (any method) claims it, by matching the email
+    // it was created with rather than a firebaseUid that doesn't exist yet.
+    const pending = await findPendingAdminByEmail(firebaseUser.email);
+    if (pending) {
+      existing = await prisma.user.update({ where: { id: pending.id }, data: { firebaseUid: firebaseUser.uid } });
+    }
+  }
   if (existing) {
     if (existing.suspendedAt) {
       res.status(403).json({ error: "account_suspended" });

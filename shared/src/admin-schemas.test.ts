@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  addAdminSchema,
   adminAuditLogQuerySchema,
   adminBusinessListQuerySchema,
   adminUserListQuerySchema,
@@ -87,5 +88,15 @@ describe("renameBusinessSchema", () => {
 
   it("rejects a name over 200 characters", () => {
     expect(renameBusinessSchema.safeParse({ name: "a".repeat(201) }).success).toBe(false);
+  });
+});
+
+describe("addAdminSchema", () => {
+  it("accepts a valid email, trimmed and lowercased", () => {
+    expect(addAdminSchema.parse({ email: "  Admin@Example.com  " }).email).toBe("admin@example.com");
+  });
+
+  it("rejects an invalid email", () => {
+    expect(addAdminSchema.safeParse({ email: "not-an-email" }).success).toBe(false);
   });
 });

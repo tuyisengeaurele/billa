@@ -40,3 +40,8 @@ export const renameBusinessSchema = z.object({
   name: z.string().trim().min(1, "Enter a business name").max(200, "Keep it under 200 characters"),
 });
 export type RenameBusinessInput = z.infer<typeof renameBusinessSchema>;
+
+export const addAdminSchema = z.object({
+  email: z.string().trim().toLowerCase().email("Enter a valid email address"),
+});
+export type AddAdminInput = z.infer<typeof addAdminSchema>;
