@@ -1,5 +1,6 @@
 import { cert, getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
+import { describeError, type HealthCheckResult } from "./health-check.js";
 import { withTimeout } from "./with-timeout.js";
 
 function ensureApp() {
@@ -23,17 +24,17 @@ export async function verifyFirebaseToken(idToken: string): Promise<{ uid: strin
   return { uid: decoded.uid, email: decoded.email };
 }
 
-export async function checkFirebaseAdminHealth(): Promise<boolean> {
+export async function checkFirebaseAdminHealth(): Promise<HealthCheckResult> {
   try {
     ensureApp();
     return await withTimeout(
       getAuth()
         .listUsers(1)
-        .then(() => true),
+        .then((): HealthCheckResult => ({ ok: true, error: null })),
       5000,
-      false,
+      { ok: false, error: "Timed out after 5s" },
     );
-  } catch {
-    return false;
+  } catch (err) {
+    return { ok: false, error: describeError(err) };
   }
 }

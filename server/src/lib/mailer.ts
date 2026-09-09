@@ -1,5 +1,6 @@
 import nodemailer, { type Transporter } from "nodemailer";
 import { prisma } from "./prisma.js";
+import { describeError, type HealthCheckResult } from "./health-check.js";
 import { withTimeout } from "./with-timeout.js";
 
 let transporter: Transporter | null = null;
@@ -60,19 +61,20 @@ export async function sendEmail(input: SendEmailInput): Promise<void> {
   await logEmailSent();
 }
 
-export async function checkMailerHealth(): Promise<boolean> {
+export async function checkMailerHealth(): Promise<HealthCheckResult> {
   try {
     // verify() does a real SMTP handshake - against a network that silently drops
-    // packets (some hosts block outbound SMTP entirely) rather than rejecting the
-    // connection, this can hang far longer than a health check should ever wait.
+    // packets (some hosts block outbound SMTP entirely, a real possibility on a
+    // free-tier host) rather than rejecting the connection, this can hang far
+    // longer than a health check should ever wait.
     return await withTimeout(
       getTransport()
         .verify()
-        .then(() => true),
-      5000,
-      false,
+        .then((): HealthCheckResult => ({ ok: true, error: null })),
+      8000,
+      { ok: false, error: "Timed out after 8s - the network may be blocking outbound SMTP" },
     );
-  } catch {
-    return false;
+  } catch (err) {
+    return { ok: false, error: describeError(err) };
   }
 }

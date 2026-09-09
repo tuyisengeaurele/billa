@@ -85,15 +85,15 @@ describe("mailer", () => {
 
     const { checkMailerHealth } = await import("./mailer.js");
 
-    expect(await checkMailerHealth()).toBe(true);
+    expect(await checkMailerHealth()).toEqual({ ok: true, error: null });
   });
 
-  it("reports unhealthy when the transport fails to verify", async () => {
+  it("reports unhealthy when the transport fails to verify, with the real error message", async () => {
     const verify = vi.fn().mockRejectedValue(new Error("auth failed"));
     vi.mocked(nodemailer.createTransport).mockReturnValue({ sendMail: vi.fn(), verify } as never);
 
     const { checkMailerHealth } = await import("./mailer.js");
 
-    expect(await checkMailerHealth()).toBe(false);
+    expect(await checkMailerHealth()).toEqual({ ok: false, error: "auth failed" });
   });
 });

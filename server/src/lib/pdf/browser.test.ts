@@ -24,7 +24,7 @@ describe("checkPdfRenderingHealth", () => {
   it(
     "reports true when the headless browser can render",
     async () => {
-      expect(await checkPdfRenderingHealth()).toBe(true);
+      expect(await checkPdfRenderingHealth()).toEqual({ ok: true, error: null });
     },
     15000,
   );

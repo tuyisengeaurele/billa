@@ -13,9 +13,15 @@ interface JobStatus {
 
 interface SystemHealthResponse {
   dbConnected: boolean;
+  dbError: string | null;
   emailConnected: boolean;
+  emailError: string | null;
   firebaseConnected: boolean;
+  firebaseError: string | null;
   pdfRenderingConnected: boolean;
+  pdfRenderingError: string | null;
+  storageConnected: boolean;
+  storageError: string | null;
   emailsSentLast24h: number;
   emailDailyLimit: number;
   jobs: JobStatus[];
@@ -33,6 +39,21 @@ function StatusBadge({ ok, okLabel, badLabel }: { ok: boolean; okLabel: string; 
       <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${ok ? "bg-success" : "bg-error"}`} aria-hidden="true" />
       {ok ? okLabel : badLabel}
     </span>
+  );
+}
+
+function ServiceStatusCard({ label, ok, error }: { label: string; ok: boolean; error: string | null }) {
+  return (
+    <div className="flex flex-col gap-2 rounded-xl border border-neutral-200 bg-surface p-4">
+      <div className="flex items-center gap-3">
+        <span className="font-sans text-sm font-medium text-neutral-900">{label}:</span>
+        <StatusBadge ok={ok} okLabel="Connected" badLabel="Disconnected" />
+      </div>
+      {/* The whole point of tracking the error message: a red badge alone means
+          another trip through the server logs to find out why - this is that
+          answer, right where the badge already is. */}
+      {!ok && error && <p className="font-sans text-xs text-neutral-500">{error}</p>}
+    </div>
   );
 }
 
@@ -88,23 +109,16 @@ export default function AdminSystemHealth() {
               );
             })()}
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-surface p-4">
-                <span className="font-sans text-sm font-medium text-neutral-900">Database:</span>
-                <StatusBadge ok={health.dbConnected} okLabel="Connected" badLabel="Disconnected" />
-              </div>
-              <div className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-surface p-4">
-                <span className="font-sans text-sm font-medium text-neutral-900">Email:</span>
-                <StatusBadge ok={health.emailConnected} okLabel="Connected" badLabel="Disconnected" />
-              </div>
-              <div className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-surface p-4">
-                <span className="font-sans text-sm font-medium text-neutral-900">Sign-in:</span>
-                <StatusBadge ok={health.firebaseConnected} okLabel="Connected" badLabel="Disconnected" />
-              </div>
-              <div className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-surface p-4">
-                <span className="font-sans text-sm font-medium text-neutral-900">PDF rendering:</span>
-                <StatusBadge ok={health.pdfRenderingConnected} okLabel="Connected" badLabel="Disconnected" />
-              </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <ServiceStatusCard label="Database" ok={health.dbConnected} error={health.dbError} />
+              <ServiceStatusCard label="Email" ok={health.emailConnected} error={health.emailError} />
+              <ServiceStatusCard label="Sign-in" ok={health.firebaseConnected} error={health.firebaseError} />
+              <ServiceStatusCard
+                label="PDF rendering"
+                ok={health.pdfRenderingConnected}
+                error={health.pdfRenderingError}
+              />
+              <ServiceStatusCard label="Storage" ok={health.storageConnected} error={health.storageError} />
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

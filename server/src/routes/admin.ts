@@ -28,6 +28,8 @@ import { deleteBusinessCascade, deleteUserCascade } from "../lib/delete-business
 import { checkMailerHealth } from "../lib/mailer.js";
 import { checkFirebaseAdminHealth } from "../lib/firebase-admin.js";
 import { checkPdfRenderingHealth } from "../lib/pdf/browser.js";
+import { checkStorageHealth } from "../lib/storage.js";
+import { describeError, type HealthCheckResult } from "../lib/health-check.js";
 import { computeRetentionCohorts } from "../lib/retention-cohorts.js";
 
 export const adminRouter = Router();
@@ -398,17 +400,20 @@ const EMAIL_DAILY_LIMIT = 500;
 adminRouter.get("/system-health", async (_req, res) => {
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-  const [latestRuns, dbCheck, emailCheck, firebaseCheck, pdfCheck, emailsSentLast24h] = await Promise.all([
-    prisma.jobRunLog.findMany({ orderBy: { ranAt: "desc" } }),
-    prisma.$queryRaw`SELECT 1`.then(
-      () => true,
-      () => false,
-    ),
-    checkMailerHealth(),
-    checkFirebaseAdminHealth(),
-    checkPdfRenderingHealth(),
-    prisma.emailSendLog.count({ where: { sentAt: { gte: oneDayAgo } } }),
-  ]);
+  const [latestRuns, dbCheck, emailCheck, firebaseCheck, pdfCheck, storageCheck, emailsSentLast24h] =
+    await Promise.all([
+      prisma.jobRunLog.findMany({ orderBy: { ranAt: "desc" } }),
+      prisma
+        .$queryRaw`SELECT 1`.then(
+          (): HealthCheckResult => ({ ok: true, error: null }),
+          (err): HealthCheckResult => ({ ok: false, error: describeError(err) }),
+        ),
+      checkMailerHealth(),
+      checkFirebaseAdminHealth(),
+      checkPdfRenderingHealth(),
+      checkStorageHealth(),
+      prisma.emailSendLog.count({ where: { sentAt: { gte: oneDayAgo } } }),
+    ]);
 
   const jobs = new Map<string, (typeof latestRuns)[number]>();
   for (const run of latestRuns) {
@@ -418,10 +423,16 @@ adminRouter.get("/system-health", async (_req, res) => {
   }
 
   res.json({
-    dbConnected: dbCheck,
-    emailConnected: emailCheck,
-    firebaseConnected: firebaseCheck,
-    pdfRenderingConnected: pdfCheck,
+    dbConnected: dbCheck.ok,
+    dbError: dbCheck.error,
+    emailConnected: emailCheck.ok,
+    emailError: emailCheck.error,
+    firebaseConnected: firebaseCheck.ok,
+    firebaseError: firebaseCheck.error,
+    pdfRenderingConnected: pdfCheck.ok,
+    pdfRenderingError: pdfCheck.error,
+    storageConnected: storageCheck.ok,
+    storageError: storageCheck.error,
     emailsSentLast24h,
     emailDailyLimit: EMAIL_DAILY_LIMIT,
     jobs: Array.from(jobs.values()).map((run) => ({

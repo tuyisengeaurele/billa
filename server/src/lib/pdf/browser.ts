@@ -1,4 +1,5 @@
 import puppeteer, { type Browser } from "puppeteer";
+import { describeError, type HealthCheckResult } from "../health-check.js";
 import { withTimeout } from "../with-timeout.js";
 
 let browserPromise: Promise<Browser> | null = null;
@@ -30,18 +31,20 @@ export async function renderHtmlToPdfBuffer(html: string): Promise<Buffer> {
   }
 }
 
-export async function checkPdfRenderingHealth(): Promise<boolean> {
+export async function checkPdfRenderingHealth(): Promise<HealthCheckResult> {
   try {
     // A cold launch (first render since the process started) is legitimately
     // slower than the other checks, so this gets more headroom than their 5s -
     // still bounded, so a genuinely stuck browser can't hang the whole endpoint.
     return await withTimeout(
-      renderHtmlToPdfBuffer("<html><body>health check</body></html>").then(() => true),
+      renderHtmlToPdfBuffer("<html><body>health check</body></html>").then(
+        (): HealthCheckResult => ({ ok: true, error: null }),
+      ),
       10000,
-      false,
+      { ok: false, error: "Timed out after 10s launching the headless browser" },
     );
-  } catch {
-    return false;
+  } catch (err) {
+    return { ok: false, error: describeError(err) };
   }
 }
 

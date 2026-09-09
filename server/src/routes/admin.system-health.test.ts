@@ -26,8 +26,8 @@ async function registerAndGetCookies(app: ReturnType<typeof createApp>, email: s
 
 describe("GET /admin/system-health", () => {
   it("returns the latest run per job plus DB, email, firebase, and PDF connectivity", async () => {
-    vi.spyOn(mailerModule, "checkMailerHealth").mockResolvedValue(true);
-    vi.spyOn(firebaseAdminModule, "checkFirebaseAdminHealth").mockResolvedValue(true);
+    vi.spyOn(mailerModule, "checkMailerHealth").mockResolvedValue({ ok: true, error: null });
+    vi.spyOn(firebaseAdminModule, "checkFirebaseAdminHealth").mockResolvedValue({ ok: true, error: null });
     const app = createApp();
     const { cookies: adminCookies } = await registerAndGetCookies(app, "admin@example.com", true);
 
@@ -48,6 +48,7 @@ describe("GET /admin/system-health", () => {
     expect(res.body.emailConnected).toBe(true);
     expect(res.body.firebaseConnected).toBe(true);
     expect(res.body.pdfRenderingConnected).toBe(true);
+    expect(res.body.storageConnected).toBe(true);
     expect(res.body.jobs).toHaveLength(2);
     const recurring = res.body.jobs.find((j: { jobName: string }) => j.jobName === "recurring-documents");
     expect(recurring).toMatchObject({ succeeded: false, errorMessage: "boom" });
@@ -56,8 +57,8 @@ describe("GET /admin/system-health", () => {
   });
 
   it("counts emails sent in the last 24 hours and reports the daily limit", async () => {
-    vi.spyOn(mailerModule, "checkMailerHealth").mockResolvedValue(true);
-    vi.spyOn(firebaseAdminModule, "checkFirebaseAdminHealth").mockResolvedValue(true);
+    vi.spyOn(mailerModule, "checkMailerHealth").mockResolvedValue({ ok: true, error: null });
+    vi.spyOn(firebaseAdminModule, "checkFirebaseAdminHealth").mockResolvedValue({ ok: true, error: null });
     const app = createApp();
     const { cookies: adminCookies } = await registerAndGetCookies(app, "admin@example.com", true);
 
@@ -72,16 +73,18 @@ describe("GET /admin/system-health", () => {
     expect(res.body.emailDailyLimit).toBe(500);
   });
 
-  it("reports a service as disconnected when its check fails", async () => {
-    vi.spyOn(mailerModule, "checkMailerHealth").mockResolvedValue(false);
-    vi.spyOn(firebaseAdminModule, "checkFirebaseAdminHealth").mockResolvedValue(false);
+  it("reports a service as disconnected when its check fails, along with why", async () => {
+    vi.spyOn(mailerModule, "checkMailerHealth").mockResolvedValue({ ok: false, error: "auth failed" });
+    vi.spyOn(firebaseAdminModule, "checkFirebaseAdminHealth").mockResolvedValue({ ok: false, error: "no network" });
     const app = createApp();
     const { cookies: adminCookies } = await registerAndGetCookies(app, "admin@example.com", true);
 
     const res = await request(app).get("/admin/system-health").set("Cookie", adminCookies);
 
     expect(res.body.emailConnected).toBe(false);
+    expect(res.body.emailError).toBe("auth failed");
     expect(res.body.firebaseConnected).toBe(false);
+    expect(res.body.firebaseError).toBe("no network");
   });
 
   it("returns 403 for a non-admin", async () => {

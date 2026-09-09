@@ -14,9 +14,15 @@ describe("AdminSystemHealth", () => {
       new Response(
         JSON.stringify({
           dbConnected: true,
+          dbError: null,
           emailConnected: true,
+          emailError: null,
           firebaseConnected: false,
+          firebaseError: "Timed out after 5s",
           pdfRenderingConnected: true,
+          pdfRenderingError: null,
+          storageConnected: true,
+          storageError: null,
           emailsSentLast24h: 42,
           emailDailyLimit: 500,
           jobs: [
@@ -54,8 +60,12 @@ describe("AdminSystemHealth", () => {
     expect(screen.getByText(/email:/i)).toBeInTheDocument();
     expect(screen.getByText(/sign-in:/i)).toBeInTheDocument();
     expect(screen.getByText(/pdf rendering:/i)).toBeInTheDocument();
-    expect(screen.getAllByText("Connected")).toHaveLength(3);
+    expect(screen.getByText(/storage:/i)).toBeInTheDocument();
+    expect(screen.getAllByText("Connected")).toHaveLength(4);
     expect(screen.getByText("Disconnected")).toBeInTheDocument();
+    // The service's own connectivity error, not to be confused with a job's -
+    // sign-in is what's actually down here.
+    expect(screen.getByText("Timed out after 5s")).toBeInTheDocument();
     expect(screen.getByText("SMTP timeout")).toBeInTheDocument();
     expect(screen.getByText("42 / 500")).toBeInTheDocument();
   });

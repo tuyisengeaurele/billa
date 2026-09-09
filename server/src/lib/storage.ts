@@ -1,11 +1,14 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { GetObjectCommand, HeadBucketCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { describeError, type HealthCheckResult } from "./health-check.js";
+import { withTimeout } from "./with-timeout.js";
 
 export interface LogoStorage {
   save(buffer: Buffer, businessId: string, extension: string): Promise<{ url: string; path: string }>;
   read(key: string): Promise<Buffer>;
+  checkHealth(): Promise<HealthCheckResult>;
 }
 
 export class LocalDiskStorage implements LogoStorage {
@@ -21,6 +24,20 @@ export class LocalDiskStorage implements LogoStorage {
 
   async read(key: string): Promise<Buffer> {
     return readFile(path.join(this.uploadsDir, key));
+  }
+
+  async checkHealth(): Promise<HealthCheckResult> {
+    try {
+      // Local disk is wiped on every redeploy anyway (see render.yaml) - this is
+      // only ever the real storage driver in dev, where the process's own working
+      // directory is trivially always reachable. Creating it if missing (rather
+      // than failing) matches save()'s own behavior above.
+      await mkdir(this.uploadsDir, { recursive: true });
+      await access(this.uploadsDir);
+      return { ok: true, error: null };
+    } catch (err) {
+      return { ok: false, error: describeError(err) };
+    }
   }
 }
 
@@ -58,6 +75,20 @@ export class R2Storage implements LogoStorage {
     const bytes = await result.Body!.transformToByteArray();
     return Buffer.from(bytes);
   }
+
+  async checkHealth(): Promise<HealthCheckResult> {
+    try {
+      return await withTimeout(
+        this.client
+          .send(new HeadBucketCommand({ Bucket: this.bucket }))
+          .then((): HealthCheckResult => ({ ok: true, error: null })),
+        5000,
+        { ok: false, error: "Timed out after 5s" },
+      );
+    } catch (err) {
+      return { ok: false, error: describeError(err) };
+    }
+  }
 }
 
 export function getStorage(): LogoStorage {
@@ -74,4 +105,13 @@ export function getStorage(): LogoStorage {
     return new R2Storage({ accountId, accessKeyId, secretAccessKey, bucket });
   }
   return new LocalDiskStorage(process.env.UPLOADS_DIR ?? "./uploads");
+}
+
+export async function checkStorageHealth(): Promise<HealthCheckResult> {
+  try {
+    return await getStorage().checkHealth();
+  } catch (err) {
+    // getStorage() itself throws if STORAGE_DRIVER=r2 is missing its credentials.
+    return { ok: false, error: describeError(err) };
+  }
 }

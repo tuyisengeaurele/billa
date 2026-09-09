@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { LocalDiskStorage } from "./storage.js";
+import { LocalDiskStorage, checkStorageHealth } from "./storage.js";
 
 describe("LocalDiskStorage", () => {
   let tmpDir: string;
@@ -38,6 +38,21 @@ describe("LocalDiskStorage", () => {
     const buffer = await storage.read(saved.path);
     expect(buffer.toString()).toBe("hello");
   });
+
+  it("reports healthy when the uploads directory is reachable, creating it if missing", async () => {
+    const freshDir = path.join(tmpDir, "not-created-yet");
+    const storage = new LocalDiskStorage(freshDir);
+
+    expect(await storage.checkHealth()).toEqual({ ok: true, error: null });
+  });
+});
+
+describe("checkStorageHealth", () => {
+  it("resolves the configured driver and reports its health", async () => {
+    // STORAGE_DRIVER is unset here (this file never sets it to "r2"), so this
+    // resolves to LocalDiskStorage against the test suite's own UPLOADS_DIR.
+    expect(await checkStorageHealth()).toEqual({ ok: true, error: null });
+  });
 });
 
 const sendMock = vi.fn();
@@ -45,6 +60,7 @@ vi.mock("@aws-sdk/client-s3", () => ({
   S3Client: vi.fn().mockImplementation(() => ({ send: sendMock })),
   PutObjectCommand: vi.fn().mockImplementation((input) => ({ input })),
   GetObjectCommand: vi.fn().mockImplementation((input) => ({ input })),
+  HeadBucketCommand: vi.fn().mockImplementation((input) => ({ input })),
 }));
 
 const { R2Storage } = await import("./storage.js");
@@ -89,5 +105,31 @@ describe("R2Storage", () => {
     expect(buffer.toString()).toBe("hello");
     const [command] = sendMock.mock.calls[0];
     expect(command.input).toMatchObject({ Bucket: "billa-uploads", Key: "biz123/logo.png" });
+  });
+
+  it("reports healthy when the bucket responds", async () => {
+    sendMock.mockResolvedValueOnce({});
+    const storage = new R2Storage({
+      accountId: "acct123",
+      accessKeyId: "key",
+      secretAccessKey: "secret",
+      bucket: "billa-uploads",
+    });
+
+    expect(await storage.checkHealth()).toEqual({ ok: true, error: null });
+    const [command] = sendMock.mock.calls[0];
+    expect(command.input).toMatchObject({ Bucket: "billa-uploads" });
+  });
+
+  it("reports the real error when the bucket is unreachable", async () => {
+    sendMock.mockRejectedValueOnce(new Error("access denied"));
+    const storage = new R2Storage({
+      accountId: "acct123",
+      accessKeyId: "key",
+      secretAccessKey: "secret",
+      bucket: "billa-uploads",
+    });
+
+    expect(await storage.checkHealth()).toEqual({ ok: false, error: "access denied" });
   });
 });
