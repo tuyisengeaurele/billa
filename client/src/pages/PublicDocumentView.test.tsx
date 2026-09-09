@@ -108,6 +108,40 @@ describe("PublicDocumentView", () => {
     expect(await screen.findByText(/isn't valid, or the document is no longer available/i)).toBeInTheDocument();
   });
 
+  it("offers a retry instead of spinning forever when the request fails for a reason other than a bad token", async () => {
+    // Regression test: the old catch only handled 404, so any other failure (a
+    // transient 500, a network error) left `document` null forever - the customer
+    // was stuck on a spinner with no error and no way to retry.
+    const user = userEvent.setup();
+    let callCount = 0;
+    vi.spyOn(global, "fetch").mockImplementation(async () => {
+      callCount++;
+      if (callCount === 1) return new Response("{}", { status: 500 });
+      return new Response(
+        JSON.stringify({
+          document: {
+            id: "d1",
+            type: "INVOICE",
+            number: "INV-0001",
+            business: { name: "Kigali Traders" },
+            customer: { name: "Acme Ltd" },
+            lines: [],
+            subtotal: 0,
+            taxTotal: 0,
+            total: 0,
+          },
+        }),
+        { status: 200 },
+      );
+    });
+
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: /try again/i }));
+
+    expect(await screen.findByText(/invoice inv-0001/i)).toBeInTheDocument();
+  });
+
   it("offers to accept an unconverted proforma", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async () =>
       new Response(

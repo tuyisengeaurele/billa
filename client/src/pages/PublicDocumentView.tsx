@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import type { DocumentType } from "@billa/shared";
+import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { Spinner } from "../components/Spinner";
 import { apiRequest, ApiError, API_BASE_URL } from "../lib/apiClient";
 import { formatRwf } from "@billa/shared";
@@ -44,6 +45,8 @@ export default function PublicDocumentView() {
   const { token } = useParams();
   const [document, setDocument] = useState<PublicDocumentDetail | null>(null);
   const [notFound, setNotFound] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
   const [isAccepting, setIsAccepting] = useState(false);
   const [isDeclining, setIsDeclining] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -55,17 +58,22 @@ export default function PublicDocumentView() {
   const [momoError, setMomoError] = useState<string | null>(null);
 
   useEffect(() => {
+    setLoadError(false);
     apiRequest<{ document: PublicDocumentDetail }>(`/public/documents/${token}`)
       .then((data) => {
         setDocument(data.document);
         setMomoPhone(data.document.customer.phone ?? "");
       })
       .catch((err) => {
+        // A 404 means the link itself is invalid - anything else (a network hiccup, a
+        // 500) is worth retrying, so it can't leave the customer on a spinner forever.
         if (err instanceof ApiError && err.status === 404) {
           setNotFound(true);
+        } else {
+          setLoadError(true);
         }
       });
-  }, [token]);
+  }, [token, reloadToken]);
 
   useEffect(() => {
     if (!momoRequestId || momoStatus !== "PENDING") return;
@@ -144,6 +152,14 @@ export default function PublicDocumentView() {
         <p className="font-sans text-sm text-neutral-600">
           This link isn't valid, or the document is no longer available.
         </p>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="mx-auto flex min-h-screen max-w-2xl items-center justify-center px-6">
+        <LoadErrorBanner message="Couldn't load this document." onRetry={() => setReloadToken((t) => t + 1)} />
       </div>
     );
   }

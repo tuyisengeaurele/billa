@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { formatRwf, type DocumentType, type InvoicePaymentStatus } from "@billa/shared";
+import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { Spinner } from "../components/Spinner";
 import { apiRequest, ApiError, API_BASE_URL } from "../lib/apiClient";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
@@ -23,22 +24,39 @@ export default function PublicCustomerPortal() {
   const [customerName, setCustomerName] = useState<string | null>(null);
   const [documents, setDocuments] = useState<PortalDocument[] | null>(null);
   const [notFound, setNotFound] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
+    setLoadError(false);
     apiRequest<{ customer: { name: string }; documents: PortalDocument[] }>(`/public/customers/${token}`)
       .then((data) => {
         setCustomerName(data.customer.name);
         setDocuments(data.documents);
       })
       .catch((err) => {
-        if (err instanceof ApiError && err.status === 404) setNotFound(true);
+        // A 404 means the link itself is invalid - anything else (a network hiccup, a
+        // 500) is worth retrying, so it can't fall into the same permanent dead end.
+        if (err instanceof ApiError && err.status === 404) {
+          setNotFound(true);
+        } else {
+          setLoadError(true);
+        }
       });
-  }, [token]);
+  }, [token, reloadToken]);
 
   if (notFound) {
     return (
       <div className="mx-auto flex min-h-screen max-w-2xl items-center justify-center px-6">
         <p className="font-sans text-sm text-neutral-600">This link isn't valid.</p>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="mx-auto flex min-h-screen max-w-2xl items-center justify-center px-6">
+        <LoadErrorBanner message="Couldn't load these documents." onRetry={() => setReloadToken((t) => t + 1)} />
       </div>
     );
   }
