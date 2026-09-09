@@ -36,15 +36,20 @@ function isTwoFactorRequired(data: SessionResult): data is TwoFactorRequired {
   return "twoFactorRequired" in data && data.twoFactorRequired === true;
 }
 
+// Registering either starts a new business (the normal signup) or joins one you were
+// invited to (see AcceptInvite) - never both, and the invited case skips creating any
+// business of your own entirely.
+export type RegisterIntent = { businessName: string } | { inviteToken: string };
+
 interface AuthContextValue {
   user: User | null;
   business: Business | null;
   isLoading: boolean;
   impersonating: boolean;
   login: (email: string, password: string) => Promise<Business | TwoFactorRequired>;
-  register: (email: string, password: string, businessName: string) => Promise<Business>;
+  register: (email: string, password: string, intent: RegisterIntent) => Promise<Business>;
   loginWithGoogle: () => Promise<Business | TwoFactorRequired>;
-  registerWithGoogle: (businessName: string) => Promise<Business>;
+  registerWithGoogle: (intent: RegisterIntent) => Promise<Business>;
   completeTwoFactorChallenge: (challengeId: string, code: string) => Promise<Business>;
   resetPassword: (email: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -70,10 +75,10 @@ function broadcastAuthChange() {
   }
 }
 
-async function exchangeSession(idToken: string, businessName?: string) {
+async function exchangeSession(idToken: string, intent?: RegisterIntent) {
   return apiRequest<SessionResult>("/auth/session", {
     method: "POST",
-    body: businessName ? { idToken, businessName } : { idToken },
+    body: intent ? { idToken, ...intent } : { idToken },
   });
 }
 
@@ -118,9 +123,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data.business;
   }
 
-  async function register(email: string, password: string, businessName: string) {
+  async function register(email: string, password: string, intent: RegisterIntent) {
     const idToken = await signUpWithEmail(email, password);
-    const data = await exchangeSession(idToken, businessName);
+    const data = await exchangeSession(idToken, intent);
     if (isTwoFactorRequired(data)) throw new Error("unexpected_two_factor_challenge");
     setUser(data.user);
     setBusiness(data.business);
@@ -138,9 +143,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data.business;
   }
 
-  async function registerWithGoogle(businessName: string) {
+  async function registerWithGoogle(intent: RegisterIntent) {
     const idToken = await signInWithGoogleFirebase();
-    const data = await exchangeSession(idToken, businessName);
+    const data = await exchangeSession(idToken, intent);
     if (isTwoFactorRequired(data)) throw new Error("unexpected_two_factor_challenge");
     setUser(data.user);
     setBusiness(data.business);

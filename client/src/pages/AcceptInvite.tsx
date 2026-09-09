@@ -114,7 +114,7 @@ export default function AcceptInvite() {
               Log in
             </Link>
             <Link
-              to="/register"
+              to={`/register?invite=${token}`}
               className="rounded-lg bg-primary-500 px-5 py-2.5 font-sans text-sm font-semibold text-white hover:bg-primary-700"
             >
               Create account

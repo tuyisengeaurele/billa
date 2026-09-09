@@ -1,8 +1,9 @@
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 import { createApp } from "../app.js";
 import { prisma } from "../lib/prisma.js";
 import { resetDb } from "../test/db.js";
+import * as mailerModule from "../lib/mailer.js";
 
 beforeAll(() => {
   process.env.JWT_ACCESS_SECRET ??= "test-secret";
@@ -10,6 +11,9 @@ beforeAll(() => {
 });
 
 beforeEach(resetDb);
+beforeEach(() => {
+  vi.spyOn(mailerModule, "sendEmail").mockResolvedValue();
+});
 
 function fakeIdToken(uid: string, email: string): string {
   return JSON.stringify({ uid, email });
@@ -100,5 +104,61 @@ describe("POST /auth/session", () => {
     const res = await request(app).post("/auth/session").send({ idToken: fakeIdToken("uid-1", "owner@example.com") });
 
     expect(res.body.business.name).toBe("Side Hustle");
+  });
+
+  describe("registering with an inviteToken", () => {
+    async function createOwnerAndInvite(app: ReturnType<typeof createApp>) {
+      const ownerRes = await request(app).post("/auth/session").send({
+        idToken: fakeIdToken("owner-uid", "owner@example.com"),
+        businessName: "Kigali Traders",
+      });
+      const ownerCookies = ownerRes.headers["set-cookie"] as unknown as string[];
+      const inviteRes = await request(app)
+        .post("/business/invites")
+        .set("Cookie", ownerCookies)
+        .send({ email: "friend@example.com" });
+      const token = (inviteRes.body.link as string).split("/invite/")[1];
+      return { token, businessId: ownerRes.body.business.id as string };
+    }
+
+    it("joins the invited business directly, without creating a placeholder business", async () => {
+      const app = createApp();
+      const { token, businessId } = await createOwnerAndInvite(app);
+
+      const res = await request(app).post("/auth/session").send({
+        idToken: fakeIdToken("friend-uid", "friend@example.com"),
+        inviteToken: token,
+      });
+
+      expect(res.status).toBe(201);
+      expect(res.body.business.id).toBe(businessId);
+      expect(res.body.business.name).toBe("Kigali Traders");
+
+      const user = await prisma.user.findUniqueOrThrow({ where: { firebaseUid: "friend-uid" } });
+      const ownedBusinesses = await prisma.business.count({ where: { ownerId: user.id } });
+      expect(ownedBusinesses).toBe(0);
+
+      const membership = await prisma.businessMember.findUnique({
+        where: { businessId_userId: { businessId, userId: user.id } },
+      });
+      expect(membership).not.toBeNull();
+    });
+
+    it("does not leave a dangling account behind when the invite can't be accepted", async () => {
+      const app = createApp();
+      const { token } = await createOwnerAndInvite(app);
+
+      const res = await request(app).post("/auth/session").send({
+        // Registers with a different email than the invite was sent to.
+        idToken: fakeIdToken("someone-else-uid", "someone-else@example.com"),
+        inviteToken: token,
+      });
+
+      expect(res.status).toBe(403);
+      expect(res.body.error).toBe("email_mismatch");
+
+      const user = await prisma.user.findUnique({ where: { firebaseUid: "someone-else-uid" } });
+      expect(user).toBeNull();
+    });
   });
 });

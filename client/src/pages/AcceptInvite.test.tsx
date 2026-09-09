@@ -51,7 +51,10 @@ describe("AcceptInvite", () => {
 
     expect(await screen.findByText(/join kigali traders/i)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /log in/i })).toHaveAttribute("href", "/login");
-    expect(screen.getByRole("link", { name: /create account/i })).toHaveAttribute("href", "/register");
+    expect(screen.getByRole("link", { name: /create account/i })).toHaveAttribute(
+      "href",
+      "/register?invite=tok-abc123",
+    );
   });
 
   it("lets a logged-in matching user accept the invite and redirects to the dashboard", async () => {

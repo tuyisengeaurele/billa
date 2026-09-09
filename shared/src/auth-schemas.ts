@@ -16,6 +16,9 @@ export const PASSWORD_REQUIREMENTS = [
 export const sessionSchema = z.object({
   idToken: z.string().trim().min(1, "Missing ID token"),
   businessName: z.string().trim().min(1).optional(),
+  // Present when this account is being created specifically to accept a pending
+  // invite - skips creating a placeholder business, joining the invited one instead.
+  inviteToken: z.string().trim().min(1).optional(),
 });
 export type SessionInput = z.infer<typeof sessionSchema>;
 

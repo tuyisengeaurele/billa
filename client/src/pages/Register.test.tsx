@@ -17,13 +17,14 @@ vi.mock("../lib/firebaseAuth", () => ({
 
 import { signInWithGoogle, signUpWithEmail } from "../lib/firebaseAuth";
 
-function renderRegister() {
+function renderRegister(initialPath = "/register") {
   return render(
-    <MemoryRouter initialEntries={["/register"]}>
+    <MemoryRouter initialEntries={[initialPath]}>
       <AuthProvider>
         <Routes>
           <Route path="/register" element={<Register />} />
           <Route path="/onboarding" element={<div>onboarding page</div>} />
+          <Route path="/dashboard" element={<div>dashboard page</div>} />
         </Routes>
       </AuthProvider>
     </MemoryRouter>,
@@ -178,5 +179,64 @@ describe("Register", () => {
     await user.click(await screen.findByRole("button", { name: /continue with google/i }));
 
     await waitFor(() => expect(screen.getByText("onboarding page")).toBeInTheDocument());
+  });
+
+  describe("registering from an invite link", () => {
+    it("joins the invited business and skips onboarding, without a placeholder business name", async () => {
+      vi.mocked(signUpWithEmail).mockResolvedValue("fake-id-token");
+      vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+        const url = urlOf(input);
+        if (url.endsWith("/auth/me")) {
+          return new Response("{}", { status: 401 });
+        }
+        if (url.endsWith("/auth/session")) {
+          const body = JSON.parse(init?.body as string);
+          expect(body.inviteToken).toBe("tok123");
+          expect(body.businessName).toBeUndefined();
+          return new Response(
+            JSON.stringify({
+              user: { id: "u2", email: "friend@example.com" },
+              business: { id: "b1", name: "Kigali Traders" },
+            }),
+            { status: 201 },
+          );
+        }
+        return new Response("{}", { status: 401 });
+      });
+
+      const user = userEvent.setup();
+      renderRegister("/register?invite=tok123");
+
+      await user.type(await screen.findByLabelText(/email/i), "friend@example.com");
+      await user.type(screen.getByLabelText(/^password/i), "Supersecret1!");
+      await user.type(screen.getByLabelText(/confirm password/i), "Supersecret1!");
+      await user.click(screen.getByRole("button", { name: /create account/i }));
+
+      await waitFor(() => expect(screen.getByText("dashboard page")).toBeInTheDocument());
+    });
+
+    it("shows a clear message when the invite has expired", async () => {
+      vi.mocked(signUpWithEmail).mockResolvedValue("fake-id-token");
+      vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+        const url = urlOf(input);
+        if (url.endsWith("/auth/me")) {
+          return new Response("{}", { status: 401 });
+        }
+        if (url.endsWith("/auth/session")) {
+          return new Response(JSON.stringify({ error: "expired" }), { status: 410 });
+        }
+        return new Response("{}", { status: 401 });
+      });
+
+      const user = userEvent.setup();
+      renderRegister("/register?invite=tok123");
+
+      await user.type(await screen.findByLabelText(/email/i), "friend@example.com");
+      await user.type(screen.getByLabelText(/^password/i), "Supersecret1!");
+      await user.type(screen.getByLabelText(/confirm password/i), "Supersecret1!");
+      await user.click(screen.getByRole("button", { name: /create account/i }));
+
+      expect(await screen.findByText(/invite has expired/i)).toBeInTheDocument();
+    });
   });
 });

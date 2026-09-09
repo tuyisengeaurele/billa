@@ -19,6 +19,7 @@ import { generateRefreshToken, hashRefreshToken, signAccessToken } from "../lib/
 import { ttlToMs } from "../lib/ttl.js";
 import { clearAuthCookies, setAccessTokenCookie, setRefreshTokenCookie } from "../lib/cookies.js";
 import { issueSession } from "../lib/session.js";
+import { acceptInviteForUser } from "../lib/accept-invite.js";
 import {
   decryptTotpSecret,
   encryptTotpSecret,
@@ -66,7 +67,7 @@ function refreshTtlMs(): number {
 }
 
 authRouter.post("/session", authRateLimit, validateBody(sessionSchema), async (req, res) => {
-  const { idToken, businessName } = req.body as SessionInput;
+  const { idToken, businessName, inviteToken } = req.body as SessionInput;
 
   let firebaseUser: { uid: string; email: string };
   try {
@@ -112,6 +113,35 @@ authRouter.post("/session", authRateLimit, validateBody(sessionSchema), async (r
     res.json({
       user: serializeUser(existing),
       business: { id: business.id, name: business.name, onboardingCompletedAt: business.onboardingCompletedAt },
+    });
+    return;
+  }
+
+  if (inviteToken) {
+    // Registering specifically to join a team, not to start a business - create
+    // just the account (still needs its own trial clock, dormant unless they ever
+    // own something themselves - see requireActiveSubscription) and join the
+    // invited business directly. No placeholder business, no onboarding wizard.
+    const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+    const newUser = await prisma.user.create({
+      data: { email: firebaseUser.email, firebaseUid: firebaseUser.uid, trialEndsAt },
+    });
+    const result = await acceptInviteForUser(inviteToken, newUser);
+    if (!result.ok) {
+      // Don't leave a business-less, invite-less account behind - let them retry
+      // registration cleanly instead.
+      await prisma.user.delete({ where: { id: newUser.id } });
+      res.status(result.status).json({ error: result.error });
+      return;
+    }
+    await issueSession(res, newUser.id, result.business.id);
+    res.status(201).json({
+      user: serializeUser(newUser),
+      business: {
+        id: result.business.id,
+        name: result.business.name,
+        onboardingCompletedAt: result.business.onboardingCompletedAt,
+      },
     });
     return;
   }

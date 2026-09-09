@@ -2,14 +2,16 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { PASSWORD_REQUIREMENTS } from "@billa/shared";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { z } from "zod";
+import type { RegisterIntent } from "../context/AuthContext";
 import { AuthLayout } from "../components/AuthLayout";
 import { Button } from "../components/Button";
 import { FormField } from "../components/FormField";
 import { GoogleIcon } from "../components/icons/GoogleIcon";
 import { useAuth } from "../context/AuthContext";
 import { firebaseErrorCode } from "../lib/firebaseAuth";
+import { ApiError } from "../lib/apiClient";
 
 const DEFAULT_BUSINESS_NAME = "My Business";
 
@@ -30,6 +32,8 @@ type RegisterFormInput = z.infer<typeof registerFormSchema>;
 export default function Register() {
   const { register: registerBusiness, registerWithGoogle } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const inviteToken = searchParams.get("invite");
   const [apiError, setApiError] = useState<string | null>(null);
   const {
     register,
@@ -39,16 +43,37 @@ export default function Register() {
   } = useForm<RegisterFormInput>({ resolver: zodResolver(registerFormSchema) });
   const password = watch("password") ?? "";
 
+  // Joining a team via an invite link never creates a business of its own, so there's
+  // nothing to onboard - land straight on the dashboard, inside the invited business.
+  const intent: RegisterIntent = inviteToken ? { inviteToken } : { businessName: DEFAULT_BUSINESS_NAME };
+
+  function describeInviteError(err: unknown): string | null {
+    if (!(err instanceof ApiError) || typeof err.body !== "object" || err.body === null) return null;
+    const code = (err.body as { error?: string }).error;
+    switch (code) {
+      case "expired":
+        return "That invite has expired. Ask for a new one.";
+      case "already_accepted":
+        return "That invite has already been used.";
+      case "not_found":
+        return "That invite link isn't valid, or has been revoked.";
+      case "email_mismatch":
+        return "That invite was sent to a different email address.";
+      default:
+        return null;
+    }
+  }
+
   async function onSubmit(data: RegisterFormInput) {
     setApiError(null);
     try {
-      const business = await registerBusiness(data.email, data.password, DEFAULT_BUSINESS_NAME);
-      navigate(business.onboardingCompletedAt ? "/dashboard" : "/onboarding");
+      const business = await registerBusiness(data.email, data.password, intent);
+      navigate(inviteToken || business.onboardingCompletedAt ? "/dashboard" : "/onboarding");
     } catch (err) {
       if (firebaseErrorCode(err) === "auth/email-already-in-use") {
         setApiError("That email is already registered. Try logging in instead.");
       } else {
-        setApiError("Something went wrong. Try again.");
+        setApiError(describeInviteError(err) ?? "Something went wrong. Try again.");
       }
     }
   }
@@ -56,20 +81,24 @@ export default function Register() {
   async function handleGoogle() {
     setApiError(null);
     try {
-      const business = await registerWithGoogle(DEFAULT_BUSINESS_NAME);
-      navigate(business.onboardingCompletedAt ? "/dashboard" : "/onboarding");
+      const business = await registerWithGoogle(intent);
+      navigate(inviteToken || business.onboardingCompletedAt ? "/dashboard" : "/onboarding");
     } catch (err) {
       if (firebaseErrorCode(err) !== "auth/popup-closed-by-user") {
-        setApiError("Something went wrong. Try again.");
+        setApiError(describeInviteError(err) ?? "Something went wrong. Try again.");
       }
     }
   }
 
   return (
     <AuthLayout
-      eyebrow="Get started"
-      headline="Your first professional invoice is minutes away."
-      tagline="Add your business details once and every business document after that takes seconds."
+      eyebrow={inviteToken ? "Join your team" : "Get started"}
+      headline={inviteToken ? "One account away from getting to work." : "Your first professional invoice is minutes away."}
+      tagline={
+        inviteToken
+          ? "Create your login, and you'll land straight in the business you were invited to."
+          : "Add your business details once and every business document after that takes seconds."
+      }
     >
       <h2 className="font-display text-2xl font-semibold text-neutral-900">Create your account</h2>
       <p className="mt-2 font-sans text-sm text-neutral-600">
