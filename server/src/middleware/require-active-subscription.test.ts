@@ -12,10 +12,10 @@ beforeAll(() => {
 
 beforeEach(resetDb);
 
-function testApp(userId: string) {
+function testApp(userId: string, businessId: string) {
   const app = express();
   app.use((req, _res, next) => {
-    req.auth = { userId, businessId: "irrelevant" };
+    req.auth = { userId, businessId };
     next();
   });
   app.get("/probe", requireActiveSubscription, (_req, res) => res.json({ ok: true }));
@@ -35,41 +35,82 @@ async function createUser(overrides: { trialEndsAt: Date; currentPeriodEnd?: Dat
   return user.id;
 }
 
+async function createBusiness(ownerId: string) {
+  const business = await prisma.business.create({ data: { name: "Kigali Traders", ownerId } });
+  return business.id;
+}
+
 describe("requireActiveSubscription", () => {
   it("allows GET requests regardless of subscription state", async () => {
-    const userId = await createUser({ trialEndsAt: new Date(Date.now() - 1000) });
-    const res = await request(testApp(userId)).get("/probe");
+    const ownerId = await createUser({ trialEndsAt: new Date(Date.now() - 1000) });
+    const businessId = await createBusiness(ownerId);
+    const res = await request(testApp(ownerId, businessId)).get("/probe");
     expect(res.status).toBe(200);
   });
 
-  it("allows non-GET requests during an active trial", async () => {
-    const userId = await createUser({ trialEndsAt: new Date(Date.now() + 1000 * 60 * 60 * 24) });
-    const res = await request(testApp(userId)).post("/probe");
+  it("allows non-GET requests during the owner's active trial", async () => {
+    const ownerId = await createUser({ trialEndsAt: new Date(Date.now() + 1000 * 60 * 60 * 24) });
+    const businessId = await createBusiness(ownerId);
+    const res = await request(testApp(ownerId, businessId)).post("/probe");
     expect(res.status).toBe(200);
   });
 
-  it("blocks non-GET requests once the trial has lapsed with no payment", async () => {
-    const userId = await createUser({ trialEndsAt: new Date(Date.now() - 1000) });
-    const res = await request(testApp(userId)).post("/probe");
+  it("blocks non-GET requests once the owner's trial has lapsed with no payment", async () => {
+    const ownerId = await createUser({ trialEndsAt: new Date(Date.now() - 1000) });
+    const businessId = await createBusiness(ownerId);
+    const res = await request(testApp(ownerId, businessId)).post("/probe");
     expect(res.status).toBe(402);
     expect(res.body.error).toBe("subscription_required");
   });
 
-  it("allows non-GET requests during an active paid period even if the trial already ended", async () => {
-    const userId = await createUser({
+  it("allows non-GET requests during an active paid period even if the owner's trial already ended", async () => {
+    const ownerId = await createUser({
       trialEndsAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 20),
       currentPeriodEnd: new Date(Date.now() + 1000 * 60 * 60 * 24 * 10),
     });
-    const res = await request(testApp(userId)).post("/probe");
+    const businessId = await createBusiness(ownerId);
+    const res = await request(testApp(ownerId, businessId)).post("/probe");
     expect(res.status).toBe(200);
   });
 
-  it("blocks non-GET requests once a paid period has also lapsed", async () => {
-    const userId = await createUser({
+  it("blocks non-GET requests once the owner's paid period has also lapsed", async () => {
+    const ownerId = await createUser({
       trialEndsAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 40),
       currentPeriodEnd: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5),
     });
-    const res = await request(testApp(userId)).post("/probe");
+    const businessId = await createBusiness(ownerId);
+    const res = await request(testApp(ownerId, businessId)).post("/probe");
     expect(res.status).toBe(402);
+  });
+
+  it("lets an invited member keep working after their own personal trial has lapsed, riding on the owner's active subscription", async () => {
+    const ownerId = await createUser({
+      trialEndsAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 20),
+      currentPeriodEnd: new Date(Date.now() + 1000 * 60 * 60 * 24 * 10),
+    });
+    const businessId = await createBusiness(ownerId);
+    // The member's own trial ended days ago - irrelevant, they're working in someone
+    // else's business.
+    const memberId = await createUser({ trialEndsAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5) });
+    await prisma.businessMember.create({ data: { businessId, userId: memberId } });
+
+    const res = await request(testApp(memberId, businessId)).post("/probe");
+    expect(res.status).toBe(200);
+  });
+
+  it("blocks an invited member once the owner's own access has lapsed, even if the member's personal trial is still active", async () => {
+    const ownerId = await createUser({ trialEndsAt: new Date(Date.now() - 1000) });
+    const businessId = await createBusiness(ownerId);
+    const memberId = await createUser({ trialEndsAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 10) });
+    await prisma.businessMember.create({ data: { businessId, userId: memberId } });
+
+    const res = await request(testApp(memberId, businessId)).post("/probe");
+    expect(res.status).toBe(402);
+  });
+
+  it("blocks a request whose business no longer exists", async () => {
+    const ownerId = await createUser({ trialEndsAt: new Date(Date.now() + 1000 * 60 * 60 * 24) });
+    const res = await request(testApp(ownerId, "nonexistent-business-id")).post("/probe");
+    expect(res.status).toBe(401);
   });
 });
