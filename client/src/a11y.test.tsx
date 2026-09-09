@@ -11,6 +11,7 @@ vi.mock("./lib/firebaseAuth", () => ({
   signInWithEmail: vi.fn(),
   signUpWithEmail: vi.fn(),
   signInWithGoogle: vi.fn(),
+  consumeGoogleRedirectResult: vi.fn(),
   signOutFirebase: vi.fn(),
   resetPassword: vi.fn(),
   firebaseErrorCode: () => null,

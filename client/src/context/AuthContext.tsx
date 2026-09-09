@@ -1,6 +1,7 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { apiRequest } from "../lib/apiClient";
 import {
+  consumeGoogleRedirectResult,
   resetPassword as resetPasswordFirebase,
   signInWithEmail,
   signInWithGoogle as signInWithGoogleFirebase,
@@ -48,8 +49,14 @@ interface AuthContextValue {
   impersonating: boolean;
   login: (email: string, password: string) => Promise<Business | null | TwoFactorRequired>;
   register: (email: string, password: string, intent: RegisterIntent) => Promise<Business>;
-  loginWithGoogle: () => Promise<Business | null | TwoFactorRequired>;
-  registerWithGoogle: (intent: RegisterIntent) => Promise<Business>;
+  // Google is a redirect, not a popup (see firebaseAuth.ts) - triggering it just
+  // sends the browser to Google and back, with nothing meaningful to await here.
+  // The actual result is picked up by completeGoogleSignIn() on the next load,
+  // which every page that offers Google sign-in calls once on mount. `undefined`
+  // means this load has no pending redirect to complete at all - not a business
+  // whose value happens to be missing (that's `null`, same as login's).
+  signInWithGoogleRedirect: () => Promise<void>;
+  completeGoogleSignIn: (intent?: RegisterIntent) => Promise<Business | null | TwoFactorRequired | undefined>;
   completeTwoFactorChallenge: (challengeId: string, code: string) => Promise<Business | null>;
   resetPassword: (email: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -101,8 +108,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  // Google returns to the page via a full navigation (see firebaseAuth.ts), not a
+  // popup, so the result can only be read once per redirect - it's fetched exactly
+  // once here and shared with whichever page's completeGoogleSignIn call needs it
+  // (see below), rather than each page consuming it separately.
+  const googleRedirectIdTokenRef = useRef<Promise<string | null> | null>(null);
+  function getGoogleRedirectIdToken() {
+    if (!googleRedirectIdTokenRef.current) {
+      // Every page mounts this provider, not just the ones offering Google sign-in,
+      // so a hiccup here (or an environment that can't support it at all) must never
+      // take the rest of auth down with it - treat it the same as an ordinary page
+      // load with nothing to consume.
+      googleRedirectIdTokenRef.current = (async () => {
+        try {
+          return (await consumeGoogleRedirectResult()) ?? null;
+        } catch {
+          return null;
+        }
+      })();
+    }
+    return googleRedirectIdTokenRef.current;
+  }
+
   useEffect(() => {
-    refreshAuth().finally(() => setIsLoading(false));
+    async function init() {
+      const idToken = await getGoogleRedirectIdToken();
+      // A pending Google redirect means the page's own completeGoogleSignIn call is
+      // about to exchange it for a real session. Calling /auth/me here at the same
+      // time would just 401 (no session yet) and race that exchange - whichever
+      // setUser call landed last would win, and a 401 landing after a successful
+      // exchange would silently wipe the user back out. Skip it and let the
+      // redirect completion set the user instead.
+      if (!idToken) {
+        await refreshAuth();
+      }
+      setIsLoading(false);
+    }
+    init();
   }, []);
 
   useEffect(() => {
@@ -135,25 +177,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data.business!;
   }
 
-  async function loginWithGoogle() {
-    const idToken = await signInWithGoogleFirebase();
-    const data = await exchangeSession(idToken);
+  async function signInWithGoogleRedirect() {
+    await signInWithGoogleFirebase();
+  }
+
+  async function completeGoogleSignIn(intent?: RegisterIntent) {
+    const idToken = await getGoogleRedirectIdToken();
+    if (!idToken) return undefined;
+    const data = await exchangeSession(idToken, intent);
     if (isTwoFactorRequired(data)) return data;
     setUser(data.user);
     setBusiness(data.business);
     setImpersonating(false);
     return data.business;
-  }
-
-  async function registerWithGoogle(intent: RegisterIntent) {
-    const idToken = await signInWithGoogleFirebase();
-    const data = await exchangeSession(idToken, intent);
-    if (isTwoFactorRequired(data)) throw new Error("unexpected_two_factor_challenge");
-    setUser(data.user);
-    setBusiness(data.business);
-    setImpersonating(false);
-    // Registering always creates or joins a real business - never null here.
-    return data.business!;
   }
 
   async function completeTwoFactorChallenge(challengeId: string, code: string) {
@@ -211,8 +247,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         impersonating,
         login,
         register,
-        loginWithGoogle,
-        registerWithGoogle,
+        signInWithGoogleRedirect,
+        completeGoogleSignIn,
         completeTwoFactorChallenge,
         resetPassword,
         logout,
