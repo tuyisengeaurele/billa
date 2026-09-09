@@ -1,4 +1,9 @@
-const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
+// Local dev runs the client (Vite, :5173) and server (:4000) as two separate
+// processes, so it needs an absolute URL unless VITE_API_URL says otherwise. A
+// production build is served from the same Express process as the API (see
+// server/src/app.ts), so requests there are same-origin by default - an empty
+// base means fetch() resolves every path against the page's own origin.
+const BASE_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.PROD ? "" : "http://localhost:4000");
 export const API_BASE_URL = BASE_URL;
 
 export class ApiError extends Error {

@@ -2,18 +2,17 @@ import type { CookieOptions, Response } from "express";
 
 const isProd = process.env.NODE_ENV === "production";
 
-// The client and API are deployed on two different onrender.com subdomains, which
-// browsers treat as separate sites (onrender.com is on the public suffix list, the
-// same reason vercel.app and github.io subdomains are mutually cross-site) - not the
-// same-origin-but-different-port relationship local dev has between localhost:5173
-// and localhost:4000. A SameSite=Lax cookie is never sent on a cross-site fetch, only
-// on a top-level navigation, so every authenticated API call was silently going out
-// with no cookie at all and immediately reading as an expired session. SameSite=None
-// is the standard fix for a genuinely cross-site frontend/API split - it requires
-// Secure, which is exactly why this only applies in production (plain HTTP local dev
-// cannot set a Secure cookie at all, and doesn't need to - localhost-to-localhost
-// really is same-site).
-const sameSite: CookieOptions["sameSite"] = isProd ? "none" : "lax";
+// The client and API are the same origin in every environment now (see app.ts:
+// the built client is served from this same Express process in production; in
+// local dev, localhost:5173 and localhost:4000 are same-site even though they're
+// different ports) - Lax is not just sufficient, it's the more secure choice
+// once None isn't actually required for anything to work. This used to be
+// SameSite=None in production, back when the client and API were two separate
+// onrender.com subdomains - genuinely cross-site to a browser (onrender.com is on
+// the public suffix list), which meant Incognito (and an increasing share of
+// regular Chrome) silently dropped every auth cookie. None is dormant here, not
+// deleted, in case a future deploy ever splits the two services again.
+const sameSite: CookieOptions["sameSite"] = "lax";
 
 export function setAccessTokenCookie(res: Response, token: string) {
   res.cookie("access_token", token, {

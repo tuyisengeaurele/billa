@@ -1,4 +1,7 @@
 import "express-async-errors";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
@@ -30,8 +33,21 @@ import { detectAllowedImageType } from "./lib/file-sniff.js";
 import { errorHandler } from "./middleware/error-handler.js";
 import { requestLogger } from "./middleware/request-logger.js";
 
-export function createApp() {
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const DEFAULT_CLIENT_DIST_DIR = path.resolve(__dirname, "../../client/dist");
+
+// The built client app, served from this same process in production so the
+// browser only ever talks to one origin - see client/src/lib/apiClient.ts and
+// server/src/lib/cookies.ts for why: two different onrender.com subdomains are
+// cross-site to a browser, and cross-site cookies get silently dropped by
+// Incognito (always) and an increasing share of regular Chrome traffic (the
+// ongoing third-party-cookie phase-out) - no cookie attribute fixes that, only
+// actually being the same origin does. Doesn't exist in local dev (the client
+// runs on its own Vite dev server there), so this stays a no-op until a real
+// build has been run. clientDistDir is only ever overridden by tests.
+export function createApp(clientDistDir: string = DEFAULT_CLIENT_DIST_DIR) {
   const app = express();
+  const clientBuildExists = fs.existsSync(path.join(clientDistDir, "index.html"));
 
   // Trust one hop of proxy (the load balancer/reverse proxy every real host puts in
   // front of the app). Without this, req.ip is always the proxy's own address, which
@@ -41,9 +57,10 @@ export function createApp() {
   app.use(requestLogger);
   app.use(
     helmet({
-      // Uploaded logos and PDFs are served from this API to a client on a different
-      // origin (separate port in dev, separate subdomain in prod) - helmet's
-      // same-origin default would block the browser from loading them there.
+      // Uploaded logos and PDFs need to load from a different origin in local dev
+      // (the client runs on its own Vite dev server there) - helmet's same-origin
+      // default would block the browser from loading them. Harmless in production,
+      // where client and API are the same origin anyway.
       crossOriginResourcePolicy: { policy: "cross-origin" },
     }),
   );
@@ -79,6 +96,31 @@ export function createApp() {
   app.get("/health", (_req, res) => {
     res.json({ ok: true });
   });
+
+  if (clientBuildExists) {
+    // Before every API router, not after: several client page routes share a
+    // bare path with a real API route of the same name (GET /documents is both
+    // "the Documents page" to a browser and "list documents" to the client's own
+    // fetch calls) - an API router registered first would always win, no matter
+    // what a fallback further down checked. A real browser navigation always
+    // sends Accept: text/html; apiRequest()'s fetch calls never do (default */*),
+    // so this never intercepts an actual API call, only page loads.
+    //
+    // The one exception: a PDF is also opened via a direct navigation
+    // (window.open/<a href>, not fetch), which sends that same Accept header -
+    // these two path shapes are the full, current list of endpoints reached that
+    // way (grep client/src for window.open and API_BASE_URL if adding another).
+    const DIRECT_DOWNLOAD_PATHS = [/^\/documents\/[^/]+\/pdf$/, /^\/public\/documents\/[^/]+\/pdf$/];
+    app.use(express.static(clientDistDir));
+    app.get("*", (req, res, next) => {
+      const isDirectDownload = DIRECT_DOWNLOAD_PATHS.some((pattern) => pattern.test(req.path));
+      if (!isDirectDownload && req.method === "GET" && req.headers.accept?.includes("text/html")) {
+        res.sendFile(path.join(clientDistDir, "index.html"));
+        return;
+      }
+      next();
+    });
+  }
 
   app.use("/auth", authRouter);
   app.use("/business", businessRouter);

@@ -11,17 +11,25 @@ services:
     plan: free
     region: oregon
     rootDir: .
+    # Client and API are one service now, not two - see server/src/app.ts and
+    # client/src/lib/apiClient.ts. Two separate onrender.com subdomains are
+    # cross-site to a browser, and cross-site cookies get silently dropped by
+    # Incognito (always) and an increasing share of regular Chrome traffic - this
+    # build step compiles both apps, and the server serves the built client
+    # itself, so the browser only ever talks to one origin.
+    #
     # Free-tier services can't use a separate pre-deploy step, so the migration runs
     # as the last part of the build instead - same effect for a single free instance,
     # since nothing serves traffic until the build finishes either way.
     # --include=dev is required: NODE_ENV=production (set below) makes a plain
-    # `npm ci` skip devDependencies, but `tsc` itself and the @types/* packages
-    # needed to compile the server (not to run it - just to build it) live there.
+    # `npm ci` skip devDependencies, but `tsc`/vite/tailwind and the @types/*
+    # packages needed to compile both apps (not to run the server - just to build
+    # it) live there.
     # The migration step runs with server/ as its working directory (via `cd`, not
     # --schema=) because server/prisma.config.ts is what actually supplies the
     # DATABASE_URL for `migrate deploy` in this Prisma version - schema.prisma alone
     # has no datasource url, and that config file is only auto-discovered from cwd.
-    buildCommand: npm ci --include=dev && npm run prisma:generate && npm run build --workspace=server && cd server && npx prisma migrate deploy
+    buildCommand: npm ci --include=dev && npm run prisma:generate && npm run build --workspace=server && npm run build --workspace=client && cd server && npx prisma migrate deploy
     startCommand: node server/dist/index.js
     healthCheckPath: /health
     envVars:
@@ -32,8 +40,8 @@ services:
           name: billa-db
           property: connectionString
       # Render sets PORT itself; the app already reads it.
-      # Fill these in once both services exist and you know their real URLs
-      # (Render dashboard -> each service -> the URL at the top of its page).
+      # Both of these are this same service's own URL (Render dashboard -> this
+      # service -> the URL at the top of its page) - fill in once you know it.
       - key: CLIENT_ORIGIN
         sync: false
       - key: API_URL
@@ -96,26 +104,10 @@ services:
       # Optional - error monitoring, leave blank to skip for now.
       - key: SENTRY_DSN
         sync: false
-
-  - type: web
-    name: billa-client
-    runtime: static
-    rootDir: .
-    # --include=dev: static-site builds on Render default to NODE_ENV=production too,
-    # which would otherwise skip vite/typescript/tailwind - all devDependencies needed
-    # to build the site, even though none of them ship in the built output.
-    buildCommand: npm ci --include=dev && npm run build --workspace=client
-    staticPublishPath: client/dist
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
-    envVars:
-      # Fill in once billa-api exists and you have its URL.
-      - key: VITE_API_URL
-        sync: false
-      # Same Firebase project as the server's Admin SDK, but the public client
-      # config - Firebase Console -> Project Settings -> General -> Your apps.
+      # The client build needs these baked in at build time (Vite reads VITE_*
+      # env vars from the process environment during `npm run build`) - same
+      # Firebase project as the Admin SDK above, but the public client config
+      # (Firebase Console -> Project Settings -> General -> Your apps).
       - key: VITE_FIREBASE_API_KEY
         sync: false
       - key: VITE_FIREBASE_AUTH_DOMAIN
