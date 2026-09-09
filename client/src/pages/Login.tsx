@@ -9,6 +9,7 @@ import { FormField } from "../components/FormField";
 import { GoogleIcon } from "../components/icons/GoogleIcon";
 import { useAuth } from "../context/AuthContext";
 import { ApiError } from "../lib/apiClient";
+import { hasNoBusinessAccess, isRateLimited, NO_BUSINESS_ACCESS_MESSAGE, RATE_LIMITED_MESSAGE } from "../lib/authErrors";
 import { firebaseErrorCode } from "../lib/firebaseAuth";
 
 const loginFormSchema = z.object({
@@ -54,6 +55,10 @@ export default function Login() {
       const code = firebaseErrorCode(err);
       if (code && INVALID_CREDENTIAL_CODES.has(code)) {
         setApiError("That email or password doesn't match our records.");
+      } else if (isRateLimited(err)) {
+        setApiError(RATE_LIMITED_MESSAGE);
+      } else if (hasNoBusinessAccess(err)) {
+        setApiError(NO_BUSINESS_ACCESS_MESSAGE);
       } else {
         setApiError("Something went wrong. Try again.");
       }
@@ -73,6 +78,10 @@ export default function Login() {
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) {
         setApiError("No account found for that Google account. Create one instead?");
+      } else if (isRateLimited(err)) {
+        setApiError(RATE_LIMITED_MESSAGE);
+      } else if (hasNoBusinessAccess(err)) {
+        setApiError(NO_BUSINESS_ACCESS_MESSAGE);
       } else if (firebaseErrorCode(err) !== "auth/popup-closed-by-user") {
         setApiError("Something went wrong. Try again.");
       }
@@ -87,8 +96,8 @@ export default function Login() {
     try {
       const business = await completeTwoFactorChallenge(challengeId, twoFactorCode.trim());
       navigate(business.onboardingCompletedAt ? "/dashboard" : "/onboarding");
-    } catch {
-      setApiError("That code didn't work. Try again.");
+    } catch (err) {
+      setApiError(isRateLimited(err) ? RATE_LIMITED_MESSAGE : "That code didn't work. Try again.");
     } finally {
       setIsVerifying(false);
     }

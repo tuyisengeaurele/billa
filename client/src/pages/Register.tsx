@@ -12,6 +12,7 @@ import { GoogleIcon } from "../components/icons/GoogleIcon";
 import { useAuth } from "../context/AuthContext";
 import { firebaseErrorCode } from "../lib/firebaseAuth";
 import { ApiError } from "../lib/apiClient";
+import { isRateLimited, RATE_LIMITED_MESSAGE } from "../lib/authErrors";
 
 const DEFAULT_BUSINESS_NAME = "My Business";
 
@@ -72,6 +73,8 @@ export default function Register() {
     } catch (err) {
       if (firebaseErrorCode(err) === "auth/email-already-in-use") {
         setApiError("That email is already registered. Try logging in instead.");
+      } else if (isRateLimited(err)) {
+        setApiError(RATE_LIMITED_MESSAGE);
       } else {
         setApiError(describeInviteError(err) ?? "Something went wrong. Try again.");
       }
@@ -84,7 +87,9 @@ export default function Register() {
       const business = await registerWithGoogle(intent);
       navigate(inviteToken || business.onboardingCompletedAt ? "/dashboard" : "/onboarding");
     } catch (err) {
-      if (firebaseErrorCode(err) !== "auth/popup-closed-by-user") {
+      if (isRateLimited(err)) {
+        setApiError(RATE_LIMITED_MESSAGE);
+      } else if (firebaseErrorCode(err) !== "auth/popup-closed-by-user") {
         setApiError(describeInviteError(err) ?? "Something went wrong. Try again.");
       }
     }

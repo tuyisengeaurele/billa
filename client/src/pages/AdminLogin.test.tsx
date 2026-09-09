@@ -126,6 +126,49 @@ describe("AdminLogin", () => {
     expect(await screen.findByText(/doesn't match our records/i)).toBeInTheDocument();
   });
 
+  it("tells the caller to wait instead of the generic error, when rate-limited", async () => {
+    vi.mocked(signInWithEmail).mockResolvedValue("fake-id-token");
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.endsWith("/auth/session")) {
+        return new Response(JSON.stringify({ error: "rate_limited" }), { status: 429 });
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderAdminLogin();
+
+    await user.type(await screen.findByLabelText(/email/i), "admin@example.com");
+    await user.type(screen.getByLabelText("Password"), "adminpassword");
+    await user.click(screen.getByRole("button", { name: /log in/i }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/too many attempts/i);
+  });
+
+  it("shows a clear message for an admin account with no linked business, instead of a generic error", async () => {
+    // Regression test: this used to be an unhandled 500 from the server (see
+    // auth.session.test.ts) - the client showed the same "Something went wrong"
+    // as any other failure, with no hint of what was actually going on.
+    vi.mocked(signInWithEmail).mockResolvedValue("fake-id-token");
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.endsWith("/auth/session")) {
+        return new Response(JSON.stringify({ error: "no_business_access" }), { status: 403 });
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderAdminLogin();
+
+    await user.type(await screen.findByLabelText(/email/i), "admin@example.com");
+    await user.type(screen.getByLabelText("Password"), "adminpassword");
+    await user.click(screen.getByRole("button", { name: /log in/i }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/isn't linked to a business/i);
+  });
+
   it("shows a verification code step, then enters the admin area once verified", async () => {
     vi.mocked(signInWithEmail).mockResolvedValue("fake-id-token");
     vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {

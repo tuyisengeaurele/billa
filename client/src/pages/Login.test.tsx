@@ -133,6 +133,30 @@ describe("Login", () => {
     await waitFor(() => expect(screen.getByText("dashboard page")).toBeInTheDocument());
   });
 
+  it("tells the caller to wait instead of the generic error, when rate-limited", async () => {
+    // Regression test: a rate-limited /auth/session (429) fell into the same
+    // generic "Something went wrong" catch-all as a real failure, which invites
+    // the person to immediately retry - and retrying immediately just fails again
+    // for the same reason, with no hint why.
+    vi.mocked(signInWithEmail).mockResolvedValue("fake-id-token");
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.endsWith("/auth/session")) {
+        return new Response(JSON.stringify({ error: "rate_limited" }), { status: 429 });
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderLogin();
+
+    await user.type(await screen.findByLabelText(/email/i), "owner@example.com");
+    await user.type(screen.getByLabelText("Password"), "supersecret1");
+    await user.click(screen.getByRole("button", { name: /log in/i }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/too many attempts/i);
+  });
+
   it("shows an error banner on invalid credentials", async () => {
     vi.mocked(signInWithEmail).mockRejectedValue({ code: "auth/invalid-credential" });
     vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 401 }));

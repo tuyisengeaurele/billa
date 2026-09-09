@@ -101,6 +101,27 @@ describe("Register", () => {
     await waitFor(() => expect(screen.getByText("onboarding page")).toBeInTheDocument());
   });
 
+  it("tells the caller to wait instead of the generic error, when rate-limited", async () => {
+    vi.mocked(signUpWithEmail).mockResolvedValue("fake-id-token");
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.endsWith("/auth/session")) {
+        return new Response(JSON.stringify({ error: "rate_limited" }), { status: 429 });
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    renderRegister();
+
+    await user.type(await screen.findByLabelText(/email/i), "owner@example.com");
+    await user.type(screen.getByLabelText(/^password/i), "Supersecret1!");
+    await user.type(screen.getByLabelText(/confirm password/i), "Supersecret1!");
+    await user.click(screen.getByRole("button", { name: /create account/i }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/too many attempts/i);
+  });
+
   it("shows an error banner when the email is already taken", async () => {
     vi.mocked(signUpWithEmail).mockRejectedValue({ code: "auth/email-already-in-use" });
     vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 401 }));
