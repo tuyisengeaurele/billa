@@ -24,8 +24,7 @@ function isTwoFactorRequired(result: unknown): result is { twoFactorRequired: tr
 }
 
 export default function AdminLogin() {
-  const { user, login, signInWithGoogleRedirect, completeGoogleSignIn, completeTwoFactorChallenge, logout } =
-    useAuth();
+  const { user, login, loginWithGoogle, completeTwoFactorChallenge, logout } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const sessionExpired = searchParams.get("expired") === "true";
@@ -39,37 +38,6 @@ export default function AdminLogin() {
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormInput>({ resolver: zodResolver(loginFormSchema) });
-
-  // Google sign-in is a full-page redirect to Google and back (see firebaseAuth.ts),
-  // not a popup - this picks the result back up on the load that follows it. On
-  // every other load, completeGoogleSignIn resolves to undefined immediately and
-  // this is a no-op.
-  useEffect(() => {
-    let cancelled = false;
-    completeGoogleSignIn()
-      .then((result) => {
-        if (cancelled || result === undefined) return;
-        if (result !== null && "twoFactorRequired" in result) {
-          setChallengeId(result.challengeId);
-          return;
-        }
-        setPendingAdminCheck(true);
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        if (isRateLimited(err)) {
-          setApiError(RATE_LIMITED_MESSAGE);
-        } else if (hasNoBusinessAccess(err)) {
-          setApiError(NO_BUSINESS_ACCESS_MESSAGE);
-        } else {
-          setApiError("Something went wrong. Try again.");
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   useEffect(() => {
     if (!pendingAdminCheck || !user) return;
@@ -108,12 +76,20 @@ export default function AdminLogin() {
   async function handleGoogle() {
     setApiError(null);
     try {
-      // Navigates the whole page to Google - there's nothing further to do here
-      // on success. The useEffect above picks up the result once Google sends
-      // the browser back.
-      await signInWithGoogleRedirect();
-    } catch {
-      setApiError("Something went wrong. Try again.");
+      const result = await loginWithGoogle();
+      if (isTwoFactorRequired(result)) {
+        setChallengeId(result.challengeId);
+        return;
+      }
+      setPendingAdminCheck(true);
+    } catch (err) {
+      if (isRateLimited(err)) {
+        setApiError(RATE_LIMITED_MESSAGE);
+      } else if (hasNoBusinessAccess(err)) {
+        setApiError(NO_BUSINESS_ACCESS_MESSAGE);
+      } else {
+        setApiError("Something went wrong. Try again.");
+      }
     }
   }
 

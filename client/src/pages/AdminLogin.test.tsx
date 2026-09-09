@@ -9,14 +9,13 @@ vi.mock("../lib/firebaseAuth", () => ({
   signInWithEmail: vi.fn(),
   signUpWithEmail: vi.fn(),
   signInWithGoogle: vi.fn(),
-  consumeGoogleRedirectResult: vi.fn(),
   signOutFirebase: vi.fn(),
   resetPassword: vi.fn(),
   firebaseErrorCode: (err: unknown) =>
     typeof err === "object" && err !== null && "code" in err ? String((err as { code: unknown }).code) : null,
 }));
 
-import { consumeGoogleRedirectResult, signInWithEmail, signInWithGoogle } from "../lib/firebaseAuth";
+import { signInWithEmail, signInWithGoogle } from "../lib/firebaseAuth";
 
 function renderAdminLogin(initialEntry = "/admin/login") {
   return render(
@@ -82,29 +81,10 @@ describe("AdminLogin", () => {
     await waitFor(() => expect(screen.getByText("admin users page")).toBeInTheDocument());
   });
 
-  it("sends the browser to Google when 'Continue with Google' is clicked", async () => {
-    // Google sign-in is a full-page redirect, not a popup (see firebaseAuth.ts) -
-    // there's nothing to await here beyond confirming the redirect was actually
-    // triggered. The rest of the flow is covered by the "returning from Google"
-    // test below.
-    vi.mocked(signInWithGoogle).mockResolvedValue();
-    vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 401 }));
-
-    const user = userEvent.setup();
-    renderAdminLogin();
-
-    await user.click(await screen.findByRole("button", { name: /continue with google/i }));
-
-    expect(signInWithGoogle).toHaveBeenCalled();
-  });
-
-  it("enters the admin area on the load Google redirects back to, for an admin with no business", async () => {
-    // Simulates landing back on /admin/login after signInWithGoogle() sent the
-    // browser to Google and back - completeGoogleSignIn() picks this up on
-    // mount. Admin-only accounts have no business at all (see auth.ts's
-    // /session handler), which this confirms doesn't trip up the redirect path
-    // the same way it doesn't trip up the popup one.
-    vi.mocked(consumeGoogleRedirectResult).mockResolvedValue("fake-google-token");
+  it("signs in with Google and enters the admin area, for an admin with no business", async () => {
+    // Admin-only accounts have no business at all (see auth.ts's /session
+    // handler) - this confirms that doesn't trip up the Google path either.
+    vi.mocked(signInWithGoogle).mockResolvedValue("fake-google-token");
     vi.spyOn(global, "fetch").mockImplementation(async (input) => {
       const url = urlOf(input);
       if (url.endsWith("/auth/me")) return new Response("{}", { status: 401 });
@@ -117,7 +97,10 @@ describe("AdminLogin", () => {
       return new Response("{}", { status: 401 });
     });
 
+    const user = userEvent.setup();
     renderAdminLogin();
+
+    await user.click(await screen.findByRole("button", { name: /continue with google/i }));
 
     await waitFor(() => expect(screen.getByText("admin users page")).toBeInTheDocument());
   });

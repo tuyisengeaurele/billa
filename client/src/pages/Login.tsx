@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { z } from "zod";
@@ -33,8 +33,7 @@ function postLoginPath(business: { onboardingCompletedAt: string | null } | null
 }
 
 export default function Login() {
-  const { login, signInWithGoogleRedirect, completeGoogleSignIn, completeTwoFactorChallenge, resetPassword } =
-    useAuth();
+  const { login, loginWithGoogle, completeTwoFactorChallenge, resetPassword } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const sessionExpired = searchParams.get("expired") === "true";
@@ -49,39 +48,6 @@ export default function Login() {
     getValues,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormInput>({ resolver: zodResolver(loginFormSchema) });
-
-  // Google sign-in is a full-page redirect to Google and back (see firebaseAuth.ts),
-  // not a popup - this picks the result back up on the load that follows it. On
-  // every other load, completeGoogleSignIn resolves to undefined immediately and
-  // this is a no-op.
-  useEffect(() => {
-    let cancelled = false;
-    completeGoogleSignIn()
-      .then((result) => {
-        if (cancelled || result === undefined) return;
-        if (isTwoFactorRequired(result)) {
-          setChallengeId(result.challengeId);
-          return;
-        }
-        navigate(postLoginPath(result));
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        if (err instanceof ApiError && err.status === 404) {
-          setApiError("No account found for that Google account. Create one instead?");
-        } else if (isRateLimited(err)) {
-          setApiError(RATE_LIMITED_MESSAGE);
-        } else if (hasNoBusinessAccess(err)) {
-          setApiError(NO_BUSINESS_ACCESS_MESSAGE);
-        } else {
-          setApiError("Something went wrong. Try again.");
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   async function onSubmit(data: LoginFormInput) {
     setApiError(null);
@@ -111,12 +77,22 @@ export default function Login() {
     setApiError(null);
     setResetMessage(null);
     try {
-      // Navigates the whole page to Google - there's nothing further to do here
-      // on success. The useEffect above picks up the result once Google sends
-      // the browser back.
-      await signInWithGoogleRedirect();
-    } catch {
-      setApiError("Something went wrong. Try again.");
+      const result = await loginWithGoogle();
+      if (isTwoFactorRequired(result)) {
+        setChallengeId(result.challengeId);
+        return;
+      }
+      navigate(postLoginPath(result));
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) {
+        setApiError("No account found for that Google account. Create one instead?");
+      } else if (isRateLimited(err)) {
+        setApiError(RATE_LIMITED_MESSAGE);
+      } else if (hasNoBusinessAccess(err)) {
+        setApiError(NO_BUSINESS_ACCESS_MESSAGE);
+      } else {
+        setApiError("Something went wrong. Try again.");
+      }
     }
   }
 

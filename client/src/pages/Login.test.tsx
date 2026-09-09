@@ -9,14 +9,13 @@ vi.mock("../lib/firebaseAuth", () => ({
   signInWithEmail: vi.fn(),
   signUpWithEmail: vi.fn(),
   signInWithGoogle: vi.fn(),
-  consumeGoogleRedirectResult: vi.fn(),
   signOutFirebase: vi.fn(),
   resetPassword: vi.fn(),
   firebaseErrorCode: (err: unknown) =>
     typeof err === "object" && err !== null && "code" in err ? String((err as { code: unknown }).code) : null,
 }));
 
-import { consumeGoogleRedirectResult, resetPassword, signInWithEmail, signInWithGoogle } from "../lib/firebaseAuth";
+import { resetPassword, signInWithEmail, signInWithGoogle } from "../lib/firebaseAuth";
 
 function renderLogin(initialEntry = "/login") {
   return render(
@@ -207,27 +206,8 @@ describe("Login", () => {
     expect(await screen.findByText(/doesn't match our records/i)).toBeInTheDocument();
   });
 
-  it("sends the browser to Google when 'Continue with Google' is clicked", async () => {
-    // Google sign-in is a full-page redirect, not a popup (see firebaseAuth.ts) -
-    // there's nothing to await here beyond confirming the redirect was actually
-    // triggered. The rest of the flow is covered by the "returning from Google"
-    // test below.
-    vi.mocked(signInWithGoogle).mockResolvedValue();
-    vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 401 }));
-
-    const user = userEvent.setup();
-    renderLogin();
-
-    await user.click(await screen.findByRole("button", { name: /continue with google/i }));
-
-    expect(signInWithGoogle).toHaveBeenCalled();
-  });
-
-  it("completes sign-in and navigates to /onboarding on the load Google redirects back to", async () => {
-    // Simulates landing back on /login after signInWithGoogle() sent the browser
-    // to Google and back - completeGoogleSignIn() picks this up on mount, the
-    // same as the click handler used to when Google sign-in was a popup.
-    vi.mocked(consumeGoogleRedirectResult).mockResolvedValue("fake-google-token");
+  it("signs in with Google and navigates to /onboarding", async () => {
+    vi.mocked(signInWithGoogle).mockResolvedValue("fake-google-token");
     vi.spyOn(global, "fetch").mockImplementation(async (input) => {
       const url = urlOf(input);
       if (url.endsWith("/auth/me")) {
@@ -245,7 +225,10 @@ describe("Login", () => {
       return new Response("{}", { status: 401 });
     });
 
+    const user = userEvent.setup();
     renderLogin();
+
+    await user.click(await screen.findByRole("button", { name: /continue with google/i }));
 
     await waitFor(() => expect(screen.getByText("onboarding page")).toBeInTheDocument());
   });

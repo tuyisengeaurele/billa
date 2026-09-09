@@ -9,7 +9,6 @@ import Profile from "./Profile";
 vi.mock("../lib/firebaseAuth", () => ({
   hasPasswordProvider: vi.fn(() => true),
   changePassword: vi.fn(),
-  consumeGoogleRedirectResult: vi.fn(),
 }));
 
 import { changePassword, hasPasswordProvider } from "../lib/firebaseAuth";

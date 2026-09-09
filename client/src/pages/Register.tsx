@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PASSWORD_REQUIREMENTS } from "@billa/shared";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { z } from "zod";
@@ -31,7 +31,7 @@ const registerFormSchema = z
 type RegisterFormInput = z.infer<typeof registerFormSchema>;
 
 export default function Register() {
-  const { register: registerBusiness, signInWithGoogleRedirect, completeGoogleSignIn } = useAuth();
+  const { register: registerBusiness, registerWithGoogle } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const inviteToken = searchParams.get("invite");
@@ -47,35 +47,6 @@ export default function Register() {
   // Joining a team via an invite link never creates a business of its own, so there's
   // nothing to onboard - land straight on the dashboard, inside the invited business.
   const intent: RegisterIntent = inviteToken ? { inviteToken } : { businessName: DEFAULT_BUSINESS_NAME };
-
-  // Google sign-in is a full-page redirect to Google and back (see firebaseAuth.ts),
-  // not a popup - this picks the result back up on the load that follows it, using
-  // the same intent a fresh render computes from the URL (Firebase returns to this
-  // exact URL, invite token and all). On every other load this is a no-op.
-  useEffect(() => {
-    let cancelled = false;
-    completeGoogleSignIn(intent)
-      .then((result) => {
-        if (cancelled || result === undefined) return;
-        if (result === null || "twoFactorRequired" in result) {
-          // A brand new registration never has 2FA to challenge - reaching this
-          // means the Google account already had an account, with 2FA enabled.
-          // Matches this page's pre-redirect behavior: a generic error, not a
-          // silent, wrong kind of success.
-          setApiError("Something went wrong. Try again.");
-          return;
-        }
-        navigate(inviteToken || result.onboardingCompletedAt ? "/dashboard" : "/onboarding");
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setApiError(isRateLimited(err) ? RATE_LIMITED_MESSAGE : (describeInviteError(err) ?? "Something went wrong. Try again."));
-      });
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   function describeInviteError(err: unknown): string | null {
     if (!(err instanceof ApiError) || typeof err.body !== "object" || err.body === null) return null;
@@ -113,12 +84,10 @@ export default function Register() {
   async function handleGoogle() {
     setApiError(null);
     try {
-      // Navigates the whole page to Google - there's nothing further to do here
-      // on success. The useEffect above picks up the result once Google sends
-      // the browser back.
-      await signInWithGoogleRedirect();
-    } catch {
-      setApiError("Something went wrong. Try again.");
+      const business = await registerWithGoogle(intent);
+      navigate(inviteToken || business.onboardingCompletedAt ? "/dashboard" : "/onboarding");
+    } catch (err) {
+      setApiError(isRateLimited(err) ? RATE_LIMITED_MESSAGE : (describeInviteError(err) ?? "Something went wrong. Try again."));
     }
   }
 
