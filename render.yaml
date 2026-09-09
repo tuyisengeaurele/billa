@@ -14,7 +14,10 @@ services:
     # Free-tier services can't use a separate pre-deploy step, so the migration runs
     # as the last part of the build instead - same effect for a single free instance,
     # since nothing serves traffic until the build finishes either way.
-    buildCommand: npm ci && npm run prisma:generate && npm run build --workspace=server && npx prisma migrate deploy --schema=server/prisma/schema.prisma
+    # --include=dev is required: NODE_ENV=production (set below) makes a plain
+    # `npm ci` skip devDependencies, but `tsc` itself and the @types/* packages
+    # needed to compile the server (not to run it - just to build it) live there.
+    buildCommand: npm ci --include=dev && npm run prisma:generate && npm run build --workspace=server && npx prisma migrate deploy --schema=server/prisma/schema.prisma
     startCommand: node server/dist/index.js
     healthCheckPath: /health
     envVars:
@@ -98,7 +101,10 @@ services:
     name: billa-client
     runtime: static
     rootDir: .
-    buildCommand: npm ci && npm run build --workspace=client
+    # --include=dev: static-site builds on Render default to NODE_ENV=production too,
+    # which would otherwise skip vite/typescript/tailwind - all devDependencies needed
+    # to build the site, even though none of them ship in the built output.
+    buildCommand: npm ci --include=dev && npm run build --workspace=client
     staticPublishPath: client/dist
     routes:
       - type: rewrite
