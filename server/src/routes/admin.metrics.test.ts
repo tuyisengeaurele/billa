@@ -30,7 +30,13 @@ function daysAgo(n: number): Date {
   return new Date(Date.now() - n * 24 * 60 * 60 * 1000);
 }
 
-async function createDocument(businessId: string, customerId: string, number: string, createdAt: Date) {
+async function createDocument(
+  businessId: string,
+  customerId: string,
+  number: string,
+  createdAt: Date,
+  status: "DRAFT" | "FINALIZED" = "DRAFT",
+) {
   return prisma.document.create({
     data: {
       businessId,
@@ -42,6 +48,7 @@ async function createDocument(businessId: string, customerId: string, number: st
       taxTotal: 0,
       total: 1000,
       createdAt,
+      status,
     },
   });
 }
@@ -99,6 +106,51 @@ describe("GET /admin/metrics", () => {
         { plan: "MONTHLY", count: 1 },
       ]),
     );
+  });
+
+  it("reports activation rate as the share of businesses that have finalized at least one document", async () => {
+    const app = createApp();
+    const { cookies: adminCookies, businessId: activatedBusinessId } = await registerAndGetCookies(
+      app,
+      "admin@example.com",
+      true,
+    );
+    const { businessId: draftOnlyBusinessId } = await registerAndGetCookies(app, "draft-only@example.com");
+
+    const customer1 = await prisma.customer.create({ data: { businessId: activatedBusinessId, name: "Customer A" } });
+    await createDocument(activatedBusinessId, customer1.id, "INV-0001", daysAgo(1), "FINALIZED");
+
+    const customer2 = await prisma.customer.create({ data: { businessId: draftOnlyBusinessId, name: "Customer B" } });
+    await createDocument(draftOnlyBusinessId, customer2.id, "INV-0001", daysAgo(1), "DRAFT");
+
+    const res = await request(app).get("/admin/metrics").set("Cookie", adminCookies);
+
+    expect(res.status).toBe(200);
+    expect(res.body.activation).toEqual({
+      activatedBusinesses: 1,
+      totalBusinesses: 2,
+      rate: 0.5,
+    });
+  });
+
+  it("returns weekly retention cohorts grouped by business signup week", async () => {
+    const app = createApp();
+    const { cookies: adminCookies, businessId, userId } = await registerAndGetCookies(app, "admin@example.com", true);
+    await prisma.business.update({ where: { id: businessId }, data: { createdAt: daysAgo(3) } });
+    await prisma.user.update({ where: { id: userId }, data: { createdAt: daysAgo(3) } });
+
+    const customer = await prisma.customer.create({ data: { businessId, name: "Customer A" } });
+    await createDocument(businessId, customer.id, "INV-0001", daysAgo(2));
+
+    const res = await request(app).get("/admin/metrics").set("Cookie", adminCookies);
+
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.retentionCohorts)).toBe(true);
+    const totalCohortBusinesses = res.body.retentionCohorts.reduce(
+      (sum: number, cohort: { cohortSize: number }) => sum + cohort.cohortSize,
+      0,
+    );
+    expect(totalCohortBusinesses).toBe(1);
   });
 
   it("returns 403 for a non-admin", async () => {

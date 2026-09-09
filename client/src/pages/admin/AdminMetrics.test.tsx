@@ -33,6 +33,8 @@ describe("AdminMetrics", () => {
             { plan: "NONE", count: 4 },
             { plan: "MONTHLY", count: 1 },
           ],
+          activation: { activatedBusinesses: 2, totalBusinesses: 5, rate: 0.4 },
+          retentionCohorts: [],
         }),
         { status: 200 },
       ),
@@ -81,6 +83,8 @@ describe("AdminMetrics", () => {
             { plan: "NONE", count: 4 },
             { plan: "MONTHLY", count: 1 },
           ],
+          activation: { activatedBusinesses: 2, totalBusinesses: 5, rate: 0.4 },
+          retentionCohorts: [],
         }),
         { status: 200 },
       ),
@@ -99,6 +103,55 @@ describe("AdminMetrics", () => {
     expect(screen.getAllByText("Daily counts for the last 30 days", { selector: "caption" })).toHaveLength(2);
     expect(screen.getByText("Accounts by plan", { selector: "caption" })).toBeInTheDocument();
     expect(screen.getAllByText("Trial").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("shows the activation rate and a weekly retention cohort table", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          totalUsers: 5,
+          totalBusinesses: 5,
+          activeTrials: 4,
+          payingAccounts: 1,
+          signups7d: 3,
+          signups30d: 4,
+          documents7d: 1,
+          documents30d: 2,
+          dailySignups30d: [],
+          dailyDocuments30d: [],
+          planDistribution: [{ plan: "NONE", count: 5 }],
+          activation: { activatedBusinesses: 2, totalBusinesses: 5, rate: 0.4 },
+          retentionCohorts: [
+            {
+              cohortStart: "2026-08-24",
+              cohortSize: 3,
+              weeks: [
+                { weekIndex: 0, retainedCount: 2, rate: 0.6667 },
+                { weekIndex: 1, retainedCount: 1, rate: 0.3333 },
+              ],
+            },
+          ],
+        }),
+        { status: 200 },
+      ),
+    );
+
+    render(
+      <MemoryRouter>
+        <AuthProvider>
+          <AdminMetrics />
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Activation")).toBeInTheDocument();
+    expect(screen.getByText("40%")).toBeInTheDocument();
+    expect(screen.getByText("2 of 5 businesses")).toBeInTheDocument();
+
+    expect(screen.getByText("Weekly retention")).toBeInTheDocument();
+    expect(screen.getByText("2026-08-24")).toBeInTheDocument();
+    expect(screen.getByText("67%")).toBeInTheDocument();
+    expect(screen.getByText("33%")).toBeInTheDocument();
   });
 
   it("shows an error message when the request fails", async () => {

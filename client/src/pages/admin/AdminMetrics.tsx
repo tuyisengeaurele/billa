@@ -28,6 +28,24 @@ interface PlanCount {
   count: number;
 }
 
+interface Activation {
+  activatedBusinesses: number;
+  totalBusinesses: number;
+  rate: number;
+}
+
+interface RetentionWeek {
+  weekIndex: number;
+  retainedCount: number;
+  rate: number;
+}
+
+interface RetentionCohort {
+  cohortStart: string;
+  cohortSize: number;
+  weeks: RetentionWeek[];
+}
+
 interface MetricsResponse {
   totalUsers: number;
   totalBusinesses: number;
@@ -40,6 +58,8 @@ interface MetricsResponse {
   dailySignups30d: DailyPoint[];
   dailyDocuments30d: DailyPoint[];
   planDistribution: PlanCount[];
+  activation: Activation;
+  retentionCohorts: RetentionCohort[];
 }
 
 const TILES: { key: keyof MetricsResponse; label: string }[] = [
@@ -121,6 +141,75 @@ function DailyLineChart({
   );
 }
 
+function retentionCellStyle(rate: number): { backgroundColor: string; color: string } {
+  const percent = Math.round(rate * 100);
+  return {
+    backgroundColor: `color-mix(in srgb, var(--color-primary-500) ${percent}%, transparent)`,
+    color: rate >= 0.5 ? "#ffffff" : "var(--color-neutral-700, #3f3f46)",
+  };
+}
+
+function RetentionCohortTable({ cohorts }: { cohorts: RetentionCohort[] }) {
+  if (cohorts.length === 0) {
+    return <p className="font-sans text-sm text-neutral-500">Not enough signups yet to show cohorts.</p>;
+  }
+
+  // Newest cohort first, since that's the one whose onboarding you're most likely
+  // adjusting right now - and only as many week columns as any cohort actually has
+  // data for yet, so a brand-new cohort's still-empty future weeks aren't drawn.
+  const newestFirst = [...cohorts].reverse();
+  const weekCount = Math.max(...cohorts.map((c) => c.weeks.length));
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[560px] border-collapse font-sans text-sm">
+        <caption className="sr-only">
+          Weekly retention by signup cohort: the share of each week's new businesses that created a document in
+          each week since.
+        </caption>
+        <thead>
+          <tr className="text-left text-neutral-500">
+            <th className="py-2 pr-4 font-medium">Cohort (signup week)</th>
+            <th className="py-2 pr-4 font-medium">Size</th>
+            {Array.from({ length: weekCount }, (_, i) => (
+              <th key={i} className="px-1 py-2 text-center font-medium">
+                Week {i}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {newestFirst.map((cohort) => (
+            <tr key={cohort.cohortStart} className="border-t border-neutral-100">
+              <td className="py-2 pr-4 text-neutral-900">{cohort.cohortStart}</td>
+              <td className="py-2 pr-4 tabular-nums text-neutral-600">{cohort.cohortSize}</td>
+              {Array.from({ length: weekCount }, (_, weekIndex) => {
+                const week = cohort.weeks[weekIndex];
+                return (
+                  <td key={weekIndex} className="p-1 text-center">
+                    {week ? (
+                      <span
+                        className="block rounded-md px-2 py-1.5 tabular-nums"
+                        style={retentionCellStyle(week.rate)}
+                      >
+                        {Math.round(week.rate * 100)}%
+                      </span>
+                    ) : (
+                      <span className="block px-2 py-1.5 text-neutral-300" aria-hidden="true">
+                        –
+                      </span>
+                    )}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export default function AdminMetrics() {
   usePageTitle("Metrics");
   const { theme } = useTheme();
@@ -176,6 +265,22 @@ export default function AdminMetrics() {
                   </p>
                 </div>
               ))}
+            </div>
+
+            <div className="rounded-xl border border-neutral-200 bg-surface p-6">
+              <h2 className="font-display text-base font-semibold text-neutral-900">Activation</h2>
+              <p className="mt-1 font-sans text-sm text-neutral-500">
+                Businesses that have finalized at least one document - the point they got real value, not just
+                signed up.
+              </p>
+              <div className="mt-4 flex items-baseline gap-3">
+                <p className="font-display text-3xl font-semibold tabular-nums text-neutral-900">
+                  {Math.round(metrics.activation.rate * 100)}%
+                </p>
+                <p className="font-sans text-sm tabular-nums text-neutral-500">
+                  {metrics.activation.activatedBusinesses} of {metrics.activation.totalBusinesses} businesses
+                </p>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -255,6 +360,16 @@ export default function AdminMetrics() {
                     </tbody>
                   </table>
                 </div>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-neutral-200 bg-surface p-6">
+              <h2 className="font-display text-base font-semibold text-neutral-900">Weekly retention</h2>
+              <p className="mt-1 font-sans text-sm text-neutral-500">
+                Of each week's new businesses, the share that created a document in each week since.
+              </p>
+              <div className="mt-4">
+                <RetentionCohortTable cohorts={metrics.retentionCohorts} />
               </div>
             </div>
           </>

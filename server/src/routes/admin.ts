@@ -28,6 +28,7 @@ import { deleteBusinessCascade, deleteUserCascade } from "../lib/delete-business
 import { checkMailerHealth } from "../lib/mailer.js";
 import { checkFirebaseAdminHealth } from "../lib/firebase-admin.js";
 import { checkPdfRenderingHealth } from "../lib/pdf/browser.js";
+import { computeRetentionCohorts } from "../lib/retention-cohorts.js";
 
 export const adminRouter = Router();
 
@@ -320,6 +321,9 @@ adminRouter.get("/metrics", async (_req, res) => {
     dailySignups30d,
     dailyDocuments30d,
     planGroups,
+    activatedBusinessGroups,
+    cohortBusinesses,
+    cohortDocuments,
   ] = await Promise.all([
     prisma.user.count(),
     prisma.business.count(),
@@ -344,12 +348,27 @@ adminRouter.get("/metrics", async (_req, res) => {
       ORDER BY date ASC
     `,
     prisma.user.groupBy({ by: ["plan"], _count: { _all: true } }),
+    // A business has "activated" once it's finalized at least one document - the
+    // moment it got real value (a document a customer actually sees), not just
+    // signed up and poked around a draft.
+    prisma.document.groupBy({ by: ["businessId"], where: { status: "FINALIZED" } }),
+    prisma.business.findMany({ select: { id: true, createdAt: true } }),
+    prisma.document.findMany({ select: { businessId: true, createdAt: true } }),
   ]);
 
   const planDistribution = planGroups.map((g) => ({
     plan: g.plan ?? "NONE",
     count: g._count._all,
   }));
+
+  const activatedBusinessCount = activatedBusinessGroups.length;
+  const activation = {
+    activatedBusinesses: activatedBusinessCount,
+    totalBusinesses,
+    rate: totalBusinesses > 0 ? activatedBusinessCount / totalBusinesses : 0,
+  };
+
+  const retentionCohorts = computeRetentionCohorts(cohortBusinesses, cohortDocuments, now);
 
   res.json({
     totalUsers,
@@ -369,6 +388,8 @@ adminRouter.get("/metrics", async (_req, res) => {
       count: Number(row.count),
     })),
     planDistribution,
+    activation,
+    retentionCohorts,
   });
 });
 
