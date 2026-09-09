@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../context/AuthContext";
+import { ProtectedRoute } from "../components/ProtectedRoute";
 import Onboarding from "./Onboarding";
 
 function urlOf(input: RequestInfo | URL): string {
@@ -16,6 +17,25 @@ function renderOnboarding() {
         <Routes>
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/dashboard" element={<div>dashboard page</div>} />
+        </Routes>
+      </AuthProvider>
+    </MemoryRouter>,
+  );
+}
+
+// Renders behind the same route guard every real page sits behind, unlike
+// renderOnboarding() above - this is what actually catches a stale-client-state bug
+// like "dashboard bounces back to onboarding because the client doesn't know the
+// server just marked it complete", since ProtectedRoute is what enforces that.
+function renderOnboardingBehindGuard() {
+  return render(
+    <MemoryRouter initialEntries={["/onboarding"]}>
+      <AuthProvider>
+        <Routes>
+          <Route path="/onboarding" element={<Onboarding />} />
+          <Route element={<ProtectedRoute />}>
+            <Route path="/dashboard" element={<div>dashboard page</div>} />
+          </Route>
         </Routes>
       </AuthProvider>
     </MemoryRouter>,
@@ -126,5 +146,37 @@ describe("Onboarding", () => {
 
     await waitFor(() => expect(screen.getByText("dashboard page")).toBeInTheDocument());
     expect(calls).toHaveLength(1);
+  });
+
+  it("actually lands on the dashboard instead of bouncing back, once the real route guard is in front of it", async () => {
+    let completed = false;
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/auth/me")) {
+        return new Response(
+          JSON.stringify({
+            user: { id: "u1", email: "owner@example.com" },
+            business: { id: "b1", name: "My Business", onboardingCompletedAt: completed ? "2026-01-01" : null },
+          }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/business/onboarding/complete") && init?.method === "POST") {
+        completed = true;
+        return new Response("{}", { status: 200 });
+      }
+      return new Response("{}", { status: 401 });
+    });
+    const user = userEvent.setup();
+    renderOnboardingBehindGuard();
+    await screen.findByText("Step 1 of 2");
+
+    await user.click(screen.getByRole("button", { name: /skip onboarding/i }));
+
+    // If the client's own auth state isn't refreshed after completing onboarding,
+    // ProtectedRoute still sees the stale onboardingCompletedAt: null and bounces
+    // straight back here instead of staying on the dashboard.
+    expect(await screen.findByText("dashboard page")).toBeInTheDocument();
+    expect(screen.queryByText("Step 1 of 2")).not.toBeInTheDocument();
   });
 });

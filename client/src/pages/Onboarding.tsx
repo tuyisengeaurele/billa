@@ -13,7 +13,7 @@ type Step = "details" | "logo";
 export default function Onboarding() {
   const [step, setStep] = useState<Step>("details");
   const navigate = useNavigate();
-  const { business, isLoading } = useAuth();
+  const { business, isLoading, refreshAuth } = useAuth();
 
   async function goToDashboard() {
     try {
@@ -21,6 +21,10 @@ export default function Onboarding() {
     } catch {
       // Not fatal: onboarding may just be re-shown on the next login.
     }
+    // The route guard on every other page checks business.onboardingCompletedAt from
+    // this same auth state - without refreshing it here first, it's still the stale
+    // "not done yet" value from before this call, and immediately bounces back here.
+    await refreshAuth();
     navigate("/dashboard");
   }
 
