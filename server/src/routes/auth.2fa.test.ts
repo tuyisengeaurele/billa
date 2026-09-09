@@ -155,6 +155,38 @@ describe("POST /auth/2fa/challenge", () => {
     expect(res.status).toBe(401);
   });
 
+  it("issues a session with business: null for an admin-only account, instead of the old crash", async () => {
+    // Regression test: the challenge row's businessId is "" for an admin with no
+    // business (see /session) - findUniqueOrThrow on that used to throw here.
+    const app = createApp();
+    await prisma.user.create({
+      data: {
+        email: "admin-only@example.com",
+        firebaseUid: "uid-admin-only",
+        trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+        isAdmin: true,
+      },
+    });
+    const firstLogin = await request(app)
+      .post("/auth/session")
+      .send({ idToken: JSON.stringify({ uid: "uid-admin-only", email: "admin-only@example.com" }) });
+    const cookies = firstLogin.headers["set-cookie"] as unknown as string[];
+    const { secret } = await setUpAndEnableTwoFactor(app, cookies);
+
+    const sessionRes = await request(app)
+      .post("/auth/session")
+      .send({ idToken: JSON.stringify({ uid: "uid-admin-only", email: "admin-only@example.com" }) });
+    expect(sessionRes.body.twoFactorRequired).toBe(true);
+
+    const res = await request(app)
+      .post("/auth/2fa/challenge")
+      .send({ challengeId: sessionRes.body.challengeId, code: authenticator.generate(secret) });
+
+    expect(res.status).toBe(200);
+    expect(res.body.business).toBeNull();
+    expect(res.headers["set-cookie"]).toBeDefined();
+  });
+
   it("rejects an expired challenge", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app);

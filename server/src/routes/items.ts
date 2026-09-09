@@ -4,6 +4,7 @@ import { itemListQuerySchema, itemSchema, itemUpdateSchema } from "@billa/shared
 import type { ItemListQuery } from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/require-auth.js";
+import { requireBusinessContext } from "../middleware/require-business.js";
 import { requireActiveSubscription } from "../middleware/require-active-subscription.js";
 import { blockAccountantMutations } from "../middleware/block-accountant-mutations.js";
 import { generalApiRateLimit } from "../middleware/general-rate-limit.js";
@@ -14,6 +15,7 @@ import { toCsv } from "../lib/csv.js";
 export const itemsRouter = Router();
 
 itemsRouter.use(requireAuth);
+itemsRouter.use(requireBusinessContext);
 itemsRouter.use(generalApiRateLimit);
 itemsRouter.use(requireActiveSubscription);
 itemsRouter.use(blockAccountantMutations);

@@ -22,6 +22,7 @@ import type {
 } from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/require-auth.js";
+import { requireBusinessContext } from "../middleware/require-business.js";
 import { generalApiRateLimit } from "../middleware/general-rate-limit.js";
 import { requireOwner } from "../middleware/require-owner.js";
 import { validateBody } from "../middleware/validate.js";
@@ -56,6 +57,7 @@ async function sendInviteEmail(businessName: string, email: string, link: string
 export const businessRouter = Router();
 
 businessRouter.use(requireAuth);
+businessRouter.use(requireBusinessContext);
 businessRouter.use(generalApiRateLimit);
 
 const uploadLogo = multer({

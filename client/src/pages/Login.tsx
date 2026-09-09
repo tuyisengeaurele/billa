@@ -24,6 +24,14 @@ function isTwoFactorRequired(result: unknown): result is { twoFactorRequired: tr
   return typeof result === "object" && result !== null && "twoFactorRequired" in result;
 }
 
+// An admin-only account has no business at all - ProtectedRoute sends any admin
+// to /admin right after this anyway, so /dashboard is just a safe waypoint, not
+// a page they'll actually see.
+function postLoginPath(business: { onboardingCompletedAt: string | null } | null): string {
+  if (!business) return "/dashboard";
+  return business.onboardingCompletedAt ? "/dashboard" : "/onboarding";
+}
+
 export default function Login() {
   const { login, loginWithGoogle, completeTwoFactorChallenge, resetPassword } = useAuth();
   const navigate = useNavigate();
@@ -50,7 +58,7 @@ export default function Login() {
         setChallengeId(result.challengeId);
         return;
       }
-      navigate(result.onboardingCompletedAt ? "/dashboard" : "/onboarding");
+      navigate(postLoginPath(result));
     } catch (err) {
       const code = firebaseErrorCode(err);
       if (code && INVALID_CREDENTIAL_CODES.has(code)) {
@@ -74,7 +82,7 @@ export default function Login() {
         setChallengeId(result.challengeId);
         return;
       }
-      navigate(result.onboardingCompletedAt ? "/dashboard" : "/onboarding");
+      navigate(postLoginPath(result));
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) {
         setApiError("No account found for that Google account. Create one instead?");
@@ -95,7 +103,7 @@ export default function Login() {
     setIsVerifying(true);
     try {
       const business = await completeTwoFactorChallenge(challengeId, twoFactorCode.trim());
-      navigate(business.onboardingCompletedAt ? "/dashboard" : "/onboarding");
+      navigate(postLoginPath(business));
     } catch (err) {
       setApiError(isRateLimited(err) ? RATE_LIMITED_MESSAGE : "That code didn't work. Try again.");
     } finally {

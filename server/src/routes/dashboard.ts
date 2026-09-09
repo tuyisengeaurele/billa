@@ -3,11 +3,13 @@ import { DOCUMENT_TYPES } from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
 import { getOutstandingInvoices } from "../lib/accounts-receivable.js";
 import { requireAuth } from "../middleware/require-auth.js";
+import { requireBusinessContext } from "../middleware/require-business.js";
 import { generalApiRateLimit } from "../middleware/general-rate-limit.js";
 
 export const dashboardRouter = Router();
 
 dashboardRouter.use(requireAuth);
+dashboardRouter.use(requireBusinessContext);
 dashboardRouter.use(generalApiRateLimit);
 
 function startOfMonth(date: Date, monthsAgo: number): Date {

@@ -22,6 +22,7 @@ import type {
 } from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/require-auth.js";
+import { requireBusinessContext } from "../middleware/require-business.js";
 import { requireActiveSubscription } from "../middleware/require-active-subscription.js";
 import { validateBody } from "../middleware/validate.js";
 import { validateQuery } from "../middleware/validate-query.js";
@@ -51,6 +52,7 @@ import { expensiveOperationRateLimit, generalApiRateLimit } from "../middleware/
 export const documentsRouter = Router();
 
 documentsRouter.use(requireAuth);
+documentsRouter.use(requireBusinessContext);
 documentsRouter.use(generalApiRateLimit);
 documentsRouter.use(requireActiveSubscription);
 documentsRouter.use(blockAccountantMutations);

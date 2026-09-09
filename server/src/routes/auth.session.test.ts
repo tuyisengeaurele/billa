@@ -65,12 +65,33 @@ describe("POST /auth/session", () => {
     expect(res.body.error).toBe("no_account");
   });
 
-  it("returns 403 no_business_access instead of crashing, for an account that owns no business at all", async () => {
-    // Regression test: an admin-only account (promoted via direct DB edit, never
-    // went through the normal "create your own business" registration) or any
-    // account that has left every business it belonged to hits this - the old
-    // findFirstOrThrow/findUniqueOrThrow pair threw an unhandled exception here,
-    // turning login itself into a 500 instead of a clear, recoverable response.
+  it("returns 403 no_business_access instead of crashing, for a non-admin account that owns no business at all", async () => {
+    // Regression test: any account that has left every business it belonged to
+    // hits this - the old findFirstOrThrow/findUniqueOrThrow pair threw an
+    // unhandled exception here, turning login itself into a 500 instead of a
+    // clear, recoverable response. Non-admins genuinely need a business (every
+    // business-scoped route requires one) - only admins are exempt, see below.
+    await prisma.user.create({
+      data: {
+        email: "no-business@example.com",
+        firebaseUid: "uid-no-business",
+        trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    const res = await request(createApp())
+      .post("/auth/session")
+      .send({ idToken: fakeIdToken("uid-no-business", "no-business@example.com") });
+
+    expect(res.status).toBe(403);
+    expect(res.body).toEqual({ error: "no_business_access" });
+  });
+
+  it("lets an admin-only account log in with no business at all, instead of the old crash", async () => {
+    // An admin promoted via direct DB edit, never given a business of its own -
+    // /admin/* never touches business data, so this is a legitimate signed-in
+    // state, not an error. See requireBusinessContext for how every
+    // business-scoped route still refuses this session's empty businessId.
     await prisma.user.create({
       data: {
         email: "admin-only@example.com",
@@ -84,8 +105,12 @@ describe("POST /auth/session", () => {
       .post("/auth/session")
       .send({ idToken: fakeIdToken("uid-admin-only", "admin-only@example.com") });
 
-    expect(res.status).toBe(403);
-    expect(res.body).toEqual({ error: "no_business_access" });
+    expect(res.status).toBe(200);
+    expect(res.body.user.isAdmin).toBe(true);
+    expect(res.body.business).toBeNull();
+
+    const cookies = res.headers["set-cookie"] as unknown as string[];
+    expect(cookies.some((c) => c.startsWith("access_token="))).toBe(true);
   });
 
   it("returns 401 for an invalid token", async () => {

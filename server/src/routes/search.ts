@@ -3,6 +3,7 @@ import { formatRwf, searchQuerySchema } from "@billa/shared";
 import type { SearchQuery } from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/require-auth.js";
+import { requireBusinessContext } from "../middleware/require-business.js";
 import { requireActiveSubscription } from "../middleware/require-active-subscription.js";
 import { validateQuery } from "../middleware/validate-query.js";
 import { generalApiRateLimit } from "../middleware/general-rate-limit.js";
@@ -10,6 +11,7 @@ import { generalApiRateLimit } from "../middleware/general-rate-limit.js";
 export const searchRouter = Router();
 
 searchRouter.use(requireAuth);
+searchRouter.use(requireBusinessContext);
 searchRouter.use(generalApiRateLimit);
 searchRouter.use(requireActiveSubscription);
 

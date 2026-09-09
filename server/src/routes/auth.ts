@@ -99,15 +99,23 @@ authRouter.post("/session", authRateLimit, validateBody(sessionSchema), async (r
       });
       businessId = firstBusiness?.id ?? null;
     }
-    if (!businessId) {
+
+    let business: { id: string; name: string; onboardingCompletedAt: Date | null } | null = null;
+    if (businessId) {
+      business = await prisma.business.findUnique({ where: { id: businessId } });
+      if (!business) businessId = null;
+    }
+    if (!businessId && !existing.isAdmin) {
+      // Regular (non-admin) accounts still require a business - admins are the one
+      // account type that legitimately has none, since /admin/* never touches
+      // business data. "" is the session's "no business" sentinel: every
+      // business-scoped router (requireBusinessContext) rejects it before any
+      // handler runs, and it can never collide with a real id (cuid()s are never
+      // empty), so nothing downstream needs to treat it as a special case.
       res.status(403).json({ error: "no_business_access" });
       return;
     }
-    const business = await prisma.business.findUnique({ where: { id: businessId } });
-    if (!business) {
-      res.status(403).json({ error: "no_business_access" });
-      return;
-    }
+    businessId = businessId ?? "";
 
     if (existing.totpEnabled) {
       const challenge = await prisma.twoFactorChallenge.create({
@@ -124,7 +132,9 @@ authRouter.post("/session", authRateLimit, validateBody(sessionSchema), async (r
     await issueSession(res, existing.id, businessId);
     res.json({
       user: serializeUser(existing),
-      business: { id: business.id, name: business.name, onboardingCompletedAt: business.onboardingCompletedAt },
+      business: business
+        ? { id: business.id, name: business.name, onboardingCompletedAt: business.onboardingCompletedAt }
+        : null,
     });
     return;
   }
@@ -189,14 +199,22 @@ authRouter.get("/me", requireAuth, async (req, res) => {
     res.status(401).json({ error: "unauthenticated" });
     return;
   }
-  const business = await prisma.business.findUnique({ where: { id: req.auth!.businessId } });
-  if (!business) {
+  // req.auth!.businessId is "" for an admin-only account (see /session) - that's
+  // a legitimate signed-in state, not an expired session. Only a *non-empty*
+  // businessId that no longer resolves (the business was deleted after this
+  // session was issued) means the session itself is stale.
+  const business = req.auth!.businessId
+    ? await prisma.business.findUnique({ where: { id: req.auth!.businessId } })
+    : null;
+  if (req.auth!.businessId && !business) {
     res.status(401).json({ error: "unauthenticated" });
     return;
   }
   res.json({
     user: serializeUser(user),
-    business: { id: business.id, name: business.name, onboardingCompletedAt: business.onboardingCompletedAt },
+    business: business
+      ? { id: business.id, name: business.name, onboardingCompletedAt: business.onboardingCompletedAt }
+      : null,
     impersonating: Boolean(req.auth!.impersonatedBy),
   });
 });
@@ -416,11 +434,18 @@ authRouter.post("/2fa/challenge", authRateLimit, validateBody(twoFactorChallenge
     await prisma.user.update({ where: { id: user.id }, data: { totpBackupCodes: remainingCodes } });
   }
 
-  const business = await prisma.business.findUniqueOrThrow({ where: { id: challenge.businessId } });
+  // challenge.businessId is "" for an admin-only account (see /session above) -
+  // findUnique, not findUniqueOrThrow, so that sentinel resolves to a null
+  // business instead of a crash.
+  const business = challenge.businessId
+    ? await prisma.business.findUnique({ where: { id: challenge.businessId } })
+    : null;
   await issueSession(res, user.id, challenge.businessId);
   res.json({
     user: serializeUser(user),
-    business: { id: business.id, name: business.name, onboardingCompletedAt: business.onboardingCompletedAt },
+    business: business
+      ? { id: business.id, name: business.name, onboardingCompletedAt: business.onboardingCompletedAt }
+      : null,
   });
 });
 

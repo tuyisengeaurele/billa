@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/require-auth.js";
+import { requireBusinessContext } from "../middleware/require-business.js";
 import { requireActiveSubscription } from "../middleware/require-active-subscription.js";
 import { generalApiRateLimit } from "../middleware/general-rate-limit.js";
 import { getOutstandingInvoices } from "../lib/accounts-receivable.js";
@@ -7,6 +8,7 @@ import { getOutstandingInvoices } from "../lib/accounts-receivable.js";
 export const receivablesRouter = Router();
 
 receivablesRouter.use(requireAuth);
+receivablesRouter.use(requireBusinessContext);
 receivablesRouter.use(generalApiRateLimit);
 receivablesRouter.use(requireActiveSubscription);
 

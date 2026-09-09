@@ -133,6 +133,41 @@ describe("Login", () => {
     await waitFor(() => expect(screen.getByText("dashboard page")).toBeInTheDocument());
   });
 
+  it("doesn't crash landing an admin-only account (no business) here instead of /admin/login", async () => {
+    // An admin with no business normally uses /admin/login, but nothing stops
+    // them from using the regular one - business: null must not throw reading
+    // .onboardingCompletedAt off it.
+    vi.mocked(signInWithEmail).mockResolvedValue("fake-id-token");
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.endsWith("/auth/session")) {
+        return new Response(
+          JSON.stringify({ user: { id: "u1", email: "admin@example.com", isAdmin: true }, business: null }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={["/login"]}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/dashboard" element={<div>dashboard page</div>} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    await user.type(await screen.findByLabelText(/email/i), "admin@example.com");
+    await user.type(screen.getByLabelText("Password"), "adminpassword");
+    await user.click(screen.getByRole("button", { name: /log in/i }));
+
+    await waitFor(() => expect(screen.getByText("dashboard page")).toBeInTheDocument());
+  });
+
   it("tells the caller to wait instead of the generic error, when rate-limited", async () => {
     // Regression test: a rate-limited /auth/session (429) fell into the same
     // generic "Something went wrong" catch-all as a real failure, which invites

@@ -1,6 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import request from "supertest";
 import { createApp } from "../app.js";
+import { prisma } from "../lib/prisma.js";
 import { resetDb } from "../test/db.js";
 
 beforeAll(() => {
@@ -46,6 +47,27 @@ async function createDocument(
 }
 
 describe("GET /documents", () => {
+  it("returns 403 for an admin-only session with no business, instead of erroring on the missing scope", async () => {
+    const app = createApp();
+    await prisma.user.create({
+      data: {
+        email: "admin-only@example.com",
+        firebaseUid: "uid-admin-only",
+        trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+        isAdmin: true,
+      },
+    });
+    const loginRes = await request(app)
+      .post("/auth/session")
+      .send({ idToken: JSON.stringify({ uid: "uid-admin-only", email: "admin-only@example.com" }) });
+    const cookies = loginRes.headers["set-cookie"] as unknown as string[];
+
+    const res = await request(app).get("/documents?type=INVOICE").set("Cookie", cookies);
+
+    expect(res.status).toBe(403);
+    expect(res.body).toEqual({ error: "no_business_access" });
+  });
+
   it("returns documents scoped to the authenticated business and type", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app);

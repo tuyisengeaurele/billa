@@ -1,12 +1,14 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/require-auth.js";
+import { requireBusinessContext } from "../middleware/require-business.js";
 import { requireActiveSubscription } from "../middleware/require-active-subscription.js";
 import { expensiveOperationRateLimit } from "../middleware/general-rate-limit.js";
 
 export const reportsRouter = Router();
 
 reportsRouter.use(requireAuth);
+reportsRouter.use(requireBusinessContext);
 reportsRouter.use(expensiveOperationRateLimit);
 reportsRouter.use(requireActiveSubscription);
 

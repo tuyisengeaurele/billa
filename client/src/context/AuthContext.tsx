@@ -30,7 +30,7 @@ export interface TwoFactorRequired {
   challengeId: string;
 }
 
-type SessionResult = { user: User; business: Business } | TwoFactorRequired;
+type SessionResult = { user: User; business: Business | null } | TwoFactorRequired;
 
 function isTwoFactorRequired(data: SessionResult): data is TwoFactorRequired {
   return "twoFactorRequired" in data && data.twoFactorRequired === true;
@@ -46,11 +46,11 @@ interface AuthContextValue {
   business: Business | null;
   isLoading: boolean;
   impersonating: boolean;
-  login: (email: string, password: string) => Promise<Business | TwoFactorRequired>;
+  login: (email: string, password: string) => Promise<Business | null | TwoFactorRequired>;
   register: (email: string, password: string, intent: RegisterIntent) => Promise<Business>;
-  loginWithGoogle: () => Promise<Business | TwoFactorRequired>;
+  loginWithGoogle: () => Promise<Business | null | TwoFactorRequired>;
   registerWithGoogle: (intent: RegisterIntent) => Promise<Business>;
-  completeTwoFactorChallenge: (challengeId: string, code: string) => Promise<Business>;
+  completeTwoFactorChallenge: (challengeId: string, code: string) => Promise<Business | null>;
   resetPassword: (email: string) => Promise<void>;
   logout: () => Promise<void>;
   stopImpersonating: () => Promise<void>;
@@ -130,7 +130,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user);
     setBusiness(data.business);
     setImpersonating(false);
-    return data.business;
+    // Registering always creates or joins a real business (unlike logging in,
+    // which an admin-only account can do without one) - never null here.
+    return data.business!;
   }
 
   async function loginWithGoogle() {
@@ -150,11 +152,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user);
     setBusiness(data.business);
     setImpersonating(false);
-    return data.business;
+    // Registering always creates or joins a real business - never null here.
+    return data.business!;
   }
 
   async function completeTwoFactorChallenge(challengeId: string, code: string) {
-    const data = await apiRequest<{ user: User; business: Business }>("/auth/2fa/challenge", {
+    const data = await apiRequest<{ user: User; business: Business | null }>("/auth/2fa/challenge", {
       method: "POST",
       body: { challengeId, code },
     });

@@ -4,6 +4,7 @@ import { customerListQuerySchema, customerSchema, customerUpdateSchema } from "@
 import type { CustomerListQuery } from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/require-auth.js";
+import { requireBusinessContext } from "../middleware/require-business.js";
 import { requireActiveSubscription } from "../middleware/require-active-subscription.js";
 import { blockAccountantMutations } from "../middleware/block-accountant-mutations.js";
 import { generalApiRateLimit } from "../middleware/general-rate-limit.js";
@@ -15,6 +16,7 @@ import { toCsv } from "../lib/csv.js";
 export const customersRouter = Router();
 
 customersRouter.use(requireAuth);
+customersRouter.use(requireBusinessContext);
 customersRouter.use(generalApiRateLimit);
 customersRouter.use(requireActiveSubscription);
 customersRouter.use(blockAccountantMutations);
