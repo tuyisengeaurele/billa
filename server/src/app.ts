@@ -62,6 +62,16 @@ export function createApp(clientDistDir: string = DEFAULT_CLIENT_DIST_DIR) {
       // default would block the browser from loading them. Harmless in production,
       // where client and API are the same origin anyway.
       crossOriginResourcePolicy: { policy: "cross-origin" },
+      // Helmet's default Cross-Origin-Opener-Policy is "same-origin", which cuts
+      // off a popup/redirect's ability to report its result back to this page -
+      // exactly the mechanism Google/Firebase sign-in depends on (a popup window
+      // reaching back via window.opener, and the redirect flow's own invisible
+      // coordination iframe on firebaseapp.com). This page never had that header
+      // at all before the client and API were merged into one process (the client
+      // was a separate static site with no Helmet in front of it) - Google
+      // sign-in worked then and silently stopped the moment this was added, with
+      // no error anywhere to point at it: the popup/redirect just never resolves.
+      crossOriginOpenerPolicy: false,
       // Helmet's default CSP (default-src 'self', no explicit connect-src) only
       // ever wrapped this API's own JSON responses before - now that this process
       // also serves the actual HTML page, that same default silently blocked the

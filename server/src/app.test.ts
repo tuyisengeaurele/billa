@@ -126,4 +126,16 @@ describe("GET /health", () => {
     expect(csp).toContain("https://securetoken.googleapis.com");
     expect(csp).toContain("https://apis.google.com");
   });
+
+  it("does not set Cross-Origin-Opener-Policy, so Google/Firebase sign-in can report its result back to this page", async () => {
+    // Regression test: helmet's default Cross-Origin-Opener-Policy is
+    // "same-origin", which silently cuts off a popup or redirect's ability to
+    // hand its result back to the page that started it - exactly what Google
+    // sign-in needs. This page never had that header before the client-server
+    // merge (the client was a separate static site with no helmet in front of
+    // it) - sign-in worked then and silently stopped the moment this was added,
+    // with nothing in the console to point at why.
+    const res = await request(createApp()).get("/health");
+    expect(res.headers["cross-origin-opener-policy"]).toBeUndefined();
+  });
 });
