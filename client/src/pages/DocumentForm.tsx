@@ -1,5 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
+  DEFAULT_DUE_DAYS,
   DOCUMENT_LANGUAGES,
   getDueDateLabel,
   RECURRENCE_INTERVALS,
@@ -137,8 +138,6 @@ function calculateLiveTotals(lines: LiveLine[]) {
   }
   return { subtotal, taxTotal, total: subtotal + taxTotal };
 }
-
-const DEFAULT_DUE_DAYS = 30;
 
 // A blank due date is one more thing to remember on every single document - default
 // it to the most common payment/validity term (30 days) so it's already right for

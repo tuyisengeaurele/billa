@@ -1,6 +1,13 @@
 import type { Document, Prisma } from "@prisma/client";
+import { DEFAULT_DUE_DAYS } from "@billa/shared";
 import { prisma } from "./prisma.js";
 import { calculateDocumentTotals } from "./document-totals.js";
+
+function defaultDueDate(): Date {
+  const date = new Date();
+  date.setDate(date.getDate() + DEFAULT_DUE_DAYS);
+  return date;
+}
 
 const CONVERTIBLE_TYPES = ["PROFORMA", "QUOTE"];
 
@@ -50,6 +57,10 @@ export async function convertProformaToInvoice(
       template: business!.defaultTemplate,
       customerId: proforma.customerId,
       issueDate: new Date(new Date().toISOString().slice(0, 10)),
+      // Converting a proforma skips DocumentForm entirely (it's a one-click action),
+      // so it never picked up the same 30-day default a document started from scratch
+      // gets there - without this, a converted invoice's due date was silently blank.
+      dueDate: defaultDueDate(),
       notes: proforma.notes,
       subtotal: totals.subtotal,
       taxTotal: totals.taxTotal,

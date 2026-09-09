@@ -2,6 +2,11 @@
 // Kept here (not imported from @prisma/client) so the client workspace
 // doesn't need Prisma as a dependency.
 
+// How many days out a new invoice/proforma's due date defaults to, whether it's
+// started from scratch in DocumentForm or created by converting a proforma into
+// an invoice - kept in one place so the two paths can't quietly drift apart.
+export const DEFAULT_DUE_DAYS = 30;
+
 export const DOCUMENT_TYPES = [
   "INVOICE",
   "PROFORMA",

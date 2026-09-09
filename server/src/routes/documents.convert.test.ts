@@ -74,6 +74,22 @@ describe("POST /documents/:id/convert", () => {
     expect(res.body.document.issueDate.slice(0, 10)).toBe(today);
   });
 
+  it("defaults the converted invoice's due date to 30 days out, the same as a document started from scratch", async () => {
+    // Regression test: converting skips DocumentForm entirely (it's a one-click
+    // action), so it never picked up that same default - due date was silently null.
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies);
+    const proformaId = await createFinalizedProforma(app, cookies, customerId);
+
+    const res = await request(app).post(`/documents/${proformaId}/convert`).set("Cookie", cookies);
+
+    expect(res.body.document.dueDate).not.toBeNull();
+    const expected = new Date();
+    expected.setDate(expected.getDate() + 30);
+    expect(res.body.document.dueDate.slice(0, 10)).toBe(expected.toISOString().slice(0, 10));
+  });
+
   it("links the proforma to the new invoice via convertedTo", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app);
