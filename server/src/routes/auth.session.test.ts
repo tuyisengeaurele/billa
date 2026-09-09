@@ -65,6 +65,29 @@ describe("POST /auth/session", () => {
     expect(res.body.error).toBe("no_account");
   });
 
+  it("returns 403 no_business_access instead of crashing, for an account that owns no business at all", async () => {
+    // Regression test: an admin-only account (promoted via direct DB edit, never
+    // went through the normal "create your own business" registration) or any
+    // account that has left every business it belonged to hits this - the old
+    // findFirstOrThrow/findUniqueOrThrow pair threw an unhandled exception here,
+    // turning login itself into a 500 instead of a clear, recoverable response.
+    await prisma.user.create({
+      data: {
+        email: "admin-only@example.com",
+        firebaseUid: "uid-admin-only",
+        trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+        isAdmin: true,
+      },
+    });
+
+    const res = await request(createApp())
+      .post("/auth/session")
+      .send({ idToken: fakeIdToken("uid-admin-only", "admin-only@example.com") });
+
+    expect(res.status).toBe(403);
+    expect(res.body).toEqual({ error: "no_business_access" });
+  });
+
   it("returns 401 for an invalid token", async () => {
     const res = await request(createApp()).post("/auth/session").send({
       idToken: "not-json",

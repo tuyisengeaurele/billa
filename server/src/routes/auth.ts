@@ -89,13 +89,25 @@ authRouter.post("/session", authRateLimit, validateBody(sessionSchema), async (r
       businessId = null;
     }
     if (!businessId) {
-      const firstBusiness = await prisma.business.findFirstOrThrow({
+      // findFirst, not findFirstOrThrow: an account that doesn't own any business of
+      // its own - every business it was a member of left or deleted, or an
+      // admin-only account that was never given one - is a real, reachable state,
+      // not a bug. Throwing here turned that into an unhandled 500 on login itself.
+      const firstBusiness = await prisma.business.findFirst({
         where: { ownerId: existing.id },
         orderBy: { createdAt: "asc" },
       });
-      businessId = firstBusiness.id;
+      businessId = firstBusiness?.id ?? null;
     }
-    const business = await prisma.business.findUniqueOrThrow({ where: { id: businessId } });
+    if (!businessId) {
+      res.status(403).json({ error: "no_business_access" });
+      return;
+    }
+    const business = await prisma.business.findUnique({ where: { id: businessId } });
+    if (!business) {
+      res.status(403).json({ error: "no_business_access" });
+      return;
+    }
 
     if (existing.totpEnabled) {
       const challenge = await prisma.twoFactorChallenge.create({
