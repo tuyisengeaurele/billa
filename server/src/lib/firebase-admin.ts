@@ -1,5 +1,6 @@
 import { cert, getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
+import { withTimeout } from "./with-timeout.js";
 
 function ensureApp() {
   if (getApps().length === 0) {
@@ -25,8 +26,13 @@ export async function verifyFirebaseToken(idToken: string): Promise<{ uid: strin
 export async function checkFirebaseAdminHealth(): Promise<boolean> {
   try {
     ensureApp();
-    await getAuth().listUsers(1);
-    return true;
+    return await withTimeout(
+      getAuth()
+        .listUsers(1)
+        .then(() => true),
+      5000,
+      false,
+    );
   } catch {
     return false;
   }

@@ -1,4 +1,5 @@
 import puppeteer, { type Browser } from "puppeteer";
+import { withTimeout } from "../with-timeout.js";
 
 let browserPromise: Promise<Browser> | null = null;
 
@@ -31,8 +32,14 @@ export async function renderHtmlToPdfBuffer(html: string): Promise<Buffer> {
 
 export async function checkPdfRenderingHealth(): Promise<boolean> {
   try {
-    await renderHtmlToPdfBuffer("<html><body>health check</body></html>");
-    return true;
+    // A cold launch (first render since the process started) is legitimately
+    // slower than the other checks, so this gets more headroom than their 5s -
+    // still bounded, so a genuinely stuck browser can't hang the whole endpoint.
+    return await withTimeout(
+      renderHtmlToPdfBuffer("<html><body>health check</body></html>").then(() => true),
+      10000,
+      false,
+    );
   } catch {
     return false;
   }

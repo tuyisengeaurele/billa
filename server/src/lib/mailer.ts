@@ -1,5 +1,6 @@
 import nodemailer, { type Transporter } from "nodemailer";
 import { prisma } from "./prisma.js";
+import { withTimeout } from "./with-timeout.js";
 
 let transporter: Transporter | null = null;
 
@@ -61,8 +62,16 @@ export async function sendEmail(input: SendEmailInput): Promise<void> {
 
 export async function checkMailerHealth(): Promise<boolean> {
   try {
-    await getTransport().verify();
-    return true;
+    // verify() does a real SMTP handshake - against a network that silently drops
+    // packets (some hosts block outbound SMTP entirely) rather than rejecting the
+    // connection, this can hang far longer than a health check should ever wait.
+    return await withTimeout(
+      getTransport()
+        .verify()
+        .then(() => true),
+      5000,
+      false,
+    );
   } catch {
     return false;
   }
