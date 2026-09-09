@@ -1,21 +1,33 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
 import { contactMessageSchema, type ContactMessageInput } from "@billa/shared";
 import { Button } from "../components/Button";
 import { FormField } from "../components/FormField";
+import { useAuth } from "../context/AuthContext";
 import { apiRequest, ApiError } from "../lib/apiClient";
 
 export default function Contact() {
+  const { user } = useAuth();
   const [apiError, setApiError] = useState<string | null>(null);
   const [isSent, setIsSent] = useState(false);
   const {
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<ContactMessageInput>({ resolver: zodResolver(contactMessageSchema) });
+
+  // Already know who's asking if they're signed in - no reason to make them retype
+  // their own name and email. Auth resolves after the form's first render, so this
+  // fills in once it's ready rather than only at mount; still fully editable.
+  useEffect(() => {
+    if (!user) return;
+    if (user.name) setValue("name", user.name);
+    setValue("email", user.email);
+  }, [user, setValue]);
 
   async function onSubmit(data: ContactMessageInput) {
     setApiError(null);
