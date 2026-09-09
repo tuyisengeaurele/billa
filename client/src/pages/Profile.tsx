@@ -435,26 +435,31 @@ export default function Profile() {
         )}
       </section>
 
-      <section className="rounded-xl border border-neutral-200 bg-surface p-6">
-        <h2 className="font-display text-base font-semibold text-neutral-900">Help &amp; support</h2>
-        <p className="mt-1 font-sans text-sm text-neutral-500">
-          Stuck on something, or found a bug? We're happy to help.
-        </p>
-        <div className="mt-4 flex flex-wrap gap-3">
-          <Link
-            to="/help"
-            className="rounded-lg border border-neutral-200 px-3.5 py-1.5 font-sans text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50"
-          >
-            Help center
-          </Link>
-          <Link
-            to="/contact"
-            className="rounded-lg border border-neutral-200 px-3.5 py-1.5 font-sans text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50"
-          >
-            Contact us
-          </Link>
-        </div>
-      </section>
+      {/* Admins are who these links reach, not who they're for - showing "get in
+          touch with support" to the person support messages land with doesn't
+          make sense. */}
+      {!user.isAdmin && (
+        <section className="rounded-xl border border-neutral-200 bg-surface p-6">
+          <h2 className="font-display text-base font-semibold text-neutral-900">Help &amp; support</h2>
+          <p className="mt-1 font-sans text-sm text-neutral-500">
+            Stuck on something, or found a bug? We're happy to help.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Link
+              to="/help"
+              className="rounded-lg border border-neutral-200 px-3.5 py-1.5 font-sans text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50"
+            >
+              Help center
+            </Link>
+            <Link
+              to="/contact"
+              className="rounded-lg border border-neutral-200 px-3.5 py-1.5 font-sans text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50"
+            >
+              Contact us
+            </Link>
+          </div>
+        </section>
+      )}
     </div>
   );
 }
