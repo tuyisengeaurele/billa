@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import type { ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { ThemeToggle } from "./ThemeToggle";
 
 interface AuthLayoutProps {
@@ -31,12 +32,14 @@ export function AuthLayout({ eyebrow, headline, tagline, children }: AuthLayoutP
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="relative z-10 flex items-center gap-3"
+          className="relative z-10"
         >
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white shadow-sm">
-            <img src="/logo.png" alt="" className="h-7 w-7" />
-          </span>
-          <span className="font-display text-2xl font-semibold text-white">Billa</span>
+          <Link to="/" className="flex w-fit items-center gap-3">
+            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white shadow-sm">
+              <img src="/logo.png" alt="" className="h-7 w-7" />
+            </span>
+            <span className="font-display text-2xl font-semibold text-white">Billa</span>
+          </Link>
         </motion.div>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -50,6 +53,14 @@ export function AuthLayout({ eyebrow, headline, tagline, children }: AuthLayoutP
         </motion.div>
       </div>
       <div className="relative flex w-full flex-col justify-center bg-page px-6 py-12 lg:w-1/2 lg:px-16">
+        <div className="absolute left-6 top-6 lg:hidden">
+          <Link to="/" className="flex items-center gap-2">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-500">
+              <img src="/logo.png" alt="" className="h-4 w-4" style={{ filter: "brightness(0) invert(1)" }} />
+            </span>
+            <span className="font-display text-base font-semibold text-neutral-900">Billa</span>
+          </Link>
+        </div>
         <div className="absolute right-6 top-6">
           <ThemeToggle />
         </div>
