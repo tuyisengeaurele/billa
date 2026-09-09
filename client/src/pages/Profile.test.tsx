@@ -381,6 +381,33 @@ describe("Profile", () => {
     expect(screen.getByRole("link", { name: /contact us/i })).toHaveAttribute("href", "/contact");
   });
 
+  it("hides the help and contact links for an admin, who receives those messages rather than sending them", async () => {
+    renderProfile(async (input) => {
+      const url = urlOf(input);
+      if (url.endsWith("/auth/me")) {
+        return new Response(
+          JSON.stringify({
+            user: { ...baseUser(), isAdmin: true },
+            business: { id: "b1", name: "Kigali Traders" },
+            impersonating: false,
+          }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/profile/sessions")) {
+        return new Response(JSON.stringify({ results: [] }), { status: 200 });
+      }
+      if (url.endsWith("/profile/notification-preferences")) {
+        return new Response(JSON.stringify({ preferences: {} }), { status: 200 });
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    await screen.findByRole("button", { name: /set up two-factor authentication/i });
+    expect(screen.queryByRole("link", { name: /help center/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /contact us/i })).not.toBeInTheDocument();
+  });
+
   it("shows two-factor setup for an admin, since /admin/profile is the only page they can reach it from", async () => {
     renderProfile(async (input) => {
       const url = urlOf(input);
