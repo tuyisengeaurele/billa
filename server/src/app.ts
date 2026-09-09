@@ -135,10 +135,18 @@ export function createApp(clientDistDir: string = DEFAULT_CLIENT_DIST_DIR) {
     // these two path shapes are the full, current list of endpoints reached that
     // way (grep client/src for window.open and API_BASE_URL if adding another).
     const DIRECT_DOWNLOAD_PATHS = [/^\/documents\/[^/]+\/pdf$/, /^\/public\/documents\/[^/]+\/pdf$/];
-    app.use(express.static(clientDistDir));
+    // index: false - index.html is served explicitly below instead, with
+    // Cache-Control: no-store. It's the one file a browser must never reuse a
+    // stale copy of: it references the build's other, content-hashed asset
+    // files by name, and it's what carries a fresh security header (like the
+    // Content-Security-Policy right above) to an already-open tab. Those hashed
+    // assets themselves are safe to let this cache normally - a new build ships
+    // under new filenames, so there's nothing stale for the browser to prefer.
+    app.use(express.static(clientDistDir, { index: false }));
     app.get("*", (req, res, next) => {
       const isDirectDownload = DIRECT_DOWNLOAD_PATHS.some((pattern) => pattern.test(req.path));
       if (!isDirectDownload && req.method === "GET" && req.headers.accept?.includes("text/html")) {
+        res.set("Cache-Control", "no-store");
         res.sendFile(path.join(clientDistDir, "index.html"));
         return;
       }

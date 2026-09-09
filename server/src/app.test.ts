@@ -32,6 +32,22 @@ describe("serving the built client", () => {
     expect(res.text).toContain("<title>Billa</title>");
   });
 
+  it("never lets a browser cache the page shell, only its content-hashed asset files", async () => {
+    // Regression test: a browser tab open from before a deploy silently kept
+    // running the old build (and the old Content-Security-Policy header, in the
+    // exact incident this exists to prevent) because nothing told it the shell
+    // it already had was allowed to go stale. Its asset files are safe to let
+    // the browser cache normally, since a new build ships them under new,
+    // content-hashed names - only the shell that names them needs this.
+    const shellRes = await request(createApp(clientDistDir))
+      .get("/dashboard")
+      .set("Accept", "text/html");
+    expect(shellRes.headers["cache-control"]).toBe("no-store");
+
+    const assetRes = await request(createApp(clientDistDir)).get("/app.css");
+    expect(assetRes.headers["cache-control"]).not.toBe("no-store");
+  });
+
   it("does not swallow an unmatched API path into the SPA fallback", async () => {
     const res = await request(createApp(clientDistDir))
       .get("/documents/does-not-exist-as-a-route")
