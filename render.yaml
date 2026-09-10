@@ -31,16 +31,23 @@ services:
     # has no datasource url, and that config file is only auto-discovered from cwd.
     #
     # PDF rendering (server/src/lib/pdf/browser.ts) launches a real headless
-    # Chrome via puppeteer - `npm ci` alone doesn't reliably download it anymore,
-    # so this installs it explicitly. Render's build and runtime share the same
-    # disk, so whatever lands in the default cache dir here (~/.cache/puppeteer)
-    # is exactly where the running server looks for it.
+    # Chrome via puppeteer. `npm ci` alone doesn't reliably download it anymore,
+    # so this installs it explicitly - into PUPPETEER_CACHE_DIR (set below), a
+    # path inside the deployed project tree. The default (~/.cache/puppeteer)
+    # doesn't survive from Render's build step to its running instance; the
+    # project directory does, and pinning the same env var for build and runtime
+    # means the server looks in exactly the place the build wrote to.
     buildCommand: npm ci --include=dev && npm exec --workspace=server -- puppeteer browsers install chrome && npm run prisma:generate && npm run build --workspace=server && npm run build --workspace=client && cd server && npx prisma migrate deploy
     startCommand: node server/dist/index.js
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
         value: production
+      # Where `puppeteer browsers install chrome` (in buildCommand) puts Chrome,
+      # and where the running server then looks for it. Must be inside the
+      # project tree - that's what persists from build to runtime on Render.
+      - key: PUPPETEER_CACHE_DIR
+        value: /opt/render/project/src/.puppeteer-cache
       - key: DATABASE_URL
         fromDatabase:
           name: billa-db
