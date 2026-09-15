@@ -112,7 +112,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             <div className="fixed inset-0 z-40 lg:hidden">
               <div className="absolute inset-0 bg-black/40" onClick={() => setIsMobileNavOpen(false)} />
               <aside className="absolute inset-y-0 left-0 w-64 border-r border-neutral-200 bg-surface">
-                <Sidebar billingBanner={billingBanner} onNavigate={() => setIsMobileNavOpen(false)} />
+                <Sidebar billingBanner={billingBanner} onNavigate={() => setIsMobileNavOpen(false)} isMobile />
               </aside>
             </div>
           )}
@@ -133,8 +133,13 @@ export function AppLayout({ children }: AppLayoutProps) {
               <div className="ml-auto flex shrink-0 items-center gap-2">
                 <SearchPaletteTrigger ref={searchTriggerRef} onClick={() => setIsSearchOpen(true)} />
                 <NotificationBell allHref="/notifications" />
-                <span className="h-6 w-px bg-neutral-200" aria-hidden="true" />
-                <BusinessSwitcher />
+                {/* Lives in the mobile drawer instead (see Sidebar.tsx) - on a narrow
+                    header there isn't room for it next to the title and the other
+                    icons without them colliding. */}
+                <span className="hidden h-6 w-px bg-neutral-200 lg:block" aria-hidden="true" />
+                <div className="hidden lg:block">
+                  <BusinessSwitcher />
+                </div>
                 <UserMenu profileHref="/profile" logoutConfirmMessage="Log out of Billa?" />
               </div>
             </header>

@@ -45,6 +45,55 @@ describe("Sidebar", () => {
     vi.restoreAllMocks();
   });
 
+  function mockFetchWithBusiness() {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      if (url.includes("/auth/me")) {
+        return new Response(
+          JSON.stringify({
+            user: { id: "u1", email: "owner@example.com" },
+            business: { id: "b1", name: "Kigali Traders" },
+            impersonating: false,
+          }),
+          { status: 200 },
+        );
+      }
+      if (url.includes("/businesses")) {
+        return new Response(JSON.stringify({ businesses: [{ id: "b1", name: "Kigali Traders", isOwner: true }] }), {
+          status: 200,
+        });
+      }
+      return new Response("{}", { status: 401 });
+    });
+  }
+
+  it("shows the business switcher when isMobile is set, since the header hides it there", async () => {
+    mockFetchWithBusiness();
+    render(
+      <MemoryRouter>
+        <AuthProvider>
+          <Sidebar billingBanner={null} isMobile />
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("button", { name: "Kigali Traders" })).toHaveAttribute("aria-haspopup", "menu");
+  });
+
+  it("does not show the business switcher for the desktop persistent sidebar, which would duplicate the header's", async () => {
+    mockFetchWithBusiness();
+    render(
+      <MemoryRouter>
+        <AuthProvider>
+          <Sidebar billingBanner={null} />
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole("link", { name: "Dashboard" });
+    expect(screen.queryByRole("button", { name: "Kigali Traders" })).not.toBeInTheDocument();
+  });
+
   it("shows every nav link", async () => {
     renderSidebar();
 

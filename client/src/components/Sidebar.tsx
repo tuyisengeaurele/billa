@@ -5,11 +5,16 @@ import { DOCUMENT_TYPES } from "@billa/shared";
 import { useActiveDocumentType } from "../context/ActiveDocumentTypeContext";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
 import { DOCUMENT_TYPE_COLORS } from "../lib/documentTypeColors";
+import { BusinessSwitcher } from "./BusinessSwitcher";
 import { ThemeToggle } from "./ThemeToggle";
 
 interface SidebarProps {
   billingBanner: string | null;
   onNavigate?: () => void;
+  // Only the mobile drawer instance of this component sets this - the desktop
+  // persistent sidebar already has the business switcher in the header (see
+  // AppLayout.tsx), so showing it here too would just duplicate it.
+  isMobile?: boolean;
 }
 
 function isLinkActive(pathname: string, search: string, to: string): boolean {
@@ -143,7 +148,7 @@ function SettingsIcon() {
   );
 }
 
-export function Sidebar({ billingBanner, onNavigate }: SidebarProps) {
+export function Sidebar({ billingBanner, onNavigate, isMobile }: SidebarProps) {
   const { pathname, search } = useLocation();
   const activeDocumentType = useActiveDocumentType();
   const active = (to: string) => isLinkActive(pathname, search, to);
@@ -157,6 +162,12 @@ export function Sidebar({ billingBanner, onNavigate }: SidebarProps) {
         </span>
         <span className="font-display text-lg font-semibold text-neutral-900">Billa</span>
       </div>
+
+      {isMobile && (
+        <div className="px-4 pb-3">
+          <BusinessSwitcher />
+        </div>
+      )}
 
       {/*
         Scrolling lives on this nav specifically, not the whole sidebar, so the logo
