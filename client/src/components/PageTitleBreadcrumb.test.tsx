@@ -39,4 +39,19 @@ describe("PageTitleBreadcrumb", () => {
     expect(screen.getByText("owner@example.com")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "owner@example.com" })).not.toBeInTheDocument();
   });
+
+  it("caps an earlier segment's width instead of letting it refuse to shrink", () => {
+    // Regression test: a non-last segment with shrink-0 and no width cap refused
+    // to shrink at all on a narrow header, overflowing into the icons next to it
+    // (found via real phone screenshots) - it needs a bounded max-width so it
+    // truncates instead.
+    renderBreadcrumb([
+      { label: "Proforma invoices", href: "/documents?type=PROFORMA" },
+      { label: "PRO-2026-0007" },
+    ]);
+
+    const link = screen.getByRole("link", { name: "Proforma invoices" });
+    expect(link.parentElement).toHaveClass("max-w-[6rem]");
+    expect(link).toHaveClass("truncate");
+  });
 });
