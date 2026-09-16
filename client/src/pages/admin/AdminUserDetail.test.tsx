@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../../context/AuthContext";
 import { AdminLayoutRoute } from "../../components/admin/AdminLayoutRoute";
 import { ToastTestWrapper } from "../../test/ToastTestWrapper";
@@ -9,6 +9,20 @@ import AdminUserDetail from "./AdminUserDetail";
 
 function urlOf(input: RequestInfo | URL): string {
   return typeof input === "string" ? input : input.toString();
+}
+
+// A plain object, not jsdom's real Location - impersonation redeem/override
+// now does a real window.location.href assignment (see the comment at each
+// call site below for why), and jsdom's real Location throws "not
+// implemented" for that. Replacing it keeps these tests from depending on
+// that unimplemented behavior, and resets cleanly between tests instead of
+// leaking one test's navigation into the next.
+function mockLocation() {
+  Object.defineProperty(window, "location", {
+    writable: true,
+    configurable: true,
+    value: { origin: "http://localhost", pathname: "/admin/users/u2", href: "http://localhost/admin/users/u2" },
+  });
 }
 
 function renderPage(userId = "u2") {
@@ -45,6 +59,8 @@ function renderPageWithLayout(userId = "u2") {
 }
 
 describe("AdminUserDetail", () => {
+  beforeEach(mockLocation);
+
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -465,7 +481,12 @@ describe("AdminUserDetail", () => {
 
     await user.click(await screen.findByRole("button", { name: /^impersonate$/i }));
 
-    expect(await screen.findByText("dashboard page")).toBeInTheDocument();
+    // A hard navigation, not an in-app route change - see the comment in
+    // useImpersonationRequest.ts for why (everything AppLayout renders needs
+    // to refetch under the newly-impersonated identity, not just re-render
+    // with new context state). jsdom can't actually perform navigation, but
+    // it does record the assignment, which is the part worth asserting on.
+    await vi.waitFor(() => expect(window.location.href).toMatch(/\/dashboard$/));
   });
 
   it("shows a denial and an override option once the request expires", async () => {
@@ -518,7 +539,7 @@ describe("AdminUserDetail", () => {
     await user.type(screen.getByLabelText(/reason for overriding/i), "Customer locked out");
     await user.click(screen.getByRole("button", { name: /override and enter/i }));
 
-    expect(await screen.findByText("dashboard page")).toBeInTheDocument();
+    await vi.waitFor(() => expect(window.location.href).toMatch(/\/dashboard$/));
   });
 
   it("disables the impersonate button when viewing your own account", async () => {

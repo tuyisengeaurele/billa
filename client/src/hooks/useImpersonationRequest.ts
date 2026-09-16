@@ -1,15 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { apiRequest, ApiError } from "../lib/apiClient";
-import { useAuth } from "../context/AuthContext";
 
 export type ImpersonationRequestStatus = "idle" | "pending" | "redeeming" | "denied" | "expired" | "error";
 
 const POLL_INTERVAL_MS = 2000;
 
 export function useImpersonationRequest() {
-  const { refreshAuth } = useAuth();
-  const navigate = useNavigate();
   const [status, setStatus] = useState<ImpersonationRequestStatus>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const requestIdRef = useRef<string | null>(null);
@@ -24,20 +20,25 @@ export function useImpersonationRequest() {
 
   useEffect(() => stopPolling, [stopPolling]);
 
-  const redeem = useCallback(
-    async (id: string) => {
-      setStatus("redeeming");
-      try {
-        await apiRequest(`/impersonation-requests/${id}/redeem`, { method: "POST" });
-        await refreshAuth();
-        navigate("/dashboard");
-      } catch {
-        setStatus("error");
-        setErrorMessage("Couldn't start impersonation. Try again.");
-      }
-    },
-    [refreshAuth, navigate],
-  );
+  const redeem = useCallback(async (id: string) => {
+    setStatus("redeeming");
+    try {
+      await apiRequest(`/impersonation-requests/${id}/redeem`, { method: "POST" });
+      // A hard navigation, not React Router's navigate() - AppLayout and
+      // everything it renders (BusinessSwitcher, NotificationBell, the
+      // sidebar) stay mounted across an in-app route change and only fetch
+      // their own data once, on mount. Switching who's actually signed in
+      // needs everything to refetch, not just AuthContext's own state - the
+      // same reason BusinessSwitcher's own switchTo() does this instead of a
+      // soft navigate. Without it, impersonation "worked" per the banner but
+      // every other panel kept showing the admin's own stale data until a
+      // manual reload.
+      window.location.href = "/dashboard";
+    } catch {
+      setStatus("error");
+      setErrorMessage("Couldn't start impersonation. Try again.");
+    }
+  }, []);
 
   const checkStatus = useCallback(
     async (id: string) => {
@@ -89,22 +90,19 @@ export function useImpersonationRequest() {
     [checkStatus, stopPolling],
   );
 
-  const override = useCallback(
-    async (overrideReason: string) => {
-      const id = requestIdRef.current;
-      if (!id) return;
-      setStatus("redeeming");
-      try {
-        await apiRequest(`/impersonation-requests/${id}/override`, { method: "POST", body: { overrideReason } });
-        await refreshAuth();
-        navigate("/dashboard");
-      } catch {
-        setStatus("error");
-        setErrorMessage("Couldn't override. Try again.");
-      }
-    },
-    [refreshAuth, navigate],
-  );
+  const override = useCallback(async (overrideReason: string) => {
+    const id = requestIdRef.current;
+    if (!id) return;
+    setStatus("redeeming");
+    try {
+      await apiRequest(`/impersonation-requests/${id}/override`, { method: "POST", body: { overrideReason } });
+      // Hard navigation - see the matching comment in redeem() above.
+      window.location.href = "/dashboard";
+    } catch {
+      setStatus("error");
+      setErrorMessage("Couldn't override. Try again.");
+    }
+  }, []);
 
   const reset = useCallback(() => {
     stopPolling();

@@ -1,12 +1,26 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../../context/AuthContext";
 import { TeamSection } from "./TeamSection";
 
 function urlOf(input: RequestInfo | URL): string {
   return typeof input === "string" ? input : input.toString();
+}
+
+// A plain object, not jsdom's real Location - impersonation redeem now does a
+// real window.location.href assignment (see useImpersonationRequest.ts for
+// why), which jsdom's real Location throws "not implemented" for. This
+// doesn't affect MemoryRouter's own navigation (leaving a team, elsewhere in
+// this file) - that's tracked entirely in its own in-memory history, never
+// window.location.
+function mockLocation() {
+  Object.defineProperty(window, "location", {
+    writable: true,
+    configurable: true,
+    value: { origin: "http://localhost", pathname: "/", href: "http://localhost/" },
+  });
 }
 
 function renderTeamSection() {
@@ -23,6 +37,8 @@ function renderTeamSection() {
 }
 
 describe("TeamSection", () => {
+  beforeEach(mockLocation);
+
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -457,7 +473,7 @@ describe("TeamSection", () => {
 
     await user.click(await screen.findByRole("button", { name: /^impersonate$/i }));
 
-    expect(await screen.findByText("dashboard page")).toBeInTheDocument();
+    await vi.waitFor(() => expect(window.location.href).toMatch(/\/dashboard$/));
   });
 
   it("shows a denial message when the member declines", async () => {

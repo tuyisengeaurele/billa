@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { apiRequest } from "../lib/apiClient";
 import { useAuth } from "../context/AuthContext";
 import { PageTitleProvider } from "../context/PageTitleContext";
+import { useToast } from "../context/ToastContext";
 import { AnnouncementBanner } from "./AnnouncementBanner";
 import { BusinessSwitcher } from "./BusinessSwitcher";
 import { DocumentTitleSync } from "./DocumentTitleSync";
@@ -24,7 +24,7 @@ interface AppLayoutProps {
 
 export function AppLayout({ children }: AppLayoutProps) {
   const { user, impersonating, stopImpersonating } = useAuth();
-  const navigate = useNavigate();
+  const toast = useToast();
   const [billingBanner, setBillingBanner] = useState<string | null>(null);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isReturningToAdmin, setIsReturningToAdmin] = useState(false);
@@ -68,7 +68,16 @@ export function AppLayout({ children }: AppLayoutProps) {
     setIsReturningToAdmin(true);
     try {
       await stopImpersonating();
-      navigate(`/admin/users/${targetId}`);
+      // A hard navigation, not React Router's navigate() - see the matching
+      // comment in useImpersonationRequest.ts. AppLayout and everything it
+      // renders stays mounted across an in-app route change and only fetches
+      // its own data once, on mount - switching who's signed in back to the
+      // admin needs everything to refetch, not just AuthContext's own state.
+      window.location.href = `/admin/users/${targetId}`;
+    } catch {
+      // This used to fail silently: the banner would just sit there with no
+      // explanation and no way to tell whether clicking it again would help.
+      toast.error("Couldn't return to admin. Try again.");
     } finally {
       setIsReturningToAdmin(false);
     }

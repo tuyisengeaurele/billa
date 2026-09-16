@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../context/AuthContext";
+import { ToastTestWrapper } from "../test/ToastTestWrapper";
 import { AppLayout } from "./AppLayout";
 
 function renderAppLayout() {
@@ -14,6 +15,20 @@ function renderAppLayout() {
         </AppLayout>
       </AuthProvider>
     </MemoryRouter>,
+  );
+}
+
+function renderAppLayoutWithToasts() {
+  return render(
+    <ToastTestWrapper>
+      <MemoryRouter>
+        <AuthProvider>
+          <AppLayout>
+            <p>page content</p>
+          </AppLayout>
+        </AuthProvider>
+      </MemoryRouter>
+    </ToastTestWrapper>,
   );
 }
 
@@ -54,6 +69,35 @@ describe("AppLayout", () => {
     await user.click(screen.getByRole("button", { name: /return to admin/i }));
 
     await waitFor(() => expect(screen.queryByText(/viewing as/i)).not.toBeInTheDocument());
+  });
+
+  it("shows an error and stays impersonating when returning to admin fails, instead of failing silently", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      if (url.includes("/auth/impersonate/stop")) {
+        return new Response(JSON.stringify({ error: "unexpected" }), { status: 500 });
+      }
+      if (url.includes("/auth/me")) {
+        return new Response(
+          JSON.stringify({
+            user: { id: "u1", email: "owner@example.com", productTourSeenAt: "2026-01-01T00:00:00.000Z" },
+            business: { id: "b1", name: "Kigali Traders" },
+            impersonating: true,
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+    const user = userEvent.setup();
+    renderAppLayoutWithToasts();
+
+    expect(await screen.findByText(/viewing as owner@example.com/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /return to admin/i }));
+
+    expect(await screen.findByText(/couldn't return to admin/i)).toBeInTheDocument();
+    expect(screen.getByText(/viewing as owner@example.com/i)).toBeInTheDocument();
   });
 
   it("doesn't show the impersonation banner for a normal session", async () => {
