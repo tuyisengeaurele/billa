@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import {
   buildContactReplyEmail,
   buildDocumentSendEmail,
@@ -19,6 +19,11 @@ const BLANK_BUSINESS = {
 };
 
 describe("email header branding", () => {
+  afterEach(() => {
+    delete process.env.RENDER_EXTERNAL_URL;
+    delete process.env.API_URL;
+  });
+
   it("includes Billa's own logo in the header, from a hosted URL", () => {
     // Regression test: emails used to be a bare "Billa" wordmark with no mark
     // at all, on every template - this checks the shell all of them share.
@@ -30,6 +35,22 @@ describe("email header branding", () => {
 
     expect(html).toMatch(/<img src="https?:\/\/[^"]+\/logo\.png"/);
     expect(html).not.toContain("base64");
+  });
+
+  it("uses RENDER_EXTERNAL_URL for the logo, not a manually-set API_URL that may be stale or unset", () => {
+    // Regression test: this used to read API_URL directly, which is never set
+    // automatically - the logo silently pointed at an unreachable localhost
+    // URL in production until someone remembered to fill it in.
+    process.env.RENDER_EXTERNAL_URL = "https://billa-api-og7v.onrender.com";
+    process.env.API_URL = "https://api.billa.rw";
+
+    const { html } = buildContactReplyEmail({
+      recipientName: "Aline",
+      originalMessage: "Hi",
+      replyMessage: "Hi back",
+    });
+
+    expect(html).toContain('src="https://billa-api-og7v.onrender.com/logo.png"');
   });
 });
 

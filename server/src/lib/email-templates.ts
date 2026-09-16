@@ -1,15 +1,13 @@
 import type { DocumentLanguage } from "@billa/shared";
+import { publicBaseUrl } from "./asset-url.js";
 
 const BRAND_PINK = "#c2185b";
 
 // Billa's own logo, not a business's uploaded one - it's a static asset this
 // same service serves (client/public/logo.png), so it's reachable at its own
 // public URL the same way a business's R2-hosted logo is (see asset-url.ts).
-// Mail providers fetch embedded images through their own servers before
-// display, so this can never be a relative path or localhost URL in
-// production - API_URL is this service's own address for exactly that reason.
 function billaLogoUrl(): string {
-  return `${process.env.API_URL ?? "http://localhost:4000"}/logo.png`;
+  return `${publicBaseUrl()}/logo.png`;
 }
 
 function escapeHtml(value: string): string {
