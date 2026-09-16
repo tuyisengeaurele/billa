@@ -4,6 +4,7 @@ import { apiRequest } from "../lib/apiClient";
 import { useAuth } from "../context/AuthContext";
 import { PageTitleProvider } from "../context/PageTitleContext";
 import { useToast } from "../context/ToastContext";
+import { ActiveImpersonationBanner } from "./ActiveImpersonationBanner";
 import { AnnouncementBanner } from "./AnnouncementBanner";
 import { BusinessSwitcher } from "./BusinessSwitcher";
 import { DocumentTitleSync } from "./DocumentTitleSync";
@@ -89,6 +90,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         <SkipToContentLink />
         <DocumentTitleSync />
         <ImpersonationRequestModal />
+        <ActiveImpersonationBanner />
         <IdleTimeoutModal />
         <ProductTourModal />
         <SearchPalette isOpen={isSearchOpen} onClose={closeSearch} />

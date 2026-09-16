@@ -126,6 +126,82 @@ impersonationRequestsRouter.get("/pending-for-me", async (req, res) => {
   });
 });
 
+// The target's own, separate session polls this - it has no other way to
+// know someone is currently impersonating it, since that's a claim on the
+// *impersonator's* signed cookie, not anything the target's own session
+// carries. userId here is the target's own id even on an impersonating
+// RefreshToken row (see session.ts's issueSession), so this is exactly "is
+// there a live, unrevoked session impersonating me right now".
+impersonationRequestsRouter.get("/active-for-me", async (req, res) => {
+  const active = await prisma.refreshToken.findFirst({
+    where: {
+      userId: req.auth!.userId,
+      impersonatedBy: { not: null },
+      revokedAt: null,
+      expiresAt: { gt: new Date() },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (!active || !active.impersonatedBy) {
+    res.json({ active: null });
+    return;
+  }
+
+  const admin = await prisma.user.findUnique({ where: { id: active.impersonatedBy } });
+  res.json({
+    active: { adminName: admin?.name ?? admin?.email ?? "An admin", startedAt: active.createdAt },
+  });
+});
+
+// Called from the target's own session to kick out whoever is currently
+// impersonating them. Revoking the refresh token stops them from silently
+// refreshing once their current access token (up to 15 minutes old) expires -
+// the same bound every other forced-logout in this app already has.
+impersonationRequestsRouter.post("/end-active", async (req, res) => {
+  const active = await prisma.refreshToken.findMany({
+    where: {
+      userId: req.auth!.userId,
+      impersonatedBy: { not: null },
+      revokedAt: null,
+      expiresAt: { gt: new Date() },
+    },
+  });
+  if (active.length === 0) {
+    res.status(400).json({ error: "not_being_impersonated" });
+    return;
+  }
+
+  await prisma.refreshToken.updateMany({
+    where: { id: { in: active.map((row) => row.id) } },
+    data: { revokedAt: new Date() },
+  });
+
+  const adminId = active[0].impersonatedBy!;
+  const admin = await prisma.user.findUnique({ where: { id: adminId } });
+  if (admin?.isAdmin) {
+    await logAdminAction({
+      adminUserId: adminId,
+      action: "IMPERSONATION_ENDED_BY_TARGET",
+      targetType: "User",
+      targetId: req.auth!.userId,
+      metadata: {},
+    });
+  } else {
+    const target = await prisma.user.findUnique({ where: { id: req.auth!.userId } });
+    await logActivity({
+      businessId: req.auth!.businessId,
+      actorUserId: req.auth!.userId,
+      action: "MEMBER_IMPERSONATION_ENDED_BY_TARGET",
+      entityType: "User",
+      entityId: req.auth!.userId,
+      metadata: { email: target?.email },
+    });
+  }
+
+  res.json({ ok: true });
+});
+
 impersonationRequestsRouter.post("/:id/approve", async (req, res) => {
   const { id } = req.params;
   const now = new Date();

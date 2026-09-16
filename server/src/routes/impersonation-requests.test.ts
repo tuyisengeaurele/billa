@@ -31,6 +31,17 @@ async function registerAndGetCookies(app: ReturnType<typeof createApp>, email: s
   };
 }
 
+async function startImpersonation(app: ReturnType<typeof createApp>, requesterCookies: string[], targetCookies: string[], targetId: string) {
+  const created = await request(app)
+    .post("/impersonation-requests")
+    .set("Cookie", requesterCookies)
+    .send({ targetUserId: targetId });
+  const requestId = created.body.request.id as string;
+  await request(app).post(`/impersonation-requests/${requestId}/approve`).set("Cookie", targetCookies);
+  const redeemed = await request(app).post(`/impersonation-requests/${requestId}/redeem`).set("Cookie", requesterCookies);
+  return { impersonatedCookies: redeemed.headers["set-cookie"] as unknown as string[] };
+}
+
 async function inviteAndAcceptMember(app: ReturnType<typeof createApp>, ownerCookies: string[], memberEmail: string) {
   await request(app).post("/business/invites").set("Cookie", ownerCookies).send({ email: memberEmail });
   const invite = await prisma.businessInvite.findFirstOrThrow({ where: { email: memberEmail } });
@@ -333,5 +344,101 @@ describe("POST /impersonation-requests/:id/override", () => {
       .send({ overrideReason: "member is unreachable" });
 
     expect(res.status).toBe(403);
+  });
+});
+
+describe("GET /impersonation-requests/active-for-me", () => {
+  it("returns null when nobody is impersonating this account", async () => {
+    const app = createApp();
+    const { cookies } = await registerAndGetCookies(app, "owner@example.com", "Kigali Traders");
+
+    const res = await request(app).get("/impersonation-requests/active-for-me").set("Cookie", cookies);
+
+    expect(res.status).toBe(200);
+    expect(res.body.active).toBeNull();
+  });
+
+  it("tells the target's own session an admin is currently impersonating them", async () => {
+    const app = createApp();
+    const { cookies: adminCookies } = await registerAndGetCookies(app, "admin@example.com", "Admin Co", true);
+    const { cookies: targetCookies, userId: targetId } = await registerAndGetCookies(app, "owner@example.com", "Kigali Traders");
+    await startImpersonation(app, adminCookies, targetCookies, targetId);
+
+    // The target's own, separate session - not the cookies the admin is now
+    // holding - is what has to see this.
+    const res = await request(app).get("/impersonation-requests/active-for-me").set("Cookie", targetCookies);
+
+    expect(res.status).toBe(200);
+    expect(res.body.active.adminName).toBe("admin@example.com");
+  });
+
+  it("still shows active after the impersonating session silently refreshes", async () => {
+    // Regression test: /auth/refresh used to drop impersonatedBy on rotation,
+    // which would have made this look like it ended after 15 minutes even
+    // though the admin was still using it.
+    const app = createApp();
+    const { cookies: adminCookies } = await registerAndGetCookies(app, "admin@example.com", "Admin Co", true);
+    const { cookies: targetCookies, userId: targetId } = await registerAndGetCookies(app, "owner@example.com", "Kigali Traders");
+    const { impersonatedCookies } = await startImpersonation(app, adminCookies, targetCookies, targetId);
+
+    const refreshRes = await request(app).post("/auth/refresh").set("Cookie", impersonatedCookies);
+    expect(refreshRes.status).toBe(200);
+
+    const res = await request(app).get("/impersonation-requests/active-for-me").set("Cookie", targetCookies);
+    expect(res.body.active.adminName).toBe("admin@example.com");
+  });
+});
+
+describe("POST /impersonation-requests/end-active", () => {
+  it("returns 400 when nobody is currently impersonating this account", async () => {
+    const app = createApp();
+    const { cookies } = await registerAndGetCookies(app, "owner@example.com", "Kigali Traders");
+
+    const res = await request(app).post("/impersonation-requests/end-active").set("Cookie", cookies);
+
+    expect(res.status).toBe(400);
+  });
+
+  it("lets the target end an admin's impersonation of them and logs an admin audit entry", async () => {
+    const app = createApp();
+    const { cookies: adminCookies, userId: adminId } = await registerAndGetCookies(app, "admin@example.com", "Admin Co", true);
+    const { cookies: targetCookies, userId: targetId } = await registerAndGetCookies(app, "owner@example.com", "Kigali Traders");
+    const { impersonatedCookies } = await startImpersonation(app, adminCookies, targetCookies, targetId);
+
+    const res = await request(app).post("/impersonation-requests/end-active").set("Cookie", targetCookies);
+    expect(res.status).toBe(200);
+
+    const activeAfter = await request(app).get("/impersonation-requests/active-for-me").set("Cookie", targetCookies);
+    expect(activeAfter.body.active).toBeNull();
+
+    // The admin's impersonating session can no longer silently refresh - it
+    // has an access token for up to 15 more minutes, but once that expires
+    // there's no way back in as this account.
+    const refreshRes = await request(app).post("/auth/refresh").set("Cookie", impersonatedCookies);
+    expect(refreshRes.status).toBe(401);
+
+    const rows = await prisma.adminAuditLogEntry.findMany({ where: { action: "IMPERSONATION_ENDED_BY_TARGET" } });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].adminUserId).toBe(adminId);
+    expect(rows[0].targetId).toBe(targetId);
+  });
+
+  it("lets a member end an owner's impersonation of them and logs a business activity entry, not an admin audit entry", async () => {
+    const app = createApp();
+    const { cookies: ownerCookies } = await registerAndGetCookies(app, "owner@example.com", "Kigali Traders");
+    const { memberId, memberCookies } = await inviteAndAcceptMember(app, ownerCookies, "member@example.com");
+    await startImpersonation(app, ownerCookies, memberCookies, memberId);
+
+    const res = await request(app).post("/impersonation-requests/end-active").set("Cookie", memberCookies);
+    expect(res.status).toBe(200);
+
+    const adminRows = await prisma.adminAuditLogEntry.findMany();
+    expect(adminRows).toHaveLength(0);
+
+    const activityRows = await prisma.activityLogEntry.findMany({ where: { action: "MEMBER_IMPERSONATION_ENDED_BY_TARGET" } });
+    expect(activityRows).toHaveLength(1);
+    // The target ended it themselves - they're the actor here, not the owner
+    // who was impersonating.
+    expect(activityRows[0].actorUserId).toBe(memberId);
   });
 });
