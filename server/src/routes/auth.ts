@@ -258,17 +258,31 @@ authRouter.post("/impersonate/stop", requireAuth, async (req, res) => {
   }
 
   const admin = await prisma.user.findUniqueOrThrow({ where: { id: adminUserId } });
+  // findFirstOrThrow here used to crash this whole endpoint for an admin-only
+  // account with no business of its own (see auth.ts's /session handler for
+  // why that's a real, supported account shape, not an edge case) - the crash
+  // was never caught client-side (see AppLayout.tsx's handleReturnToAdmin),
+  // so it silently failed and left the caller stuck "impersonating" forever
+  // with no way out. findFirst, and the "" businessId sentinel below, make
+  // this the same graceful shape as everywhere else that resolves a business.
   let businessId = admin.lastActiveBusinessId;
+  if (businessId && !(await hasBusinessAccess(admin.id, businessId))) {
+    businessId = null;
+  }
   if (!businessId) {
-    const firstBusiness = await prisma.business.findFirstOrThrow({
+    const firstBusiness = await prisma.business.findFirst({
       where: { ownerId: admin.id },
       orderBy: { createdAt: "asc" },
     });
-    businessId = firstBusiness.id;
+    businessId = firstBusiness?.id ?? null;
   }
-  const business = await prisma.business.findUniqueOrThrow({ where: { id: businessId } });
+  let business: { id: string; name: string; onboardingCompletedAt: Date | null } | null = null;
+  if (businessId) {
+    business = await prisma.business.findUnique({ where: { id: businessId } });
+    if (!business) businessId = null;
+  }
 
-  await issueSession(res, admin.id, businessId);
+  await issueSession(res, admin.id, businessId ?? "");
 
   if (admin.isAdmin) {
     await logAdminAction({
@@ -281,7 +295,7 @@ authRouter.post("/impersonate/stop", requireAuth, async (req, res) => {
   } else {
     const target = await prisma.user.findUnique({ where: { id: req.auth!.userId } });
     await logActivity({
-      businessId,
+      businessId: businessId ?? "",
       actorUserId: admin.id,
       action: "MEMBER_IMPERSONATION_ENDED",
       entityType: "User",
@@ -292,7 +306,7 @@ authRouter.post("/impersonate/stop", requireAuth, async (req, res) => {
 
   res.json({
     user: serializeUser(admin),
-    business: { id: business.id, name: business.name, onboardingCompletedAt: business.onboardingCompletedAt },
+    business: business ? { id: business.id, name: business.name, onboardingCompletedAt: business.onboardingCompletedAt } : null,
   });
 });
 

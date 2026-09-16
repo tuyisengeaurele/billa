@@ -182,7 +182,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function stopImpersonating() {
-    const data = await apiRequest<{ user: User; business: Business }>("/auth/impersonate/stop", {
+    // The admin returning here can be an admin-only account with no business
+    // at all - same as everywhere else, that's business: null, not an error.
+    const data = await apiRequest<{ user: User; business: Business | null }>("/auth/impersonate/stop", {
       method: "POST",
     });
     setUser(data.user);

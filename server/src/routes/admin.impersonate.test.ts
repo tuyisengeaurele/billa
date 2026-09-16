@@ -4,6 +4,7 @@ import { createApp } from "../app.js";
 import { prisma } from "../lib/prisma.js";
 import { resetDb } from "../test/db.js";
 import * as mailerModule from "../lib/mailer.js";
+import { createPendingFirebaseUid } from "../lib/pending-admin.js";
 
 beforeAll(() => {
   process.env.JWT_ACCESS_SECRET ??= "test-secret";
@@ -48,6 +49,19 @@ async function inviteAndAcceptMember(
   return {
     memberId: memberSession.body.user.id as string,
     memberCookies: acceptRes.headers["set-cookie"] as unknown as string[],
+  };
+}
+
+// Mirrors admin.ts's POST /admins (see admin.admins.test.ts) - a real system
+// admin, added by another admin, with no business of its own at all.
+async function registerBusinessLessAdminAndGetCookies(app: ReturnType<typeof createApp>, email: string) {
+  await prisma.user.create({
+    data: { email, firebaseUid: createPendingFirebaseUid(), trialEndsAt: new Date(), isAdmin: true },
+  });
+  const res = await request(app).post("/auth/session").send({ idToken: JSON.stringify({ uid: email, email }) });
+  return {
+    cookies: res.headers["set-cookie"] as unknown as string[],
+    userId: res.body.user.id as string,
   };
 }
 
@@ -106,6 +120,40 @@ describe("POST /auth/impersonate/stop", () => {
     const activityRows = await prisma.activityLogEntry.findMany({ where: { action: "MEMBER_IMPERSONATION_ENDED" } });
     expect(activityRows).toHaveLength(1);
     expect(activityRows[0].actorUserId).toBe(ownerId);
+  });
+
+  it("restores an admin with no business of their own, instead of crashing", async () => {
+    // Regression test: this used to call findFirstOrThrow for a business owned
+    // by the admin, which threw (and 500'd the whole endpoint) for exactly
+    // this account shape - a real, supported one (see the "Add admin" flow).
+    // The client never caught that error either, so it silently failed and
+    // left the caller stuck impersonating forever.
+    const app = createApp();
+    const { cookies: adminCookies, userId: adminId } = await registerBusinessLessAdminAndGetCookies(
+      app,
+      "admin-no-biz@example.com",
+    );
+    const { cookies: targetCookies, userId: targetId } = await registerAndGetCookies(app, "owner@example.com", "Kigali Traders");
+
+    const requestId = await impersonate(app, adminCookies, targetId);
+    await request(app).post(`/impersonation-requests/${requestId}/approve`).set("Cookie", targetCookies);
+    const redeemRes = await request(app).post(`/impersonation-requests/${requestId}/redeem`).set("Cookie", adminCookies);
+    const impersonatedCookies = redeemRes.headers["set-cookie"] as unknown as string[];
+
+    const res = await request(app).post("/auth/impersonate/stop").set("Cookie", impersonatedCookies);
+
+    expect(res.status).toBe(200);
+    expect(res.body.user.email).toBe("admin-no-biz@example.com");
+    expect(res.body.business).toBeNull();
+
+    const restoredCookies = res.headers["set-cookie"] as unknown as string[];
+    const meRes = await request(app).get("/auth/me").set("Cookie", restoredCookies);
+    expect(meRes.body.user.email).toBe("admin-no-biz@example.com");
+    expect(meRes.body.impersonating).toBe(false);
+
+    const rows = await prisma.adminAuditLogEntry.findMany({ where: { action: "IMPERSONATION_ENDED" } });
+    expect(rows[0].adminUserId).toBe(adminId);
+    expect(rows[0].targetId).toBe(targetId);
   });
 
   it("returns 400 when not currently impersonating", async () => {
