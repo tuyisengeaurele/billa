@@ -18,6 +18,21 @@ const BLANK_BUSINESS = {
   businessLogoUrl: null,
 };
 
+describe("email header branding", () => {
+  it("includes Billa's own logo in the header, from a hosted URL", () => {
+    // Regression test: emails used to be a bare "Billa" wordmark with no mark
+    // at all, on every template - this checks the shell all of them share.
+    const { html } = buildContactReplyEmail({
+      recipientName: "Aline",
+      originalMessage: "How do I add my TIN number?",
+      replyMessage: "You can add it from Business settings.",
+    });
+
+    expect(html).toMatch(/<img src="https?:\/\/[^"]+\/logo\.png"/);
+    expect(html).not.toContain("base64");
+  });
+});
+
 describe("buildDocumentSendEmail", () => {
   it("writes a warm English email with the customer's name and document details", () => {
     const { subject, html } = buildDocumentSendEmail({

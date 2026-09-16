@@ -2,6 +2,16 @@ import type { DocumentLanguage } from "@billa/shared";
 
 const BRAND_PINK = "#c2185b";
 
+// Billa's own logo, not a business's uploaded one - it's a static asset this
+// same service serves (client/public/logo.png), so it's reachable at its own
+// public URL the same way a business's R2-hosted logo is (see asset-url.ts).
+// Mail providers fetch embedded images through their own servers before
+// display, so this can never be a relative path or localhost URL in
+// production - API_URL is this service's own address for exactly that reason.
+function billaLogoUrl(): string {
+  return `${process.env.API_URL ?? "http://localhost:4000"}/logo.png`;
+}
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -43,7 +53,15 @@ export interface SenderInput {
 
 function renderFooter(business?: BusinessFooterInput, sender?: SenderInput | null): string {
   if (!business) {
-    return `<p style="margin:0;font-size:12px;color:#a1a1aa;">Billa, invoicing for Rwandan businesses.</p>`;
+    return `
+    <table role="presentation" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="vertical-align:middle;padding-right:8px;">
+          <img src="${billaLogoUrl()}" width="16" height="16" alt="" style="display:block;">
+        </td>
+        <td style="vertical-align:middle;font-size:12px;color:#a1a1aa;">Billa, invoicing for Rwandan businesses.</td>
+      </tr>
+    </table>`;
   }
 
   const name = escapeHtml(business.name);
@@ -98,8 +116,17 @@ function renderEmailShell(bodyHtml: string, business?: BusinessFooterInput, send
               <td style="background:${BRAND_PINK};height:4px;line-height:4px;font-size:0;">&nbsp;</td>
             </tr>
             <tr>
-              <td style="padding:24px 32px 8px;">
-                <span style="font-family:Georgia,'Times New Roman',serif;font-size:20px;font-weight:700;color:#18181b;letter-spacing:-0.01em;">Billa</span>
+              <td style="padding:28px 32px 8px;">
+                <table role="presentation" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="vertical-align:middle;padding-right:9px;">
+                      <img src="${billaLogoUrl()}" width="26" height="26" alt="" style="display:block;">
+                    </td>
+                    <td style="vertical-align:middle;">
+                      <span style="font-family:Georgia,'Times New Roman',serif;font-size:21px;font-weight:700;color:#18181b;letter-spacing:-0.01em;">Billa</span>
+                    </td>
+                  </tr>
+                </table>
               </td>
             </tr>
             <tr>
