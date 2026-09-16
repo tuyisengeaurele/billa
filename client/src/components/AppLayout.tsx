@@ -17,6 +17,7 @@ import { SearchPalette } from "./SearchPalette";
 import { SearchPaletteTrigger } from "./SearchPaletteTrigger";
 import { Sidebar } from "./Sidebar";
 import { SkipToContentLink } from "./SkipToContentLink";
+import { TwoFactorReminderBanner } from "./TwoFactorReminderBanner";
 import { UserMenu } from "./UserMenu";
 
 interface AppLayoutProps {
@@ -113,6 +114,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         )}
 
         <AnnouncementBanner />
+        {!impersonating && <TwoFactorReminderBanner />}
 
         <div className="flex flex-1">
           <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-neutral-200 bg-surface lg:block">
