@@ -39,6 +39,18 @@ describe("GET /admin/users", () => {
     expect(res.body.results[0].email).toBe("someone@acme.com");
   });
 
+  it("also matches by name, not just email", async () => {
+    const app = createApp();
+    const { cookies: adminCookies } = await registerAndGetCookies(app, "admin@example.com", "Admin Co", true);
+    const { userId } = await registerAndGetCookies(app, "owner@example.com", "Kigali Traders");
+    await prisma.user.update({ where: { id: userId }, data: { name: "Jane Uwase" } });
+
+    const res = await request(app).get("/admin/users?search=uwase").set("Cookie", adminCookies);
+
+    expect(res.body.results).toHaveLength(1);
+    expect(res.body.results[0].email).toBe("owner@example.com");
+  });
+
   it("includes each user's name", async () => {
     const app = createApp();
     const { cookies: adminCookies } = await registerAndGetCookies(app, "admin@example.com", "Admin Co", true);
@@ -144,6 +156,29 @@ describe("GET /admin/businesses", () => {
     expect(res.status).toBe(200);
     expect(res.body.results).toHaveLength(1);
     expect(res.body.results[0]).toMatchObject({ name: "Kigali Traders", ownerEmail: "owner@example.com", memberCount: 0 });
+  });
+
+  it("also matches by the owner's account email, not just the business name", async () => {
+    const app = createApp();
+    const { cookies: adminCookies } = await registerAndGetCookies(app, "admin@example.com", "Admin Co", true);
+    await registerAndGetCookies(app, "aline@example.com", "Kigali Traders");
+
+    const res = await request(app).get("/admin/businesses?search=aline").set("Cookie", adminCookies);
+
+    expect(res.body.results).toHaveLength(1);
+    expect(res.body.results[0].name).toBe("Kigali Traders");
+  });
+
+  it("also matches by the business's own contact email", async () => {
+    const app = createApp();
+    const { cookies: adminCookies } = await registerAndGetCookies(app, "admin@example.com", "Admin Co", true);
+    const { businessId } = await registerAndGetCookies(app, "owner@example.com", "Kigali Traders");
+    await prisma.business.update({ where: { id: businessId }, data: { email: "hello@kigalitraders.rw" } });
+
+    const res = await request(app).get("/admin/businesses?search=hello@kigalitraders").set("Cookie", adminCookies);
+
+    expect(res.body.results).toHaveLength(1);
+    expect(res.body.results[0].name).toBe("Kigali Traders");
   });
 
   it("returns 403 for a non-admin", async () => {

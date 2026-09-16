@@ -73,7 +73,12 @@ adminRouter.get("/users", validateQuery(adminUserListQuerySchema), async (req, r
   const query = req.listQuery as AdminUserListQuery;
 
   const where: Prisma.UserWhereInput = query.search
-    ? { email: { contains: query.search, mode: "insensitive" } }
+    ? {
+        OR: [
+          { email: { contains: query.search, mode: "insensitive" } },
+          { name: { contains: query.search, mode: "insensitive" } },
+        ],
+      }
     : {};
 
   const [results, total] = await Promise.all([
@@ -532,7 +537,13 @@ adminRouter.get("/businesses", validateQuery(adminBusinessListQuerySchema), asyn
   const query = req.listQuery as AdminBusinessListQuery;
 
   const where: Prisma.BusinessWhereInput = query.search
-    ? { name: { contains: query.search, mode: "insensitive" } }
+    ? {
+        OR: [
+          { name: { contains: query.search, mode: "insensitive" } },
+          { email: { contains: query.search, mode: "insensitive" } },
+          { owner: { email: { contains: query.search, mode: "insensitive" } } },
+        ],
+      }
     : {};
 
   const [rows, total] = await Promise.all([
