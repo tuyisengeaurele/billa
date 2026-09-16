@@ -68,8 +68,7 @@ export function ImpersonationRequestModal() {
             </p>
           )}
           <p className="mt-3 font-sans text-sm text-neutral-500">
-            They'll be able to see and act as you until they stop. You can end it at any time from the banner at the
-            top of your screen.
+            They'll be able to see and act as you until they choose to stop.
           </p>
           <div className="mt-6 flex justify-end gap-3">
             <button
