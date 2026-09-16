@@ -362,7 +362,13 @@ authRouter.post("/refresh", async (req, res) => {
     data: { revokedAt: new Date() },
   });
 
-  const accessToken = signAccessToken({ userId: user.id, businessId: stored.businessId });
+  // Carried over from the token being rotated, not re-derived - an
+  // impersonation session must still look like one after this, the same way
+  // its businessId does. Dropping it here used to silently turn an admin's
+  // impersonating session into a normal one for the target the moment the
+  // access token's first 15-minute expiry forced a silent refresh.
+  const impersonatedBy = stored.impersonatedBy;
+  const accessToken = signAccessToken({ userId: user.id, businessId: stored.businessId, impersonatedBy: impersonatedBy ?? undefined });
   const newRefreshToken = generateRefreshToken();
   const ttlMs = refreshTtlMs();
 
@@ -373,6 +379,7 @@ authRouter.post("/refresh", async (req, res) => {
       tokenHash: hashRefreshToken(newRefreshToken),
       family: stored.family,
       expiresAt: new Date(Date.now() + ttlMs),
+      impersonatedBy,
     },
   });
 

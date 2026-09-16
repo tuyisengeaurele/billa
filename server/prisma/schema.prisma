@@ -71,6 +71,7 @@ enum ActivityAction {
   MEMBER_REMOVED
   MEMBER_IMPERSONATION_STARTED
   MEMBER_IMPERSONATION_ENDED
+  MEMBER_IMPERSONATION_ENDED_BY_TARGET
 }
 
 enum ImpersonationRequestStatus {
@@ -326,14 +327,22 @@ model Notification {
 }
 
 model RefreshToken {
-  id         String    @id @default(cuid())
-  userId     String
-  businessId String
-  tokenHash  String
-  family     String
-  expiresAt  DateTime
-  revokedAt  DateTime?
-  createdAt  DateTime  @default(now())
+  id             String    @id @default(cuid())
+  userId         String
+  businessId     String
+  tokenHash      String
+  family         String
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  // Set only on a session issued by impersonation (see session.ts's
+  // issueSession) - userId here is the *target's* id even for that session,
+  // so a live, unrevoked row with this set is exactly "someone is currently
+  // impersonating this user", queryable from the target's own separate
+  // session. Must be carried across /auth/refresh's token rotation or an
+  // impersonation session would silently stop looking like one after the
+  // access token's first 15-minute expiry.
+  impersonatedBy String?
 
   user User @relation(fields: [userId], references: [id])
 

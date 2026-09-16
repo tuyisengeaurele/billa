@@ -21,6 +21,7 @@ export async function issueSession(res: Response, userId: string, businessId: st
       tokenHash: hashRefreshToken(refreshToken),
       family: crypto.randomUUID(),
       expiresAt: new Date(Date.now() + ttlMs),
+      impersonatedBy,
     },
   });
 
