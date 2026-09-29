@@ -38,6 +38,16 @@ describe("buildWhatsAppMessage", () => {
     );
   });
 
+  it("invites the customer to pay when the invoice can be paid online", () => {
+    const message = buildWhatsAppMessage({ ...base, kind: "share", payable: true });
+    expect(message).toContain("View and pay it here: https://billa.example/view/abc");
+  });
+
+  it("does not offer payment for a quote even when the business takes MoMo", () => {
+    const message = buildWhatsAppMessage({ ...base, kind: "share", type: "QUOTE", payable: true });
+    expect(message).toContain("View it here:");
+  });
+
   it("calls a draft without a number by its type only", () => {
     const message = buildWhatsAppMessage({ ...base, kind: "share", number: null });
     expect(message).toContain("sent you invoice for");
