@@ -90,6 +90,7 @@ enum NotificationType {
   CONTACT_MESSAGE_RECEIVED
   DOCUMENT_ACCEPTED
   DOCUMENT_DECLINED
+  DOCUMENT_VIEWED
 }
 
 model Business {
@@ -418,6 +419,9 @@ model Document {
   taxTotal          Int
   total             Int
   sentAt            DateTime?
+  firstViewedAt     DateTime?
+  lastViewedAt      DateTime?
+  viewCount         Int              @default(0)
 
   publicToken String @unique @default(dbgenerated("gen_random_uuid()::text"))
 

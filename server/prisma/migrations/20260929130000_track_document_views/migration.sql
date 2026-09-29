@@ -1,0 +1,7 @@
+-- AlterEnum
+ALTER TYPE "NotificationType" ADD VALUE 'DOCUMENT_VIEWED';
+
+-- AlterTable
+ALTER TABLE "Document" ADD COLUMN "firstViewedAt" TIMESTAMP(3),
+ADD COLUMN "lastViewedAt" TIMESTAMP(3),
+ADD COLUMN "viewCount" INTEGER NOT NULL DEFAULT 0;
