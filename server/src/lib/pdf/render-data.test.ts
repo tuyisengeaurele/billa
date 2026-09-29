@@ -114,6 +114,24 @@ function makeDocument(
 }
 
 describe("buildPdfRenderData", () => {
+  it("encodes the public link as a QR code on a finalized document", async () => {
+    process.env.CLIENT_ORIGIN = "https://billa.example";
+    const data = await buildPdfRenderData(
+      makeDocument({ status: "FINALIZED", publicToken: "tok-123" }),
+      makeBusiness(),
+    );
+
+    expect(data.viewUrl).toBe("https://billa.example/view/tok-123");
+    expect(data.qrDataUri).toMatch(/^data:image\/png;base64,/);
+  });
+
+  it("leaves the QR code off a draft, which has no public page", async () => {
+    const data = await buildPdfRenderData(makeDocument({ status: "DRAFT" }), makeBusiness());
+
+    expect(data.viewUrl).toBeNull();
+    expect(data.qrDataUri).toBeNull();
+  });
+
   it("escapes user-controlled text fields", async () => {
     const data = await buildPdfRenderData(makeDocument(), makeBusiness());
     expect(data.business.name).toBe("Kigali Traders &lt;Ltd&gt;");

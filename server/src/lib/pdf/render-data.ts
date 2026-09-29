@@ -8,6 +8,7 @@ import {
   getPdfLabels,
   type PdfLabels,
 } from "@billa/shared";
+import QRCode from "qrcode";
 import { pickStructuralDark } from "../color.js";
 import { escapeHtml } from "./escape-html.js";
 import { readLogoDataUri } from "./logo.js";
@@ -63,6 +64,8 @@ export interface PdfRenderData {
   totalFormatted: string;
   showTotals: boolean;
   amountInWordsFormatted: string | null;
+  viewUrl: string | null;
+  qrDataUri: string | null;
 }
 
 type DocumentWithRelations = Document & { lines: DocumentLine[]; customer: Customer };
@@ -87,6 +90,12 @@ export async function buildPdfRenderData(
   const labels = getPdfLabels(document.language);
   const amountInWords = document.language === "FR" ? amountInWordsFr : amountInWordsRwf;
   const showTotals = document.type !== "DELIVERY_NOTE";
+  // Only a finalized document has a public page, so a draft's PDF carries no QR code.
+  const viewUrl =
+    document.status === "FINALIZED"
+      ? `${process.env.CLIENT_ORIGIN ?? "http://localhost:5173"}/view/${document.publicToken}`
+      : null;
+  const qrDataUri = viewUrl ? await QRCode.toDataURL(viewUrl, { margin: 1, width: 240 }) : null;
   const accentColor = business.primaryColor ?? DEFAULT_ACCENT;
   const accentColors = Array.isArray(business.accentColors)
     ? business.accentColors.filter((c): c is string => typeof c === "string")
@@ -141,5 +150,7 @@ export async function buildPdfRenderData(
     totalFormatted: formatRwf(document.total),
     showTotals,
     amountInWordsFormatted: showTotals ? amountInWords(Number(document.total)) : null,
+    viewUrl,
+    qrDataUri,
   };
 }
