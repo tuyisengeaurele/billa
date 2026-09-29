@@ -57,6 +57,49 @@ describe("DELETE /admin/businesses/:id", () => {
     expect(rows[0]).toMatchObject({ adminUserId: adminId, targetType: "Business", targetId: businessId });
   });
 
+  it("deletes a business that has payments, receipts and MoMo requests", async () => {
+    const app = createApp();
+    const { cookies: adminCookies } = await registerAndGetCookies(app, "admin@example.com", true);
+    const { businessId, userId } = await registerAndGetCookies(app, "owner@example.com");
+    const customer = await prisma.customer.create({ data: { businessId, name: "Musanze Supplies" } });
+    const invoice = await prisma.document.create({
+      data: {
+        businessId,
+        customerId: customer.id,
+        type: "INVOICE",
+        status: "FINALIZED",
+        template: "MINIMAL",
+        number: "INV-0001",
+        subtotal: 1000,
+        taxTotal: 0,
+        total: 1000,
+        lines: { create: [{ description: "Item", quantity: 1, unitPrice: 1000, taxRate: 0, lineTotal: 1000, sortOrder: 0 }] },
+      },
+    });
+    const momo = await prisma.momoPaymentRequest.create({
+      data: { businessId, documentId: invoice.id, referenceId: "ref-1", phoneNumber: "250788000000", amount: 1000, status: "SUCCESSFUL" },
+    });
+    await prisma.invoicePayment.create({
+      data: {
+        businessId,
+        documentId: invoice.id,
+        amount: 1000,
+        method: "MOBILE_MONEY",
+        paidOn: new Date(),
+        createdByUserId: userId,
+        momoPaymentRequestId: momo.id,
+      },
+    });
+    await prisma.notification.create({ data: { userId, type: "PAYMENT_RECEIVED", title: "Payment received" } });
+
+    const res = await request(app).delete(`/admin/businesses/${businessId}`).set("Cookie", adminCookies);
+
+    expect(res.status).toBe(200);
+    expect(await prisma.invoicePayment.count({ where: { businessId } })).toBe(0);
+    expect(await prisma.momoPaymentRequest.count({ where: { businessId } })).toBe(0);
+    expect(await prisma.business.findUnique({ where: { id: businessId } })).toBeNull();
+  });
+
   it("returns 404 for an unknown business", async () => {
     const app = createApp();
     const { cookies: adminCookies } = await registerAndGetCookies(app, "admin@example.com", true);
@@ -113,6 +156,61 @@ describe("DELETE /admin/users/:id", () => {
     expect(res.status).toBe(200);
     expect(await prisma.user.findUnique({ where: { id: ownerId } })).toBeNull();
     expect(await prisma.business.findUnique({ where: { id: businessId } })).toBeNull();
+  });
+
+  it("deletes a user who has notifications and impersonation history", async () => {
+    const app = createApp();
+    const { cookies: adminCookies } = await registerAndGetCookies(app, "admin@example.com", true);
+    const { userId: ownerId, businessId } = await registerAndGetCookies(app, "owner@example.com");
+    const { userId: memberId } = await registerAndGetCookies(app, "member@example.com");
+    await prisma.notification.create({ data: { userId: memberId, type: "PAYMENT_RECEIVED", title: "Payment received" } });
+    await prisma.impersonationRequest.create({
+      data: {
+        requesterId: ownerId,
+        targetUserId: memberId,
+        businessId,
+        status: "DENIED",
+        expiresAt: new Date(Date.now() + 60_000),
+      },
+    });
+
+    const res = await request(app).delete(`/admin/users/${memberId}`).set("Cookie", adminCookies);
+
+    expect(res.status).toBe(200);
+    expect(await prisma.user.findUnique({ where: { id: memberId } })).toBeNull();
+    expect(await prisma.notification.count({ where: { userId: memberId } })).toBe(0);
+    expect(await prisma.impersonationRequest.count({ where: { targetUserId: memberId } })).toBe(0);
+  });
+
+  it("keeps a deleted member's recorded payments, credited to the business owner", async () => {
+    const app = createApp();
+    const { cookies: adminCookies } = await registerAndGetCookies(app, "admin@example.com", true);
+    const { userId: ownerId, businessId } = await registerAndGetCookies(app, "owner@example.com");
+    const { userId: memberId } = await registerAndGetCookies(app, "member@example.com");
+    const customer = await prisma.customer.create({ data: { businessId, name: "Musanze Supplies" } });
+    const invoice = await prisma.document.create({
+      data: {
+        businessId,
+        customerId: customer.id,
+        type: "INVOICE",
+        status: "FINALIZED",
+        template: "MINIMAL",
+        number: "INV-0001",
+        subtotal: 1000,
+        taxTotal: 0,
+        total: 1000,
+        lines: { create: [{ description: "Item", quantity: 1, unitPrice: 1000, taxRate: 0, lineTotal: 1000, sortOrder: 0 }] },
+      },
+    });
+    const payment = await prisma.invoicePayment.create({
+      data: { businessId, documentId: invoice.id, amount: 1000, method: "CASH", paidOn: new Date(), createdByUserId: memberId },
+    });
+
+    const res = await request(app).delete(`/admin/users/${memberId}`).set("Cookie", adminCookies);
+
+    expect(res.status).toBe(200);
+    const kept = await prisma.invoicePayment.findUniqueOrThrow({ where: { id: payment.id } });
+    expect(kept.createdByUserId).toBe(ownerId);
   });
 
   it("returns 400 when deleting yourself", async () => {
