@@ -2,6 +2,7 @@ import type { InvoicePayment, PaymentMethod } from "@prisma/client";
 import { prisma } from "./prisma.js";
 import { recomputeInvoicePaymentStatus } from "./invoice-payment-status.js";
 import { createNotification } from "./notifications.js";
+import { emitWebhookEvent } from "./webhooks/dispatch.js";
 
 export interface RecordInvoicePaymentInput {
   businessId: string;
@@ -48,6 +49,16 @@ export async function recordInvoicePayment(input: RecordInvoicePaymentInput): Pr
       link: `/documents/${input.documentId}`,
     });
   }
+
+  await emitWebhookEvent(input.businessId, "payment.received", {
+    id: payment.id,
+    documentId: input.documentId,
+    invoiceNumber: invoice?.number ?? null,
+    amount: payment.amount,
+    method: payment.method,
+    paidOn: payment.paidOn.toISOString().slice(0, 10),
+    referenceNumber: payment.referenceNumber,
+  });
 
   return payment;
 }

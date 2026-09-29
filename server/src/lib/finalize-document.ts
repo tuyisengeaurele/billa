@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Document } from "@prisma/client";
 import { prisma } from "./prisma.js";
 import { DEFAULT_PREFIXES } from "./document-sequences.js";
+import { emitWebhookEvent } from "./webhooks/dispatch.js";
 
 export type FinalizeDocumentResult =
   | { ok: true; document: Document }
@@ -52,6 +53,18 @@ export async function finalizeDocumentById(businessId: string, id: string): Prom
       where: { id },
       data: { number, status: "FINALIZED" },
     });
+  });
+
+  await emitWebhookEvent(businessId, "document.finalized", {
+    id: finalized.id,
+    type: finalized.type,
+    number: finalized.number,
+    customerId: finalized.customerId,
+    issueDate: finalized.issueDate.toISOString().slice(0, 10),
+    dueDate: finalized.dueDate ? finalized.dueDate.toISOString().slice(0, 10) : null,
+    subtotal: finalized.subtotal,
+    taxTotal: finalized.taxTotal,
+    total: finalized.total,
   });
 
   return { ok: true, document: finalized };
