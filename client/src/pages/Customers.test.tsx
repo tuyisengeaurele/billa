@@ -41,6 +41,20 @@ describe("Customers", () => {
     expect(await screen.findByText(/no customers yet/i)).toBeInTheDocument();
   });
 
+  it("offers a CSV import even before there is a first customer", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.includes("/customers")) {
+        return new Response(JSON.stringify({ results: [], total: 0, page: 1, pageSize: 20 }), { status: 200 });
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    renderCustomers();
+
+    expect(await screen.findByRole("button", { name: /import csv/i })).toBeInTheDocument();
+  });
+
   it("renders a list of customers", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async (input) => {
       const url = urlOf(input);

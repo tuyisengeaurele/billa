@@ -42,6 +42,20 @@ describe("Items", () => {
     expect(await screen.findByText(/no items yet/i)).toBeInTheDocument();
   });
 
+  it("offers a CSV import even before there is a first item", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.includes("/items")) {
+        return new Response(JSON.stringify({ results: [], total: 0, page: 1, pageSize: 20 }), { status: 200 });
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    renderItems();
+
+    expect(await screen.findByRole("button", { name: /import csv/i })).toBeInTheDocument();
+  });
+
   it("renders a list of items with formatted prices", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async (input) => {
       const url = urlOf(input);

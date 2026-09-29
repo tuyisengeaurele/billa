@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { BulkActionBar } from "../components/BulkActionBar";
 import { Button } from "../components/Button";
 import { ExportCsvButton } from "../components/ExportCsvButton";
+import { ImportCsvButton } from "../components/ImportCsvButton";
+import { CUSTOMER_IMPORT } from "../lib/importConfigs";
 import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { Modal } from "../components/Modal";
 import { SelectAllCheckbox } from "../components/SelectAllCheckbox";
@@ -233,7 +235,10 @@ export default function Customers() {
                 Show inactive
               </label>
             </div>
-            <ExportCsvButton path={exportPath} filename="customers.csv" />
+            <div className="flex items-center gap-2">
+              <ImportCsvButton config={CUSTOMER_IMPORT} onImported={list.reload} />
+              <ExportCsvButton path={exportPath} filename="customers.csv" />
+            </div>
           </div>
           )}
 
