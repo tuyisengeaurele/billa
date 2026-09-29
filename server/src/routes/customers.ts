@@ -1,5 +1,6 @@
 import { Router } from "express";
 import type { Prisma } from "@prisma/client";
+import * as Sentry from "@sentry/node";
 import {
   customerListQuerySchema,
   customerSchema,
@@ -18,6 +19,9 @@ import { validateBody } from "../middleware/validate.js";
 import { validateQuery } from "../middleware/validate-query.js";
 import { logActivity } from "../lib/activity-log.js";
 import { getOutstandingInvoices } from "../lib/accounts-receivable.js";
+import { buildPublicAssetUrl } from "../lib/asset-url.js";
+import { buildStatementEmail } from "../lib/email-templates.js";
+import { sendEmail } from "../lib/mailer.js";
 import { toCsv } from "../lib/csv.js";
 import { normalizeRwandaPhoneNumber } from "../lib/phone-number.js";
 
@@ -102,6 +106,63 @@ customersRouter.get("/:id", async (req, res) => {
   const outstandingBalance = outstanding.reduce((sum, invoice) => sum + Math.max(invoice.amountOwed, 0), 0);
 
   res.json({ customer: { ...customer, outstandingBalance } });
+});
+
+customersRouter.post("/:id/send-statement", async (req, res) => {
+  const businessId = req.auth!.businessId;
+  const { id } = req.params;
+
+  const customer = await prisma.customer.findFirst({ where: { id, businessId } });
+  if (!customer) {
+    res.status(404).json({ error: "not_found" });
+    return;
+  }
+  if (!customer.email) {
+    res.status(400).json({ error: "customer_has_no_email" });
+    return;
+  }
+
+  const outstanding = (await getOutstandingInvoices(businessId, id)).filter((invoice) => invoice.amountOwed > 0);
+  if (outstanding.length === 0) {
+    res.status(409).json({ error: "nothing_owed" });
+    return;
+  }
+
+  const [business, sender] = await Promise.all([
+    prisma.business.findUniqueOrThrow({ where: { id: businessId } }),
+    prisma.user.findUnique({ where: { id: req.auth!.userId } }),
+  ]);
+  const clientOrigin = process.env.CLIENT_ORIGIN ?? "http://localhost:5173";
+  const { subject, html } = buildStatementEmail({
+    customerName: customer.name,
+    businessName: business.name,
+    businessAddress: business.address,
+    businessPhone: business.phone,
+    businessEmail: business.email,
+    businessLogoUrl: buildPublicAssetUrl(business.logoUrl),
+    sender: sender ? { name: sender.name, phone: sender.phone, email: sender.email } : null,
+    portalUrl: `${clientOrigin}/portal/${customer.portalToken}`,
+    payable: business.momoEnabled,
+    invoices: outstanding.map((invoice) => ({
+      number: invoice.number,
+      dueDate: invoice.dueDate ? invoice.dueDate.toISOString().slice(0, 10) : null,
+      amountOwed: invoice.amountOwed,
+    })),
+  });
+
+  try {
+    await sendEmail({ to: customer.email, subject, html });
+  } catch (err) {
+    Sentry.captureException(err);
+    res.status(502).json({ error: "email_send_failed" });
+    return;
+  }
+
+  res.json({
+    sentTo: customer.email,
+    invoiceCount: outstanding.length,
+    totalOwed: outstanding.reduce((sum, invoice) => sum + invoice.amountOwed, 0),
+  });
 });
 
 customersRouter.get("/:id/payment-stats", async (req, res) => {
