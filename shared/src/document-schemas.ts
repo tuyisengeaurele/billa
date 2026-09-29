@@ -68,6 +68,9 @@ export type DocumentInput = z.infer<typeof documentSchema>;
 export const updateDocumentRemindersSchema = z.object({ enabled: z.boolean() });
 export type UpdateDocumentRemindersInput = z.infer<typeof updateDocumentRemindersSchema>;
 
+export const markDocumentSharedSchema = z.object({ channel: z.enum(["WHATSAPP"]) });
+export type MarkDocumentSharedInput = z.infer<typeof markDocumentSharedSchema>;
+
 export const documentListQuerySchema = z.object({
   type: z
     .string()

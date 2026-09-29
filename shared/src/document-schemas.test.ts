@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { documentLineSchema, documentListQuerySchema, documentSchema } from "./document-schemas.js";
+import { documentLineSchema, documentListQuerySchema, documentSchema, markDocumentSharedSchema } from "./document-schemas.js";
 
 describe("documentLineSchema", () => {
   it("accepts a valid line", () => {
@@ -285,5 +285,15 @@ describe("documentListQuerySchema", () => {
 
   it("accepts a customerId filter", () => {
     expect(documentListQuerySchema.parse({ customerId: "c1" }).customerId).toBe("c1");
+  });
+});
+
+describe("markDocumentSharedSchema", () => {
+  it("accepts the WhatsApp channel", () => {
+    expect(markDocumentSharedSchema.safeParse({ channel: "WHATSAPP" }).success).toBe(true);
+  });
+
+  it("rejects an unknown channel", () => {
+    expect(markDocumentSharedSchema.safeParse({ channel: "FAX" }).success).toBe(false);
   });
 });
