@@ -1,11 +1,19 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { formatRwf, type DocumentType, type InvoicePaymentStatus } from "@billa/shared";
-import { apiRequest } from "../lib/apiClient";
+import {
+  buildStatementWhatsAppMessage,
+  buildWhatsAppLink,
+  formatRwf,
+  type DocumentType,
+  type InvoicePaymentStatus,
+} from "@billa/shared";
+import { apiRequest, ApiError } from "../lib/apiClient";
 import { ariaSortValue } from "../lib/ariaSort";
 import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { Spinner } from "../components/Spinner";
+import { useAuth } from "../context/AuthContext";
 import { usePageTitle } from "../context/PageTitleContext";
+import { useToast } from "../context/ToastContext";
 import { usePaginatedList } from "../lib/usePaginatedList";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
 import { DOCUMENT_TYPE_COLORS } from "../lib/documentTypeColors";
@@ -21,6 +29,7 @@ interface Customer {
   email: string | null;
   isActive: boolean;
   portalToken: string;
+  outstandingBalance: number;
 }
 
 interface DocumentRow {
@@ -56,6 +65,9 @@ export default function CustomerStatement() {
   const [reloadToken, setReloadToken] = useState(0);
   const [portalLinkCopied, setPortalLinkCopied] = useState(false);
   const [paymentStats, setPaymentStats] = useState<PaymentStats | null>(null);
+  const toast = useToast();
+  const { business } = useAuth();
+  const [isEmailing, setIsEmailing] = useState(false);
 
   async function handleCopyPortalLink() {
     if (!customer) return;
@@ -65,6 +77,39 @@ export default function CustomerStatement() {
       setPortalLinkCopied(true);
       setTimeout(() => setPortalLinkCopied(false), 3000);
     }
+  }
+
+  async function handleEmailStatement() {
+    if (!customer) return;
+    setIsEmailing(true);
+    try {
+      const result = await apiRequest<{ sentTo: string }>(`/customers/${customer.id}/send-statement`, { method: "POST" });
+      toast.success(`Statement sent to ${result.sentTo}`);
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError && err.status === 409
+          ? "This customer doesn't owe anything right now."
+          : "Couldn't send the statement. Try again.",
+      );
+    } finally {
+      setIsEmailing(false);
+    }
+  }
+
+  function handleWhatsAppStatement() {
+    if (!customer) return;
+    const message = buildStatementWhatsAppMessage({
+      customerName: customer.name,
+      businessName: business?.name ?? "",
+      totalOwed: customer.outstandingBalance,
+      portalUrl: `${window.location.origin}/portal/${customer.portalToken}`,
+    });
+    const link = buildWhatsAppLink(customer.phone, message);
+    if (!link) {
+      toast.error("Add a phone number to this customer first.");
+      return;
+    }
+    window.open(link, "_blank", "noopener");
   }
 
   useEffect(() => {
@@ -118,7 +163,30 @@ export default function CustomerStatement() {
             <span className="font-sans text-sm text-neutral-500">
               {list.total} document{list.total === 1 ? "" : "s"}
             </span>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={handleEmailStatement}
+                disabled={isEmailing || !customer.email || customer.outstandingBalance <= 0}
+                title={
+                  !customer.email
+                    ? "Add an email to this customer to send it"
+                    : customer.outstandingBalance <= 0
+                      ? "This customer doesn't owe anything right now"
+                      : undefined
+                }
+                className="rounded-lg border border-neutral-200 px-3 py-1.5 font-sans text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isEmailing ? "Sending…" : "Email statement"}
+              </button>
+              <button
+                type="button"
+                onClick={handleWhatsAppStatement}
+                disabled={customer.outstandingBalance <= 0}
+                className="rounded-lg border border-neutral-200 px-3 py-1.5 font-sans text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                WhatsApp statement
+              </button>
               <button
                 type="button"
                 onClick={handleCopyPortalLink}
