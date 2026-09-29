@@ -28,3 +28,10 @@ describe("getPdfLabels", () => {
     }
   });
 });
+
+describe("scanToView label", () => {
+  it("has wording for both document languages", () => {
+    expect(getPdfLabels("EN").scanToView).toBe("Scan to view online");
+    expect(getPdfLabels("FR").scanToView).toBe("Scannez pour voir en ligne");
+  });
+});
