@@ -12,8 +12,7 @@ describe("serving the built client", () => {
     clientDistDir = await mkdtemp(path.join(os.tmpdir(), "billa-client-dist-"));
     await writeFile(path.join(clientDistDir, "index.html"), "<!doctype html><title>Billa</title>");
     await writeFile(path.join(clientDistDir, "app.css"), "body { color: red; }");
-    await writeFile(path.join(clientDistDir, "big.js"), "const value = 1;
-".repeat(500));
+    await writeFile(path.join(clientDistDir, "big.js"), "const value = 1;".repeat(500));
   });
 
   afterEach(async () => {
