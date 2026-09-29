@@ -40,6 +40,29 @@ async function createFinalizedProforma(app: ReturnType<typeof createApp>, cookie
 }
 
 describe("POST /documents/:id/convert", () => {
+  it("keeps the proforma's language and the customer's reference on the invoice", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies);
+    const created = await request(app)
+      .post("/documents")
+      .set("Cookie", cookies)
+      .send({
+        type: "PROFORMA",
+        customerId,
+        issueDate: "2026-08-01",
+        language: "FR",
+        customerReference: "PO-9",
+        lines: [{ description: "Printing", quantity: 1, unitPrice: 5000, taxRate: 18 }],
+      });
+    await request(app).post(`/documents/${created.body.document.id}/finalize`).set("Cookie", cookies);
+
+    const res = await request(app).post(`/documents/${created.body.document.id}/convert`).set("Cookie", cookies);
+
+    expect(res.body.document.language).toBe("FR");
+    expect(res.body.document.customerReference).toBe("PO-9");
+  });
+
   it("creates a draft invoice copying the proforma's customer, lines, and notes", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app);

@@ -62,6 +62,8 @@ export async function convertProformaToInvoice(
       // gets there - without this, a converted invoice's due date was silently blank.
       dueDate: defaultDueDate(),
       notes: proforma.notes,
+      language: proforma.language,
+      customerReference: proforma.customerReference,
       subtotal: totals.subtotal,
       taxTotal: totals.taxTotal,
       total: totals.total,
