@@ -15,6 +15,7 @@ import { z } from "zod";
 import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { Modal } from "../components/Modal";
 import { PaymentTermsSelect } from "../components/PaymentTermsSelect";
+import { CreditLimitWarning } from "../components/customers/CreditLimitWarning";
 import { Spinner } from "../components/Spinner";
 import { CustomerPicker } from "../components/customers/CustomerPicker";
 import { ItemPicker } from "../components/items/ItemPicker";
@@ -573,6 +574,10 @@ export default function DocumentForm() {
               )}
             </div>
           </section>
+
+          {type === "INVOICE" && watchedCustomerId && (
+            <CreditLimitWarning customerId={watchedCustomerId} invoiceTotal={totals.total} />
+          )}
 
           <section className="rounded-xl border border-neutral-200 bg-surface p-6">
             <div className="flex items-center justify-between">
