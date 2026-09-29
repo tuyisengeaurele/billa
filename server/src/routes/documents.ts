@@ -6,6 +6,7 @@ import {
   createPaymentSchema,
   documentListQuerySchema,
   documentSchema,
+  markDocumentSharedSchema,
   DOCUMENT_LANGUAGES,
   getPdfLabels,
   updateDocumentRemindersSchema,
@@ -16,6 +17,7 @@ import type {
   CreatePaymentInput,
   DocumentInput,
   DocumentListQuery,
+  MarkDocumentSharedInput,
   UpdateDocumentRemindersInput,
   VoidPaymentInput,
   WriteOffInvoiceInput,
@@ -459,6 +461,33 @@ documentsRouter.post("/:id/send", async (req, res) => {
   }
 
   const updated = await prisma.document.update({ where: { id }, data: { sentAt: new Date() } });
+  res.json({ sentAt: updated.sentAt });
+});
+
+documentsRouter.post("/:id/shared", validateBody(markDocumentSharedSchema), async (req, res) => {
+  const businessId = req.auth!.businessId;
+  const { id } = req.params;
+  const body = req.body as MarkDocumentSharedInput;
+
+  const document = await prisma.document.findFirst({ where: { id, businessId } });
+  if (!document) {
+    res.status(404).json({ error: "not_found" });
+    return;
+  }
+  if (document.status !== "FINALIZED") {
+    res.status(409).json({ error: "not_finalized" });
+    return;
+  }
+
+  const updated = await prisma.document.update({ where: { id }, data: { sentAt: new Date() } });
+  await logActivity({
+    businessId,
+    actorUserId: req.auth!.userId,
+    action: "DOCUMENT_SHARED",
+    entityType: "Document",
+    entityId: id,
+    metadata: { channel: body.channel, type: document.type, number: document.number },
+  });
   res.json({ sentAt: updated.sentAt });
 });
 
