@@ -17,6 +17,7 @@ import { BillingSection } from "../components/business/BillingSection";
 import { ApiKeysSection } from "../components/business/ApiKeysSection";
 import { MomoSection } from "../components/business/MomoSection";
 import { TwoFactorSection } from "../components/business/TwoFactorSection";
+import { WebhooksSection } from "../components/business/WebhooksSection";
 import { TeamSection } from "../components/business/TeamSection";
 import { ExportCsvButton } from "../components/ExportCsvButton";
 
@@ -576,6 +577,8 @@ export default function BusinessSettings() {
         {isOwner && <MomoSection />}
 
         {isOwner && <ApiKeysSection />}
+
+        {isOwner && <WebhooksSection />}
 
         <section className="rounded-xl border border-neutral-200 bg-surface p-6">
           <div className="flex items-center justify-between">
