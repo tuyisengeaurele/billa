@@ -10,6 +10,11 @@ declare global {
 }
 
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
+  // Already authenticated earlier in the request, by an API key (see api-key-auth.ts).
+  if (req.auth) {
+    next();
+    return;
+  }
   const token = req.cookies?.access_token;
   if (!token) {
     res.status(401).json({ error: "unauthenticated" });
