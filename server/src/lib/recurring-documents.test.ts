@@ -76,6 +76,87 @@ describe("generateDueRecurringDocuments", () => {
     expect(updatedSource.nextRecurrenceAt!.getTime()).toBeGreaterThan(due.getTime());
   });
 
+  it("keeps a line's discount, so the repeat charges the same amount", async () => {
+    const { business, customer } = await setupBusiness();
+    await prisma.document.create({
+      data: {
+        businessId: business.id,
+        customerId: customer.id,
+        type: "INVOICE",
+        status: "FINALIZED",
+        template: "MINIMAL",
+        issueDate: new Date("2026-01-01"),
+        subtotal: 4500,
+        taxTotal: 810,
+        total: 5310,
+        recurrenceInterval: "MONTHLY",
+        nextRecurrenceAt: new Date("2020-01-01"),
+        lines: {
+          create: [
+            {
+              description: "Consulting",
+              quantity: 1,
+              unitPrice: 5000,
+              taxRate: 18,
+              discountType: "PERCENT",
+              discountValue: 10,
+              lineTotal: 4500,
+              sortOrder: 0,
+            },
+          ],
+        },
+      },
+    });
+
+    const generated = await generateDueRecurringDocuments(business.id);
+
+    expect(generated[0].total).toBe(5310);
+    const line = await prisma.documentLine.findFirstOrThrow({ where: { documentId: generated[0].id } });
+    expect(line.discountType).toBe("PERCENT");
+    expect(Number(line.discountValue)).toBe(10);
+    expect(line.lineTotal).toBe(4500);
+  });
+
+  it("keeps the language, customer reference and the payment window of the original", async () => {
+    const { business, customer } = await setupBusiness();
+    await prisma.document.create({
+      data: {
+        businessId: business.id,
+        customerId: customer.id,
+        type: "INVOICE",
+        status: "FINALIZED",
+        template: "MINIMAL",
+        language: "FR",
+        customerReference: "PO-77",
+        issueDate: new Date("2026-01-01"),
+        dueDate: new Date("2026-01-31"),
+        subtotal: 5000,
+        taxTotal: 900,
+        total: 5900,
+        recurrenceInterval: "MONTHLY",
+        nextRecurrenceAt: new Date("2020-03-01T00:00:00.000Z"),
+        lines: {
+          create: [{ description: "Consulting", quantity: 1, unitPrice: 5000, taxRate: 18, lineTotal: 5000, sortOrder: 0 }],
+        },
+      },
+    });
+
+    const generated = await generateDueRecurringDocuments(business.id);
+
+    expect(generated[0].language).toBe("FR");
+    expect(generated[0].customerReference).toBe("PO-77");
+    expect(generated[0].dueDate?.toISOString().slice(0, 10)).toBe("2020-03-31");
+  });
+
+  it("leaves the due date empty when the original had none", async () => {
+    const { business, customer } = await setupBusiness();
+    await createRecurringDocument(business.id, customer.id, { nextRecurrenceAt: new Date("2020-01-01") });
+
+    const generated = await generateDueRecurringDocuments(business.id);
+
+    expect(generated[0].dueDate).toBeNull();
+  });
+
   it("does not generate a document that isn't due yet", async () => {
     const { business, customer } = await setupBusiness();
     const future = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);

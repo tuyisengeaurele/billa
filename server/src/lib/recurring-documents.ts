@@ -44,8 +44,16 @@ export async function generateDueRecurringDocuments(businessId: string): Promise
         quantity: Number(line.quantity),
         unitPrice: line.unitPrice,
         taxRate: Number(line.taxRate),
+        discountType: line.discountType,
+        discountValue: line.discountValue ? Number(line.discountValue) : null,
       })),
     );
+
+    // Each repeat gets the same window to pay as the original had, counted from its own issue date.
+    const issueDate = source.nextRecurrenceAt!;
+    const dueDate = source.dueDate
+      ? new Date(issueDate.getTime() + (source.dueDate.getTime() - source.issueDate.getTime()))
+      : null;
 
     const newDocument = await prisma.document.create({
       data: {
@@ -54,7 +62,10 @@ export async function generateDueRecurringDocuments(businessId: string): Promise
         status: "DRAFT",
         template: source.template,
         customerId: source.customerId,
-        issueDate: source.nextRecurrenceAt!,
+        issueDate,
+        dueDate,
+        language: source.language,
+        customerReference: source.customerReference,
         notes: source.notes,
         subtotal: totals.subtotal,
         taxTotal: totals.taxTotal,
@@ -66,6 +77,8 @@ export async function generateDueRecurringDocuments(businessId: string): Promise
             quantity: line.quantity,
             unitPrice: line.unitPrice,
             taxRate: line.taxRate,
+            discountType: line.discountType,
+            discountValue: line.discountValue,
             lineTotal: totals.lines[index].lineTotal,
             sortOrder: index,
           })),
