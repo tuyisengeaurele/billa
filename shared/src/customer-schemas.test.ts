@@ -15,6 +15,19 @@ describe("customerSchema", () => {
   });
 });
 
+describe("customer credit limit", () => {
+  it("accepts a whole positive amount, or null to clear it", () => {
+    expect(customerSchema.safeParse({ name: "Kigali Traders", creditLimit: 500000 }).success).toBe(true);
+    expect(customerUpdateSchema.safeParse({ creditLimit: null }).success).toBe(true);
+  });
+
+  it("rejects zero, a negative or a fractional limit", () => {
+    for (const creditLimit of [0, -100, 1500.5]) {
+      expect(customerSchema.safeParse({ name: "Kigali Traders", creditLimit }).success).toBe(false);
+    }
+  });
+});
+
 describe("customerUpdateSchema", () => {
   it("accepts isActive alone", () => {
     expect(customerUpdateSchema.safeParse({ isActive: false }).success).toBe(true);

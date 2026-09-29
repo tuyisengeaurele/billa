@@ -6,6 +6,13 @@ export const customerSchema = z.object({
   address: z.string().trim().min(1).optional(),
   phone: z.string().trim().min(1).optional(),
   email: z.string().trim().email("Enter a valid email address").optional(),
+  // Whole RWF; null clears it.
+  creditLimit: z
+    .number({ invalid_type_error: "Enter a whole number of RWF" })
+    .int("Enter a whole number of RWF")
+    .positive("Enter a limit greater than zero")
+    .nullable()
+    .optional(),
 });
 export type CustomerInput = z.infer<typeof customerSchema>;
 
