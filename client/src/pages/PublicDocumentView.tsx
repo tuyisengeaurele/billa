@@ -4,6 +4,7 @@ import type { DocumentType } from "@billa/shared";
 import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { Spinner } from "../components/Spinner";
 import { apiRequest, ApiError, API_BASE_URL } from "../lib/apiClient";
+import { momoFailureMessage } from "../lib/momoFailureMessage";
 import { formatRwf } from "@billa/shared";
 
 interface PublicDocumentLine {
@@ -326,7 +327,7 @@ export default function PublicDocumentView() {
                 <p className="font-sans text-sm text-error">
                   {momoStatus === "EXPIRED"
                     ? "This payment request expired before it was approved."
-                    : (momoFailureReason ?? "The payment didn't go through.")}
+                    : momoFailureMessage(momoFailureReason)}
                 </p>
                 <button
                   type="button"
