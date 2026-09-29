@@ -19,3 +19,4 @@ export * from "./profile-schemas.js";
 export * from "./search-schemas.js";
 export * from "./notification-schemas.js";
 export * from "./momo-schemas.js";
+export * from "./whatsapp-number.js";
