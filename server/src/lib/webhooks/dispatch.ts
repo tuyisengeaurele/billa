@@ -53,6 +53,19 @@ export async function emitWebhookEvent(businessId: string, event: WebhookEvent, 
   }
 }
 
+/** Queues a "webhook.test" event for one endpoint so its owner can check the connection works. */
+export async function queueTestDelivery(endpointId: string): Promise<string> {
+  const delivery = await prisma.webhookDelivery.create({
+    data: {
+      endpointId,
+      event: "webhook.test",
+      payload: { event: "webhook.test", createdAt: new Date().toISOString(), data: { message: "This is a test event from Billa." } },
+    },
+  });
+  scheduleAttempt(delivery.id);
+  return delivery.id;
+}
+
 async function finish(
   deliveryId: string,
   attempts: number,
