@@ -137,6 +137,7 @@ model Business {
   invites               BusinessInvite[]
   activityLog           ActivityLogEntry[]
   invoicePayments       InvoicePayment[]
+  apiKeys               ApiKey[]
   impersonationRequests ImpersonationRequest[]
   momoPaymentRequests    MomoPaymentRequest[]
 
@@ -326,6 +327,24 @@ model Notification {
   user User @relation(fields: [userId], references: [id])
 
   @@index([userId, readAt])
+}
+
+model ApiKey {
+  id              String    @id @default(cuid())
+  businessId      String
+  name            String
+  // The first characters of the key, kept so a person can tell keys apart in the list.
+  // The key itself is never stored, only its SHA-256 hash.
+  keyPrefix       String
+  keyHash         String    @unique
+  createdByUserId String
+  lastUsedAt      DateTime?
+  revokedAt       DateTime?
+  createdAt       DateTime  @default(now())
+
+  business Business @relation(fields: [businessId], references: [id])
+
+  @@index([businessId])
 }
 
 model RefreshToken {
