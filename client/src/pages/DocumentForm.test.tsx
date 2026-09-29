@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -107,6 +107,28 @@ describe("DocumentForm", () => {
     await user.click(option);
 
     expect(screen.getByLabelText("Tax rate")).toHaveValue(0);
+  });
+
+  it("sets the due date from the chosen payment term", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async () => new Response("{}", { status: 401 }));
+    const user = userEvent.setup();
+    renderNew();
+
+    const issueDate = screen.getByLabelText(/issue date/i);
+    fireEvent.change(issueDate, { target: { value: "2026-09-01" } });
+    await user.selectOptions(screen.getByLabelText(/payment terms/i), "14");
+
+    expect(screen.getByLabelText(/due date/i)).toHaveValue("2026-09-15");
+  });
+
+  it("switches the payment terms to Custom when the due date is typed by hand", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async () => new Response("{}", { status: 401 }));
+    renderNew();
+
+    fireEvent.change(screen.getByLabelText(/issue date/i), { target: { value: "2026-09-01" } });
+    fireEvent.change(screen.getByLabelText(/due date/i), { target: { value: "2026-09-12" } });
+
+    await waitFor(() => expect(screen.getByLabelText(/payment terms/i)).toHaveValue("custom"));
   });
 
   it("adds and removes line items, updating the live total", async () => {

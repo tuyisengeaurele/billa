@@ -14,6 +14,7 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { z } from "zod";
 import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { Modal } from "../components/Modal";
+import { PaymentTermsSelect } from "../components/PaymentTermsSelect";
 import { Spinner } from "../components/Spinner";
 import { CustomerPicker } from "../components/customers/CustomerPicker";
 import { ItemPicker } from "../components/items/ItemPicker";
@@ -469,6 +470,14 @@ export default function DocumentForm() {
                 error={errors.issueDate?.message}
                 {...register("issueDate")}
               />
+              {dueDateLabel && (
+                <PaymentTermsSelect
+                  label={type === "INVOICE" ? "Payment terms" : "Validity"}
+                  issueDate={watch("issueDate")}
+                  dueDate={watch("dueDate")}
+                  onSelect={(dueDate) => setValue("dueDate", dueDate, { shouldDirty: true })}
+                />
+              )}
               {dueDateLabel && (
                 <FormField
                   id="dueDate"
