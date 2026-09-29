@@ -1,7 +1,13 @@
 import { Router } from "express";
 import type { Prisma } from "@prisma/client";
-import { itemListQuerySchema, itemSchema, itemUpdateSchema } from "@billa/shared";
-import type { ItemListQuery } from "@billa/shared";
+import {
+  importRowsRequestSchema,
+  itemListQuerySchema,
+  itemSchema,
+  itemUpdateSchema,
+  parseItemImportRow,
+} from "@billa/shared";
+import type { ImportRowsRequest, ItemInput, ItemListQuery } from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/require-auth.js";
 import { requireBusinessContext } from "../middleware/require-business.js";
@@ -77,6 +83,41 @@ itemsRouter.get("/export.csv", validateQuery(itemListQuerySchema), async (req, r
   res.setHeader("Content-Type", "text/csv");
   res.setHeader("Content-Disposition", 'attachment; filename="items.csv"');
   res.send(csv);
+});
+
+itemsRouter.post("/import", validateBody(importRowsRequestSchema), async (req, res) => {
+  const businessId = req.auth!.businessId;
+  const { rows } = req.body as ImportRowsRequest;
+
+  const key = (description: string, unit: string) => `${description.trim().toLowerCase()}|${unit.trim().toLowerCase()}`;
+  const existing = await prisma.item.findMany({ where: { businessId }, select: { description: true, unit: true } });
+  const seen = new Set(existing.map((item) => key(item.description, item.unit)));
+
+  const toCreate: ItemInput[] = [];
+  const skipped: { row: number; reason: string }[] = [];
+  const invalid: { row: number; error: string }[] = [];
+
+  rows.forEach((raw, index) => {
+    const row = index + 1;
+    const parsed = parseItemImportRow(raw);
+    if (!parsed.ok) {
+      invalid.push({ row, error: parsed.error });
+      return;
+    }
+    const itemKey = key(parsed.value.description, parsed.value.unit);
+    if (seen.has(itemKey)) {
+      skipped.push({ row, reason: "Already an item with this description and unit" });
+      return;
+    }
+    seen.add(itemKey);
+    toCreate.push(parsed.value);
+  });
+
+  if (toCreate.length > 0) {
+    await prisma.item.createMany({ data: toCreate.map((item) => ({ ...item, businessId })) });
+  }
+
+  res.json({ created: toCreate.length, skipped, invalid });
 });
 
 itemsRouter.post("/", validateBody(itemSchema), async (req, res) => {
