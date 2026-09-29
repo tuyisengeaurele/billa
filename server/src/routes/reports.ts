@@ -4,6 +4,7 @@ import { requireAuth } from "../middleware/require-auth.js";
 import { requireBusinessContext } from "../middleware/require-business.js";
 import { requireActiveSubscription } from "../middleware/require-active-subscription.js";
 import { expensiveOperationRateLimit } from "../middleware/general-rate-limit.js";
+import { toCsv } from "../lib/csv.js";
 
 export const reportsRouter = Router();
 
@@ -73,4 +74,57 @@ reportsRouter.get("/tax-summary", async (req, res) => {
       .map(([rate, amounts]) => ({ rate, ...amounts }))
       .sort((a, b) => a.rate - b.rate),
   });
+});
+
+const REGISTER_TYPE_LABELS = { INVOICE: "Invoice", CREDIT_NOTE: "Credit note" } as const;
+
+// One row per invoice and credit note, in the shape an accountant files a VAT return from.
+// Credit notes are negative so a column total is the net figure for the period.
+reportsRouter.get("/vat-register.csv", async (req, res) => {
+  const businessId = req.auth!.businessId;
+  const from = typeof req.query.from === "string" && req.query.from ? new Date(req.query.from) : undefined;
+  const to = typeof req.query.to === "string" && req.query.to ? new Date(req.query.to) : undefined;
+
+  const documents = await prisma.document.findMany({
+    where: {
+      businessId,
+      status: "FINALIZED",
+      type: { in: ["INVOICE", "CREDIT_NOTE"] },
+      ...(from || to
+        ? { issueDate: { ...(from ? { gte: from } : {}), ...(to ? { lt: endOfDay(to) } : {}) } }
+        : {}),
+    },
+    include: { customer: { select: { name: true, tin: true } } },
+    orderBy: [{ issueDate: "asc" }, { number: "asc" }],
+  });
+
+  const csv = toCsv(
+    documents.map((document) => {
+      const sign = document.type === "CREDIT_NOTE" ? -1 : 1;
+      return {
+        date: document.issueDate.toISOString().slice(0, 10),
+        number: document.number ?? "",
+        type: REGISTER_TYPE_LABELS[document.type as keyof typeof REGISTER_TYPE_LABELS],
+        customer: document.customer.name,
+        tin: document.customer.tin ?? "",
+        net: sign * document.subtotal,
+        vat: sign * document.taxTotal,
+        total: sign * document.total,
+      };
+    }),
+    [
+      { key: "date", header: "Date" },
+      { key: "number", header: "Number" },
+      { key: "type", header: "Type" },
+      { key: "customer", header: "Customer" },
+      { key: "tin", header: "Customer TIN" },
+      { key: "net", header: "Net" },
+      { key: "vat", header: "VAT" },
+      { key: "total", header: "Total" },
+    ],
+  );
+
+  res.setHeader("Content-Type", "text/csv; charset=utf-8");
+  res.setHeader("Content-Disposition", 'attachment; filename="vat-register.csv"');
+  res.send(csv);
 });

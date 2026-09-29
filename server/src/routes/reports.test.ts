@@ -176,3 +176,64 @@ describe("GET /reports/tax-summary", () => {
     expect(res.body.totalTaxInvoiced).toBe(0);
   });
 });
+
+describe("GET /reports/vat-register.csv", () => {
+  it("returns 401 without a session", async () => {
+    const res = await request(createApp()).get("/reports/vat-register.csv");
+    expect(res.status).toBe(401);
+  });
+
+  it("lists each finalized invoice and credit note with net, VAT and total, credit notes negative", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customer = await request(app)
+      .post("/customers")
+      .set("Cookie", cookies)
+      .send({ name: "Musanze Supplies", tin: "123456789" });
+    const customerId = customer.body.customer.id as string;
+    const invoice = await createFinalizedDocument(app, cookies, customerId, "INVOICE", "2026-08-19", 100000, 18);
+    await createFinalizedDocument(app, cookies, customerId, "CREDIT_NOTE", "2026-08-20", 20000, 18, invoice.id);
+
+    const res = await request(app).get("/reports/vat-register.csv").set("Cookie", cookies);
+
+    expect(res.status).toBe(200);
+    expect(res.headers["content-type"]).toContain("text/csv");
+    const lines = res.text.split("\r\n");
+    expect(lines[0]).toBe("Date,Number,Type,Customer,Customer TIN,Net,VAT,Total");
+    expect(lines[1]).toBe("2026-08-19,INV-0001,Invoice,Musanze Supplies,123456789,100000,18000,118000");
+    expect(lines[2]).toBe("2026-08-20,CN-0001,Credit note,Musanze Supplies,123456789,-20000,-3600,-23600");
+  });
+
+  it("leaves out drafts, other document types and dates outside the range", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies);
+    await createFinalizedDocument(app, cookies, customerId, "INVOICE", "2026-07-01", 1000, 18);
+    await createFinalizedDocument(app, cookies, customerId, "INVOICE", "2026-08-19", 2000, 18);
+    await createFinalizedDocument(app, cookies, customerId, "QUOTE", "2026-08-19", 3000, 18);
+    await request(app)
+      .post("/documents")
+      .set("Cookie", cookies)
+      .send({ type: "INVOICE", customerId, issueDate: "2026-08-19", lines: [] });
+
+    const res = await request(app)
+      .get("/reports/vat-register.csv?from=2026-08-01&to=2026-08-31")
+      .set("Cookie", cookies);
+
+    const rows = res.text.split("\r\n");
+    expect(rows).toHaveLength(2);
+    expect(rows[1]).toContain(",2000,360,2360");
+  });
+
+  it("only includes the caller's own business", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies);
+    await createFinalizedDocument(app, cookies, customerId, "INVOICE", "2026-08-19", 2000, 18);
+    const otherCookies = await registerAndGetCookies(app, "other@example.com");
+
+    const res = await request(app).get("/reports/vat-register.csv").set("Cookie", otherCookies);
+
+    expect(res.text.split("\r\n")).toHaveLength(1);
+  });
+});
