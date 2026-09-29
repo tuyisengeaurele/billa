@@ -29,6 +29,7 @@ import { reportsRouter } from "./routes/reports.js";
 import { receivablesRouter } from "./routes/receivables.js";
 import { profileRouter } from "./routes/profile.js";
 import { notificationsRouter } from "./routes/notifications.js";
+import { apiKeysRouter } from "./routes/api-keys.js";
 import { getStorage } from "./lib/storage.js";
 import { detectAllowedImageType } from "./lib/file-sniff.js";
 import { errorHandler } from "./middleware/error-handler.js";
@@ -189,6 +190,7 @@ export function createApp(clientDistDir: string = DEFAULT_CLIENT_DIST_DIR) {
   app.use("/reports", reportsRouter);
   app.use("/profile", profileRouter);
   app.use("/notifications", notificationsRouter);
+  app.use("/api-keys", apiKeysRouter);
   app.use("/receivables", receivablesRouter);
 
   Sentry.setupExpressErrorHandler(app);
