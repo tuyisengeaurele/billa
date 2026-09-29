@@ -67,6 +67,30 @@ describe("GET /reports/tax-summary", () => {
     expect(res.body.byRate).toEqual([{ rate: 18, taxableAmount: 100000, taxAmount: 18000 }]);
   });
 
+  it("taxes the discounted amount, so the summary matches the invoice", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies);
+    const created = await request(app)
+      .post("/documents")
+      .set("Cookie", cookies)
+      .send({
+        type: "INVOICE",
+        customerId,
+        issueDate: "2026-08-19",
+        lines: [
+          { description: "Cement", quantity: 1, unitPrice: 100000, taxRate: 18, discountType: "PERCENT", discountValue: 10 },
+        ],
+      });
+    await request(app).post(`/documents/${created.body.document.id}/finalize`).set("Cookie", cookies);
+
+    const res = await request(app).get("/reports/tax-summary").set("Cookie", cookies);
+
+    expect(created.body.document.taxTotal).toBe(16200);
+    expect(res.body.totalTaxInvoiced).toBe(16200);
+    expect(res.body.byRate).toEqual([{ rate: 18, taxableAmount: 90000, taxAmount: 16200 }]);
+  });
+
   it("nets out tax from finalized credit notes", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app);

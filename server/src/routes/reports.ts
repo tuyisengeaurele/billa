@@ -45,7 +45,8 @@ reportsRouter.get("/tax-summary", async (req, res) => {
   let totalTaxCredited = 0;
 
   for (const line of lines) {
-    const rawSubtotal = Math.round(Number(line.quantity) * line.unitPrice);
+    // The stored line total is already net of any line discount, which is the amount VAT is charged on.
+    const rawSubtotal = line.lineTotal;
     const taxAmount = Math.round(rawSubtotal * (Number(line.taxRate) / 100));
     const sign = line.document.type === "INVOICE" ? 1 : -1;
     const rate = Number(line.taxRate);
