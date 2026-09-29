@@ -19,6 +19,7 @@ import { useToast } from "../context/ToastContext";
 import { useWhatsAppShare } from "../hooks/useWhatsAppShare";
 import { apiRequest, ApiError, API_BASE_URL } from "../lib/apiClient";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
+import { formatRelativeTime } from "../lib/relativeTime";
 import { PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS } from "../lib/paymentStatusColors";
 import { formatRwf } from "@billa/shared";
 
@@ -46,6 +47,8 @@ interface DocumentDetail {
   business: { momoEnabled: boolean };
   dueDate: string | null;
   sentAt: string | null;
+  viewCount: number;
+  lastViewedAt: string | null;
   lines: DocumentLine[];
   subtotal: number;
   taxTotal: number;
@@ -328,6 +331,14 @@ export default function DocumentView() {
             )}
           </div>
         </div>
+
+        {document.status === "FINALIZED" && document.sentAt && (
+          <p className="text-right font-sans text-sm text-neutral-500">
+            {document.lastViewedAt
+              ? `Opened by the customer ${formatRelativeTime(document.lastViewedAt)} (${document.viewCount} ${document.viewCount === 1 ? "view" : "views"})`
+              : "Sent, not opened yet"}
+          </p>
+        )}
 
         {deleteError && (
           <div className="rounded-lg bg-error-bg px-4 py-3 font-sans text-sm text-error" role="alert">

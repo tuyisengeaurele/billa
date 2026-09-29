@@ -298,6 +298,82 @@ describe("DocumentView", () => {
     );
   });
 
+  it("shows when the customer last opened a sent document", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async () =>
+      new Response(
+        JSON.stringify({
+          document: {
+            id: "d1",
+            number: "INV-0001",
+            type: "INVOICE",
+            status: "FINALIZED",
+            publicToken: "tok",
+            customer: { name: "Kigali Traders", email: null, phone: null },
+            business: { momoEnabled: false },
+            sentAt: "2026-09-01T08:00:00.000Z",
+            viewCount: 3,
+            lastViewedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+            lines: [],
+            subtotal: 0,
+            taxTotal: 0,
+            total: 0,
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/documents/d1"]}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/documents/:id" element={<DocumentView />} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText(/opened by the customer 2h ago \(3 views\)/i)).toBeInTheDocument();
+  });
+
+  it("says a sent document has not been opened yet", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async () =>
+      new Response(
+        JSON.stringify({
+          document: {
+            id: "d1",
+            number: "INV-0001",
+            type: "INVOICE",
+            status: "FINALIZED",
+            publicToken: "tok",
+            customer: { name: "Kigali Traders", email: null, phone: null },
+            business: { momoEnabled: false },
+            sentAt: "2026-09-01T08:00:00.000Z",
+            viewCount: 0,
+            lastViewedAt: null,
+            lines: [],
+            subtotal: 0,
+            taxTotal: 0,
+            total: 0,
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/documents/d1"]}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/documents/:id" element={<DocumentView />} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText(/not opened yet/i)).toBeInTheDocument();
+  });
+
   it("does not offer WhatsApp sharing for a draft", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async () =>
       new Response(
