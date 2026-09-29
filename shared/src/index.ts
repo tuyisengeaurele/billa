@@ -21,3 +21,4 @@ export * from "./notification-schemas.js";
 export * from "./momo-schemas.js";
 export * from "./whatsapp-number.js";
 export * from "./whatsapp-message.js";
+export * from "./format-date.js";
