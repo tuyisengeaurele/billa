@@ -483,4 +483,92 @@ describe("PublicDocumentView", () => {
       expect(screen.queryByText(/pay with mtn momo/i)).not.toBeInTheDocument();
     });
   });
+
+  describe("payments received", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    function paidInvoice(overrides: Record<string, unknown> = {}) {
+      return {
+        id: "d1",
+        type: "INVOICE",
+        number: "INV-0001",
+        business: { name: "Kigali Traders", momoEnabled: false },
+        customer: { name: "Acme Ltd", phone: null },
+        lines: [],
+        subtotal: 0,
+        taxTotal: 0,
+        total: 10000,
+        amountPaid: 4000,
+        amountOwed: 6000,
+        paymentStatus: "PARTIALLY_PAID",
+        payments: [
+          { id: "p1", amount: 4000, method: "MOBILE_MONEY", paidOn: "2026-09-03T00:00:00.000Z", receiptToken: "rcpt-1" },
+        ],
+        ...overrides,
+      };
+    }
+
+    it("lists each payment with its date, method and a receipt link", async () => {
+      vi.spyOn(global, "fetch").mockImplementation(async () =>
+        new Response(JSON.stringify({ document: paidInvoice() }), { status: 200 }),
+      );
+
+      renderPage("tok-abc123");
+
+      expect(await screen.findByText("Payments received")).toBeInTheDocument();
+      expect(screen.getByText("3 Sep 2026")).toBeInTheDocument();
+      expect(screen.getByText("Mobile Money")).toBeInTheDocument();
+      expect(screen.getByText("4,000 RWF")).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: /receipt/i })).toHaveAttribute(
+        "href",
+        expect.stringContaining("/public/documents/rcpt-1/pdf"),
+      );
+    });
+
+    it("leaves out the receipt link for a payment with no receipt", async () => {
+      vi.spyOn(global, "fetch").mockImplementation(async () =>
+        new Response(
+          JSON.stringify({
+            document: paidInvoice({
+              payments: [{ id: "p1", amount: 4000, method: "CASH", paidOn: "2026-09-03T00:00:00.000Z", receiptToken: null }],
+            }),
+          }),
+          { status: 200 },
+        ),
+      );
+
+      renderPage("tok-abc123");
+
+      await screen.findByText("Payments received");
+      expect(screen.queryByRole("link", { name: /receipt/i })).not.toBeInTheDocument();
+    });
+
+    it("says the invoice is paid in full once nothing is owed", async () => {
+      vi.spyOn(global, "fetch").mockImplementation(async () =>
+        new Response(
+          JSON.stringify({ document: paidInvoice({ amountPaid: 10000, amountOwed: 0, paymentStatus: "PAID" }) }),
+          { status: 200 },
+        ),
+      );
+
+      renderPage("tok-abc123");
+
+      expect(await screen.findByText(/paid in full/i)).toBeInTheDocument();
+    });
+
+    it("shows no payments section when nothing has been paid", async () => {
+      vi.spyOn(global, "fetch").mockImplementation(async () =>
+        new Response(JSON.stringify({ document: paidInvoice({ payments: [], amountPaid: 0, amountOwed: 10000 }) }), {
+          status: 200,
+        }),
+      );
+
+      renderPage("tok-abc123");
+
+      await screen.findByText(/invoice inv-0001/i);
+      expect(screen.queryByText("Payments received")).not.toBeInTheDocument();
+    });
+  });
 });

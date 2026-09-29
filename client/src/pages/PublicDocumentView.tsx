@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import type { DocumentType } from "@billa/shared";
+import type { DocumentType, PaymentMethod } from "@billa/shared";
 import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { Spinner } from "../components/Spinner";
 import { apiRequest, ApiError, API_BASE_URL } from "../lib/apiClient";
 import { momoFailureMessage } from "../lib/momoFailureMessage";
+import { PAYMENT_METHOD_LABELS } from "../lib/paymentMethodLabels";
 import { formatRwf } from "@billa/shared";
 
 interface PublicDocumentLine {
@@ -13,6 +14,14 @@ interface PublicDocumentLine {
   quantity: string | number;
   unitPrice: number;
   lineTotal: number;
+}
+
+interface PublicPayment {
+  id: string;
+  amount: number;
+  method: PaymentMethod;
+  paidOn: string;
+  receiptToken: string | null;
 }
 
 interface PublicDocumentDetail {
@@ -25,6 +34,7 @@ interface PublicDocumentDetail {
   total: number;
   amountPaid: number;
   amountOwed: number;
+  payments?: PublicPayment[];
   paymentStatus: string | null;
   business: { name: string; momoEnabled: boolean };
   customer: { name: string; phone: string | null };
@@ -42,6 +52,10 @@ const DOCUMENT_TYPE_DISPLAY: Record<string, string> = {
   QUOTE: "Quote",
   RECEIPT: "Receipt",
 };
+
+function formatPaidOn(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+}
 
 export default function PublicDocumentView() {
   const { token } = useParams();
@@ -272,6 +286,39 @@ export default function PublicDocumentView() {
           <span>Tax: {formatRwf(document.taxTotal)}</span>
           <span className="font-semibold text-neutral-900">Total: {formatRwf(document.total)}</span>
         </div>
+
+        {document.payments && document.payments.length > 0 && (
+          <div className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-surface px-5 py-4">
+            <p className="font-sans text-sm font-medium text-neutral-900">Payments received</p>
+            <ul className="flex flex-col divide-y divide-neutral-100 font-sans text-sm">
+              {document.payments.map((payment) => (
+                <li key={payment.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                  <span className="flex items-center gap-2 text-neutral-600">
+                    <span>{formatPaidOn(payment.paidOn)}</span>
+                    <span className="text-neutral-300" aria-hidden="true">
+                      |
+                    </span>
+                    <span>{PAYMENT_METHOD_LABELS[payment.method]}</span>
+                  </span>
+                  <span className="flex items-center gap-4">
+                    <span className="font-medium text-neutral-900">{formatRwf(payment.amount)}</span>
+                    {payment.receiptToken && (
+                      <a
+                        href={`${API_BASE_URL}/public/documents/${payment.receiptToken}/pdf`}
+                        className="font-semibold text-primary-500 hover:text-primary-700"
+                      >
+                        Receipt
+                      </a>
+                    )}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            {document.type === "INVOICE" && document.amountOwed === 0 && (
+              <p className="font-sans text-sm font-medium text-primary-700">Paid in full. Thank you.</p>
+            )}
+          </div>
+        )}
 
         {document.type === "INVOICE" &&
           document.business.momoEnabled &&
