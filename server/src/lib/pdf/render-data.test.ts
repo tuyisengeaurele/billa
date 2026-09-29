@@ -90,6 +90,7 @@ function makeDocument(
       phone: null,
       email: null,
       isActive: true,
+      creditLimit: null,
       portalToken: "portal-token1",
       createdAt: new Date(),
       updatedAt: new Date(),

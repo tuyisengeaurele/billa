@@ -421,6 +421,8 @@ model Customer {
   phone       String?
   email       String?
   isActive    Boolean  @default(true)
+  // Whole RWF. Only used to warn when a new invoice would take what they owe past it.
+  creditLimit Int?
   portalToken String   @unique @default(dbgenerated("gen_random_uuid()::text"))
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
