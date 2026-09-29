@@ -128,10 +128,25 @@ publicDocumentsRouter.get("/:token", publicDocumentRateLimit, async (req, res) =
   // The balance the pay button charges: net of payments and credit notes, the same
   // figure the MoMo request itself uses, so the amount shown is the amount taken.
   const balance = document.type === "INVOICE" ? await getInvoiceOutstandingBalance(document.id) : null;
+  const payments =
+    document.type === "INVOICE"
+      ? await prisma.invoicePayment.findMany({
+          where: { documentId: document.id, voidedAt: null },
+          orderBy: { paidOn: "asc" },
+          include: { receiptDocument: { select: { publicToken: true, status: true } } },
+        })
+      : [];
   res.json({
     document: {
       ...documentFields,
       amountOwed: balance ? Math.max(balance.amountOwed, 0) : 0,
+      payments: payments.map((payment) => ({
+        id: payment.id,
+        amount: payment.amount,
+        method: payment.method,
+        paidOn: payment.paidOn,
+        receiptToken: payment.receiptDocument?.status === "FINALIZED" ? payment.receiptDocument.publicToken : null,
+      })),
       accepted: Boolean(convertedTo),
       declined: Boolean(declinedAt),
     },

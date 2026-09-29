@@ -89,6 +89,45 @@ describe("GET /public/documents/:token amountOwed", () => {
   });
 });
 
+describe("GET /public/documents/:token payments", () => {
+  it("lists recorded payments with a receipt token, and leaves voided ones out", async () => {
+    const app = createApp();
+    const { document, cookies } = await setUpMomoInvoice(app, 10000);
+    const kept = await request(app)
+      .post(`/documents/${document.id}/payments`)
+      .set("Cookie", cookies)
+      .send({ amount: 3000, method: "CASH", paidOn: "2026-09-03", generateReceipt: true });
+    const voided = await request(app)
+      .post(`/documents/${document.id}/payments`)
+      .set("Cookie", cookies)
+      .send({ amount: 2000, method: "CASH", paidOn: "2026-09-04" });
+    await request(app)
+      .post(`/documents/${document.id}/payments/${voided.body.payment.id}/void`)
+      .set("Cookie", cookies)
+      .send({ voidReason: "entered twice" });
+
+    const res = await request(app).get(`/public/documents/${document.publicToken}`);
+
+    expect(res.body.document.payments).toHaveLength(1);
+    expect(res.body.document.payments[0]).toMatchObject({ id: kept.body.payment.id, amount: 3000, method: "CASH" });
+    const receipt = await prisma.document.findUniqueOrThrow({ where: { id: kept.body.payment.receiptDocumentId } });
+    expect(res.body.document.payments[0].receiptToken).toBe(receipt.publicToken);
+  });
+
+  it("gives a payment without a receipt a null token", async () => {
+    const app = createApp();
+    const { document, cookies } = await setUpMomoInvoice(app, 10000);
+    await request(app)
+      .post(`/documents/${document.id}/payments`)
+      .set("Cookie", cookies)
+      .send({ amount: 3000, method: "CASH", paidOn: "2026-09-03" });
+
+    const res = await request(app).get(`/public/documents/${document.publicToken}`);
+
+    expect(res.body.document.payments[0].receiptToken).toBeNull();
+  });
+});
+
 describe("POST /public/documents/:token/momo/request", () => {
   it("creates a payment request for the outstanding balance and calls MTN", async () => {
     const app = createApp();
