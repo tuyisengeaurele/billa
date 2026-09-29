@@ -66,6 +66,8 @@ services:
         generateValue: true
       - key: TOTP_SECRET_ENCRYPTION_KEY
         generateValue: true
+      - key: WEBHOOK_SECRET_ENCRYPTION_KEY
+        generateValue: true
       - key: JWT_ACCESS_TTL
         value: 15m
       - key: JWT_REFRESH_TTL

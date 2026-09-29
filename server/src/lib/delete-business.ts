@@ -9,6 +9,8 @@ export async function deleteBusinessCascade(tx: TransactionClient, businessId: s
   await tx.momoPaymentRequest.deleteMany({ where: { businessId } });
   await tx.impersonationRequest.deleteMany({ where: { businessId } });
   await tx.apiKey.deleteMany({ where: { businessId } });
+  await tx.webhookDelivery.deleteMany({ where: { endpoint: { businessId } } });
+  await tx.webhookEndpoint.deleteMany({ where: { businessId } });
   await tx.documentLine.deleteMany({ where: { document: { businessId } } });
   await tx.document.deleteMany({ where: { businessId } });
   await tx.documentSequence.deleteMany({ where: { businessId } });

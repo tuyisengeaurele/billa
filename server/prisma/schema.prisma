@@ -138,6 +138,7 @@ model Business {
   activityLog           ActivityLogEntry[]
   invoicePayments       InvoicePayment[]
   apiKeys               ApiKey[]
+  webhookEndpoints      WebhookEndpoint[]
   impersonationRequests ImpersonationRequest[]
   momoPaymentRequests    MomoPaymentRequest[]
 
@@ -345,6 +346,47 @@ model ApiKey {
   business Business @relation(fields: [businessId], references: [id])
 
   @@index([businessId])
+}
+
+enum WebhookDeliveryStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
+model WebhookEndpoint {
+  id         String   @id @default(cuid())
+  businessId String
+  url        String
+  // Encrypted with WEBHOOK_SECRET_ENCRYPTION_KEY; the raw secret is shown once, on creation.
+  secretEnc  String
+  events     String[]
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  business   Business          @relation(fields: [businessId], references: [id])
+  deliveries WebhookDelivery[]
+
+  @@index([businessId])
+}
+
+model WebhookDelivery {
+  id             String                @id @default(cuid())
+  endpointId     String
+  event          String
+  payload        Json
+  status         WebhookDeliveryStatus @default(PENDING)
+  attempts       Int                   @default(0)
+  lastStatusCode Int?
+  lastError      String?
+  nextAttemptAt  DateTime?
+  deliveredAt    DateTime?
+  createdAt      DateTime              @default(now())
+
+  endpoint WebhookEndpoint @relation(fields: [endpointId], references: [id])
+
+  @@index([endpointId, createdAt])
+  @@index([status, nextAttemptAt])
 }
 
 model RefreshToken {
