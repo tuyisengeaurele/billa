@@ -11,10 +11,11 @@ export interface OutstandingInvoice {
   dueDate: Date | null;
 }
 
-export async function getOutstandingInvoices(businessId: string): Promise<OutstandingInvoice[]> {
+export async function getOutstandingInvoices(businessId: string, customerId?: string): Promise<OutstandingInvoice[]> {
   const invoices = await prisma.document.findMany({
     where: {
       businessId,
+      ...(customerId ? { customerId } : {}),
       type: "INVOICE",
       status: "FINALIZED",
       paymentStatus: { in: ["UNPAID", "PARTIALLY_PAID"] },

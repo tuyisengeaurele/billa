@@ -17,6 +17,7 @@ import { generalApiRateLimit } from "../middleware/general-rate-limit.js";
 import { validateBody } from "../middleware/validate.js";
 import { validateQuery } from "../middleware/validate-query.js";
 import { logActivity } from "../lib/activity-log.js";
+import { getOutstandingInvoices } from "../lib/accounts-receivable.js";
 import { toCsv } from "../lib/csv.js";
 import { normalizeRwandaPhoneNumber } from "../lib/phone-number.js";
 
@@ -96,7 +97,11 @@ customersRouter.get("/:id", async (req, res) => {
     return;
   }
 
-  res.json({ customer });
+  // What they still owe across finalized invoices, so a new invoice can be weighed against their credit limit.
+  const outstanding = await getOutstandingInvoices(businessId, id);
+  const outstandingBalance = outstanding.reduce((sum, invoice) => sum + Math.max(invoice.amountOwed, 0), 0);
+
+  res.json({ customer: { ...customer, outstandingBalance } });
 });
 
 customersRouter.get("/:id/payment-stats", async (req, res) => {
