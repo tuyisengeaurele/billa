@@ -23,13 +23,19 @@ function paragraphs(lines: string[]): string {
   return lines.map((line) => `<p style="margin:0 0 16px;">${line}</p>`).join("");
 }
 
-function viewOnlineButton(viewUrl: string | null): string {
+const VIEW_BUTTON_LABELS: Record<DocumentLanguage, { view: string; viewAndPay: string }> = {
+  EN: { view: "View online", viewAndPay: "View and pay online" },
+  FR: { view: "Voir en ligne", viewAndPay: "Voir et payer en ligne" },
+};
+
+function viewOnlineButton(viewUrl: string | null, language: DocumentLanguage, payable = false): string {
   if (!viewUrl) return "";
+  const labels = VIEW_BUTTON_LABELS[language];
   return `
     <table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 20px;">
       <tr>
         <td style="border-radius:8px;background:${BRAND_PINK};">
-          <a href="${viewUrl}" style="display:inline-block;padding:10px 20px;font-size:13px;font-weight:600;color:#ffffff;text-decoration:none;">View online</a>
+          <a href="${viewUrl}" style="display:inline-block;padding:10px 20px;font-size:13px;font-weight:600;color:#ffffff;text-decoration:none;">${payable ? labels.viewAndPay : labels.view}</a>
         </td>
       </tr>
     </table>`;
@@ -153,10 +159,12 @@ export interface DocumentSendEmailInput {
   businessLogoUrl: string | null;
   sender: SenderInput | null;
   viewUrl: string | null;
+  // The linked page takes a MoMo payment, so the button should say so.
+  payable?: boolean;
 }
 
 export function buildDocumentSendEmail(input: DocumentSendEmailInput): { subject: string; html: string } {
-  const { language, customerName, typeLabel, number, businessName, viewUrl } = input;
+  const { language, customerName, typeLabel, number, businessName, viewUrl, payable } = input;
   const customer = escapeHtml(customerName);
   const business = escapeHtml(businessName);
   const type = escapeHtml(typeLabel);
@@ -179,7 +187,7 @@ export function buildDocumentSendEmail(input: DocumentSendEmailInput): { subject
           `Merci de faire confiance à ${business}. Vous trouverez ci-joint votre ${typeLower} ${docNumber} au format PDF.`,
           `Pour toute question à ce sujet, il vous suffit de répondre à cet e-mail.`,
           `Cordialement,<br>L'équipe ${business}`,
-        ]) + viewOnlineButton(viewUrl),
+        ]) + viewOnlineButton(viewUrl, language, payable),
         footer,
         input.sender,
       ),
@@ -194,7 +202,7 @@ export function buildDocumentSendEmail(input: DocumentSendEmailInput): { subject
         `Thank you for choosing ${business}. Your ${typeLower} ${docNumber} is attached to this email as a PDF.`,
         `If you have any questions, just reply to this email and we will get back to you.`,
         `Warm regards,<br>The ${business} team`,
-      ]) + viewOnlineButton(viewUrl),
+      ]) + viewOnlineButton(viewUrl, language, payable),
       footer,
       input.sender,
     ),
@@ -212,10 +220,11 @@ export interface OverdueReminderEmailInput {
   businessEmail: string | null;
   businessLogoUrl: string | null;
   viewUrl: string | null;
+  payable?: boolean;
 }
 
 export function buildOverdueReminderEmail(input: OverdueReminderEmailInput): { subject: string; html: string } {
-  const { language, customerName, number, businessName, dueDate, viewUrl } = input;
+  const { language, customerName, number, businessName, dueDate, viewUrl, payable } = input;
   const customer = escapeHtml(customerName);
   const business = escapeHtml(businessName);
   const docNumber = number ? escapeHtml(number) : "";
@@ -236,7 +245,7 @@ export function buildOverdueReminderEmail(input: OverdueReminderEmailInput): { s
           `Ceci est un rappel amical : la facture ${docNumber} de ${business}, échue le ${dueDate}, n'a pas encore été réglée. Vous la trouverez de nouveau en pièce jointe.`,
           `Si le paiement a déjà été envoyé, merci et veuillez ignorer ce message. Sinon, répondez à cet e-mail à tout moment.`,
           `Cordialement,<br>L'équipe ${business}`,
-        ]) + viewOnlineButton(viewUrl),
+        ]) + viewOnlineButton(viewUrl, language, payable),
         footer,
       ),
     };
@@ -250,7 +259,7 @@ export function buildOverdueReminderEmail(input: OverdueReminderEmailInput): { s
         `This is a friendly reminder that invoice ${docNumber} from ${business}, due on ${dueDate}, has not been paid yet. A copy is attached again for convenience.`,
         `If you have already sent payment, thank you, and please disregard this note. Otherwise, reply here anytime.`,
         `Best,<br>The ${business} team`,
-      ]) + viewOnlineButton(viewUrl),
+      ]) + viewOnlineButton(viewUrl, language, payable),
       footer,
     ),
   };
@@ -294,7 +303,7 @@ export function buildQuoteExpiryReminderEmail(input: QuoteExpiryReminderEmailInp
           `Ceci est un rappel amical : votre ${typeLower} ${docNumber} de ${business} expire le ${expiryDate}. Si vous souhaitez l'accepter, faites-le avant cette date.`,
           `Pour toute question, il vous suffit de répondre à cet e-mail.`,
           `Cordialement,<br>L'équipe ${business}`,
-        ]) + viewOnlineButton(viewUrl),
+        ]) + viewOnlineButton(viewUrl, language),
         footer,
       ),
     };
@@ -308,7 +317,7 @@ export function buildQuoteExpiryReminderEmail(input: QuoteExpiryReminderEmailInp
         `This is a friendly reminder that your ${typeLower} ${docNumber} from ${business} expires on ${expiryDate}. If you would like to accept it, please do so before then.`,
         `If you have any questions, just reply to this email.`,
         `Best,<br>The ${business} team`,
-      ]) + viewOnlineButton(viewUrl),
+      ]) + viewOnlineButton(viewUrl, language),
       footer,
     ),
   };

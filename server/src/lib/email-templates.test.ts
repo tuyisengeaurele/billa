@@ -54,6 +54,45 @@ describe("email header branding", () => {
   });
 });
 
+describe("view link button", () => {
+  const send = {
+    customerName: "Aline Uwase",
+    typeLabel: "Invoice",
+    number: "INV-0001",
+    businessName: "Kigali Traders",
+    ...BLANK_BUSINESS,
+    sender: null,
+    viewUrl: "https://billa.example/view/abc",
+  };
+  const reminder = {
+    customerName: "Aline Uwase",
+    number: "INV-0001",
+    businessName: "Kigali Traders",
+    dueDate: "2026-09-01",
+    ...BLANK_BUSINESS,
+    viewUrl: "https://billa.example/view/abc",
+  };
+
+  it("says View online when the customer cannot pay from the page", () => {
+    expect(buildDocumentSendEmail({ ...send, language: "EN" }).html).toContain(">View online<");
+    expect(buildOverdueReminderEmail({ ...reminder, language: "EN" }).html).toContain(">View online<");
+  });
+
+  it("says View and pay online when the page takes payment", () => {
+    expect(buildDocumentSendEmail({ ...send, language: "EN", payable: true }).html).toContain(">View and pay online<");
+    expect(buildOverdueReminderEmail({ ...reminder, language: "EN", payable: true }).html).toContain(
+      ">View and pay online<",
+    );
+  });
+
+  it("uses French wording in a French email", () => {
+    expect(buildDocumentSendEmail({ ...send, language: "FR" }).html).toContain(">Voir en ligne<");
+    expect(buildDocumentSendEmail({ ...send, language: "FR", payable: true }).html).toContain(
+      ">Voir et payer en ligne<",
+    );
+  });
+});
+
 describe("buildDocumentSendEmail", () => {
   it("writes a warm English email with the customer's name and document details", () => {
     const { subject, html } = buildDocumentSendEmail({
