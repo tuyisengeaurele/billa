@@ -60,6 +60,7 @@ export default function Receivables() {
   const { business } = useAuth();
   const shareOnWhatsApp = useWhatsAppShare();
   const [results, setResults] = useState<ReceivableRow[] | null>(null);
+  const [momoEnabled, setMomoEnabled] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [paymentTarget, setPaymentTarget] = useState<ReceivableRow | null>(null);
   const [writeOffTarget, setWriteOffTarget] = useState<ReceivableRow | null>(null);
@@ -95,8 +96,11 @@ export default function Receivables() {
 
   function load() {
     setLoadError(false);
-    apiRequest<{ results: ReceivableRow[] }>("/receivables")
-      .then((data) => setResults(data.results))
+    apiRequest<{ results: ReceivableRow[]; momoEnabled: boolean }>("/receivables")
+      .then((data) => {
+        setResults(data.results);
+        setMomoEnabled(data.momoEnabled);
+      })
       .catch(() => setLoadError(true));
   }
 
@@ -114,6 +118,7 @@ export default function Receivables() {
       amount: row.amountOwed,
       dueDate: row.dueDate,
       viewUrl: `${window.location.origin}/view/${row.publicToken}`,
+      payable: momoEnabled,
     });
     void shareOnWhatsApp({ documentId: row.id, phone: row.customerPhone, message, record: false });
   }

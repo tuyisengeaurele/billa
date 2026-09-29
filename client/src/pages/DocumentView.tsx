@@ -43,6 +43,7 @@ interface DocumentDetail {
   status: "DRAFT" | "FINALIZED";
   publicToken: string;
   customer: { name: string; email: string | null; phone: string | null };
+  business: { momoEnabled: boolean };
   dueDate: string | null;
   sentAt: string | null;
   lines: DocumentLine[];
@@ -173,6 +174,7 @@ export default function DocumentView() {
       amount: document.total,
       dueDate: document.dueDate,
       viewUrl: `${window.location.origin}/view/${document.publicToken}`,
+      payable: document.business?.momoEnabled,
     });
     const sentAt = await shareOnWhatsApp({
       documentId: document.id,

@@ -264,6 +264,7 @@ describe("DocumentView", () => {
                 status: "FINALIZED",
                 publicToken: "tok-abc123",
                 customer: { name: "Kigali Traders", email: null, phone: "0788123456" },
+                business: { momoEnabled: true },
                 dueDate: "2026-10-15T00:00:00.000Z",
                 lines: [],
                 subtotal: 0,
@@ -291,6 +292,7 @@ describe("DocumentView", () => {
     const [link] = open.mock.calls[0]!;
     expect(String(link)).toContain("https://wa.me/250788123456?text=");
     expect(decodeURIComponent(String(link))).toContain("invoice INV-0001 for 11,800 RWF");
+    expect(decodeURIComponent(String(link))).toContain("View and pay it here");
     await waitFor(() =>
       expect(fetchSpy.mock.calls.some(([input]) => urlOf(input).endsWith("/documents/d1/shared"))).toBe(true),
     );

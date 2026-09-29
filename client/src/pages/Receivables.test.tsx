@@ -87,6 +87,22 @@ describe("Receivables", () => {
     const text = decodeURIComponent(String(link));
     expect(text).toContain("invoice INV-0001 has 40,000 RWF outstanding");
     expect(text).toContain("/view/tok-1");
+    expect(text).toContain("View it here");
+  });
+
+  it("invites the customer to pay in the reminder when the business takes MoMo", async () => {
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.includes("/auth/me")) return authMeResponse();
+      return new Response(JSON.stringify({ results: [baseRow()], total: 1, momoEnabled: true }), { status: 200 });
+    });
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: /remind acme ltd on whatsapp/i }));
+
+    expect(decodeURIComponent(String(open.mock.calls[0]![0]))).toContain("View and pay it here");
   });
 
   it("sorts by owed amount when the Owed header is clicked", async () => {
