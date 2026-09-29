@@ -2,6 +2,7 @@ import "express-async-errors";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import compression from "compression";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
@@ -55,6 +56,9 @@ export function createApp(clientDistDir: string = DEFAULT_CLIENT_DIST_DIR) {
   app.set("trust proxy", 1);
 
   app.use(requestLogger);
+  // The Render free tier does not compress for us, and the client bundle and list
+  // responses are plain text that shrinks to a fraction over slow mobile data.
+  app.use(compression());
   app.use(
     helmet({
       // Uploaded logos and PDFs need to load from a different origin in local dev

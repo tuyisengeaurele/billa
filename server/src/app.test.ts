@@ -12,10 +12,17 @@ describe("serving the built client", () => {
     clientDistDir = await mkdtemp(path.join(os.tmpdir(), "billa-client-dist-"));
     await writeFile(path.join(clientDistDir, "index.html"), "<!doctype html><title>Billa</title>");
     await writeFile(path.join(clientDistDir, "app.css"), "body { color: red; }");
+    await writeFile(path.join(clientDistDir, "big.js"), "const value = 1;
+".repeat(500));
   });
 
   afterEach(async () => {
     await rm(clientDistDir, { recursive: true, force: true });
+  });
+
+  it("gzips a large text asset for a browser that accepts it", async () => {
+    const res = await request(createApp(clientDistDir)).get("/big.js").set("Accept-Encoding", "gzip");
+    expect(res.headers["content-encoding"]).toBe("gzip");
   });
 
   it("serves a built static asset by its own path", async () => {
