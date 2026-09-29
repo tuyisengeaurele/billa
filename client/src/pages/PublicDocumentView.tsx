@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import type { DocumentType, PaymentMethod } from "@billa/shared";
+import { formatShortDate, type DocumentType, type PaymentMethod } from "@billa/shared";
 import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { Spinner } from "../components/Spinner";
 import { apiRequest, ApiError, API_BASE_URL } from "../lib/apiClient";
@@ -52,10 +52,6 @@ const DOCUMENT_TYPE_DISPLAY: Record<string, string> = {
   QUOTE: "Quote",
   RECEIPT: "Receipt",
 };
-
-function formatPaidOn(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
-}
 
 export default function PublicDocumentView() {
   const { token } = useParams();
@@ -294,7 +290,7 @@ export default function PublicDocumentView() {
               {document.payments.map((payment) => (
                 <li key={payment.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
                   <span className="flex items-center gap-2 text-neutral-600">
-                    <span>{formatPaidOn(payment.paidOn)}</span>
+                    <span>{formatShortDate(payment.paidOn)}</span>
                     <span className="text-neutral-300" aria-hidden="true">
                       |
                     </span>
