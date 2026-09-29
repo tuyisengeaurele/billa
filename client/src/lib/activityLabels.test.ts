@@ -10,6 +10,12 @@ describe("describeActivity", () => {
     expect(describeActivity("DOCUMENT_FINALIZED", { type: "INVOICE", number: "INV-0004" })).toBe("finalized INV-0004");
   });
 
+  it("describes a document shared on WhatsApp by number", () => {
+    expect(describeActivity("DOCUMENT_SHARED", { type: "INVOICE", number: "INV-0004", channel: "WHATSAPP" })).toBe(
+      "shared INV-0004 on WhatsApp",
+    );
+  });
+
   it("describes a created customer by name", () => {
     expect(describeActivity("CUSTOMER_CREATED", { name: "Acme Ltd" })).toBe("added customer Acme Ltd");
   });

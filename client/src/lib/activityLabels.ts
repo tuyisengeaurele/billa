@@ -21,6 +21,8 @@ export function describeActivity(action: string, metadata: Record<string, unknow
       return `finalized ${number ?? typeLabel}`;
     case "DOCUMENT_DELETED":
       return `deleted ${typeLabel}`;
+    case "DOCUMENT_SHARED":
+      return `shared ${number ?? typeLabel} on WhatsApp`;
     case "CUSTOMER_CREATED":
       return name ? `added customer ${name}` : "added a customer";
     case "CUSTOMER_DEACTIVATED":
