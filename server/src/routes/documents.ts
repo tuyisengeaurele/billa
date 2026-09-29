@@ -94,7 +94,7 @@ documentsRouter.post(
 
 const DOCUMENT_INCLUDE = {
   lines: { orderBy: { sortOrder: "asc" as const } },
-  customer: { select: { name: true, email: true } },
+  customer: { select: { name: true, email: true, phone: true } },
   convertedFrom: { select: { id: true, number: true, type: true } },
   convertedTo: { select: { id: true, number: true, type: true } },
   referencedDocument: { select: { id: true, number: true, type: true } },

@@ -19,7 +19,7 @@ async function registerAndGetCookies(app: ReturnType<typeof createApp>) {
 }
 
 async function createCustomer(app: ReturnType<typeof createApp>, cookies: string[]) {
-  const res = await request(app).post("/customers").set("Cookie", cookies).send({ name: "Musanze Supplies" });
+  const res = await request(app).post("/customers").set("Cookie", cookies).send({ name: "Musanze Supplies", phone: "0788123456" });
   return res.body.customer.id as string;
 }
 
@@ -42,6 +42,7 @@ describe("GET /documents/:id", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.document.customer.name).toBe("Musanze Supplies");
+    expect(res.body.document.customer.phone).toBe("0788123456");
     expect(res.body.document.lines).toHaveLength(1);
   });
 
