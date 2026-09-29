@@ -68,6 +68,7 @@ export async function sendOverdueReminders(businessId: string): Promise<SentRemi
       businessEmail: business.email,
       businessLogoUrl,
       viewUrl: `${clientOrigin}/view/${doc.publicToken}`,
+      payable: business.momoEnabled,
     });
 
     try {

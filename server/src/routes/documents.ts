@@ -445,6 +445,7 @@ documentsRouter.post("/:id/send", async (req, res) => {
     businessLogoUrl: buildPublicAssetUrl(business!.logoUrl),
     sender: sender ? { name: sender.name, phone: sender.phone, email: sender.email } : null,
     viewUrl: `${clientOrigin}/view/${document.publicToken}`,
+    payable: document.type === "INVOICE" && business!.momoEnabled,
   });
 
   try {

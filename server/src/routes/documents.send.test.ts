@@ -93,6 +93,19 @@ describe("POST /documents/:id/send", () => {
     expect(call.html).not.toContain("base64");
   });
 
+  it("tells the customer they can pay online when the business takes MoMo", async () => {
+    const sendSpy = vi.spyOn(mailerModule, "sendDocumentEmail").mockResolvedValue();
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    await prisma.business.updateMany({ data: { momoEnabled: true } });
+    const customerId = await createCustomer(app, cookies, "acme@example.com");
+    const documentId = await createFinalizedInvoice(app, cookies, customerId);
+
+    await request(app).post(`/documents/${documentId}/send`).set("Cookie", cookies);
+
+    expect(sendSpy.mock.calls[0]![0].html).toContain(">View and pay online<");
+  });
+
   it("returns 409 when the document is still a draft", async () => {
     const app = createApp();
     const cookies = await registerAndGetCookies(app);

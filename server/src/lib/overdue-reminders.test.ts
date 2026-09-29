@@ -85,6 +85,27 @@ describe("sendOverdueReminders", () => {
     expect(mailerModule.sendDocumentEmail).toHaveBeenCalledTimes(1);
   });
 
+  it("links to a page where the customer can pay when the business takes MoMo", async () => {
+    const { business, customer } = await setupBusiness("customer@example.com");
+    await prisma.business.update({ where: { id: business.id }, data: { momoEnabled: true } });
+    await createOverdueInvoice(business.id, customer.id, { dueDate: new Date("2020-01-01") });
+
+    await sendOverdueReminders(business.id);
+
+    const call = vi.mocked(mailerModule.sendDocumentEmail).mock.calls[0]![0];
+    expect(call.html).toContain(">View and pay online<");
+  });
+
+  it("only offers to view the invoice when the business does not take MoMo", async () => {
+    const { business, customer } = await setupBusiness("customer@example.com");
+    await createOverdueInvoice(business.id, customer.id, { dueDate: new Date("2020-01-01") });
+
+    await sendOverdueReminders(business.id);
+
+    const call = vi.mocked(mailerModule.sendDocumentEmail).mock.calls[0]![0];
+    expect(call.html).toContain(">View online<");
+  });
+
   it("skips an invoice with reminders turned off for that document", async () => {
     const { business, customer } = await setupBusiness("customer@example.com");
     await createOverdueInvoice(business.id, customer.id, {
