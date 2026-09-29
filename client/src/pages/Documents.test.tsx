@@ -206,6 +206,41 @@ describe("Documents", () => {
     expect(await screen.findByText("Partially paid")).toBeInTheDocument();
   });
 
+  it("marks a document the customer has opened, but not one that is already paid", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.includes("/documents")) {
+        const base = {
+          status: "FINALIZED",
+          issueDate: "2026-08-19T00:00:00.000Z",
+          total: 5900,
+          customer: { name: "Kigali Traders" },
+          lastViewedAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+          viewCount: 2,
+        };
+        return new Response(
+          JSON.stringify({
+            results: [
+              { ...base, id: "d1", number: "INV-0001", paymentStatus: "UNPAID" },
+              { ...base, id: "d2", number: "INV-0002", paymentStatus: "PAID" },
+              { ...base, id: "d3", number: "INV-0003", paymentStatus: "UNPAID", lastViewedAt: null, viewCount: 0 },
+            ],
+            total: 3,
+            page: 1,
+            pageSize: 20,
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    renderDocuments();
+
+    expect(await screen.findAllByText("Opened")).toHaveLength(1);
+    expect(screen.getByText("Opened")).toHaveAttribute("title", expect.stringContaining("3h ago"));
+  });
+
   it("navigates to the edit form when a draft row is clicked", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async (input) => {
       const url = urlOf(input);

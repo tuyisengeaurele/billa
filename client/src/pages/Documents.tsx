@@ -12,6 +12,7 @@ import { API_BASE_URL, apiRequest } from "../lib/apiClient";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
 import { DOCUMENT_TYPE_COLORS } from "../lib/documentTypeColors";
 import { PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS } from "../lib/paymentStatusColors";
+import { formatRelativeTime } from "../lib/relativeTime";
 import { usePageTitle } from "../context/PageTitleContext";
 import { useToast } from "../context/ToastContext";
 
@@ -24,6 +25,7 @@ interface DocumentRow {
   total: number;
   customer: { name: string; email: string | null };
   paymentStatus: InvoicePaymentStatus | null;
+  lastViewedAt: string | null;
 }
 
 const LANGUAGE_LABELS: Record<DocumentLanguage, string> = {
@@ -383,6 +385,14 @@ export default function Documents() {
                             className={`rounded-full px-2.5 py-1 text-xs font-medium ${PAYMENT_STATUS_COLORS[document.paymentStatus]}`}
                           >
                             {PAYMENT_STATUS_LABELS[document.paymentStatus]}
+                          </span>
+                        )}
+                        {document.lastViewedAt && document.paymentStatus !== "PAID" && (
+                          <span
+                            title={`Opened by the customer ${formatRelativeTime(document.lastViewedAt)}`}
+                            className="rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-600"
+                          >
+                            Opened
                           </span>
                         )}
                       </div>
