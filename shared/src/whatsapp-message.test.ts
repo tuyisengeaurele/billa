@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildWhatsAppLink, buildWhatsAppMessage } from "./whatsapp-message.js";
+import { buildStatementWhatsAppMessage, buildWhatsAppLink, buildWhatsAppMessage } from "./whatsapp-message.js";
 
 const base = {
   customerName: "Jean",
@@ -67,5 +67,24 @@ describe("buildWhatsAppLink", () => {
   it("returns null when the phone cannot be used", () => {
     expect(buildWhatsAppLink("", "Hi")).toBeNull();
     expect(buildWhatsAppLink(null, "Hi")).toBeNull();
+  });
+});
+
+describe("buildStatementWhatsAppMessage", () => {
+  const input = {
+    customerName: "Jean",
+    businessName: "Kigali Supplies",
+    totalOwed: 52500,
+    portalUrl: "https://billa.example/portal/xyz",
+  };
+
+  it("states the balance and links to the customer's page", () => {
+    expect(buildStatementWhatsAppMessage(input)).toBe(
+      "Hello Jean, this is your statement from Kigali Supplies. You currently owe 52,500 RWF.\nSee your invoices here: https://billa.example/portal/xyz",
+    );
+  });
+
+  it("invites payment when the business takes MoMo", () => {
+    expect(buildStatementWhatsAppMessage({ ...input, payable: true })).toContain("See and pay your invoices here:");
   });
 });

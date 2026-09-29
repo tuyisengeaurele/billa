@@ -41,3 +41,18 @@ export function buildWhatsAppLink(phone: string | null | undefined, message: str
   if (!number) return null;
   return `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
 }
+
+export interface StatementWhatsAppInput {
+  customerName: string;
+  businessName: string;
+  totalOwed: number;
+  portalUrl: string;
+  payable?: boolean;
+}
+
+export function buildStatementWhatsAppMessage(input: StatementWhatsAppInput): string {
+  return [
+    `Hello ${input.customerName}, this is your statement from ${input.businessName}. You currently owe ${formatRwf(input.totalOwed)}.`,
+    `${input.payable ? "See and pay your invoices here" : "See your invoices here"}: ${input.portalUrl}`,
+  ].join("\n");
+}
