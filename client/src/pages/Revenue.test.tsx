@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../context/AuthContext";
+import * as downloadFileModule from "../lib/downloadFile";
 import Revenue from "./Revenue";
 
 function urlOf(input: RequestInfo | URL): string {
@@ -185,6 +186,24 @@ describe("Revenue", () => {
 
     expect(await screen.findByText("18%")).toBeInTheDocument();
     expect(screen.getAllByText(/18,000 rwf/i).length).toBeGreaterThan(0);
+  });
+
+  it("offers the VAT register for the chosen dates", async () => {
+    mockFetch(mockRevenue());
+    const download = vi.spyOn(downloadFileModule, "downloadFile").mockResolvedValue(undefined);
+    renderPage();
+    await screen.findByText("18%");
+
+    fireEvent.change(screen.getByLabelText("From date"), { target: { value: "2026-01-01" } });
+    fireEvent.change(screen.getByLabelText("To date"), { target: { value: "2026-03-31" } });
+    fireEvent.click(screen.getByRole("button", { name: /download vat register/i }));
+
+    await waitFor(() =>
+      expect(download).toHaveBeenCalledWith(
+        "/reports/vat-register.csv?from=2026-01-01&to=2026-03-31",
+        "vat-register-2026-01-01-to-2026-03-31.csv",
+      ),
+    );
   });
 
   it("reloads the tax summary when the date range changes", async () => {

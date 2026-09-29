@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { formatRwf } from "@billa/shared";
 import { apiRequest } from "../lib/apiClient";
+import { ExportCsvButton } from "../components/ExportCsvButton";
 import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { Spinner } from "../components/Spinner";
 import { useTheme } from "../context/ThemeContext";
@@ -292,6 +293,11 @@ export default function Revenue() {
                 value={taxTo}
                 onChange={(event) => setTaxTo(event.target.value)}
                 className="rounded-lg border border-neutral-200 bg-surface px-3 py-2 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+              />
+              <ExportCsvButton
+                path={`/reports/vat-register.csv?from=${taxFrom}&to=${taxTo}`}
+                filename={`vat-register-${taxFrom}-to-${taxTo}.csv`}
+                label="Download VAT register"
               />
             </div>
           </div>
