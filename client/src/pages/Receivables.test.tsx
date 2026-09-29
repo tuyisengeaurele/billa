@@ -15,6 +15,8 @@ function baseRow(overrides: Record<string, unknown> = {}) {
     id: "inv1",
     number: "INV-0001",
     customerName: "Acme Ltd",
+    customerPhone: "0788123456",
+    publicToken: "tok-1",
     total: 100000,
     amountOwed: 100000,
     dueDate: "2026-09-01",
@@ -66,6 +68,25 @@ describe("Receivables", () => {
     expect(await screen.findByText("Acme Ltd")).toBeInTheDocument();
     expect(screen.getByText("INV-0001")).toBeInTheDocument();
     expect(screen.getByText("Current", { selector: "span" })).toBeInTheDocument();
+  });
+
+  it("opens a prefilled WhatsApp reminder for the amount still owed", async () => {
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.includes("/auth/me")) return authMeResponse();
+      return new Response(JSON.stringify({ results: [baseRow({ amountOwed: 40000 })], total: 1 }), { status: 200 });
+    });
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: /remind acme ltd on whatsapp/i }));
+
+    const [link] = open.mock.calls[0]!;
+    expect(String(link)).toContain("https://wa.me/250788123456?text=");
+    const text = decodeURIComponent(String(link));
+    expect(text).toContain("invoice INV-0001 has 40,000 RWF outstanding");
+    expect(text).toContain("/view/tok-1");
   });
 
   it("sorts by owed amount when the Owed header is clicked", async () => {

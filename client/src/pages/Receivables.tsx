@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { formatRwf } from "@billa/shared";
+import { buildWhatsAppMessage, formatRwf } from "@billa/shared";
 import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { Modal } from "../components/Modal";
 import { RecordPaymentModal } from "../components/RecordPaymentModal";
 import { Spinner } from "../components/Spinner";
+import { useAuth } from "../context/AuthContext";
 import { usePageTitle } from "../context/PageTitleContext";
 import { useToast } from "../context/ToastContext";
+import { useWhatsAppShare } from "../hooks/useWhatsAppShare";
 import { apiRequest, ApiError } from "../lib/apiClient";
 import { ariaSortValue } from "../lib/ariaSort";
 
@@ -14,6 +16,8 @@ interface ReceivableRow {
   id: string;
   number: string | null;
   customerName: string;
+  customerPhone: string | null;
+  publicToken: string;
   total: number;
   amountOwed: number;
   dueDate: string | null;
@@ -53,6 +57,8 @@ type BucketFilter = "all" | ReceivableRow["agingBucket"];
 export default function Receivables() {
   usePageTitle("Accounts receivable");
   const toast = useToast();
+  const { business } = useAuth();
+  const shareOnWhatsApp = useWhatsAppShare();
   const [results, setResults] = useState<ReceivableRow[] | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [paymentTarget, setPaymentTarget] = useState<ReceivableRow | null>(null);
@@ -97,6 +103,20 @@ export default function Receivables() {
   useEffect(() => {
     load();
   }, []);
+
+  function remindOnWhatsApp(row: ReceivableRow) {
+    const message = buildWhatsAppMessage({
+      kind: "reminder",
+      customerName: row.customerName,
+      businessName: business?.name ?? "",
+      type: "INVOICE",
+      number: row.number,
+      amount: row.amountOwed,
+      dueDate: row.dueDate,
+      viewUrl: `${window.location.origin}/view/${row.publicToken}`,
+    });
+    void shareOnWhatsApp({ documentId: row.id, phone: row.customerPhone, message, record: false });
+  }
 
   function openWriteOffModal(row: ReceivableRow) {
     setWriteOffTarget(row);
@@ -219,6 +239,14 @@ export default function Receivables() {
                     <td className="py-3 font-medium text-neutral-900">{formatRwf(row.amountOwed)}</td>
                     <td className="py-3">
                       <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => remindOnWhatsApp(row)}
+                          aria-label={`Remind ${row.customerName} on WhatsApp about ${row.number ?? "this invoice"}`}
+                          className="rounded-lg border border-neutral-200 px-2.5 py-1 font-sans text-xs font-medium text-neutral-700 transition-colors hover:border-primary-500 hover:text-primary-700"
+                        >
+                          Remind
+                        </button>
                         <button
                           type="button"
                           onClick={() => setPaymentTarget(row)}
