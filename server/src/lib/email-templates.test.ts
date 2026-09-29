@@ -5,6 +5,7 @@ import {
   buildInviteEmail,
   buildOverdueReminderEmail,
   buildQuoteExpiryReminderEmail,
+  buildStatementEmail,
 } from "./email-templates.js";
 
 function assertNoEmDash(html: string) {
@@ -51,6 +52,50 @@ describe("email header branding", () => {
     });
 
     expect(html).toContain('src="https://billa-api-og7v.onrender.com/logo.png"');
+  });
+});
+
+describe("buildStatementEmail", () => {
+  const base = {
+    customerName: "Aline <Uwase>",
+    businessName: "Kigali Traders",
+    ...BLANK_BUSINESS,
+    sender: null,
+    portalUrl: "https://billa.example/portal/abc",
+    invoices: [
+      { number: "INV-0001", dueDate: "2026-09-01", amountOwed: 40000 },
+      { number: "INV-0002", dueDate: null, amountOwed: 12500 },
+    ],
+  };
+
+  it("lists each open invoice and the total owed", () => {
+    const { subject, html } = buildStatementEmail(base);
+
+    expect(subject).toBe("Your statement from Kigali Traders");
+    expect(html).toContain("INV-0001");
+    expect(html).toContain("40,000 RWF");
+    expect(html).toContain("INV-0002");
+    expect(html).toContain("52,500 RWF");
+    expect(html).toContain("1 Sep 2026");
+  });
+
+  it("links to the customer's portal", () => {
+    expect(buildStatementEmail(base).html).toContain('href="https://billa.example/portal/abc"');
+  });
+
+  it("only mentions paying when the customer can pay online", () => {
+    expect(buildStatementEmail(base).html).toContain(">View online<");
+    expect(buildStatementEmail({ ...base, payable: true }).html).toContain(">View and pay online<");
+  });
+
+  it("escapes the customer's name", () => {
+    const { html } = buildStatementEmail(base);
+    expect(html).toContain("Aline &lt;Uwase&gt;");
+    expect(html).not.toContain("Aline <Uwase>");
+  });
+
+  it("uses no em dashes", () => {
+    assertNoEmDash(buildStatementEmail(base).html);
   });
 });
 

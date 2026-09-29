@@ -1,4 +1,4 @@
-import type { DocumentLanguage } from "@billa/shared";
+import { formatRwf, formatShortDate, type DocumentLanguage } from "@billa/shared";
 import { publicBaseUrl } from "./asset-url.js";
 
 const BRAND_PINK = "#c2185b";
@@ -17,6 +17,10 @@ function escapeHtml(value: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+function formatEmailDate(iso: string): string {
+  return formatShortDate(iso);
 }
 
 function paragraphs(lines: string[]): string {
@@ -403,6 +407,68 @@ export function buildContactNotificationEmail(input: ContactNotificationEmailInp
     html: renderEmailShell(
       `<p style="margin:0 0 16px;">${name} (${email}) just sent this through the contact form:</p>` +
         `<blockquote style="margin:0;padding:12px 16px;background:#fafafa;border-left:3px solid #e4e4e7;color:#3f3f46;">${message}</blockquote>`,
+    ),
+  };
+}
+
+export interface StatementEmailInput {
+  customerName: string;
+  businessName: string;
+  businessAddress: string | null;
+  businessPhone: string | null;
+  businessEmail: string | null;
+  businessLogoUrl: string | null;
+  sender: SenderInput | null;
+  portalUrl: string;
+  payable?: boolean;
+  invoices: { number: string | null; dueDate: string | null; amountOwed: number }[];
+}
+
+/** A plain list of what a customer still owes, with a link to see and pay it. English only for now. */
+export function buildStatementEmail(input: StatementEmailInput): { subject: string; html: string } {
+  const customer = escapeHtml(input.customerName);
+  const business = escapeHtml(input.businessName);
+  const total = input.invoices.reduce((sum, invoice) => sum + invoice.amountOwed, 0);
+  const footer: BusinessFooterInput = {
+    name: input.businessName,
+    address: input.businessAddress,
+    phone: input.businessPhone,
+    email: input.businessEmail,
+    logoUrl: input.businessLogoUrl,
+  };
+
+  const rows = input.invoices
+    .map(
+      (invoice) => `
+      <tr>
+        <td style="padding:8px 0;border-bottom:1px solid #f4f4f5;">${escapeHtml(invoice.number ?? "Invoice")}</td>
+        <td style="padding:8px 0;border-bottom:1px solid #f4f4f5;color:#71717a;">${invoice.dueDate ? `Due ${formatEmailDate(invoice.dueDate)}` : ""}</td>
+        <td style="padding:8px 0;border-bottom:1px solid #f4f4f5;text-align:right;">${formatRwf(invoice.amountOwed)}</td>
+      </tr>`,
+    )
+    .join("");
+
+  const table = `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 16px;font-size:14px;">
+      ${rows}
+      <tr>
+        <td colspan="2" style="padding:10px 0;font-weight:600;">Total owed</td>
+        <td style="padding:10px 0;text-align:right;font-weight:600;">${formatRwf(total)}</td>
+      </tr>
+    </table>`;
+
+  return {
+    subject: `Your statement from ${input.businessName}`,
+    html: renderEmailShell(
+      paragraphs([
+        `Hi ${customer},`,
+        `Here is what is still open with ${business}.`,
+      ]) +
+        table +
+        paragraphs([`If you have already paid any of these, thank you, and please ignore that line. Reply here if something looks wrong.`]) +
+        viewOnlineButton(input.portalUrl, "EN", input.payable),
+      footer,
+      input.sender,
     ),
   };
 }
