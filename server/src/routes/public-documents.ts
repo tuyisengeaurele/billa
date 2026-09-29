@@ -14,6 +14,7 @@ import { getAccessToken, requestToPay } from "../lib/momo-client.js";
 import { buildMomoCredentials } from "../lib/business-momo.js";
 import { resolvePendingMomoPaymentRequest } from "../lib/resolve-pending-payment.js";
 import { normalizeRwandaPhoneNumber } from "../lib/phone-number.js";
+import { recordDocumentView } from "../lib/record-document-view.js";
 
 export const publicDocumentsRouter = Router();
 
@@ -123,6 +124,11 @@ publicDocumentsRouter.get("/:token", publicDocumentRateLimit, async (req, res) =
     res.status(404).json({ error: "not_found" });
     return;
   }
+
+  await recordDocumentView(document.id, {
+    userAgent: req.get("user-agent"),
+    isSignedIn: Boolean(req.cookies?.access_token),
+  });
 
   const { convertedTo, declinedAt, ...documentFields } = document;
   // The balance the pay button charges: net of payments and credit notes, the same
