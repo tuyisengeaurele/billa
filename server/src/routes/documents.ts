@@ -45,6 +45,7 @@ import { convertProformaToInvoice } from "../lib/convert-proforma.js";
 import { recomputeInvoicePaymentStatus } from "../lib/invoice-payment-status.js";
 import { recordInvoicePayment } from "../lib/record-invoice-payment.js";
 import { finalizeDocumentById } from "../lib/finalize-document.js";
+import { generatePaymentReceipt } from "../lib/generate-payment-receipt.js";
 import { detectAllowedImageType } from "../lib/file-sniff.js";
 import { getStorage } from "../lib/storage.js";
 import { blockAccountantMutations } from "../middleware/block-accountant-mutations.js";
@@ -602,14 +603,6 @@ documentsRouter.post("/:id/finalize", requireFinalizePermission, async (req, res
   res.json({ document: finalized });
 });
 
-const PAYMENT_METHOD_LABELS: Record<string, string> = {
-  CASH: "Cash",
-  BANK_TRANSFER: "Bank transfer",
-  MOBILE_MONEY: "Mobile Money",
-  CHEQUE: "Cheque",
-  OTHER: "Other",
-};
-
 documentsRouter.post("/:id/payments", validateBody(createPaymentSchema), async (req, res) => {
   const businessId = req.auth!.businessId;
   const { id } = req.params;
@@ -653,43 +646,16 @@ documentsRouter.post("/:id/payments", validateBody(createPaymentSchema), async (
     receiptImageUrl: body.receiptImageUrl,
   });
 
-  let receiptDocumentId: string | null = null;
-  if (body.generateReceipt) {
-    const business = await prisma.business.findUnique({ where: { id: businessId } });
-    const totals = calculateDocumentTotals([{ quantity: 1, unitPrice: body.amount, taxRate: 0 }]);
-    const draftReceipt = await prisma.document.create({
-      data: {
+  const receiptDocumentId = body.generateReceipt
+    ? await generatePaymentReceipt({
         businessId,
-        type: "RECEIPT",
-        status: "DRAFT",
-        template: business!.defaultTemplate,
-        customerId: invoice.customerId,
-        issueDate: new Date(body.paidOn),
-        referencedDocumentId: id,
-        subtotal: totals.subtotal,
-        taxTotal: totals.taxTotal,
-        total: totals.total,
-        lines: {
-          create: [
-            {
-              description: `Payment received (${PAYMENT_METHOD_LABELS[body.method] ?? body.method})`,
-              quantity: 1,
-              unitPrice: body.amount,
-              taxRate: 0,
-              lineTotal: totals.lines[0].lineTotal,
-              sortOrder: 0,
-            },
-          ],
-        },
-      },
-    });
-
-    const finalizedReceipt = await finalizeDocumentById(businessId, draftReceipt.id);
-    if (finalizedReceipt.ok) {
-      receiptDocumentId = finalizedReceipt.document.id;
-      await prisma.invoicePayment.update({ where: { id: payment.id }, data: { receiptDocumentId } });
-    }
-  }
+        invoiceId: id,
+        paymentId: payment.id,
+        amount: body.amount,
+        method: body.method,
+        paidOn: new Date(body.paidOn),
+      })
+    : null;
 
   const updatedInvoice = await prisma.document.findUnique({ where: { id }, include: DOCUMENT_INCLUDE });
   res.status(201).json({ payment: { ...payment, receiptDocumentId }, document: updatedInvoice });
