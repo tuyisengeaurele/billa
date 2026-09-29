@@ -24,6 +24,7 @@ const NOTIFICATION_LABELS: Record<NotificationType, string> = {
   CONTACT_MESSAGE_RECEIVED: "Someone submits the contact form",
   DOCUMENT_ACCEPTED: "A customer accepts a quote or proforma",
   DOCUMENT_DECLINED: "A customer declines a quote or proforma",
+  DOCUMENT_VIEWED: "A customer opens a document you sent",
 };
 
 export default function Profile() {

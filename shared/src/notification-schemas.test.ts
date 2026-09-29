@@ -21,3 +21,9 @@ describe("updateNotificationPreferencesSchema", () => {
     ).toBe(false);
   });
 });
+
+describe("DOCUMENT_VIEWED preference", () => {
+  it("can be turned off like the other notification types", () => {
+    expect(updateNotificationPreferencesSchema.safeParse({ preferences: { DOCUMENT_VIEWED: false } }).success).toBe(true);
+  });
+});

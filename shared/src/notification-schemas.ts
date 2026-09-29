@@ -7,6 +7,7 @@ export const NOTIFICATION_TYPES = [
   "CONTACT_MESSAGE_RECEIVED",
   "DOCUMENT_ACCEPTED",
   "DOCUMENT_DECLINED",
+  "DOCUMENT_VIEWED",
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
@@ -19,6 +20,7 @@ export const updateNotificationPreferencesSchema = z.object({
       CONTACT_MESSAGE_RECEIVED: z.boolean().optional(),
       DOCUMENT_ACCEPTED: z.boolean().optional(),
       DOCUMENT_DECLINED: z.boolean().optional(),
+      DOCUMENT_VIEWED: z.boolean().optional(),
     })
     .strict(),
 });
