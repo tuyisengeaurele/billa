@@ -4,6 +4,8 @@ export interface OutstandingInvoice {
   id: string;
   number: string | null;
   customerName: string;
+  customerPhone: string | null;
+  publicToken: string;
   total: number;
   amountOwed: number;
   dueDate: Date | null;
@@ -17,7 +19,7 @@ export async function getOutstandingInvoices(businessId: string): Promise<Outsta
       status: "FINALIZED",
       paymentStatus: { in: ["UNPAID", "PARTIALLY_PAID"] },
     },
-    include: { customer: { select: { name: true } } },
+    include: { customer: { select: { name: true, phone: true } } },
     orderBy: { dueDate: "asc" },
   });
 
@@ -44,6 +46,8 @@ export async function getOutstandingInvoices(businessId: string): Promise<Outsta
       id: invoice.id,
       number: invoice.number,
       customerName: invoice.customer.name,
+      customerPhone: invoice.customer.phone,
+      publicToken: invoice.publicToken,
       total: invoice.total,
       amountOwed: invoice.total - credited - invoice.amountPaid,
       dueDate: invoice.dueDate,

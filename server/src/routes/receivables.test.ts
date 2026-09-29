@@ -19,7 +19,7 @@ async function registerAndGetCookies(app: ReturnType<typeof createApp>, email = 
 }
 
 async function createCustomer(app: ReturnType<typeof createApp>, cookies: string[], name = "Acme Ltd") {
-  const res = await request(app).post("/customers").set("Cookie", cookies).send({ name });
+  const res = await request(app).post("/customers").set("Cookie", cookies).send({ name, phone: "0788123456" });
   return res.body.customer.id as string;
 }
 
@@ -62,6 +62,8 @@ describe("GET /receivables", () => {
     expect(res.body.results).toHaveLength(1);
     expect(res.body.results[0].customerName).toBe("Acme Ltd");
     expect(res.body.results[0].amountOwed).toBe(100000);
+    expect(res.body.results[0].customerPhone).toBe("0788123456");
+    expect(res.body.results[0].publicToken).toEqual(expect.any(String));
   });
 
   it("excludes a fully paid invoice", async () => {

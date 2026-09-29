@@ -37,6 +37,8 @@ receivablesRouter.get("/", async (req, res) => {
       id: invoice.id,
       number: invoice.number,
       customerName: invoice.customerName,
+      customerPhone: invoice.customerPhone,
+      publicToken: invoice.publicToken,
       total: invoice.total,
       amountOwed: invoice.amountOwed,
       dueDate: invoice.dueDate ? invoice.dueDate.toISOString().slice(0, 10) : null,
