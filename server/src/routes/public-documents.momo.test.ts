@@ -4,6 +4,7 @@ import { createApp } from "../app.js";
 import { resetDb } from "../test/db.js";
 import { prisma } from "../lib/prisma.js";
 import * as momoClientModule from "../lib/momo-client.js";
+import * as generateReceiptModule from "../lib/generate-payment-receipt.js";
 
 beforeAll(() => {
   process.env.JWT_ACCESS_SECRET ??= "test-secret";
@@ -241,6 +242,32 @@ describe("GET /public/documents/:token/momo/request/:requestId", () => {
     expect(invoice.paymentStatus).toBe("PAID");
     const payment = await prisma.invoicePayment.findFirstOrThrow({ where: { documentId: document.id } });
     expect(payment.momoPaymentRequestId).toBe(requestId);
+  });
+
+  it("issues a finalized receipt for the MoMo payment", async () => {
+    const app = createApp();
+    const { document, requestId } = await createPendingRequest(app);
+    vi.spyOn(momoClientModule, "getRequestToPayStatus").mockResolvedValue({ status: "SUCCESSFUL" });
+
+    await request(app).get(`/public/documents/${document.publicToken}/momo/request/${requestId}`);
+
+    const payment = await prisma.invoicePayment.findFirstOrThrow({ where: { documentId: document.id } });
+    expect(payment.receiptDocumentId).not.toBeNull();
+    const receipt = await prisma.document.findUniqueOrThrow({ where: { id: payment.receiptDocumentId! } });
+    expect(receipt).toMatchObject({ type: "RECEIPT", status: "FINALIZED", total: 10000, referencedDocumentId: document.id });
+  });
+
+  it("still records the payment when the receipt cannot be issued", async () => {
+    const app = createApp();
+    const { document, requestId } = await createPendingRequest(app);
+    vi.spyOn(momoClientModule, "getRequestToPayStatus").mockResolvedValue({ status: "SUCCESSFUL" });
+    vi.spyOn(generateReceiptModule, "generatePaymentReceipt").mockRejectedValue(new Error("boom"));
+
+    const res = await request(app).get(`/public/documents/${document.publicToken}/momo/request/${requestId}`);
+
+    expect(res.body.status).toBe("SUCCESSFUL");
+    const invoice = await prisma.document.findUniqueOrThrow({ where: { id: document.id } });
+    expect(invoice.paymentStatus).toBe("PAID");
   });
 
   it("stores the failure reason and marks the request FAILED", async () => {

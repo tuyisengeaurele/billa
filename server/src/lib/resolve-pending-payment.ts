@@ -1,9 +1,11 @@
 import type { Payment, MomoPaymentRequest } from "@prisma/client";
+import * as Sentry from "@sentry/node";
 import { prisma } from "./prisma.js";
 import { getAccessToken, getRequestToPayStatus } from "./momo-client.js";
 import type { MomoCredentials } from "./momo-client.js";
 import { getBillingMomoConfig } from "./billing-momo.js";
 import { getInvoiceOutstandingBalance } from "./invoice-payment-status.js";
+import { generatePaymentReceipt } from "./generate-payment-receipt.js";
 import { recordInvoicePayment } from "./record-invoice-payment.js";
 
 const PLAN_DAYS: Record<"MONTHLY" | "ANNUAL", number> = { MONTHLY: 30, ANNUAL: 365 };
@@ -95,7 +97,7 @@ export async function resolvePendingMomoPaymentRequest(
     return { status: "FAILED", failureReason: "already_paid" };
   }
 
-  await recordInvoicePayment({
+  const payment = await recordInvoicePayment({
     businessId: momoRequest.businessId,
     documentId: momoRequest.documentId,
     amount: momoRequest.amount,
@@ -106,6 +108,21 @@ export async function resolvePendingMomoPaymentRequest(
     momoPaymentRequestId: momoRequest.id,
   });
   await prisma.momoPaymentRequest.update({ where: { id: momoRequest.id }, data: { status: "SUCCESSFUL" } });
+
+  // The money is already recorded; a receipt that can't be issued must not turn a
+  // successful payment into an error for the customer, or get it retried.
+  try {
+    await generatePaymentReceipt({
+      businessId: momoRequest.businessId,
+      invoiceId: momoRequest.documentId,
+      paymentId: payment.id,
+      amount: momoRequest.amount,
+      method: "MOBILE_MONEY",
+      paidOn: payment.paidOn,
+    });
+  } catch (err) {
+    Sentry.captureException(err);
+  }
 
   return { status: "SUCCESSFUL" };
 }
