@@ -2,14 +2,7 @@ import { useEffect, useState } from "react";
 import { PAYMENT_METHODS, type PaymentMethod } from "@billa/shared";
 import { Modal } from "./Modal";
 import { apiRequest, ApiError } from "../lib/apiClient";
-
-const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
-  CASH: "Cash",
-  BANK_TRANSFER: "Bank transfer",
-  MOBILE_MONEY: "Mobile Money",
-  CHEQUE: "Cheque",
-  OTHER: "Other",
-};
+import { PAYMENT_METHOD_LABELS } from "../lib/paymentMethodLabels";
 
 interface RecordPaymentModalProps {
   isOpen: boolean;
