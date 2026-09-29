@@ -62,6 +62,7 @@ describe("GET /receivables", () => {
     expect(res.body.results).toHaveLength(1);
     expect(res.body.results[0].customerName).toBe("Acme Ltd");
     expect(res.body.results[0].amountOwed).toBe(100000);
+    expect(res.body.momoEnabled).toBe(false);
     expect(res.body.results[0].customerPhone).toBe("0788123456");
     expect(res.body.results[0].publicToken).toEqual(expect.any(String));
   });

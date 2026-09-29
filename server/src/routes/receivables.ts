@@ -4,6 +4,7 @@ import { requireBusinessContext } from "../middleware/require-business.js";
 import { requireActiveSubscription } from "../middleware/require-active-subscription.js";
 import { generalApiRateLimit } from "../middleware/general-rate-limit.js";
 import { getOutstandingInvoices } from "../lib/accounts-receivable.js";
+import { prisma } from "../lib/prisma.js";
 
 export const receivablesRouter = Router();
 
@@ -47,5 +48,6 @@ receivablesRouter.get("/", async (req, res) => {
     };
   });
 
-  res.json({ results, total: results.length });
+  const business = await prisma.business.findUnique({ where: { id: businessId }, select: { momoEnabled: true } });
+  res.json({ results, total: results.length, momoEnabled: business?.momoEnabled ?? false });
 });

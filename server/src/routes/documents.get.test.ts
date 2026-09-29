@@ -43,6 +43,7 @@ describe("GET /documents/:id", () => {
     expect(res.status).toBe(200);
     expect(res.body.document.customer.name).toBe("Musanze Supplies");
     expect(res.body.document.customer.phone).toBe("0788123456");
+    expect(res.body.document.business.momoEnabled).toBe(false);
     expect(res.body.document.lines).toHaveLength(1);
   });
 
