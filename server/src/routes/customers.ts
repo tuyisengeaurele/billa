@@ -1,7 +1,13 @@
 import { Router } from "express";
 import type { Prisma } from "@prisma/client";
-import { customerListQuerySchema, customerSchema, customerUpdateSchema } from "@billa/shared";
-import type { CustomerListQuery } from "@billa/shared";
+import {
+  customerListQuerySchema,
+  customerSchema,
+  customerUpdateSchema,
+  importRowsRequestSchema,
+  parseCustomerImportRow,
+} from "@billa/shared";
+import type { CustomerInput, CustomerListQuery, ImportRowsRequest } from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/require-auth.js";
 import { requireBusinessContext } from "../middleware/require-business.js";
@@ -12,6 +18,7 @@ import { validateBody } from "../middleware/validate.js";
 import { validateQuery } from "../middleware/validate-query.js";
 import { logActivity } from "../lib/activity-log.js";
 import { toCsv } from "../lib/csv.js";
+import { normalizeRwandaPhoneNumber } from "../lib/phone-number.js";
 
 export const customersRouter = Router();
 
@@ -138,6 +145,53 @@ customersRouter.get("/:id/payment-stats", async (req, res) => {
       : null;
 
   res.json({ paidInvoiceCount, averageDaysToPay, onTimeRate });
+});
+
+customersRouter.post("/import", validateBody(importRowsRequestSchema), async (req, res) => {
+  const businessId = req.auth!.businessId;
+  const { rows } = req.body as ImportRowsRequest;
+
+  const existing = await prisma.customer.findMany({ where: { businessId }, select: { name: true, phone: true, tin: true } });
+  const phones = new Set(existing.flatMap((c) => (c.phone ? [normalizeRwandaPhoneNumber(c.phone)] : [])));
+  const tins = new Set(existing.flatMap((c) => (c.tin ? [c.tin.trim().toLowerCase()] : [])));
+  const names = new Set(existing.map((c) => c.name.trim().toLowerCase()));
+
+  const toCreate: CustomerInput[] = [];
+  const skipped: { row: number; reason: string }[] = [];
+  const invalid: { row: number; error: string }[] = [];
+
+  rows.forEach((raw, index) => {
+    const row = index + 1;
+    const parsed = parseCustomerImportRow(raw);
+    if (!parsed.ok) {
+      invalid.push({ row, error: parsed.error });
+      return;
+    }
+    const customer = parsed.value;
+    const phone = customer.phone ? normalizeRwandaPhoneNumber(customer.phone) : null;
+    const tin = customer.tin?.trim().toLowerCase() ?? null;
+    const name = customer.name.trim().toLowerCase();
+
+    let reason: string | null = null;
+    if (phone && phones.has(phone)) reason = "Already a customer with this phone number";
+    else if (tin && tins.has(tin)) reason = "Already a customer with this TIN";
+    else if (names.has(name)) reason = "Already a customer with this name";
+    if (reason) {
+      skipped.push({ row, reason });
+      return;
+    }
+
+    if (phone) phones.add(phone);
+    if (tin) tins.add(tin);
+    names.add(name);
+    toCreate.push(customer);
+  });
+
+  if (toCreate.length > 0) {
+    await prisma.customer.createMany({ data: toCreate.map((customer) => ({ ...customer, businessId })) });
+  }
+
+  res.json({ created: toCreate.length, skipped, invalid });
 });
 
 customersRouter.post("/", validateBody(customerSchema), async (req, res) => {

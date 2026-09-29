@@ -108,7 +108,8 @@ export function createApp(clientDistDir: string = DEFAULT_CLIENT_DIST_DIR) {
       credentials: true,
     }),
   );
-  app.use(express.json());
+  // A 500-row import is a few hundred KB of JSON, well past the 100kb default.
+  app.use(express.json({ limit: "1mb" }));
   app.use(cookieParser());
   if (process.env.STORAGE_DRIVER === "r2") {
     app.get("/uploads/:businessId/:filename", async (req, res) => {
