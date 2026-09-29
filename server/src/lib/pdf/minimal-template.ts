@@ -1,4 +1,4 @@
-import { htmlDocumentShell } from "./html-shell.js";
+import { htmlDocumentShell, renderQrBlock } from "./html-shell.js";
 import {
   buildSignatures,
   PREMIUM_STYLES,
@@ -105,5 +105,5 @@ export function renderMinimalHtml(data: PdfRenderData): string {
     </div>
   `;
 
-  return htmlDocumentShell(data.number ?? "Draft", STYLES, body);
+  return htmlDocumentShell(data.number ?? "Draft", STYLES, body + renderQrBlock(data));
 }

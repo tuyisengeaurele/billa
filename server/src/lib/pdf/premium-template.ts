@@ -1,4 +1,4 @@
-import { htmlDocumentShell } from "./html-shell.js";
+import { htmlDocumentShell, renderQrBlock } from "./html-shell.js";
 import type { PdfRenderData } from "./render-data.js";
 
 const STYLES = `
@@ -244,5 +244,5 @@ export function renderPremiumHtml(data: PdfRenderData): string {
     </div>
   `;
 
-  return htmlDocumentShell(data.number ?? "Draft", STYLES, body);
+  return htmlDocumentShell(data.number ?? "Draft", STYLES, body + renderQrBlock(data));
 }

@@ -47,6 +47,8 @@ function makeData(overrides: Partial<PdfRenderData> = {}): PdfRenderData {
     totalFormatted: "17,700 RWF",
     showTotals: true,
     amountInWordsFormatted: "Seventeen Thousand Seven Hundred Rwandan Francs Only",
+    viewUrl: null,
+    qrDataUri: null,
     ...overrides,
   };
 }
@@ -176,5 +178,17 @@ describe("renderClassicHtml", () => {
     );
     expect(html).toContain("Jane Doe");
     expect(html).toContain("Managing Director");
+  });
+});
+
+describe("renderClassicHtml QR code", () => {
+  it("shows the QR code when the document has a public link", () => {
+    const html = renderClassicHtml(makeData({ qrDataUri: "data:image/png;base64,AAA" }));
+    expect(html).toContain('src="data:image/png;base64,AAA"');
+    expect(html).toContain("Scan to view online");
+  });
+
+  it("leaves it out when the document has none", () => {
+    expect(renderClassicHtml(makeData())).not.toContain("qr-block\"");
   });
 });

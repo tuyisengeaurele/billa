@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { htmlDocumentShell } from "./html-shell.js";
+import { htmlDocumentShell, renderQrBlock } from "./html-shell.js";
 
 describe("htmlDocumentShell", () => {
   it("wraps the body in a full HTML document with the title and fonts embedded", () => {
@@ -13,5 +13,17 @@ describe("htmlDocumentShell", () => {
   it("includes any extra template-specific styles passed in", () => {
     const html = htmlDocumentShell("t", ".sidebar { width: 30%; }", "<div></div>");
     expect(html).toContain(".sidebar { width: 30%; }");
+  });
+});
+
+describe("renderQrBlock", () => {
+  it("shows the QR code with its caption", () => {
+    const html = renderQrBlock({ qrDataUri: "data:image/png;base64,AAA", labels: { scanToView: "Scan to view online" } });
+    expect(html).toContain('src="data:image/png;base64,AAA"');
+    expect(html).toContain("Scan to view online");
+  });
+
+  it("renders nothing when there is no QR code", () => {
+    expect(renderQrBlock({ qrDataUri: null, labels: { scanToView: "Scan to view online" } })).toBe("");
   });
 });
