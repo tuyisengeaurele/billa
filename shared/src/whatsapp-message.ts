@@ -31,7 +31,7 @@ export function buildWhatsAppMessage(input: WhatsAppMessageInput): string {
       : `Hello ${input.customerName}, ${input.businessName} sent you ${reference} for ${formatRwf(input.amount)}.`;
   const lines = [opening];
   if (dueLabel && input.dueDate) lines.push(`${dueLabel}: ${formatShortDate(input.dueDate)}.`);
-  const canPay = input.kind === "reminder" || (input.payable === true && input.type === "INVOICE");
+  const canPay = input.payable === true && input.type === "INVOICE";
   lines.push(`${canPay ? "View and pay it here" : "View it here"}: ${input.viewUrl}`);
   return lines.join("\n");
 }

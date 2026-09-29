@@ -32,10 +32,15 @@ describe("buildWhatsAppMessage", () => {
   });
 
   it("asks for the amount still owed in a reminder", () => {
-    const message = buildWhatsAppMessage({ ...base, kind: "reminder", amount: 40000 });
+    const message = buildWhatsAppMessage({ ...base, kind: "reminder", amount: 40000, payable: true });
     expect(message).toBe(
       "Hello Jean, a reminder from Kigali Supplies that invoice INV-0007 has 40,000 RWF outstanding.\nDue date: 15 Oct 2026.\nView and pay it here: https://billa.example/view/abc",
     );
+  });
+
+  it("only offers to view a reminded invoice when it cannot be paid online", () => {
+    const message = buildWhatsAppMessage({ ...base, kind: "reminder", amount: 40000 });
+    expect(message).toContain("View it here: https://billa.example/view/abc");
   });
 
   it("invites the customer to pay when the invoice can be paid online", () => {
