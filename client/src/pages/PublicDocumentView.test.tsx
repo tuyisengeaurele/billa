@@ -372,6 +372,7 @@ describe("PublicDocumentView", () => {
         taxTotal: 0,
         total: 10000,
         amountPaid: 0,
+        amountOwed: 10000,
         paymentStatus: "UNPAID",
         ...overrides,
       };
@@ -413,7 +414,7 @@ describe("PublicDocumentView", () => {
         }
         if (url.endsWith("/public/documents/tok-abc123") && statusCalls >= 2) {
           // the refetch after MTN confirms: the balance is now fully paid
-          return new Response(JSON.stringify({ document: invoiceWithMomo({ amountPaid: 10000, paymentStatus: "PAID" }) }), { status: 200 });
+          return new Response(JSON.stringify({ document: invoiceWithMomo({ amountPaid: 10000, amountOwed: 0, paymentStatus: "PAID" }) }), { status: 200 });
         }
         return new Response(JSON.stringify({ document: invoiceWithMomo() }), { status: 200 });
       });
@@ -450,6 +451,16 @@ describe("PublicDocumentView", () => {
       expect(await screen.findByRole("button", { name: /try again/i })).toBeInTheDocument();
     });
 
+    it("charges the balance after credit notes, not the invoice total", async () => {
+      vi.spyOn(global, "fetch").mockImplementation(async () =>
+        new Response(JSON.stringify({ document: invoiceWithMomo({ amountOwed: 6000 }) }), { status: 200 }),
+      );
+
+      renderPage("tok-abc123");
+
+      expect(await screen.findByRole("button", { name: /pay 6,000 rwf with mtn momo/i })).toBeInTheDocument();
+    });
+
     it("does not show the MoMo section when the business hasn't enabled it", async () => {
       vi.spyOn(global, "fetch").mockImplementation(async () =>
         new Response(JSON.stringify({ document: invoiceWithMomo({ business: { name: "Kigali Traders", momoEnabled: false } }) }), { status: 200 }),
@@ -463,7 +474,7 @@ describe("PublicDocumentView", () => {
 
     it("does not show the MoMo section once the invoice is fully paid", async () => {
       vi.spyOn(global, "fetch").mockImplementation(async () =>
-        new Response(JSON.stringify({ document: invoiceWithMomo({ amountPaid: 10000, paymentStatus: "PAID" }) }), { status: 200 }),
+        new Response(JSON.stringify({ document: invoiceWithMomo({ amountPaid: 10000, amountOwed: 0, paymentStatus: "PAID" }) }), { status: 200 }),
       );
 
       renderPage("tok-abc123");

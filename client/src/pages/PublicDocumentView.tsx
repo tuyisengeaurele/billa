@@ -23,6 +23,7 @@ interface PublicDocumentDetail {
   taxTotal: number;
   total: number;
   amountPaid: number;
+  amountOwed: number;
   paymentStatus: string | null;
   business: { name: string; momoEnabled: boolean };
   customer: { name: string; phone: string | null };
@@ -273,7 +274,7 @@ export default function PublicDocumentView() {
 
         {document.type === "INVOICE" &&
           document.business.momoEnabled &&
-          (document.total - document.amountPaid > 0 || momoStatus === "SUCCESSFUL") && (
+          (document.amountOwed > 0 || momoStatus === "SUCCESSFUL") && (
           <div className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-surface px-5 py-4">
             <p className="font-sans text-sm font-medium text-neutral-900">Pay with MTN MoMo</p>
 
@@ -304,7 +305,7 @@ export default function PublicDocumentView() {
                   disabled={isRequestingMomo || !momoPhone.trim()}
                   className="rounded-lg bg-primary-500 px-4 py-2.5 font-sans text-sm font-semibold text-white transition-colors hover:bg-primary-700 disabled:opacity-60"
                 >
-                  {isRequestingMomo ? "Sending…" : `Pay ${formatRwf(document.total - document.amountPaid)} with MTN MoMo`}
+                  {isRequestingMomo ? "Sending…" : `Pay ${formatRwf(document.amountOwed)} with MTN MoMo`}
                 </button>
               </div>
             )}
