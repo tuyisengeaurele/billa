@@ -69,7 +69,8 @@ describe("Profile", () => {
     });
 
     const nameField = await screen.findByLabelText(/^name$/i);
-    expect(nameField).toHaveValue("Ange Aurele");
+    // The field renders before the signed-in user has loaded, so wait for it to fill in.
+    await waitFor(() => expect(nameField).toHaveValue("Ange Aurele"));
     expect(screen.getByText("owner@example.com")).toBeInTheDocument();
 
     await user.clear(nameField);
