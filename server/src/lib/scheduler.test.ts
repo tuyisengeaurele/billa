@@ -4,6 +4,7 @@ import { resetDb } from "../test/db.js";
 import { runScheduledJobs } from "./scheduler.js";
 import * as mailerModule from "./mailer.js";
 import * as recurringModule from "./recurring-documents.js";
+import * as dispatchModule from "./webhooks/dispatch.js";
 
 beforeEach(async () => {
   vi.spyOn(mailerModule, "sendDocumentEmail").mockResolvedValue();
@@ -154,5 +155,26 @@ describe("runScheduledJobs", () => {
     const updated = await prisma.business.findUniqueOrThrow({ where: { id: business.id } });
     expect(updated.lastDigestSentAt).not.toBeNull();
     expect(mailerModule.sendEmail).toHaveBeenCalled();
+  });
+});
+
+describe("runScheduledJobs webhook retries", () => {
+  it("retries due webhook deliveries and logs the run", async () => {
+    const retrySpy = vi.spyOn(dispatchModule, "retryDueWebhookDeliveries").mockResolvedValue(3);
+
+    await runScheduledJobs();
+
+    expect(retrySpy).toHaveBeenCalledTimes(1);
+    const run = await prisma.jobRunLog.findFirstOrThrow({ where: { jobName: "webhook-retries" } });
+    expect(run).toMatchObject({ succeeded: true, resultCount: 3 });
+  });
+
+  it("logs a failed run instead of crashing the tick", async () => {
+    vi.spyOn(dispatchModule, "retryDueWebhookDeliveries").mockRejectedValue(new Error("database down"));
+
+    await expect(runScheduledJobs()).resolves.toBeUndefined();
+
+    const run = await prisma.jobRunLog.findFirstOrThrow({ where: { jobName: "webhook-retries" } });
+    expect(run).toMatchObject({ succeeded: false, errorMessage: "database down" });
   });
 });

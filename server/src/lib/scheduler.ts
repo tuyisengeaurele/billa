@@ -5,6 +5,7 @@ import { sendQuoteExpiryReminders } from "./quote-expiry-reminders.js";
 import { sendOwnerPaymentDigestIfDue } from "./owner-digest.js";
 import { reconcilePendingPayments } from "./payment-reconciliation.js";
 import { recordJobRun } from "./job-run-log.js";
+import { retryDueWebhookDeliveries } from "./webhooks/dispatch.js";
 
 const RUN_INTERVAL_MS = 60 * 60 * 1000;
 
@@ -85,6 +86,16 @@ export async function runScheduledJobs(): Promise<void> {
     });
   } catch (err) {
     await recordJobRun("payment-reconciliation", {
+      succeeded: false,
+      errorMessage: err instanceof Error ? err.message : "Unknown error",
+    });
+  }
+
+  try {
+    const retried = await retryDueWebhookDeliveries();
+    await recordJobRun("webhook-retries", { succeeded: true, resultCount: retried });
+  } catch (err) {
+    await recordJobRun("webhook-retries", {
       succeeded: false,
       errorMessage: err instanceof Error ? err.message : "Unknown error",
     });
