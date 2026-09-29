@@ -250,6 +250,87 @@ describe("DocumentView", () => {
     expect(await screen.findByText(/link copied/i)).toBeInTheDocument();
   });
 
+  it("opens a prefilled WhatsApp chat for a finalized document and records the share", async () => {
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
+    const fetchSpy = vi.spyOn(global, "fetch").mockImplementation(async (input) =>
+      urlOf(input).endsWith("/shared")
+        ? new Response(JSON.stringify({ sentAt: "2026-09-29T10:00:00.000Z" }), { status: 200 })
+        : new Response(
+            JSON.stringify({
+              document: {
+                id: "d1",
+                number: "INV-0001",
+                type: "INVOICE",
+                status: "FINALIZED",
+                publicToken: "tok-abc123",
+                customer: { name: "Kigali Traders", email: null, phone: "0788123456" },
+                dueDate: "2026-10-15T00:00:00.000Z",
+                lines: [],
+                subtotal: 0,
+                taxTotal: 0,
+                total: 11800,
+              },
+            }),
+            { status: 200 },
+          ),
+    );
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={["/documents/d1"]}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/documents/:id" element={<DocumentView />} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: /share on whatsapp/i }));
+
+    const [link] = open.mock.calls[0]!;
+    expect(String(link)).toContain("https://wa.me/250788123456?text=");
+    expect(decodeURIComponent(String(link))).toContain("invoice INV-0001 for 11,800 RWF");
+    await waitFor(() =>
+      expect(fetchSpy.mock.calls.some(([input]) => urlOf(input).endsWith("/documents/d1/shared"))).toBe(true),
+    );
+  });
+
+  it("does not offer WhatsApp sharing for a draft", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async () =>
+      new Response(
+        JSON.stringify({
+          document: {
+            id: "d1",
+            number: null,
+            type: "INVOICE",
+            status: "DRAFT",
+            publicToken: "tok",
+            customer: { name: "Kigali Traders", email: null, phone: "0788123456" },
+            lines: [],
+            subtotal: 0,
+            taxTotal: 0,
+            total: 0,
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/documents/d1"]}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/documents/:id" element={<DocumentView />} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("Kigali Traders");
+    expect(screen.queryByRole("button", { name: /share on whatsapp/i })).not.toBeInTheDocument();
+  });
+
   it("does not show a share link button for a draft document", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async () =>
       new Response(

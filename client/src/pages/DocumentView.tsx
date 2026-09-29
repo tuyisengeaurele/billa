@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
+  buildWhatsAppMessage,
   DOCUMENT_LANGUAGES,
   type DocumentLanguage,
   type DocumentType,
@@ -12,8 +13,10 @@ import { Modal } from "../components/Modal";
 import { RecordPaymentModal } from "../components/RecordPaymentModal";
 import { Spinner } from "../components/Spinner";
 import { useSetActiveDocumentType } from "../context/ActiveDocumentTypeContext";
+import { useAuth } from "../context/AuthContext";
 import { usePageTitle } from "../context/PageTitleContext";
 import { useToast } from "../context/ToastContext";
+import { useWhatsAppShare } from "../hooks/useWhatsAppShare";
 import { apiRequest, ApiError, API_BASE_URL } from "../lib/apiClient";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
 import { PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS } from "../lib/paymentStatusColors";
@@ -39,7 +42,8 @@ interface DocumentDetail {
   number: string | null;
   status: "DRAFT" | "FINALIZED";
   publicToken: string;
-  customer: { name: string; email: string | null };
+  customer: { name: string; email: string | null; phone: string | null };
+  dueDate: string | null;
   sentAt: string | null;
   lines: DocumentLine[];
   subtotal: number;
@@ -75,6 +79,8 @@ export default function DocumentView() {
   const { id } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
+  const { business } = useAuth();
+  const shareOnWhatsApp = useWhatsAppShare();
   const [document, setDocument] = useState<DocumentDetail | null>(null);
   useSetActiveDocumentType(document?.type);
   const typeLabels = document ? DOCUMENT_TYPE_LABELS[document.type] : undefined;
@@ -154,6 +160,27 @@ export default function DocumentView() {
     } finally {
       setIsSending(false);
     }
+  }
+
+  async function handleShareOnWhatsApp() {
+    if (!document) return;
+    const message = buildWhatsAppMessage({
+      kind: "share",
+      customerName: document.customer.name,
+      businessName: business?.name ?? "",
+      type: document.type,
+      number: document.number,
+      amount: document.total,
+      dueDate: document.dueDate,
+      viewUrl: `${window.location.origin}/view/${document.publicToken}`,
+    });
+    const sentAt = await shareOnWhatsApp({
+      documentId: document.id,
+      phone: document.customer.phone,
+      message,
+      record: true,
+    });
+    if (sentAt) setDocument({ ...document, sentAt });
   }
 
   function downloadPdf(language: DocumentLanguage) {
@@ -240,6 +267,16 @@ export default function DocumentView() {
                 className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
               >
                 {linkCopied ? "Link copied" : "Copy link"}
+              </button>
+            )}
+            {document.status === "FINALIZED" && (
+              <button
+                type="button"
+                onClick={handleShareOnWhatsApp}
+                title={!document.customer.phone ? "Add a phone number to this customer to share it" : undefined}
+                className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+              >
+                Share on WhatsApp
               </button>
             )}
             {REMINDABLE_TYPES.includes(document.type) && document.status === "FINALIZED" && (
