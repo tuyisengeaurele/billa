@@ -10,6 +10,10 @@ const customerFormSchema = z.object({
   address: z.string().trim(),
   phone: z.string().trim(),
   email: z.union([z.literal(""), z.string().trim().email("Enter a valid email address")]),
+  creditLimit: z
+    .string()
+    .trim()
+    .refine((value) => value === "" || (/^\d+$/.test(value) && Number(value) > 0), "Enter a whole number of RWF greater than zero"),
 });
 type CustomerFormInput = z.infer<typeof customerFormSchema>;
 
@@ -19,6 +23,7 @@ export interface CustomerFormValues {
   address?: string;
   phone?: string;
   email?: string;
+  creditLimit?: number | null;
 }
 
 export interface CustomerSubmitValues {
@@ -27,6 +32,8 @@ export interface CustomerSubmitValues {
   address?: string;
   phone?: string;
   email?: string;
+  // null clears a limit that was set before.
+  creditLimit?: number | null;
 }
 
 interface CustomerFormProps {
@@ -49,6 +56,7 @@ export function CustomerForm({ initialValues, isSubmitting, apiError, onSubmit }
       address: initialValues?.address ?? "",
       phone: initialValues?.phone ?? "",
       email: initialValues?.email ?? "",
+      creditLimit: initialValues?.creditLimit ? String(initialValues.creditLimit) : "",
     },
   });
 
@@ -58,6 +66,8 @@ export function CustomerForm({ initialValues, isSubmitting, apiError, onSubmit }
     if (data.address.trim()) payload.address = data.address.trim();
     if (data.phone.trim()) payload.phone = data.phone.trim();
     if (data.email.trim()) payload.email = data.email.trim();
+    if (data.creditLimit) payload.creditLimit = Number(data.creditLimit);
+    else if (initialValues?.creditLimit) payload.creditLimit = null;
     onSubmit(payload);
   }
 
@@ -73,6 +83,14 @@ export function CustomerForm({ initialValues, isSubmitting, apiError, onSubmit }
       <FormField id="address" label="Address" type="text" error={errors.address?.message} {...register("address")} />
       <FormField id="phone" label="Phone" type="tel" error={errors.phone?.message} {...register("phone")} />
       <FormField id="email" label="Email" type="email" error={errors.email?.message} {...register("email")} />
+      <FormField
+        id="creditLimit"
+        label="Credit limit in RWF (optional)"
+        type="text"
+        inputMode="numeric"
+        error={errors.creditLimit?.message}
+        {...register("creditLimit")}
+      />
       <Button type="submit" isLoading={isSubmitting}>
         Save customer
       </Button>

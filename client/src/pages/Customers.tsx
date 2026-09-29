@@ -22,6 +22,7 @@ interface Customer {
   address: string | null;
   phone: string | null;
   email: string | null;
+  creditLimit: number | null;
   isActive: boolean;
 }
 
@@ -192,6 +193,7 @@ export default function Customers() {
         address: editingCustomer.address ?? undefined,
         phone: editingCustomer.phone ?? undefined,
         email: editingCustomer.email ?? undefined,
+        creditLimit: editingCustomer.creditLimit,
       }
     : undefined;
 

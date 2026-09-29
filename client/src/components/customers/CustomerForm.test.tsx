@@ -46,6 +46,60 @@ describe("CustomerForm", () => {
     expect(onSubmit).toHaveBeenCalledWith({ name: "Kigali Traders", tin: "123456789" });
   });
 
+  it("submits a credit limit as a number", async () => {
+    const onSubmit = vi.fn();
+    const user = userEvent.setup();
+    render(<CustomerForm isSubmitting={false} apiError={null} onSubmit={onSubmit} />);
+
+    await user.type(screen.getByLabelText("Name"), "Kigali Traders");
+    await user.type(screen.getByLabelText(/credit limit/i), "500000");
+    await user.click(screen.getByRole("button", { name: /save customer/i }));
+
+    expect(onSubmit).toHaveBeenCalledWith({ name: "Kigali Traders", creditLimit: 500000 });
+  });
+
+  it("rejects a credit limit that is not a positive whole number", async () => {
+    const onSubmit = vi.fn();
+    const user = userEvent.setup();
+    render(<CustomerForm isSubmitting={false} apiError={null} onSubmit={onSubmit} />);
+
+    await user.type(screen.getByLabelText("Name"), "Kigali Traders");
+    await user.type(screen.getByLabelText(/credit limit/i), "12.5");
+    await user.click(screen.getByRole("button", { name: /save customer/i }));
+
+    expect(await screen.findByText(/whole number of rwf/i)).toBeInTheDocument();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("pre-fills an existing limit, and sends null when it is cleared", async () => {
+    const onSubmit = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <CustomerForm
+        initialValues={{ name: "Kigali Traders", creditLimit: 500000 }}
+        isSubmitting={false}
+        apiError={null}
+        onSubmit={onSubmit}
+      />,
+    );
+    expect(screen.getByLabelText(/credit limit/i)).toHaveValue("500000");
+
+    await user.clear(screen.getByLabelText(/credit limit/i));
+    await user.click(screen.getByRole("button", { name: /save customer/i }));
+
+    expect(onSubmit).toHaveBeenCalledWith({ name: "Kigali Traders", creditLimit: null });
+  });
+
+  it("does not send a limit for a customer that never had one", async () => {
+    const onSubmit = vi.fn();
+    const user = userEvent.setup();
+    render(<CustomerForm initialValues={{ name: "Kigali Traders" }} isSubmitting={false} apiError={null} onSubmit={onSubmit} />);
+
+    await user.click(screen.getByRole("button", { name: /save customer/i }));
+
+    expect(onSubmit).toHaveBeenCalledWith({ name: "Kigali Traders" });
+  });
+
   it("shows the api error banner when provided", () => {
     render(<CustomerForm isSubmitting={false} apiError="Something went wrong." onSubmit={() => {}} />);
     expect(screen.getByRole("alert")).toHaveTextContent("Something went wrong.");
