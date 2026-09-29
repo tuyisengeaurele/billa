@@ -49,6 +49,45 @@ async function setUpMomoInvoice(app: ReturnType<typeof createApp>, amount = 1000
   return { document: finalized.body.document as { id: string; publicToken: string }, cookies };
 }
 
+describe("GET /public/documents/:token amountOwed", () => {
+  it("reports the balance after payments and credit notes", async () => {
+    const app = createApp();
+    const { document, cookies } = await setUpMomoInvoice(app, 10000);
+
+    const before = await request(app).get(`/public/documents/${document.publicToken}`);
+    expect(before.body.document.amountOwed).toBe(10000);
+
+    const invoice = await prisma.document.findUniqueOrThrow({ where: { id: document.id } });
+    const credit = await request(app)
+      .post("/documents")
+      .set("Cookie", cookies)
+      .send({
+        type: "CREDIT_NOTE",
+        customerId: invoice.customerId,
+        referencedDocumentId: document.id,
+        issueDate: "2026-09-02",
+        lines: [{ description: "Returned goods", quantity: 1, unitPrice: 4000, taxRate: 0 }],
+      });
+    await request(app).post(`/documents/${credit.body.document.id}/finalize`).set("Cookie", cookies);
+
+    const after = await request(app).get(`/public/documents/${document.publicToken}`);
+    expect(after.body.document.amountOwed).toBe(6000);
+  });
+
+  it("is zero once the invoice is fully paid", async () => {
+    const app = createApp();
+    const { document, cookies } = await setUpMomoInvoice(app, 10000);
+    await request(app)
+      .post(`/documents/${document.id}/payments`)
+      .set("Cookie", cookies)
+      .send({ amount: 10000, method: "CASH", paidOn: "2026-09-03" });
+
+    const res = await request(app).get(`/public/documents/${document.publicToken}`);
+
+    expect(res.body.document.amountOwed).toBe(0);
+  });
+});
+
 describe("POST /public/documents/:token/momo/request", () => {
   it("creates a payment request for the outstanding balance and calls MTN", async () => {
     const app = createApp();

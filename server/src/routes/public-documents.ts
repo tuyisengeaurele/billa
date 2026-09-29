@@ -125,7 +125,17 @@ publicDocumentsRouter.get("/:token", publicDocumentRateLimit, async (req, res) =
   }
 
   const { convertedTo, declinedAt, ...documentFields } = document;
-  res.json({ document: { ...documentFields, accepted: Boolean(convertedTo), declined: Boolean(declinedAt) } });
+  // The balance the pay button charges: net of payments and credit notes, the same
+  // figure the MoMo request itself uses, so the amount shown is the amount taken.
+  const balance = document.type === "INVOICE" ? await getInvoiceOutstandingBalance(document.id) : null;
+  res.json({
+    document: {
+      ...documentFields,
+      amountOwed: balance ? Math.max(balance.amountOwed, 0) : 0,
+      accepted: Boolean(convertedTo),
+      declined: Boolean(declinedAt),
+    },
+  });
 });
 
 const MOMO_EXPIRY_MS = 5 * 60 * 1000;
