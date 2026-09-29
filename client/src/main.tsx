@@ -1,12 +1,14 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
+import { registerServiceWorker } from "./lib/registerServiceWorker";
 import { initSentry } from "./lib/sentry";
 import "@fontsource-variable/fraunces";
 import "@fontsource-variable/plus-jakarta-sans";
 import "./index.css";
 
 initSentry();
+registerServiceWorker();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
