@@ -959,3 +959,159 @@ describe("DocumentForm", () => {
     expect(await screen.findByText("Document finalized")).toBeInTheDocument();
   });
 });
+
+describe("DocumentForm payment plan", () => {
+  function mockServer(onPost: (body: any) => void) {
+    return vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.includes("/customers")) {
+        return new Response(
+          JSON.stringify({ results: [{ id: "c1", name: "Kigali Traders", phone: null }], total: 1, page: 1, pageSize: 10 }),
+          { status: 200 },
+        );
+      }
+      if (url.includes("/documents") && init?.method === "POST") {
+        onPost(JSON.parse(init.body as string));
+        return new Response(JSON.stringify({ document: { id: "d1" } }), { status: 201 });
+      }
+      if (url.endsWith("/documents/d1")) {
+        return new Response(
+          JSON.stringify({
+            document: {
+              id: "d1",
+              type: "INVOICE",
+              customerId: "c1",
+              customer: { name: "Kigali Traders" },
+              issueDate: "2026-10-01T00:00:00.000Z",
+              dueDate: null,
+              notes: null,
+              lines: [],
+              installments: [],
+            },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+  }
+
+  async function fillInvoice(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole("button", { name: /select a customer/i }));
+    await user.type(screen.getByLabelText("Search customers"), "Kigali");
+    await user.click(await screen.findByText("Kigali Traders"));
+    await user.click(screen.getByRole("button", { name: /add line/i }));
+    await user.click(screen.getByRole("button", { name: "Select an item" }));
+    await user.type(screen.getByLabelText("Search items"), "Cement");
+    await user.click(await screen.findByRole("button", { name: /as a custom line/i }));
+    const price = screen.getByLabelText(/unit price/i);
+    await user.clear(price);
+    await user.type(price, "100000");
+    const tax = screen.getByLabelText("Tax rate");
+    await user.clear(tax);
+    await user.type(tax, "0");
+  }
+
+  it("offers a payment plan on an invoice but not on a quote", () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 401 }));
+    const { unmount } = renderNew();
+    expect(screen.getByLabelText(/pay in instalments/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/pay in full/i)).toBeChecked();
+    unmount();
+
+    renderNewForType("QUOTE");
+    expect(screen.queryByLabelText(/pay in instalments/i)).not.toBeInTheDocument();
+  });
+
+  it("sends the instalments with the last one worked out as the balance", async () => {
+    let body: any = null;
+    mockServer((posted) => (body = posted));
+    const user = userEvent.setup();
+    renderNew();
+
+    await fillInvoice(user);
+    await user.click(screen.getByLabelText(/pay in instalments/i));
+    await user.type(screen.getByLabelText("Amount for instalment 1"), "40000");
+    await user.click(screen.getByRole("button", { name: /save draft/i }));
+
+    await waitFor(() => expect(body).not.toBeNull());
+    expect(body.installments).toHaveLength(2);
+    expect(body.installments[0]).toMatchObject({ label: "Deposit", amount: 40000 });
+    expect(body.installments[1]).toMatchObject({ label: "Balance", amount: 60000 });
+    expect(typeof body.installments[0].dueDate).toBe("string");
+  });
+
+  it("sends no instalments when the invoice is paid in full", async () => {
+    let body: any = null;
+    mockServer((posted) => (body = posted));
+    const user = userEvent.setup();
+    renderNew();
+
+    await fillInvoice(user);
+    await user.click(screen.getByRole("button", { name: /save draft/i }));
+
+    await waitFor(() => expect(body).not.toBeNull());
+    expect(body.installments).toBeUndefined();
+  });
+
+  it("will not save a plan whose earlier instalments already reach the total", async () => {
+    let posted = false;
+    mockServer(() => (posted = true));
+    const user = userEvent.setup();
+    renderNew();
+
+    await fillInvoice(user);
+    await user.click(screen.getByLabelText(/pay in instalments/i));
+    await user.type(screen.getByLabelText("Amount for instalment 1"), "100000");
+    await user.click(screen.getByRole("button", { name: /save draft/i }));
+
+    expect(await screen.findAllByText(/leave something for the last instalment/i)).not.toHaveLength(0);
+    expect(posted).toBe(false);
+  });
+
+  it("keeps a plan from being combined with a repeating invoice", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 401 }));
+    const user = userEvent.setup();
+    renderNew();
+
+    await user.click(screen.getByLabelText(/make this recurring/i));
+
+    expect(screen.getByLabelText(/pay in instalments/i)).toBeDisabled();
+  });
+
+  it("shows the plan of a saved draft when it is opened again", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      if (urlOf(input).endsWith("/documents/d1")) {
+        return new Response(
+          JSON.stringify({
+            document: {
+              id: "d1",
+              type: "INVOICE",
+              customerId: "c1",
+              customer: { name: "Kigali Traders" },
+              issueDate: "2026-10-01T00:00:00.000Z",
+              dueDate: "2026-11-15T00:00:00.000Z",
+              notes: null,
+              lines: [{ id: "l1", itemId: null, description: "Cement", quantity: "1.00", unitPrice: 100000, taxRate: "0.00" }],
+              recurrenceInterval: null,
+              recurrenceEndDate: null,
+              installments: [
+                { id: "s1", label: "Deposit", amount: 40000, dueDate: "2026-10-01T00:00:00.000Z", sortOrder: 0 },
+                { id: "s2", label: "Balance", amount: 60000, dueDate: "2026-11-15T00:00:00.000Z", sortOrder: 1 },
+              ],
+            },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    renderEdit("d1");
+
+    expect(await screen.findByLabelText("Amount for instalment 1")).toHaveValue("40000");
+    expect(screen.getByLabelText(/pay in instalments/i)).toBeChecked();
+    expect(screen.getByLabelText("Amount for instalment 2")).toHaveValue("60,000");
+    expect(screen.getByLabelText("Due date of instalment 2")).toHaveValue("2026-11-15");
+  });
+});

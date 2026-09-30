@@ -1,9 +1,11 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
+  addDaysToDate,
   DEFAULT_DUE_DAYS,
   DOCUMENT_LANGUAGES,
   getDueDateLabel,
   RECURRENCE_INTERVALS,
+  validateInstallmentPlan,
   type DocumentLanguage,
   type DocumentType,
   type RecurrenceInterval,
@@ -16,6 +18,7 @@ import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { Modal } from "../components/Modal";
 import { PaymentTermsSelect } from "../components/PaymentTermsSelect";
 import { CreditLimitWarning } from "../components/customers/CreditLimitWarning";
+import { InstallmentsEditor, withBalance, type PlanRow } from "../components/documents/InstallmentsEditor";
 import { Spinner } from "../components/Spinner";
 import { CustomerPicker } from "../components/customers/CustomerPicker";
 import { ItemPicker } from "../components/items/ItemPicker";
@@ -58,6 +61,8 @@ const documentFormSchema = z.object({
   recurrenceEnabled: z.boolean(),
   recurrenceInterval: z.string(),
   recurrenceEndDate: z.string(),
+  paymentMode: z.enum(["FULL", "INSTALMENTS"]),
+  installments: z.array(z.object({ label: z.string(), amount: z.number(), dueDate: z.string() })),
 });
 type DocumentFormInput = z.infer<typeof documentFormSchema>;
 
@@ -98,6 +103,7 @@ interface DocumentResponse {
   type: DocumentType;
   recurrenceInterval: RecurrenceInterval | null;
   recurrenceEndDate: string | null;
+  installments?: { label: string | null; amount: number; dueDate: string }[];
 }
 
 interface InvoiceOption {
@@ -205,6 +211,8 @@ export default function DocumentForm() {
       recurrenceEnabled: false,
       recurrenceInterval: "MONTHLY",
       recurrenceEndDate: "",
+      paymentMode: "FULL",
+      installments: [],
     },
   });
 
@@ -240,6 +248,12 @@ export default function DocumentForm() {
           recurrenceEnabled: doc.recurrenceInterval !== null,
           recurrenceInterval: doc.recurrenceInterval ?? "MONTHLY",
           recurrenceEndDate: doc.recurrenceEndDate ? doc.recurrenceEndDate.slice(0, 10) : "",
+          paymentMode: (doc.installments?.length ?? 0) >= 2 ? "INSTALMENTS" : "FULL",
+          installments: (doc.installments ?? []).map((step) => ({
+            label: step.label ?? "",
+            amount: step.amount,
+            dueDate: step.dueDate.slice(0, 10),
+          })),
         });
         setConvertedFrom(doc.convertedFrom ?? null);
         setReferencedDocument(doc.referencedDocument ?? null);
@@ -286,6 +300,36 @@ export default function DocumentForm() {
 
   const totals = calculateLiveTotals(watchedLines ?? []);
 
+  // A payment plan only applies to a one-off invoice; the last instalment is always what is left.
+  const paymentMode = watch("paymentMode");
+  const planRows = watch("installments") as PlanRow[];
+  const isRepeating = watch("recurrenceEnabled");
+  const planActive = type === "INVOICE" && paymentMode === "INSTALMENTS" && !isRepeating;
+  const planPayload = planActive
+    ? withBalance(planRows, totals.total).map((row) => ({
+        label: row.label.trim() || undefined,
+        amount: row.amount,
+        dueDate: row.dueDate,
+      }))
+    : undefined;
+  const planError = planPayload ? validateInstallmentPlan(totals.total, planPayload) : null;
+
+  function choosePaymentMode(mode: "FULL" | "INSTALMENTS") {
+    setValue("paymentMode", mode, { shouldDirty: true });
+    if (mode === "INSTALMENTS" && planRows.length < 2) {
+      const issueDate = getValues("issueDate");
+      const finalDate = getValues("dueDate") || addDaysToDate(issueDate, DEFAULT_DUE_DAYS);
+      setValue(
+        "installments",
+        [
+          { label: "Deposit", amount: 0, dueDate: issueDate },
+          { label: "Balance", amount: 0, dueDate: finalDate },
+        ],
+        { shouldDirty: true },
+      );
+    }
+  }
+
   function addLine() {
     append({ description: "", quantity: 1, unitPrice: 0, taxRate: 18, discountType: "", discountValue: 0 });
   }
@@ -304,6 +348,7 @@ export default function DocumentForm() {
         discountType: line.discountType || undefined,
       })),
       referencedDocumentId: canReference ? referencedDocumentId || undefined : undefined,
+      installments: planPayload,
       recurrence: data.recurrenceEnabled
         ? {
             interval: data.recurrenceInterval as RecurrenceInterval,
@@ -329,6 +374,8 @@ export default function DocumentForm() {
     if (!isDirty) return;
     if (!watchedCustomerId) return;
     if (referenceIsRequired && !referencedDocumentId) return;
+    // A half-finished plan would only bounce off the server, so wait until it adds up.
+    if (planError) return;
     const timeout = setTimeout(async () => {
       setAutosaveStatus("saving");
       try {
@@ -340,11 +387,15 @@ export default function DocumentForm() {
     }, 1500);
     return () => clearTimeout(timeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watchedAll, isDirty, watchedCustomerId, referenceIsRequired, referencedDocumentId]);
+  }, [watchedAll, isDirty, watchedCustomerId, referenceIsRequired, referencedDocumentId, planError]);
 
   async function saveDraft(data: DocumentFormInput) {
     if (referenceIsRequired && !referencedDocumentId) {
       setApiError("Choose the invoice this document is for.");
+      return;
+    }
+    if (planError) {
+      setApiError(planError);
       return;
     }
     setApiError(null);
@@ -377,6 +428,10 @@ export default function DocumentForm() {
     }
     if (referenceIsRequired && !referencedDocumentId) {
       setApiError("Choose the invoice this document is for.");
+      return;
+    }
+    if (planError) {
+      setApiError(planError);
       return;
     }
     setApiError(null);
@@ -543,7 +598,7 @@ export default function DocumentForm() {
 
             <div className="mt-5 flex flex-col gap-3 border-t border-neutral-100 pt-4">
               <label className="flex items-center gap-2 font-sans text-sm font-medium text-neutral-800">
-                <input type="checkbox" {...register("recurrenceEnabled")} />
+                <input type="checkbox" disabled={planActive} {...register("recurrenceEnabled")} />
                 Make this recurring
               </label>
               {watch("recurrenceEnabled") && (
@@ -702,6 +757,46 @@ export default function DocumentForm() {
               <span className="font-semibold text-neutral-900">Total: {formatRwf(totals.total)}</span>
             </div>
           </section>
+
+          {type === "INVOICE" && (
+            <section className="rounded-xl border border-neutral-200 bg-surface p-6">
+              <h2 className="font-display text-base font-semibold text-neutral-900">Payment</h2>
+              <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2">
+                <label className="flex items-center gap-2 font-sans text-sm text-neutral-800">
+                  <input
+                    type="radio"
+                    name="paymentMode"
+                    checked={paymentMode === "FULL"}
+                    onChange={() => choosePaymentMode("FULL")}
+                  />
+                  Pay in full
+                </label>
+                <label className="flex items-center gap-2 font-sans text-sm text-neutral-800">
+                  <input
+                    type="radio"
+                    name="paymentMode"
+                    checked={paymentMode === "INSTALMENTS"}
+                    disabled={isRepeating}
+                    onChange={() => choosePaymentMode("INSTALMENTS")}
+                  />
+                  Pay in instalments
+                </label>
+              </div>
+              {isRepeating && (
+                <p className="mt-2 font-sans text-xs text-neutral-500">A repeating invoice is paid in full each time.</p>
+              )}
+              {paymentMode === "INSTALMENTS" && !isRepeating && (
+                <div className="mt-4">
+                  <InstallmentsEditor
+                    total={totals.total}
+                    issueDate={watch("issueDate")}
+                    rows={planRows}
+                    onChange={(rows) => setValue("installments", rows, { shouldDirty: true })}
+                  />
+                </div>
+              )}
+            </section>
+          )}
 
           <div className="flex flex-wrap items-center gap-3">
             <button
