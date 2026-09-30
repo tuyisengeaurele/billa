@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MAX_INSTALLMENTS } from "./installments.js";
 import {
   DISCOUNT_TYPES,
   DOCUMENT_LANGUAGES,
@@ -30,6 +31,16 @@ export const documentLineSchema = z
   });
 export type DocumentLineInput = z.infer<typeof documentLineSchema>;
 
+export const installmentSchema = z.object({
+  label: z.string().trim().min(1).max(40, "Keep the name under 40 characters").nullable().optional(),
+  amount: z
+    .number({ invalid_type_error: "Enter an amount" })
+    .int("Enter a whole number of RWF")
+    .positive("Enter an amount greater than zero"),
+  dueDate: z.string().trim().min(1, "Choose a due date"),
+});
+export type InstallmentSchemaInput = z.infer<typeof installmentSchema>;
+
 export const recurrenceSchema = z
   .object({
     interval: z.enum(RECURRENCE_INTERVALS),
@@ -52,12 +63,26 @@ export const documentSchema = z
     customerReference: z.string().trim().min(1).optional(),
     lines: z.array(documentLineSchema),
     recurrence: recurrenceSchema,
+    // A payment plan: the invoice is paid in these steps instead of all at once. Left out for full payment.
+    installments: z
+      .array(installmentSchema)
+      .min(2, "Add at least two instalments, or choose to pay in full")
+      .max(MAX_INSTALLMENTS, `Use ${MAX_INSTALLMENTS} instalments or fewer`)
+      .optional(),
     referencedDocumentId: z.string().trim().min(1).nullable().optional(),
     language: z.enum(DOCUMENT_LANGUAGES).optional().default("EN"),
   })
   .refine((data) => !REQUIRED_REFERENCE_TYPES.includes(data.type) || Boolean(data.referencedDocumentId), {
     message: "Choose the invoice this document is for",
     path: ["referencedDocumentId"],
+  })
+  .refine((data) => !data.installments || data.type === "INVOICE", {
+    message: "Only invoices can be paid in instalments",
+    path: ["installments"],
+  })
+  .refine((data) => !data.installments || !data.recurrence, {
+    message: "A repeating invoice cannot use instalments",
+    path: ["installments"],
   })
   .refine((data) => REFERENCEABLE_TYPES.includes(data.type) || !data.referencedDocumentId, {
     message: "Only delivery notes, receipts, and credit notes can reference another document",

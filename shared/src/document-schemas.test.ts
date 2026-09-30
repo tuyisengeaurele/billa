@@ -297,3 +297,48 @@ describe("markDocumentSharedSchema", () => {
     expect(markDocumentSharedSchema.safeParse({ channel: "FAX" }).success).toBe(false);
   });
 });
+
+describe("documentSchema payment plan", () => {
+  const base = {
+    type: "INVOICE",
+    customerId: "c1",
+    issueDate: "2026-10-01",
+    lines: [{ description: "Cement", quantity: 1, unitPrice: 100000, taxRate: 0 }],
+  };
+  const plan = [
+    { label: "Deposit", amount: 40000, dueDate: "2026-10-01" },
+    { label: "Balance", amount: 60000, dueDate: "2026-11-01" },
+  ];
+
+  it("accepts an invoice with two or more instalments", () => {
+    expect(documentSchema.safeParse({ ...base, installments: plan }).success).toBe(true);
+  });
+
+  it("is fine without a plan, which means paying in full", () => {
+    expect(documentSchema.safeParse(base).success).toBe(true);
+  });
+
+  it("rejects a single instalment", () => {
+    expect(documentSchema.safeParse({ ...base, installments: [plan[0]] }).success).toBe(false);
+  });
+
+  it("rejects more than twelve instalments", () => {
+    const many = Array.from({ length: 13 }, () => ({ amount: 1000, dueDate: "2026-10-01" }));
+    expect(documentSchema.safeParse({ ...base, installments: many }).success).toBe(false);
+  });
+
+  it("rejects an instalment of zero or with a fraction", () => {
+    expect(documentSchema.safeParse({ ...base, installments: [{ ...plan[0], amount: 0 }, plan[1]] }).success).toBe(false);
+    expect(documentSchema.safeParse({ ...base, installments: [{ ...plan[0], amount: 10.5 }, plan[1]] }).success).toBe(false);
+  });
+
+  it("only allows a plan on an invoice", () => {
+    const result = documentSchema.safeParse({ ...base, type: "QUOTE", installments: plan });
+    expect(result.success).toBe(false);
+  });
+
+  it("does not allow a plan on a repeating invoice", () => {
+    const result = documentSchema.safeParse({ ...base, recurrence: { interval: "MONTHLY" }, installments: plan });
+    expect(result.success).toBe(false);
+  });
+});
