@@ -1,5 +1,6 @@
 import { prisma } from "./prisma.js";
 import { refreshExchangeRates } from "./exchange-rates.js";
+import { purgeDeadSessions } from "./session-cleanup.js";
 import { generateDueRecurringDocuments } from "./recurring-documents.js";
 import { sendDueSoonReminders } from "./due-soon-reminders.js";
 import { sendOverdueReminders } from "./overdue-reminders.js";
@@ -98,6 +99,16 @@ export async function runScheduledJobs(): Promise<void> {
     });
   } catch (err) {
     await recordJobRun("payment-reconciliation", {
+      succeeded: false,
+      errorMessage: err instanceof Error ? err.message : "Unknown error",
+    });
+  }
+
+  try {
+    const purged = await purgeDeadSessions();
+    await recordJobRun("session-cleanup", { succeeded: true, resultCount: purged });
+  } catch (err) {
+    await recordJobRun("session-cleanup", {
       succeeded: false,
       errorMessage: err instanceof Error ? err.message : "Unknown error",
     });
