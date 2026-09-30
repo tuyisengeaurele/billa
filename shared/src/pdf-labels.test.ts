@@ -35,3 +35,12 @@ describe("scanToView label", () => {
     expect(getPdfLabels("FR").scanToView).toBe("Scannez pour voir en ligne");
   });
 });
+
+describe("payment schedule labels", () => {
+  it("has a heading and a step name in both document languages", () => {
+    expect(getPdfLabels("EN").paymentSchedule).toBe("Payment schedule");
+    expect(getPdfLabels("EN").instalment).toBe("Instalment");
+    expect(getPdfLabels("FR").paymentSchedule).toBe("Échéancier de paiement");
+    expect(getPdfLabels("FR").instalment).toBe("Échéance");
+  });
+});

@@ -40,6 +40,8 @@ export interface PdfLabels {
   documentIssuedBy: string;
   allAmountsIn: string;
   scanToView: string;
+  paymentSchedule: string;
+  instalment: string;
 }
 
 const EN: PdfLabels = {
@@ -89,6 +91,8 @@ const EN: PdfLabels = {
   documentIssuedBy: "This is a document issued by",
   allAmountsIn: "All amounts in Rwandan Francs (RWF)",
   scanToView: "Scan to view online",
+  paymentSchedule: "Payment schedule",
+  instalment: "Instalment",
 };
 
 const FR: PdfLabels = {
@@ -138,6 +142,8 @@ const FR: PdfLabels = {
   documentIssuedBy: "Ceci est un document émis par",
   allAmountsIn: "Tous les montants sont en Francs Rwandais (FRW)",
   scanToView: "Scannez pour voir en ligne",
+  paymentSchedule: "Échéancier de paiement",
+  instalment: "Échéance",
 };
 
 const LABELS_BY_LANGUAGE: Record<DocumentLanguage, PdfLabels> = { EN, FR };

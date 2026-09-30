@@ -49,6 +49,7 @@ function makeData(overrides: Partial<PdfRenderData> = {}): PdfRenderData {
     amountInWordsFormatted: "Seventeen Thousand Seven Hundred Rwandan Francs Only",
     viewUrl: null,
     qrDataUri: null,
+    schedule: [],
     ...overrides,
   };
 }

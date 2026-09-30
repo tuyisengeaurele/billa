@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildPdfRenderData } from "./render-data.js";
 import { Prisma } from "@prisma/client";
-import type { Business, Customer, Document, DocumentLine } from "@prisma/client";
+import type { Business, Customer, Document, DocumentInstalment, DocumentLine } from "@prisma/client";
 
 const { Decimal } = Prisma;
 
@@ -43,8 +43,8 @@ function makeBusiness(overrides: Partial<Business> = {}): Business {
 }
 
 function makeDocument(
-  overrides: Partial<Document> = {},
-): Document & { lines: DocumentLine[]; customer: Customer } {
+  overrides: Partial<Document> & { installments?: DocumentInstalment[] } = {},
+): Document & { lines: DocumentLine[]; customer: Customer; installments: DocumentInstalment[] } {
   return {
     id: "doc1",
     businessId: "biz1",
@@ -95,6 +95,7 @@ function makeDocument(
       createdAt: new Date(),
       updatedAt: new Date(),
     },
+    installments: [],
     lines: [
       {
         id: "line1",
@@ -131,6 +132,57 @@ describe("buildPdfRenderData", () => {
 
     expect(data.viewUrl).toBeNull();
     expect(data.qrDataUri).toBeNull();
+  });
+
+  it("lists a payment plan with dates and amounts, naming any step that has no name", async () => {
+    const data = await buildPdfRenderData(
+      makeDocument({
+        installments: [
+          { id: "s1", documentId: "doc1", sortOrder: 0, label: "Deposit", amount: 7000, dueDate: new Date("2026-10-01") },
+          { id: "s2", documentId: "doc1", sortOrder: 1, label: null, amount: 10700, dueDate: new Date("2026-11-15") },
+        ],
+      }),
+      makeBusiness(),
+    );
+
+    expect(data.schedule).toEqual([
+      { label: "Deposit", dueDate: "2026-10-01", amountFormatted: "7,000 RWF" },
+      { label: "Instalment 2", dueDate: "2026-11-15", amountFormatted: "10,700 RWF" },
+    ]);
+  });
+
+  it("names an unnamed step in French for a French document", async () => {
+    const data = await buildPdfRenderData(
+      makeDocument({
+        language: "FR",
+        installments: [
+          { id: "s1", documentId: "doc1", sortOrder: 0, label: null, amount: 7000, dueDate: new Date("2026-10-01") },
+          { id: "s2", documentId: "doc1", sortOrder: 1, label: null, amount: 10700, dueDate: new Date("2026-11-15") },
+        ],
+      }),
+      makeBusiness(),
+    );
+
+    expect(data.schedule.map((step) => step.label)).toEqual(["Échéance 1", "Échéance 2"]);
+  });
+
+  it("escapes a step's name", async () => {
+    const data = await buildPdfRenderData(
+      makeDocument({
+        installments: [
+          { id: "s1", documentId: "doc1", sortOrder: 0, label: "<b>Deposit</b>", amount: 7000, dueDate: new Date("2026-10-01") },
+          { id: "s2", documentId: "doc1", sortOrder: 1, label: null, amount: 10700, dueDate: new Date("2026-11-15") },
+        ],
+      }),
+      makeBusiness(),
+    );
+
+    expect(data.schedule[0]!.label).toBe("&lt;b&gt;Deposit&lt;/b&gt;");
+  });
+
+  it("has no schedule for an invoice paid in full", async () => {
+    const data = await buildPdfRenderData(makeDocument(), makeBusiness());
+    expect(data.schedule).toEqual([]);
   });
 
   it("escapes user-controlled text fields", async () => {

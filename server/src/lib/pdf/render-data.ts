@@ -1,4 +1,4 @@
-import type { Business, Customer, Document, DocumentLine } from "@prisma/client";
+import type { Business, Customer, Document, DocumentInstalment, DocumentLine } from "@prisma/client";
 import {
   amountInWordsFr,
   amountInWordsRwf,
@@ -11,6 +11,7 @@ import {
 import QRCode from "qrcode";
 import { pickStructuralDark } from "../color.js";
 import { escapeHtml } from "./escape-html.js";
+import { prisma } from "../prisma.js";
 import { readLogoDataUri } from "./logo.js";
 
 const DEFAULT_ACCENT = "#27272a";
@@ -66,9 +67,12 @@ export interface PdfRenderData {
   amountInWordsFormatted: string | null;
   viewUrl: string | null;
   qrDataUri: string | null;
+  // A payment plan, one entry per instalment in date order. Empty when the invoice is paid in full.
+  schedule: { label: string; dueDate: string; amountFormatted: string }[];
 }
 
-type DocumentWithRelations = Document & { lines: DocumentLine[]; customer: Customer };
+// Callers that already loaded the plan can pass it; otherwise it is read here, so no PDF can leave it out.
+type DocumentWithRelations = Document & { lines: DocumentLine[]; customer: Customer; installments?: DocumentInstalment[] };
 
 function escapeNullable(value: string | null): string | null {
   return value === null ? null : escapeHtml(value);
@@ -88,6 +92,9 @@ export async function buildPdfRenderData(
   const logoDataUri = await readLogoDataUri(business.logoUrl, business.id);
   const signatureDataUri = await readLogoDataUri(business.signatureUrl, business.id);
   const labels = getPdfLabels(document.language);
+  const installments =
+    document.installments ??
+    (await prisma.documentInstalment.findMany({ where: { documentId: document.id }, orderBy: { sortOrder: "asc" } }));
   const amountInWords = document.language === "FR" ? amountInWordsFr : amountInWordsRwf;
   const showTotals = document.type !== "DELIVERY_NOTE";
   // Only a finalized document has a public page, so a draft's PDF carries no QR code.
@@ -152,5 +159,10 @@ export async function buildPdfRenderData(
     amountInWordsFormatted: showTotals ? amountInWords(Number(document.total)) : null,
     viewUrl,
     qrDataUri,
+    schedule: installments.map((step, index) => ({
+      label: step.label ? escapeHtml(step.label) : `${labels.instalment} ${index + 1}`,
+      dueDate: step.dueDate.toISOString().slice(0, 10),
+      amountFormatted: formatRwf(step.amount),
+    })),
   };
 }
