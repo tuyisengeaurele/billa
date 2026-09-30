@@ -17,6 +17,8 @@ export interface WhatsAppMessageInput {
   viewUrl: string;
   // The public page takes a MoMo payment for this document.
   payable?: boolean;
+  // A reminder for an invoice on a payment plan says which instalment is due now.
+  instalment?: { label: string | null; amount: number };
 }
 
 export function buildWhatsAppMessage(input: WhatsAppMessageInput): string {
@@ -27,7 +29,11 @@ export function buildWhatsAppMessage(input: WhatsAppMessageInput): string {
 
   const opening =
     input.kind === "reminder"
-      ? `Hello ${input.customerName}, a reminder from ${input.businessName} that ${reference} has ${formatRwf(input.amount)} outstanding.`
+      ? `Hello ${input.customerName}, a reminder from ${input.businessName} that ${reference} has ${formatRwf(input.amount)} outstanding${
+          input.instalment
+            ? `, of which ${formatRwf(input.instalment.amount)} (${input.instalment.label?.trim() || "the next instalment"}) is due now`
+            : ""
+        }.`
       : `Hello ${input.customerName}, ${input.businessName} sent you ${reference} for ${formatRwf(input.amount)}.`;
   const lines = [opening];
   if (dueLabel && input.dueDate) lines.push(`${dueLabel}: ${formatShortDate(input.dueDate)}.`);

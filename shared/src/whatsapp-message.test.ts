@@ -31,6 +31,19 @@ describe("buildWhatsAppMessage", () => {
     expect(message).not.toContain("Valid until");
   });
 
+  it("names the instalment that is due when the invoice is on a payment plan", () => {
+    const message = buildWhatsAppMessage({
+      ...base,
+      kind: "reminder",
+      amount: 100000,
+      instalment: { label: "Deposit", amount: 40000 },
+    });
+    expect(message.split("
+")[0]).toBe(
+      "Hello Jean, a reminder from Kigali Supplies that invoice INV-0007 has 100,000 RWF outstanding, of which 40,000 RWF (Deposit) is due now.",
+    );
+  });
+
   it("asks for the amount still owed in a reminder", () => {
     const message = buildWhatsAppMessage({ ...base, kind: "reminder", amount: 40000, payable: true });
     expect(message).toBe(
