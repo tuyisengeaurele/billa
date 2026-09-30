@@ -130,7 +130,7 @@ export default function Receivables() {
       instalment: isOnPlan(row) ? { label: row.nextInstallmentLabel ?? null, amount: row.amountDue! } : undefined,
       dueDate: row.dueDate,
       viewUrl: `${window.location.origin}/view/${row.publicToken}`,
-      payable: momoEnabled,
+      payable: momoEnabled && coerceCurrency(row.currency) === "RWF",
     });
     void shareOnWhatsApp({ documentId: row.id, phone: row.customerPhone, message, record: false });
   }
