@@ -3,7 +3,6 @@ import {
   createBusinessSchema,
   createInviteSchema,
   switchBusinessSchema,
-  updateMemberRoleSchema,
 } from "./multi-business-schemas.js";
 
 describe("switchBusinessSchema", () => {
@@ -40,23 +39,11 @@ describe("createInviteSchema", () => {
     expect(result.role).toBe("MEMBER");
   });
 
-  it("accepts ACCOUNTANT as the invited role", () => {
-    const result = createInviteSchema.parse({ email: "team@example.com", role: "ACCOUNTANT" });
-    expect(result.role).toBe("ACCOUNTANT");
+  it("no longer accepts the removed accountant role", () => {
+    expect(createInviteSchema.safeParse({ email: "team@example.com", role: "ACCOUNTANT" }).success).toBe(false);
   });
 
   it("rejects an unknown role", () => {
     expect(createInviteSchema.safeParse({ email: "team@example.com", role: "SUPERADMIN" }).success).toBe(false);
-  });
-});
-
-describe("updateMemberRoleSchema", () => {
-  it("accepts MEMBER and ACCOUNTANT", () => {
-    expect(updateMemberRoleSchema.safeParse({ role: "MEMBER" }).success).toBe(true);
-    expect(updateMemberRoleSchema.safeParse({ role: "ACCOUNTANT" }).success).toBe(true);
-  });
-
-  it("rejects an unknown role", () => {
-    expect(updateMemberRoleSchema.safeParse({ role: "OWNER" }).success).toBe(false);
   });
 });

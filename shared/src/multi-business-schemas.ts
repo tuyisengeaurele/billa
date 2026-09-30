@@ -19,7 +19,3 @@ export const createInviteSchema = z.object({
 });
 export type CreateInviteInput = z.infer<typeof createInviteSchema>;
 
-export const updateMemberRoleSchema = z.object({
-  role: z.enum(BUSINESS_MEMBER_ROLES),
-});
-export type UpdateMemberRoleInput = z.infer<typeof updateMemberRoleSchema>;

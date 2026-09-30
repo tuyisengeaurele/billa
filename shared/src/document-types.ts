@@ -41,7 +41,6 @@ export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 export const INVOICE_PAYMENT_STATUSES = ["UNPAID", "PARTIALLY_PAID", "PAID", "WRITTEN_OFF"] as const;
 export type InvoicePaymentStatus = (typeof INVOICE_PAYMENT_STATUSES)[number];
 
-// ACCOUNTANT is read-only across all business data (see the server's
-// blockAccountantMutations middleware); MEMBER keeps full read/write access.
-export const BUSINESS_MEMBER_ROLES = ["MEMBER", "ACCOUNTANT"] as const;
+// A business has its owner plus members, and every member can read and write.
+export const BUSINESS_MEMBER_ROLES = ["MEMBER"] as const;
 export type BusinessMemberRole = (typeof BUSINESS_MEMBER_ROLES)[number];
