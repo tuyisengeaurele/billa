@@ -12,6 +12,13 @@ export const PREMIUM_STYLES = `
 .signature-image { display: block; max-height: 8mm; max-width: 32mm; margin: 0 auto 1.5mm; object-fit: contain; }
 .signature-name { font-size: 10px; font-weight: 700; }
 .signature-label { font-size: 8px; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85; }
+.amount-words-split { display: flex; gap: 6mm; align-items: flex-start; }
+.amount-words-split > div { flex: 1; min-width: 0; }
+.schedule-label { font-size: 8px; text-transform: uppercase; letter-spacing: 0.12em; color: #6b7280; font-weight: 700; margin-bottom: 1mm; }
+.schedule-table { width: 100%; border-collapse: collapse; font-size: 9.5px; }
+.schedule-table td { padding: 0.4mm 0; }
+.schedule-table td.schedule-date { color: #6b7280; padding: 0.4mm 2mm; }
+.schedule-table td.schedule-amount { text-align: right; font-weight: 600; white-space: nowrap; }
 .footer-qr { text-align: center; flex-shrink: 0; }
 .footer-qr img { display: block; width: 15mm; height: 15mm; margin: 0 auto 1mm; background: #ffffff; }
 .footer-qr span { display: block; font-size: 6.5px; letter-spacing: 0.04em; opacity: 0.85; }
@@ -47,11 +54,31 @@ export function renderTotalsBox(data: {
   </div>`;
 }
 
-export function renderAmountInWordsBox(amountInWordsFormatted: string, labels: PdfLabels): string {
-  return `<div class="amount-words">
-    <div class="amount-words-label">${labels.amountInWords}</div>
-    <div class="amount-words-text">${amountInWordsFormatted}</div>
+/** The payment plan as a small table, one row per instalment. Empty for an invoice paid in full. */
+export function renderSchedule(data: {
+  schedule: { label: string; dueDate: string; amountFormatted: string }[];
+  labels: PdfLabels;
+}): string {
+  if (data.schedule.length === 0) return "";
+  const rows = data.schedule
+    .map(
+      (step) =>
+        `<tr><td>${step.label}</td><td class="schedule-date">${step.dueDate}</td><td class="schedule-amount">${step.amountFormatted}</td></tr>`,
+    )
+    .join("");
+  return `<div class="schedule"><div class="schedule-label">${data.labels.paymentSchedule}</div><table class="schedule-table">${rows}</table></div>`;
+}
+
+// With a payment plan the schedule sits beside the words instead of below them, so it costs no page height.
+export function renderAmountInWordsBox(amountInWordsFormatted: string, labels: PdfLabels, scheduleHtml = ""): string {
+  const words = `<div class="amount-words-label">${labels.amountInWords}</div>
+    <div class="amount-words-text">${amountInWordsFormatted}</div>`;
+  if (!scheduleHtml) {
+    return `<div class="amount-words">
+    ${words}
   </div>`;
+  }
+  return `<div class="amount-words amount-words-split"><div>${words}</div>${scheduleHtml}</div>`;
 }
 
 export interface FooterSignature {

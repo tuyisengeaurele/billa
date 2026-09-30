@@ -1,4 +1,5 @@
 import { htmlDocumentShell } from "./html-shell.js";
+import { renderSchedule } from "./premium-parts.js";
 import type { PdfRenderData } from "./render-data.js";
 
 const STYLES = `
@@ -49,6 +50,13 @@ table.items tbody td.r { text-align: right; font-weight: 600; color: #1a1a2e; }
 .grand td { background: var(--dark) !important; color: #fff !important; font-size: 15px !important; font-weight: 700 !important; padding: 12px 16px !important; }
 
 .words-row { margin: 0 36px; border: 1px solid #f0eeec; border-radius: 6px; padding: 10px 14px; margin-bottom: 20px; }
+.words-row-split { display: flex; gap: 24px; align-items: flex-start; }
+.words-row-split > div { flex: 1; min-width: 0; }
+.schedule-label { font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent); margin-bottom: 3px; }
+.schedule-table { width: 100%; border-collapse: collapse; font-size: 11px; color: #333; }
+.schedule-table td { padding: 1.5px 0; }
+.schedule-table td.schedule-date { color: #6b7280; padding: 1.5px 8px; }
+.schedule-table td.schedule-amount { text-align: right; font-weight: 600; white-space: nowrap; }
 .words-lbl { font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent); margin-bottom: 3px; }
 .words-val { font-size: 12px; font-style: italic; color: #333; line-height: 1.4; }
 
@@ -221,7 +229,15 @@ export function renderPremiumHtml(data: PdfRenderData): string {
             </div>
             ${
               data.amountInWordsFormatted
-                ? `<div class="words-row">
+                ? data.schedule.length > 0
+                  ? `<div class="words-row words-row-split">
+                    <div>
+                      <div class="words-lbl">${labels.amountInWords}</div>
+                      <div class="words-val">${data.amountInWordsFormatted} (${data.totalFormatted})</div>
+                    </div>
+                    ${renderSchedule(data)}
+                  </div>`
+                  : `<div class="words-row">
                     <div class="words-lbl">${labels.amountInWords}</div>
                     <div class="words-val">${data.amountInWordsFormatted} (${data.totalFormatted})</div>
                   </div>`

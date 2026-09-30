@@ -5,6 +5,7 @@ import {
   renderAmountInWordsBox,
   renderFooterBar,
   renderFooterQr,
+  renderSchedule,
   renderStatusPill,
   renderTotalsBox,
 } from "./premium-parts.js";
@@ -91,7 +92,7 @@ export function renderMinimalHtml(data: PdfRenderData): string {
               dark,
               labels: data.labels,
             })}</div>
-      ${data.amountInWordsFormatted ? renderAmountInWordsBox(data.amountInWordsFormatted, data.labels) : ""}`
+      ${data.amountInWordsFormatted ? renderAmountInWordsBox(data.amountInWordsFormatted, data.labels, renderSchedule(data)) : ""}`
           : ""
       }
       ${data.notes ? `<div class="notes">${data.notes}</div>` : ""}

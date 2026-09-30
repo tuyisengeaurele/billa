@@ -193,3 +193,27 @@ describe("renderClassicHtml QR code", () => {
     expect(renderClassicHtml(makeData())).not.toContain('class="footer-qr"');
   });
 });
+
+describe("renderClassicHtml payment schedule", () => {
+  const schedule = [
+    { label: "Deposit", dueDate: "2026-10-01", amountFormatted: "7,000 RWF" },
+    { label: "Balance", dueDate: "2026-11-15", amountFormatted: "10,700 RWF" },
+  ];
+
+  it("lists each instalment with its date and amount", () => {
+    const html = renderClassicHtml(makeData({ schedule }));
+    expect(html).toContain("Payment schedule");
+    for (const text of ["Deposit", "2026-10-01", "7,000 RWF", "Balance", "2026-11-15", "10,700 RWF"]) {
+      expect(html).toContain(text);
+    }
+  });
+
+  it("leaves the schedule out for an invoice paid in full", () => {
+    expect(renderClassicHtml(makeData())).not.toContain("Payment schedule");
+  });
+
+  it("uses the French heading for a French document", () => {
+    const html = renderClassicHtml(makeData({ schedule, labels: getPdfLabels("FR") }));
+    expect(html).toContain("Échéancier de paiement");
+  });
+});
