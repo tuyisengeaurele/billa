@@ -45,6 +45,7 @@ function makeData(overrides: Partial<PdfRenderData> = {}): PdfRenderData {
     subtotalFormatted: "15,000 RWF",
     taxTotalFormatted: "2,700 RWF",
     totalFormatted: "17,700 RWF",
+    currencyLabel: "RWF (Rwandan Franc)",
     showTotals: true,
     amountInWordsFormatted: "Seventeen Thousand Seven Hundred Rwandan Francs Only",
     viewUrl: null,

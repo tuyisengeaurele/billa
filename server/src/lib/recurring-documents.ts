@@ -70,6 +70,8 @@ export async function generateDueRecurringDocuments(businessId: string): Promise
         subtotal: totals.subtotal,
         taxTotal: totals.taxTotal,
         total: totals.total,
+        currency: source.currency,
+        exchangeRate: source.exchangeRate,
         lines: {
           create: source.lines.map((line, index) => ({
             itemId: line.itemId,

@@ -67,6 +67,8 @@ export async function convertProformaToInvoice(
       subtotal: totals.subtotal,
       taxTotal: totals.taxTotal,
       total: totals.total,
+      currency: proforma.currency,
+      exchangeRate: proforma.exchangeRate,
       convertedFromId: proforma.id,
       lines: {
         create: proforma.lines.map((line, index) => ({

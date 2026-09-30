@@ -40,6 +40,8 @@ export async function generatePaymentReceipt(input: GeneratePaymentReceiptInput)
       subtotal: totals.subtotal,
       taxTotal: totals.taxTotal,
       total: totals.total,
+      currency: invoice.currency,
+      exchangeRate: invoice.exchangeRate,
       lines: {
         create: [
           {

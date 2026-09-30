@@ -103,7 +103,7 @@ const DOCUMENT_INCLUDE = {
 };
 
 type ReferencedDocumentResult =
-  | { ok: true; referencedDocumentId: string | null }
+  | { ok: true; referencedDocumentId: string | null; currency?: { currency: string; exchangeRate: number | null } }
   | { ok: false; error: string };
 
 async function resolveReferencedDocument(
@@ -129,7 +129,20 @@ async function resolveReferencedDocument(
     return { ok: false, error: "referenced_document_wrong_customer" };
   }
 
-  return { ok: true, referencedDocumentId };
+  return {
+    ok: true,
+    referencedDocumentId,
+    currency: { currency: referenced.currency, exchangeRate: referenced.exchangeRate },
+  };
+}
+
+// A document that refers to an invoice is always in the invoice's currency, at the invoice's rate.
+function currencyFields(
+  body: DocumentInput,
+  referenced: { currency?: { currency: string; exchangeRate: number | null } },
+) {
+  if (referenced.currency) return referenced.currency;
+  return { currency: body.currency, exchangeRate: body.currency === "RWF" ? null : (body.exchangeRate ?? null) };
 }
 
 function recurrenceFields(body: DocumentInput) {
@@ -302,6 +315,7 @@ documentsRouter.post("/", validateBody(documentSchema), async (req, res) => {
       subtotal: totals.subtotal,
       taxTotal: totals.taxTotal,
       total: totals.total,
+      ...currencyFields(body, referenced),
       referencedDocumentId: referenced.referencedDocumentId,
       ...recurrenceFields(body),
       lines: {
@@ -549,6 +563,7 @@ documentsRouter.patch("/:id", validateBody(documentSchema), async (req, res) => 
         subtotal: totals.subtotal,
         taxTotal: totals.taxTotal,
         total: totals.total,
+        ...currencyFields(body, referenced),
         referencedDocumentId: referenced.referencedDocumentId,
         ...recurrenceFields(body),
         lines: {

@@ -198,7 +198,7 @@ export function renderPremiumHtml(data: PdfRenderData): string {
             ${data.customer.tin ? `<tr><td>${labels.tin}:</td><td>${data.customer.tin}</td></tr>` : ""}
             ${data.customer.phone ? `<tr><td>${labels.contact}:</td><td>${data.customer.phone}</td></tr>` : ""}
             ${data.customer.address ? `<tr><td>${labels.location}:</td><td>${data.customer.address}</td></tr>` : ""}
-            <tr><td>${labels.currency}:</td><td>${labels.currencyValue}</td></tr>
+            <tr><td>${labels.currency}:</td><td>${data.currencyLabel}</td></tr>
           </table>
         </div>
       </div>

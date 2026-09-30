@@ -60,6 +60,8 @@ function makeDocument(
     subtotal: 15000,
     taxTotal: 2700,
     total: 17700,
+    currency: "RWF",
+    exchangeRate: null,
     sentAt: null,
     firstViewedAt: null,
     lastViewedAt: null,
@@ -282,6 +284,27 @@ describe("buildPdfRenderData", () => {
     expect(data.business.bankAccountNumber).toBe("000123456789");
     expect(data.business.signatoryName).toBe("Jane &lt;Doe&gt;");
     expect(data.business.signatoryTitle).toBe("Managing Director");
+  });
+
+  it("formats amounts, the amount in words and the currency label in a foreign currency", async () => {
+    const data = await buildPdfRenderData(
+      makeDocument({ currency: "USD", exchangeRate: 1450, subtotal: 15000, taxTotal: 2700, total: 17700 }),
+      makeBusiness(),
+    );
+
+    expect(data.totalFormatted).toBe("177.00 USD");
+    expect(data.lines[0]!.unitPriceFormatted).toBe("50.00 USD");
+    expect(data.amountInWordsFormatted).toBe("One Hundred Seventy-Seven US Dollars Only");
+    expect(data.currencyLabel).toBe("USD (US dollar)");
+  });
+
+  it("writes the amount in words in French for a French document in euros", async () => {
+    const data = await buildPdfRenderData(
+      makeDocument({ currency: "EUR", exchangeRate: 1600, language: "FR", total: 10050 }),
+      makeBusiness(),
+    );
+
+    expect(data.amountInWordsFormatted).toBe("Cent Euros et Cinquante Centimes Seulement");
   });
 
   it("leaves bank and signatory details null when unset", async () => {

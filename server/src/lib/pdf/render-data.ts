@@ -1,11 +1,16 @@
 import type { Business, Customer, Document, DocumentInstalment, DocumentLine } from "@prisma/client";
 import {
+  amountInWordsEn,
   amountInWordsFr,
+  amountInWordsFrCurrency,
   amountInWordsRwf,
-  formatRwf,
+  currencyName,
+  formatMoney,
   getDueDateLabel,
   getPartyLabel,
   getPdfLabels,
+  isCurrency,
+  type Currency,
   type PdfLabels,
 } from "@billa/shared";
 import QRCode from "qrcode";
@@ -63,6 +68,8 @@ export interface PdfRenderData {
   subtotalFormatted: string;
   taxTotalFormatted: string;
   totalFormatted: string;
+  // "RWF (Rwandan Franc)" or "USD (US dollar)": what the premium template prints under Currency.
+  currencyLabel: string;
   showTotals: boolean;
   amountInWordsFormatted: string | null;
   viewUrl: string | null;
@@ -78,11 +85,11 @@ function escapeNullable(value: string | null): string | null {
   return value === null ? null : escapeHtml(value);
 }
 
-function formatDiscount(line: DocumentLine): string | null {
+function formatDiscount(line: DocumentLine, currency: Currency): string | null {
   if (!line.discountType || !line.discountValue) return null;
   return line.discountType === "PERCENT"
     ? `${line.discountValue.toString()}% off`
-    : `${formatRwf(Number(line.discountValue))} off`;
+    : `${formatMoney(Number(line.discountValue), currency)} off`;
 }
 
 export async function buildPdfRenderData(
@@ -95,7 +102,12 @@ export async function buildPdfRenderData(
   const installments =
     document.installments ??
     (await prisma.documentInstalment.findMany({ where: { documentId: document.id }, orderBy: { sortOrder: "asc" } }));
-  const amountInWords = document.language === "FR" ? amountInWordsFr : amountInWordsRwf;
+  const currency: Currency = isCurrency(document.currency) ? document.currency : "RWF";
+  const money = (amount: number) => formatMoney(amount, currency);
+  const amountInWords = (amount: number) => {
+    if (currency === "RWF") return document.language === "FR" ? amountInWordsFr(amount) : amountInWordsRwf(amount);
+    return document.language === "FR" ? amountInWordsFrCurrency(amount, currency) : amountInWordsEn(amount, currency);
+  };
   const showTotals = document.type !== "DELIVERY_NOTE";
   // Only a finalized document has a public page, so a draft's PDF carries no QR code.
   const viewUrl =
@@ -147,14 +159,15 @@ export async function buildPdfRenderData(
       .map((line) => ({
         description: escapeHtml(line.description),
         quantity: line.quantity.toString(),
-        unitPriceFormatted: formatRwf(line.unitPrice),
+        unitPriceFormatted: money(line.unitPrice),
         taxRateFormatted: `${line.taxRate.toString()}%`,
-        lineTotalFormatted: formatRwf(line.lineTotal),
-        discountFormatted: formatDiscount(line),
+        lineTotalFormatted: money(line.lineTotal),
+        discountFormatted: formatDiscount(line, currency),
       })),
-    subtotalFormatted: formatRwf(document.subtotal),
-    taxTotalFormatted: formatRwf(document.taxTotal),
-    totalFormatted: formatRwf(document.total),
+    subtotalFormatted: money(document.subtotal),
+    taxTotalFormatted: money(document.taxTotal),
+    totalFormatted: money(document.total),
+    currencyLabel: currency === "RWF" ? labels.currencyValue : `${currency} (${currencyName(currency)})`,
     showTotals,
     amountInWordsFormatted: showTotals ? amountInWords(Number(document.total)) : null,
     viewUrl,
@@ -162,7 +175,7 @@ export async function buildPdfRenderData(
     schedule: installments.map((step, index) => ({
       label: step.label ? escapeHtml(step.label) : `${labels.instalment} ${index + 1}`,
       dueDate: step.dueDate.toISOString().slice(0, 10),
-      amountFormatted: formatRwf(step.amount),
+      amountFormatted: money(step.amount),
     })),
   };
 }
