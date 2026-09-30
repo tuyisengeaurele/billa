@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { formatShortDate, type DocumentType, type PaymentMethod } from "@billa/shared";
+import { formatShortDate, type DocumentType, type PaymentMethod, type ScheduleStep } from "@billa/shared";
+import { PaymentScheduleList, instalmentName } from "../components/documents/PaymentScheduleList";
 import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { Spinner } from "../components/Spinner";
 import { apiRequest, ApiError, API_BASE_URL } from "../lib/apiClient";
@@ -34,6 +35,10 @@ interface PublicDocumentDetail {
   total: number;
   amountPaid: number;
   amountOwed: number;
+  // What to pay now: the next instalment when there is a payment plan, otherwise what is owed.
+  amountDue?: number;
+  schedule?: ScheduleStep[] | null;
+  nextInstallment?: ScheduleStep | null;
   payments?: PublicPayment[];
   paymentStatus: string | null;
   business: { name: string; momoEnabled: boolean };
@@ -316,6 +321,8 @@ export default function PublicDocumentView() {
           </div>
         )}
 
+        {document.schedule && document.schedule.length > 0 && <PaymentScheduleList schedule={document.schedule} />}
+
         {document.type === "INVOICE" &&
           document.business.momoEnabled &&
           (document.amountOwed > 0 || momoStatus === "SUCCESSFUL") && (
@@ -349,7 +356,11 @@ export default function PublicDocumentView() {
                   disabled={isRequestingMomo || !momoPhone.trim()}
                   className="rounded-lg bg-primary-500 px-4 py-2.5 font-sans text-sm font-semibold text-white transition-colors hover:bg-primary-700 disabled:opacity-60"
                 >
-                  {isRequestingMomo ? "Sending…" : `Pay ${formatRwf(document.amountOwed)} with MTN MoMo`}
+                  {isRequestingMomo
+                    ? "Sending…"
+                    : `Pay ${formatRwf(document.amountDue ?? document.amountOwed)}${
+                        document.nextInstallment ? ` (${instalmentName(document.nextInstallment)})` : ""
+                      } with MTN MoMo`}
                 </button>
               </div>
             )}

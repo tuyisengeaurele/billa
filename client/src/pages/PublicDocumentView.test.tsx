@@ -461,6 +461,62 @@ describe("PublicDocumentView", () => {
       expect(await screen.findByRole("button", { name: /pay 6,000 rwf with mtn momo/i })).toBeInTheDocument();
     });
 
+    it("shows the payment plan and asks for the next instalment, not the whole balance", async () => {
+      const steps = [
+        { number: 1, count: 2, label: "Deposit", amount: 40000, dueDate: "2026-10-01", paid: 40000, remaining: 0, status: "PAID", isOverdue: false },
+        { number: 2, count: 2, label: null, amount: 60000, dueDate: "2026-11-15", paid: 0, remaining: 60000, status: "UNPAID", isOverdue: false },
+            ];
+      vi.spyOn(global, "fetch").mockImplementation(async () =>
+        new Response(
+          JSON.stringify({
+            document: invoiceWithMomo({
+              amountPaid: 40000,
+              amountOwed: 60000,
+              amountDue: 60000,
+              total: 100000,
+              schedule: steps,
+              nextInstallment: steps[1],
+            }),
+          }),
+          { status: 200 },
+        ),
+      );
+
+      renderPage("tok-abc123");
+
+      expect(await screen.findByText("Payment plan")).toBeInTheDocument();
+      expect(screen.getByText("Deposit")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /pay 60,000 rwf \(instalment 2\) with mtn momo/i })).toBeInTheDocument();
+    });
+
+    it("asks for just the deposit while the balance is not yet due", async () => {
+      const steps = [
+        { number: 1, count: 2, label: "Deposit", amount: 40000, dueDate: "2026-10-01", paid: 40000, remaining: 0, status: "PAID", isOverdue: false },
+        { number: 2, count: 2, label: null, amount: 60000, dueDate: "2026-11-15", paid: 0, remaining: 60000, status: "UNPAID", isOverdue: false },
+            ];
+      vi.spyOn(global, "fetch").mockImplementation(async () =>
+        new Response(
+          JSON.stringify({
+            document: invoiceWithMomo({
+              total: 100000,
+              amountOwed: 100000,
+              amountDue: 40000,
+              schedule: [
+                { ...steps[0], paid: 0, remaining: 40000, status: "UNPAID" },
+                steps[1],
+              ],
+              nextInstallment: { ...steps[0], paid: 0, remaining: 40000, status: "UNPAID" },
+            }),
+          }),
+          { status: 200 },
+        ),
+      );
+
+      renderPage("tok-abc123");
+
+      expect(await screen.findByRole("button", { name: /pay 40,000 rwf \(deposit\) with mtn momo/i })).toBeInTheDocument();
+    });
+
     it("does not show the MoMo section when the business hasn't enabled it", async () => {
       vi.spyOn(global, "fetch").mockImplementation(async () =>
         new Response(JSON.stringify({ document: invoiceWithMomo({ business: { name: "Kigali Traders", momoEnabled: false } }) }), { status: 200 }),
