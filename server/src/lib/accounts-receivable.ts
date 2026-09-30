@@ -1,4 +1,4 @@
-import { buildSchedule, nextInstallmentDue } from "@billa/shared";
+import { buildSchedule, isCurrency, nextInstallmentDue, toRwf, type Currency } from "@billa/shared";
 import { prisma } from "./prisma.js";
 import { toPlan } from "./document-schedule.js";
 
@@ -15,6 +15,9 @@ export interface OutstandingInvoice {
   // How much is due by that date: everything still owed, or what is left of that instalment.
   amountDue: number;
   nextInstallmentLabel: string | null;
+  // Amounts above are in this currency; amountOwedRwf is the balance at the rate saved on the invoice.
+  currency: Currency;
+  amountOwedRwf: number;
 }
 
 export async function getOutstandingInvoices(businessId: string, customerId?: string): Promise<OutstandingInvoice[]> {
@@ -49,6 +52,7 @@ export async function getOutstandingInvoices(businessId: string, customerId?: st
 
   const now = new Date();
   return invoices.map((invoice) => {
+    const currency: Currency = isCurrency(invoice.currency) ? invoice.currency : "RWF";
     const credited = creditedByInvoice.get(invoice.id) ?? 0;
     const amountOwed = invoice.total - credited - invoice.amountPaid;
     // Payments and credit notes both count towards the earliest instalments first.
@@ -67,6 +71,8 @@ export async function getOutstandingInvoices(businessId: string, customerId?: st
       dueDate: next ? new Date(next.dueDate) : invoice.dueDate,
       amountDue: next ? next.remaining : amountOwed,
       nextInstallmentLabel: next ? next.label : null,
+      currency,
+      amountOwedRwf: toRwf(amountOwed, currency, invoice.exchangeRate),
     };
   });
 }

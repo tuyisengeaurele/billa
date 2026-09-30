@@ -55,3 +55,21 @@ describe("currency words in French", () => {
     expect(amountInWordsFrCurrency(100, "EUR")).toBe("Un Euro Seulement");
   });
 });
+
+describe("totals by currency", () => {
+  it("adds each currency on its own, RWF first", async () => {
+    const { sumByCurrency, formatMoneyTotals } = await import("./currency.js");
+    const items = [
+      { currency: "USD" as const, amount: 10000 },
+      { currency: "RWF" as const, amount: 5000 },
+      { currency: "USD" as const, amount: 2550 },
+      { currency: "RWF" as const, amount: 1000 },
+    ];
+    expect(sumByCurrency(items)).toEqual([
+      { currency: "RWF", amount: 6000 },
+      { currency: "USD", amount: 12550 },
+    ]);
+    expect(formatMoneyTotals(items)).toBe("6,000 RWF + 125.50 USD");
+    expect(formatMoneyTotals([])).toBe("0 RWF");
+  });
+});

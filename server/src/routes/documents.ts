@@ -9,9 +9,11 @@ import {
   markDocumentSharedSchema,
   DOCUMENT_LANGUAGES,
   getPdfLabels,
+  minorPerMajor,
   updateDocumentRemindersSchema,
   voidPaymentSchema,
   writeOffInvoiceSchema,
+  type Currency,
 } from "@billa/shared";
 import type {
   CreatePaymentInput,
@@ -261,7 +263,8 @@ documentsRouter.get("/export.csv", expensiveOperationRateLimit, validateQuery(do
       customer: doc.customer.name,
       issueDate: doc.issueDate.toISOString().slice(0, 10),
       dueDate: doc.dueDate ? doc.dueDate.toISOString().slice(0, 10) : "",
-      total: doc.total,
+      total: doc.total / minorPerMajor(doc.currency as Currency),
+      currency: doc.currency,
     })),
     [
       { key: "type", header: "Type" },
@@ -271,6 +274,7 @@ documentsRouter.get("/export.csv", expensiveOperationRateLimit, validateQuery(do
       { key: "issueDate", header: "Issue date" },
       { key: "dueDate", header: "Due date" },
       { key: "total", header: "Total" },
+      { key: "currency", header: "Currency" },
     ],
   );
 

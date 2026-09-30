@@ -104,3 +104,25 @@ export function amountInWordsFrCurrency(minor: number, currency: Currency): stri
   }
   return `${parts.join(" et ")} Seulement`;
 }
+
+export interface MoneyAmount {
+  currency: Currency;
+  amount: number;
+}
+
+/** Adds up amounts one currency at a time, RWF first, so a statement never adds dollars to francs. */
+export function sumByCurrency(items: MoneyAmount[]): MoneyAmount[] {
+  const totals = new Map<Currency, number>();
+  for (const item of items) totals.set(item.currency, (totals.get(item.currency) ?? 0) + item.amount);
+  return CURRENCIES.filter((currency) => totals.has(currency)).map((currency) => ({
+    currency,
+    amount: totals.get(currency)!,
+  }));
+}
+
+/** "50,000 RWF + 250.00 USD". Zero in RWF when there is nothing. */
+export function formatMoneyTotals(items: MoneyAmount[]): string {
+  const totals = sumByCurrency(items);
+  if (totals.length === 0) return formatMoney(0);
+  return totals.map((total) => formatMoney(total.amount, total.currency)).join(" + ");
+}

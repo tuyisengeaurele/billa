@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { minorPerMajor, toRwf, type Currency } from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/require-auth.js";
 import { requireBusinessContext } from "../middleware/require-business.js";
@@ -38,7 +39,7 @@ reportsRouter.get("/tax-summary", async (req, res) => {
           : {}),
       },
     },
-    include: { document: { select: { type: true } } },
+    include: { document: { select: { type: true, currency: true, exchangeRate: true } } },
   });
 
   const byRate = new Map<number, { taxableAmount: number; taxAmount: number }>();
@@ -47,7 +48,8 @@ reportsRouter.get("/tax-summary", async (req, res) => {
 
   for (const line of lines) {
     // The stored line total is already net of any line discount, which is the amount VAT is charged on.
-    const rawSubtotal = line.lineTotal;
+    // Returns are filed in RWF, so a foreign invoice counts at the rate saved on it.
+    const rawSubtotal = toRwf(line.lineTotal, line.document.currency as Currency, line.document.exchangeRate);
     const taxAmount = Math.round(rawSubtotal * (Number(line.taxRate) / 100));
     const sign = line.document.type === "INVOICE" ? 1 : -1;
     const rate = Number(line.taxRate);
@@ -101,15 +103,20 @@ reportsRouter.get("/vat-register.csv", async (req, res) => {
   const csv = toCsv(
     documents.map((document) => {
       const sign = document.type === "CREDIT_NOTE" ? -1 : 1;
+      const currency = document.currency as Currency;
       return {
         date: document.issueDate.toISOString().slice(0, 10),
         number: document.number ?? "",
         type: REGISTER_TYPE_LABELS[document.type as keyof typeof REGISTER_TYPE_LABELS],
         customer: document.customer.name,
         tin: document.customer.tin ?? "",
-        net: sign * document.subtotal,
-        vat: sign * document.taxTotal,
-        total: sign * document.total,
+        // Filed in RWF: a foreign document is converted at the rate saved on it.
+        net: sign * toRwf(document.subtotal, currency, document.exchangeRate),
+        vat: sign * toRwf(document.taxTotal, currency, document.exchangeRate),
+        total: sign * toRwf(document.total, currency, document.exchangeRate),
+        currency: document.currency,
+        rate: document.exchangeRate ?? "",
+        originalTotal: (sign * document.total) / minorPerMajor(currency),
       };
     }),
     [
@@ -118,9 +125,12 @@ reportsRouter.get("/vat-register.csv", async (req, res) => {
       { key: "type", header: "Type" },
       { key: "customer", header: "Customer" },
       { key: "tin", header: "Customer TIN" },
-      { key: "net", header: "Net" },
-      { key: "vat", header: "VAT" },
-      { key: "total", header: "Total" },
+      { key: "net", header: "Net (RWF)" },
+      { key: "vat", header: "VAT (RWF)" },
+      { key: "total", header: "Total (RWF)" },
+      { key: "currency", header: "Currency" },
+      { key: "rate", header: "Rate to RWF" },
+      { key: "originalTotal", header: "Total in currency" },
     ],
   );
 

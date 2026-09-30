@@ -56,7 +56,12 @@ describe("POST /customers/:id/send-statement", () => {
     const res = await request(app).post(`/customers/${customerId}/send-statement`).set("Cookie", cookies);
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ sentTo: "acme@example.com", invoiceCount: 2, totalOwed: 14000 });
+    expect(res.body).toEqual({
+      sentTo: "acme@example.com",
+      invoiceCount: 2,
+      totalOwed: 14000,
+      totals: [{ currency: "RWF", amount: 14000 }],
+    });
     const call = sendSpy.mock.calls[0]![0];
     expect(call.to).toBe("acme@example.com");
     expect(call.subject).toBe("Your statement from Kigali Traders");

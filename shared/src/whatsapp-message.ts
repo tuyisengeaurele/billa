@@ -1,6 +1,7 @@
 import type { DocumentType } from "./document-types.js";
 import { getDueDateLabel } from "./document-labels.js";
 import { formatShortDate } from "./format-date.js";
+import { formatMoneyTotals, type MoneyAmount } from "./currency.js";
 import { formatRwf } from "./money.js";
 import { getPdfLabels } from "./pdf-labels.js";
 import { toWhatsAppNumber } from "./whatsapp-number.js";
@@ -52,13 +53,15 @@ export interface StatementWhatsAppInput {
   customerName: string;
   businessName: string;
   totalOwed: number;
+  // What is owed in each currency. When given, it is used instead of totalOwed, which is RWF only.
+  totals?: MoneyAmount[];
   portalUrl: string;
   payable?: boolean;
 }
 
 export function buildStatementWhatsAppMessage(input: StatementWhatsAppInput): string {
   return [
-    `Hello ${input.customerName}, this is your statement from ${input.businessName}. You currently owe ${formatRwf(input.totalOwed)}.`,
+    `Hello ${input.customerName}, this is your statement from ${input.businessName}. You currently owe ${input.totals ? formatMoneyTotals(input.totals) : formatRwf(input.totalOwed)}.`,
     `${input.payable ? "See and pay your invoices here" : "See your invoices here"}: ${input.portalUrl}`,
   ].join("\n");
 }

@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { minorPerMajor, type Currency } from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/require-auth.js";
 import { requireBusinessContext } from "../middleware/require-business.js";
@@ -34,7 +35,8 @@ exportRouter.get("/all", async (req, res) => {
       customer: doc.customer.name,
       issueDate: doc.issueDate.toISOString().slice(0, 10),
       dueDate: doc.dueDate ? doc.dueDate.toISOString().slice(0, 10) : null,
-      total: doc.total,
+      total: doc.total / minorPerMajor(doc.currency as Currency),
+      currency: doc.currency,
     })),
     customers: customers.map((customer) => ({
       name: customer.name,

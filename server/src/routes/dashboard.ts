@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { DOCUMENT_TYPES } from "@billa/shared";
+import { DOCUMENT_TYPES, toRwf, type Currency } from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
 import { getOutstandingInvoices } from "../lib/accounts-receivable.js";
 import { requireAuth } from "../middleware/require-auth.js";
@@ -139,6 +139,8 @@ dashboardRouter.get("/revenue", async (req, res) => {
     select: {
       type: true,
       total: true,
+      currency: true,
+      exchangeRate: true,
       issueDate: true,
       customerId: true,
       customer: { select: { name: true } },
@@ -156,7 +158,10 @@ dashboardRouter.get("/revenue", async (req, res) => {
   const customerNet = new Map<string, { name: string; total: number }>();
   const itemNet = new Map<string, { description: string; total: number }>();
 
-  for (const doc of docs) {
+  for (const source of docs) {
+    // Every figure on the dashboard is in RWF, so a foreign invoice counts at the rate saved on it.
+    const rwf = (amount: number) => toRwf(amount, source.currency as Currency, source.exchangeRate);
+    const doc = { ...source, total: rwf(source.total), lines: source.lines.map((line) => ({ ...line, lineTotal: rwf(line.lineTotal) })) };
     const bucket = monthTotals.get(monthKey(doc.issueDate));
     if (bucket) {
       if (doc.type === "INVOICE") bucket.invoiced += doc.total;
@@ -204,7 +209,7 @@ dashboardRouter.get("/revenue", async (req, res) => {
   const [collectedPayments, outstandingInvoices, ninetyDayPaidInvoices] = await Promise.all([
     prisma.invoicePayment.findMany({
       where: { businessId, voidedAt: null, paidOn: { gte: windowStart } },
-      select: { amount: true },
+      select: { amount: true, document: { select: { currency: true, exchangeRate: true } } },
     }),
     getOutstandingInvoices(businessId),
     prisma.document.findMany({
@@ -216,8 +221,11 @@ dashboardRouter.get("/revenue", async (req, res) => {
     }),
   ]);
 
-  const totalCollected = collectedPayments.reduce((sum, payment) => sum + payment.amount, 0);
-  const totalOutstanding = outstandingInvoices.reduce((sum, invoice) => sum + invoice.amountOwed, 0);
+  const totalCollected = collectedPayments.reduce(
+    (sum, payment) => sum + toRwf(payment.amount, payment.document.currency as Currency, payment.document.exchangeRate),
+    0,
+  );
+  const totalOutstanding = outstandingInvoices.reduce((sum, invoice) => sum + invoice.amountOwedRwf, 0);
 
   const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
   const dsoSamples: number[] = [];

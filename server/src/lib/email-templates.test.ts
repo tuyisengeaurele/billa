@@ -68,6 +68,20 @@ describe("buildStatementEmail", () => {
     ],
   };
 
+  it("shows each invoice in its own currency and totals each currency on its own", () => {
+    const { html } = buildStatementEmail({
+      ...base,
+      invoices: [
+        { number: "INV-0001", dueDate: null, amountOwed: 40000 },
+        { number: "INV-0002", dueDate: null, amountOwed: 12550, currency: "USD" as const },
+        { number: "INV-0003", dueDate: null, amountOwed: 1000 },
+      ],
+    });
+
+    expect(html).toContain("125.50 USD");
+    expect(html).toContain("41,000 RWF + 125.50 USD");
+  });
+
   it("lists each open invoice and the total owed", () => {
     const { subject, html } = buildStatementEmail(base);
 

@@ -1,4 +1,11 @@
-import { formatRwf, formatShortDate, type DocumentLanguage } from "@billa/shared";
+import {
+  formatMoney,
+  formatMoneyTotals,
+  formatShortDate,
+  isCurrency,
+  type Currency,
+  type DocumentLanguage,
+} from "@billa/shared";
 import { publicBaseUrl } from "./asset-url.js";
 
 const BRAND_PINK = "#c2185b";
@@ -227,6 +234,8 @@ export interface OverdueReminderEmailInput {
   payable?: boolean;
   // Set when the invoice is paid in instalments and it is one of them that is late.
   installment?: { label: string | null; amount: number };
+  // The invoice's currency; RWF when left out.
+  currency?: string;
 }
 
 export function buildOverdueReminderEmail(input: OverdueReminderEmailInput): { subject: string; html: string } {
@@ -235,7 +244,8 @@ export function buildOverdueReminderEmail(input: OverdueReminderEmailInput): { s
   const business = escapeHtml(businessName);
   const docNumber = number ? escapeHtml(number) : "";
   const stepLabel = installment?.label ? escapeHtml(installment.label) : null;
-  const stepAmount = installment ? formatRwf(installment.amount) : "";
+  const currency: Currency = input.currency && isCurrency(input.currency) ? input.currency : "RWF";
+  const stepAmount = installment ? formatMoney(installment.amount, currency) : "";
   const footer: BusinessFooterInput = {
     name: businessName,
     address: input.businessAddress,
@@ -429,14 +439,16 @@ export interface StatementEmailInput {
   sender: SenderInput | null;
   portalUrl: string;
   payable?: boolean;
-  invoices: { number: string | null; dueDate: string | null; amountOwed: number }[];
+  invoices: { number: string | null; dueDate: string | null; amountOwed: number; currency?: Currency }[];
 }
 
 /** A plain list of what a customer still owes, with a link to see and pay it. English only for now. */
 export function buildStatementEmail(input: StatementEmailInput): { subject: string; html: string } {
   const customer = escapeHtml(input.customerName);
   const business = escapeHtml(input.businessName);
-  const total = input.invoices.reduce((sum, invoice) => sum + invoice.amountOwed, 0);
+  const total = formatMoneyTotals(
+    input.invoices.map((invoice) => ({ currency: invoice.currency ?? "RWF", amount: invoice.amountOwed })),
+  );
   const footer: BusinessFooterInput = {
     name: input.businessName,
     address: input.businessAddress,
@@ -451,7 +463,7 @@ export function buildStatementEmail(input: StatementEmailInput): { subject: stri
       <tr>
         <td style="padding:8px 0;border-bottom:1px solid #f4f4f5;">${escapeHtml(invoice.number ?? "Invoice")}</td>
         <td style="padding:8px 0;border-bottom:1px solid #f4f4f5;color:#71717a;">${invoice.dueDate ? `Due ${formatEmailDate(invoice.dueDate)}` : ""}</td>
-        <td style="padding:8px 0;border-bottom:1px solid #f4f4f5;text-align:right;">${formatRwf(invoice.amountOwed)}</td>
+        <td style="padding:8px 0;border-bottom:1px solid #f4f4f5;text-align:right;">${formatMoney(invoice.amountOwed, invoice.currency ?? "RWF")}</td>
       </tr>`,
     )
     .join("");
@@ -461,7 +473,7 @@ export function buildStatementEmail(input: StatementEmailInput): { subject: stri
       ${rows}
       <tr>
         <td colspan="2" style="padding:10px 0;font-weight:600;">Total owed</td>
-        <td style="padding:10px 0;text-align:right;font-weight:600;">${formatRwf(total)}</td>
+        <td style="padding:10px 0;text-align:right;font-weight:600;">${total}</td>
       </tr>
     </table>`;
 

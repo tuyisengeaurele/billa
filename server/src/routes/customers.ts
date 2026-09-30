@@ -7,6 +7,7 @@ import {
   customerUpdateSchema,
   importRowsRequestSchema,
   parseCustomerImportRow,
+  sumByCurrency,
 } from "@billa/shared";
 import type { CustomerInput, CustomerListQuery, ImportRowsRequest } from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
@@ -101,7 +102,8 @@ customersRouter.get("/:id", async (req, res) => {
 
   // What they still owe across finalized invoices, so a new invoice can be weighed against their credit limit.
   const outstanding = await getOutstandingInvoices(businessId, id);
-  const outstandingBalance = outstanding.reduce((sum, invoice) => sum + Math.max(invoice.amountOwed, 0), 0);
+  // The credit limit is in RWF, so a foreign invoice counts at the rate saved on it.
+  const outstandingBalance = outstanding.reduce((sum, invoice) => sum + Math.max(invoice.amountOwedRwf, 0), 0);
 
   res.json({ customer: { ...customer, outstandingBalance } });
 });
@@ -145,6 +147,7 @@ customersRouter.post("/:id/send-statement", async (req, res) => {
       number: invoice.number,
       dueDate: invoice.dueDate ? invoice.dueDate.toISOString().slice(0, 10) : null,
       amountOwed: invoice.amountOwed,
+      currency: invoice.currency,
     })),
   });
 
@@ -159,7 +162,8 @@ customersRouter.post("/:id/send-statement", async (req, res) => {
   res.json({
     sentTo: customer.email,
     invoiceCount: outstanding.length,
-    totalOwed: outstanding.reduce((sum, invoice) => sum + invoice.amountOwed, 0),
+    totalOwed: outstanding.reduce((sum, invoice) => sum + invoice.amountOwedRwf, 0),
+    totals: sumByCurrency(outstanding.map((invoice) => ({ currency: invoice.currency, amount: invoice.amountOwed }))),
   });
 });
 

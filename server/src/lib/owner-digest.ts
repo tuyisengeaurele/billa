@@ -1,4 +1,4 @@
-import { formatRwf } from "@billa/shared";
+import { formatRwf, toRwf, type Currency } from "@billa/shared";
 import { prisma } from "./prisma.js";
 import { sendEmail } from "./mailer.js";
 import { buildOwnerDigestEmail } from "./email-templates.js";
@@ -23,7 +23,7 @@ export async function sendOwnerPaymentDigestIfDue(businessId: string): Promise<D
   const [collectedPayments, newlyOverdueCount] = await Promise.all([
     prisma.invoicePayment.findMany({
       where: { businessId, voidedAt: null, paidOn: { gte: weekAgo } },
-      select: { amount: true },
+      select: { amount: true, document: { select: { currency: true, exchangeRate: true } } },
     }),
     prisma.document.count({
       where: {
@@ -36,7 +36,10 @@ export async function sendOwnerPaymentDigestIfDue(businessId: string): Promise<D
     }),
   ]);
 
-  const totalCollected = collectedPayments.reduce((sum, payment) => sum + payment.amount, 0);
+  const totalCollected = collectedPayments.reduce(
+    (sum, payment) => sum + toRwf(payment.amount, payment.document.currency as Currency, payment.document.exchangeRate),
+    0,
+  );
 
   const { subject, html } = buildOwnerDigestEmail({
     businessName: business.name,

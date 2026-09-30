@@ -70,6 +70,7 @@ export async function sendOverdueReminders(businessId: string): Promise<SentRemi
       businessName: business.name,
       dueDate: nextInstallment ? nextInstallment.dueDate.slice(0, 10) : doc.dueDate!.toISOString().slice(0, 10),
       installment: nextInstallment ? { label: nextInstallment.label, amount: nextInstallment.remaining } : undefined,
+      currency: doc.currency,
       businessAddress: business.address,
       businessPhone: business.phone,
       businessEmail: business.email,

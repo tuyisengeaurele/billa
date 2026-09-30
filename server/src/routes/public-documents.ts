@@ -191,6 +191,11 @@ publicDocumentsRouter.post(
       res.status(400).json({ error: "momo_not_enabled" });
       return;
     }
+    // MTN MoMo takes Rwandan francs only, so an invoice in another currency is paid another way.
+    if (document.currency !== "RWF") {
+      res.status(400).json({ error: "momo_rwf_only" });
+      return;
+    }
 
     // The existing-check and the create must happen atomically (see idempotent-payment.ts) -
     // otherwise two near-simultaneous requests for the same invoice can both see "no pending
