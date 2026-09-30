@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/node";
+import { startOfUtcDay } from "@billa/shared";
 import { prisma } from "./prisma.js";
 import { buildPdfRenderData } from "./pdf/render-data.js";
 import { renderDocumentPdf } from "./pdf/render-document-pdf.js";
@@ -23,6 +24,7 @@ export async function sendOverdueReminders(businessId: string): Promise<SentRemi
   const businessLogoUrl = buildPublicAssetUrl(business.logoUrl);
 
   const now = new Date();
+  const today = startOfUtcDay(now);
   const cooldownCutoff = new Date(now.getTime() - business.reminderCadenceDays * DAY_MS);
 
   const overdue = await prisma.document.findMany({
@@ -34,7 +36,8 @@ export async function sendOverdueReminders(businessId: string): Promise<SentRemi
       customer: { email: { not: null } },
       AND: [
         // Late as a whole, or (for an invoice paid in instalments) late on one of its steps.
-        { OR: [{ dueDate: { lt: now } }, { installments: { some: { dueDate: { lt: now } } } }] },
+        // Overdue starts the day after the due date, so an invoice due today gets no reminder yet.
+        { OR: [{ dueDate: { lt: today } }, { installments: { some: { dueDate: { lt: today } } } }] },
         { OR: [{ lastReminderSentAt: null }, { lastReminderSentAt: { lt: cooldownCutoff } }] },
         // paymentStatus can be null for an invoice that hasn't had its status computed yet;
         // notIn alone would silently exclude those rows (NULL NOT IN (...) is NULL, not true).

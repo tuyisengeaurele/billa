@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/node";
+import { isOverdueAt, startOfUtcDay } from "@billa/shared";
 import { prisma } from "./prisma.js";
 import { buildPdfRenderData } from "./pdf/render-data.js";
 import { renderDocumentPdf } from "./pdf/render-document-pdf.js";
@@ -31,6 +32,8 @@ export async function sendDueSoonReminders(businessId: string): Promise<SentDueS
   const businessLogoUrl = buildPublicAssetUrl(business.logoUrl);
 
   const now = new Date();
+  // A payment due today is still on time, so it can still get its note.
+  const today = startOfUtcDay(now);
   const horizon = new Date(now.getTime() + business.dueSoonReminderDays * DAY_MS);
 
   const candidates = await prisma.document.findMany({
@@ -44,8 +47,8 @@ export async function sendDueSoonReminders(businessId: string): Promise<SentDueS
         // Coming due as a whole, or (on a payment plan) on one of its steps.
         {
           OR: [
-            { dueDate: { gte: now, lte: horizon } },
-            { installments: { some: { dueDate: { gte: now, lte: horizon } } } },
+            { dueDate: { gte: today, lte: horizon } },
+            { installments: { some: { dueDate: { gte: today, lte: horizon } } } },
           ],
         },
         { OR: [{ paymentStatus: null }, { paymentStatus: { notIn: ["PAID", "WRITTEN_OFF"] } }] },
@@ -64,7 +67,7 @@ export async function sendDueSoonReminders(businessId: string): Promise<SentDueS
     const isInstallment = doc.installments.length > 0;
     // The payment that is coming up next: the next unpaid instalment, or the invoice's own due date.
     const nextDue = isInstallment ? (nextInstallment ? new Date(nextInstallment.dueDate) : null) : doc.dueDate;
-    if (!nextDue || nextDue < now || nextDue > horizon) continue;
+    if (!nextDue || isOverdueAt(nextDue, now) || nextDue > horizon) continue;
     if (sameDay(nextDue, doc.dueSoonReminderFor)) continue;
 
     const balance = await getInvoiceOutstandingBalance(doc.id);

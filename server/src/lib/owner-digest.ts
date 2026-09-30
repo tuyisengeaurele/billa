@@ -1,4 +1,4 @@
-import { formatRwf, toRwf, type Currency } from "@billa/shared";
+import { formatRwf, startOfUtcDay, toRwf, type Currency } from "@billa/shared";
 import { prisma } from "./prisma.js";
 import { sendEmail } from "./mailer.js";
 import { buildOwnerDigestEmail } from "./email-templates.js";
@@ -31,7 +31,8 @@ export async function sendOwnerPaymentDigestIfDue(businessId: string): Promise<D
         type: "INVOICE",
         status: "FINALIZED",
         paymentStatus: { in: ["UNPAID", "PARTIALLY_PAID"] },
-        dueDate: { gte: weekAgo, lt: now },
+        // Overdue starts the day after the due date, so a due date today is not late yet.
+        dueDate: { gte: startOfUtcDay(weekAgo), lt: startOfUtcDay(now) },
       },
     }),
   ]);

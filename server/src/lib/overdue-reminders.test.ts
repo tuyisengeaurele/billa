@@ -85,6 +85,17 @@ describe("sendOverdueReminders", () => {
     expect(mailerModule.sendDocumentEmail).toHaveBeenCalledTimes(1);
   });
 
+  it("does not remind on the due date itself, only from the day after", async () => {
+    const { business, customer } = await setupBusiness("customer@example.com");
+    const today = new Date(Math.floor(Date.now() / 86400000) * 86400000);
+    await createOverdueInvoice(business.id, customer.id, { dueDate: today });
+
+    expect(await sendOverdueReminders(business.id)).toHaveLength(0);
+
+    await prisma.document.updateMany({ data: { dueDate: new Date(today.getTime() - 86400000) } });
+    expect(await sendOverdueReminders(business.id)).toHaveLength(1);
+  });
+
   it("links to a page where the customer can pay when the business takes MoMo", async () => {
     const { business, customer } = await setupBusiness("customer@example.com");
     await prisma.business.update({ where: { id: business.id }, data: { momoEnabled: true } });

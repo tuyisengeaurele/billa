@@ -44,6 +44,27 @@ async function finalizedInvoice(
   return id;
 }
 
+describe("overdue starts the day after the due date", () => {
+  it("keeps an invoice due today current on the receivables page, and ages one due yesterday", async () => {
+    const app = createApp();
+    const { cookies, customerId } = await setUp(app);
+    await finalizedInvoice(app, cookies, customerId, { dueDate: new Date().toISOString().slice(0, 10) }, 1000);
+    await finalizedInvoice(
+      app,
+      cookies,
+      customerId,
+      { dueDate: new Date(Date.now() - 86400000).toISOString().slice(0, 10) },
+      2000,
+    );
+
+    const res = await request(app).get("/receivables").set("Cookie", cookies);
+
+    const byOwed = Object.fromEntries(res.body.results.map((row: { amountOwed: number }) => [row.amountOwed, row]));
+    expect(byOwed[1000]).toMatchObject({ agingBucket: "current", daysOverdue: 0 });
+    expect(byOwed[2000]).toMatchObject({ agingBucket: "0-30", daysOverdue: 1 });
+  });
+});
+
 describe("reports with a foreign currency", () => {
   it("lists a foreign invoice in its own currency with its RWF equivalent", async () => {
     const app = createApp();

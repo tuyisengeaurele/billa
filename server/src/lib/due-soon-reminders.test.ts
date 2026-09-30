@@ -99,6 +99,14 @@ describe("sendDueSoonReminders", () => {
     expect(call.html).toContain("10,000 RWF");
   });
 
+  it("still reminds about a payment that is due today", async () => {
+    const { business, customer } = await setupBusiness();
+    const today = new Date(Math.floor(Date.now() / DAY_MS) * DAY_MS);
+    await createInvoice(business.id, customer.id, { dueDate: today });
+
+    expect(await sendDueSoonReminders(business.id)).toHaveLength(1);
+  });
+
   it("does not remind about one that is still far off, or already late", async () => {
     const { business, customer } = await setupBusiness();
     await createInvoice(business.id, customer.id, { dueDate: inDays(20) });

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { DOCUMENT_TYPES, toRwf, type Currency } from "@billa/shared";
+import { DOCUMENT_TYPES, isOverdueAt, toRwf, type Currency } from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
 import { getOutstandingInvoices } from "../lib/accounts-receivable.js";
 import { requireAuth } from "../middleware/require-auth.js";
@@ -55,7 +55,7 @@ dashboardRouter.get("/summary", async (req, res) => {
     // Paid and written-off invoices drop out, and an instalment plan is judged step by step.
     getOutstandingInvoices(businessId).then((invoices) => {
       const now = new Date();
-      return invoices.filter((invoice) => invoice.amountOwed > 0 && invoice.dueDate !== null && invoice.dueDate < now).length;
+      return invoices.filter((invoice) => invoice.amountOwed > 0 && invoice.dueDate !== null && isOverdueAt(invoice.dueDate, now)).length;
     }),
     prisma.document.count({
       where: {
