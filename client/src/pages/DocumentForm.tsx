@@ -520,7 +520,7 @@ export default function DocumentForm() {
   async function confirmDelete() {
     setIsDeleting(true);
     try {
-      await apiRequest(`/documents/${id}`, { method: "DELETE" });
+      await apiRequest(`/documents/${documentId}`, { method: "DELETE" });
       navigate("/documents");
       toast.success("Draft deleted");
     } catch (err) {
@@ -861,7 +861,7 @@ export default function DocumentForm() {
                             {...register(`lines.${index}.taxRate`, { valueAsNumber: true })}
                           />
                         </td>
-                        <td className="py-2 align-top text-neutral-600">{money(lineTotal)}</td>
+                        <td className="whitespace-nowrap py-2 align-top text-neutral-600">{money(lineTotal)}</td>
                         <td className="py-2 align-top">
                           <button
                             type="button"
@@ -936,10 +936,10 @@ export default function DocumentForm() {
             >
               {isSaving ? "Saving…" : "Save draft"}
             </button>
-            {isEditing && (
+            {documentId && (
               <button
                 type="button"
-                onClick={() => window.open(`${API_BASE_URL}/documents/${id}/pdf`, "_blank")}
+                onClick={() => window.open(`${API_BASE_URL}/documents/${documentId}/pdf`, "_blank")}
                 className="flex items-center justify-center rounded-lg border border-neutral-200 px-6 py-2.5 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
               >
                 Download PDF
@@ -953,7 +953,7 @@ export default function DocumentForm() {
             >
               {isFinalizing ? "Finalizing…" : "Finalize"}
             </button>
-            {isEditing && (
+            {documentId && (
               <button
                 type="button"
                 onClick={() => setIsDeleteOpen(true)}
