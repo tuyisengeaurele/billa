@@ -76,6 +76,9 @@ export default function Landing() {
             <a href="#faq" className="font-sans text-sm font-medium text-neutral-600 hover:text-neutral-900">
               FAQ
             </a>
+            <Link to="/developers" className="font-sans text-sm font-medium text-neutral-600 hover:text-neutral-900">
+              Developers
+            </Link>
           </nav>
           <div className="flex items-center gap-6">
             <ThemeToggle />
@@ -283,6 +286,35 @@ export default function Landing() {
         </div>
       </section>
 
+      <section id="developers" className="mx-auto max-w-5xl scroll-mt-24 px-6 py-20">
+        <div className="grid items-center gap-10 lg:grid-cols-2">
+          <div>
+            <p className="font-sans text-xs font-semibold uppercase tracking-wide text-primary-500">For developers</p>
+            <h2 className="mt-3 font-display text-3xl font-semibold text-neutral-900">Build on Billa</h2>
+            <p className="mt-4 font-sans text-base text-neutral-600">
+              Connect Billa to your accounting tool, point-of-sale system or your own app. Read and create customers,
+              items and documents, and get a signed message the moment an invoice is finalized or a payment comes in.
+            </p>
+            <Link
+              to="/developers"
+              className="mt-6 inline-block rounded-lg bg-primary-500 px-5 py-2.5 font-sans text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-primary-700 hover:shadow-md"
+            >
+              Read the API docs
+            </Link>
+          </div>
+          <pre className="overflow-x-auto rounded-xl border border-neutral-200 bg-surface p-5 font-mono text-xs leading-relaxed text-neutral-800">
+            <code>{`curl -H "Authorization: Bearer $BILLA_KEY" \\
+  https://your-billa-host/api/v1/documents
+
+{
+  "results": [
+    { "number": "INV-0001", "total": 25000, "paymentStatus": "PAID" }
+  ]
+}`}</code>
+          </pre>
+        </div>
+      </section>
+
       <section id="faq" className="scroll-mt-24 border-t border-neutral-100 bg-neutral-50 px-6 py-20">
         <div className="mx-auto max-w-3xl">
           <motion.h2
@@ -367,6 +399,11 @@ export default function Landing() {
                 <a href="#faq" className="font-sans text-sm text-neutral-600 hover:text-neutral-900">
                   FAQ
                 </a>
+              </li>
+              <li>
+                <Link to="/developers" className="font-sans text-sm text-neutral-600 hover:text-neutral-900">
+                  Developers
+                </Link>
               </li>
             </ul>
           </div>

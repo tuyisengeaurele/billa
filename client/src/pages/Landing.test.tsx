@@ -54,4 +54,27 @@ describe("Landing", () => {
     expect(bodyText).not.toMatch(/not (yet )?(open|available)/i);
     expect(bodyText).toMatch(/mtn mobile money/i);
   });
+
+  it("has a developers section that points to the API docs", () => {
+    renderLanding();
+
+    expect(screen.getByRole("heading", { name: /build on billa/i })).toBeInTheDocument();
+    const docsLink = screen.getByRole("link", { name: /read the api docs/i });
+    expect(docsLink).toHaveAttribute("href", "/developers");
+  });
+
+  it("links to the developers page from the header and the footer", () => {
+    renderLanding();
+
+    const links = screen.getAllByRole("link", { name: /^developers$/i });
+    expect(links.length).toBeGreaterThanOrEqual(2);
+    links.forEach((link) => expect(link).toHaveAttribute("href", "/developers"));
+  });
+
+  it("does not promise anything the API does not do", () => {
+    renderLanding();
+
+    const bodyText = document.body.textContent ?? "";
+    expect(bodyText).not.toMatch(/unlimited api|free api|rate limit/i);
+  });
 });

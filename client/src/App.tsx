@@ -31,6 +31,7 @@ const Notifications = lazy(() => import("./pages/Notifications"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const HelpCenter = lazy(() => import("./pages/HelpCenter"));
+const Developers = lazy(() => import("./pages/Developers"));
 const Contact = lazy(() => import("./pages/Contact"));
 const AdminMessages = lazy(() => import("./pages/AdminMessages"));
 const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
@@ -64,6 +65,7 @@ export default function App() {
                   <Route path="/privacy" element={<PrivacyPolicy />} />
                   <Route path="/terms" element={<TermsOfService />} />
                   <Route path="/help" element={<HelpCenter />} />
+                  <Route path="/developers" element={<Developers />} />
                   <Route path="/contact" element={<Contact />} />
                   <Route path="/view/:token" element={<PublicDocumentView />} />
                   <Route path="/portal/:token" element={<PublicCustomerPortal />} />
