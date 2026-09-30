@@ -4,7 +4,7 @@ Read and create customers, items and documents from another system.
 
 ## Authentication
 
-Create a key under Settings, API access. Only the business owner can. The full key is shown once, so copy it then.
+Create a key on the Developers page (linked from the home page footer) while signed in. Only the business owner can. The full key is shown once, so copy it then.
 
 Send it on every request:
 
@@ -98,7 +98,7 @@ curl -H "Authorization: Bearer $BILLA_KEY" \
 
 ## Webhooks
 
-Have Billa call a URL of yours when something happens. Add one under Settings, Webhooks. The address must start with `https://` and be reachable from the internet. There is a limit of 5 per business.
+Have Billa call a URL of yours when something happens. Add one on the Developers page. The address must start with `https://` and be reachable from the internet. There is a limit of 5 per business.
 
 Events:
 
