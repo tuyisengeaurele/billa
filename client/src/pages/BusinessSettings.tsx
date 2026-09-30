@@ -38,6 +38,7 @@ interface BusinessProfile {
   signatureUrl: string | null;
   remindersEnabled: boolean;
   reminderCadenceDays: number;
+  dueSoonReminderDays: number;
   requireApprovalToFinalize: boolean;
 }
 
@@ -212,6 +213,7 @@ export default function BusinessSettings() {
         primaryColor: profile.primaryColor,
         remindersEnabled: profile.remindersEnabled,
         reminderCadenceDays: profile.reminderCadenceDays,
+        dueSoonReminderDays: profile.dueSoonReminderDays,
         requireApprovalToFinalize: profile.requireApprovalToFinalize,
       };
       for (const field of TEXT_FIELDS) {
@@ -427,6 +429,30 @@ export default function BusinessSettings() {
                   onChange={(e) => setProfile({ ...profile, reminderCadenceDays: Number(e.target.value) })}
                   className="w-32 rounded-lg border border-neutral-200 bg-surface px-3.5 py-2.5 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
                 />
+              </div>
+            )}
+            {profile.remindersEnabled && (
+              <div className="mt-4 flex flex-col gap-1.5">
+                <label htmlFor="dueSoonReminderDays" className="font-sans text-sm font-medium text-neutral-800">
+                  Remind customers before a payment is due
+                </label>
+                <select
+                  id="dueSoonReminderDays"
+                  disabled={!isOwner}
+                  value={profile.dueSoonReminderDays ?? 3}
+                  onChange={(e) => setProfile({ ...profile, dueSoonReminderDays: Number(e.target.value) })}
+                  className="w-48 rounded-lg border border-neutral-200 bg-surface px-3.5 py-2.5 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                >
+                  <option value={0}>Don't send</option>
+                  {[1, 2, 3, 5, 7].map((days) => (
+                    <option key={days} value={days}>
+                      {days} day{days === 1 ? "" : "s"} before
+                    </option>
+                  ))}
+                </select>
+                <p className="font-sans text-xs text-neutral-500">
+                  One friendly note for each payment, including each instalment of a payment plan.
+                </p>
               </div>
             )}
           </section>

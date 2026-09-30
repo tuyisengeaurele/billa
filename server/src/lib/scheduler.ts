@@ -1,5 +1,6 @@
 import { prisma } from "./prisma.js";
 import { generateDueRecurringDocuments } from "./recurring-documents.js";
+import { sendDueSoonReminders } from "./due-soon-reminders.js";
 import { sendOverdueReminders } from "./overdue-reminders.js";
 import { sendQuoteExpiryReminders } from "./quote-expiry-reminders.js";
 import { sendOwnerPaymentDigestIfDue } from "./owner-digest.js";
@@ -28,6 +29,8 @@ export async function runScheduledJobs(): Promise<void> {
   let recurringFailed = false;
   let remindersFailed = false;
   let expiryRemindersFailed = false;
+  let dueSoonSent = 0;
+  let dueSoonFailed = false;
   let digestsFailed = false;
 
   for (const { id: businessId } of businesses) {
@@ -54,6 +57,13 @@ export async function runScheduledJobs(): Promise<void> {
     }
 
     try {
+      const sent = await sendDueSoonReminders(businessId);
+      dueSoonSent += sent.length;
+    } catch {
+      dueSoonFailed = true;
+    }
+
+    try {
       const sent = await sendQuoteExpiryReminders(businessId);
       expiryRemindersSent += sent.length;
     } catch {
@@ -70,6 +80,7 @@ export async function runScheduledJobs(): Promise<void> {
 
   await recordJobRun("recurring-documents", { succeeded: !recurringFailed, resultCount: recurringGenerated });
   await recordJobRun("overdue-reminders", { succeeded: !remindersFailed, resultCount: remindersSent });
+  await recordJobRun("due-soon-reminders", { succeeded: !dueSoonFailed, resultCount: dueSoonSent });
   await recordJobRun("quote-expiry-reminders", {
     succeeded: !expiryRemindersFailed,
     resultCount: expiryRemindersSent,

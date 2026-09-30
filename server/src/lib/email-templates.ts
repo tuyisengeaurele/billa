@@ -287,6 +287,76 @@ export function buildOverdueReminderEmail(input: OverdueReminderEmailInput): { s
   };
 }
 
+export interface DueSoonReminderEmailInput {
+  language: DocumentLanguage;
+  customerName: string;
+  number: string | null;
+  businessName: string;
+  dueDate: string;
+  // What falls due on that date, in the invoice's currency.
+  amount: number;
+  currency?: string;
+  // Set when the invoice is paid in instalments and it is one of them that is coming up.
+  isInstallment?: boolean;
+  installmentLabel?: string | null;
+  businessAddress: string | null;
+  businessPhone: string | null;
+  businessEmail: string | null;
+  businessLogoUrl: string | null;
+  viewUrl: string | null;
+  payable?: boolean;
+}
+
+/** A friendly note a few days before a payment is due, so it does not become a chase later. */
+export function buildDueSoonReminderEmail(input: DueSoonReminderEmailInput): { subject: string; html: string } {
+  const { language, customerName, number, businessName, dueDate, viewUrl, payable } = input;
+  const customer = escapeHtml(customerName);
+  const business = escapeHtml(businessName);
+  const docNumber = number ? escapeHtml(number) : "";
+  const currency: Currency = input.currency && isCurrency(input.currency) ? input.currency : "RWF";
+  const amount = formatMoney(input.amount, currency);
+  const stepLabel = input.installmentLabel ? escapeHtml(input.installmentLabel) : null;
+  const footer: BusinessFooterInput = {
+    name: businessName,
+    address: input.businessAddress,
+    phone: input.businessPhone,
+    email: input.businessEmail,
+    logoUrl: input.businessLogoUrl,
+  };
+
+  if (language === "FR") {
+    return {
+      subject: `${number ?? "Votre facture"} arrive à échéance le ${dueDate}`,
+      html: renderEmailShell(
+        paragraphs([
+          `Bonjour ${customer},`,
+          input.isInstallment
+            ? `Un petit rappel : ${stepLabel ? `l'échéance ${stepLabel}` : "une échéance"} de ${amount} de la facture ${docNumber} de ${business} est due le ${dueDate}.`
+            : `Un petit rappel : la facture ${docNumber} de ${business}, d'un montant de ${amount}, est due le ${dueDate}.`,
+          `Si le paiement est déjà en route, merci et veuillez ignorer ce message. Pour toute question, répondez simplement à cet e-mail.`,
+          `Cordialement,<br>L'équipe ${business}`,
+        ]) + viewOnlineButton(viewUrl, language, payable),
+        footer,
+      ),
+    };
+  }
+
+  return {
+    subject: `${number ?? "Your invoice"} is due on ${dueDate}`,
+    html: renderEmailShell(
+      paragraphs([
+        `Hi ${customer},`,
+        input.isInstallment
+          ? `A quick heads-up that ${stepLabel ? `the ${stepLabel} instalment` : "an instalment"} of ${amount} for invoice ${docNumber} from ${business} is due on ${dueDate}.`
+          : `A quick heads-up that invoice ${docNumber} from ${business}, for ${amount}, is due on ${dueDate}.`,
+        `If payment is already on its way, thank you, and please disregard this note. Otherwise, reply here anytime.`,
+        `Best,<br>The ${business} team`,
+      ]) + viewOnlineButton(viewUrl, language, payable),
+      footer,
+    ),
+  };
+}
+
 export interface QuoteExpiryReminderEmailInput {
   language: DocumentLanguage;
   customerName: string;

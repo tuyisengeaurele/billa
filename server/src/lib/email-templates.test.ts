@@ -55,6 +55,49 @@ describe("email header branding", () => {
   });
 });
 
+describe("buildDueSoonReminderEmail", () => {
+  const base = {
+    language: "EN" as const,
+    customerName: "Aline <Uwase>",
+    number: "INV-0007",
+    businessName: "Kigali Traders",
+    dueDate: "2026-10-15",
+    amount: 40000,
+    ...BLANK_BUSINESS,
+    viewUrl: "https://billa.example/view/abc",
+  };
+
+  it("says which invoice is due, when, and for how much", async () => {
+    const { buildDueSoonReminderEmail } = await import("./email-templates.js");
+    const { subject, html } = buildDueSoonReminderEmail(base);
+
+    expect(subject).toBe("INV-0007 is due on 2026-10-15");
+    expect(html).toContain("40,000 RWF");
+    expect(html).toContain("Aline &lt;Uwase&gt;");
+  });
+
+  it("names the instalment when the invoice is on a payment plan, in its currency", async () => {
+    const { buildDueSoonReminderEmail } = await import("./email-templates.js");
+    const { html } = buildDueSoonReminderEmail({
+      ...base,
+      amount: 12550,
+      currency: "USD",
+      isInstallment: true,
+      installmentLabel: "Deposit",
+    });
+
+    expect(html).toContain("the Deposit instalment of 125.50 USD");
+  });
+
+  it("is available in French", async () => {
+    const { buildDueSoonReminderEmail } = await import("./email-templates.js");
+    const { subject, html } = buildDueSoonReminderEmail({ ...base, language: "FR" });
+
+    expect(subject).toBe("INV-0007 arrive à échéance le 2026-10-15");
+    expect(html).toContain("Un petit rappel");
+  });
+});
+
 describe("buildStatementEmail", () => {
   const base = {
     customerName: "Aline <Uwase>",
