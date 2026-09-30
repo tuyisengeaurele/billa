@@ -38,8 +38,7 @@ describe("buildWhatsAppMessage", () => {
       amount: 100000,
       instalment: { label: "Deposit", amount: 40000 },
     });
-    expect(message.split("
-")[0]).toBe(
+    expect(message.split("\n")[0]).toBe(
       "Hello Jean, a reminder from Kigali Supplies that invoice INV-0007 has 100,000 RWF outstanding, of which 40,000 RWF (Deposit) is due now.",
     );
   });
