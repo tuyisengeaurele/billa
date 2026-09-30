@@ -69,6 +69,14 @@ describe("buildSchedule", () => {
     expect(schedule[1]!.isOverdue).toBe(false);
   });
 
+  it("does not call an instalment overdue on the day it falls due, only after", () => {
+    const plan = [{ amount: 1000, dueDate: "2026-10-01" }, { amount: 1000, dueDate: "2026-11-01" }];
+
+    expect(buildSchedule(plan, 0, new Date("2026-10-01T00:30:00.000Z"))[0]!.isOverdue).toBe(false);
+    expect(buildSchedule(plan, 0, new Date("2026-10-01T23:59:00.000Z"))[0]!.isOverdue).toBe(false);
+    expect(buildSchedule(plan, 0, new Date("2026-10-02T00:01:00.000Z"))[0]!.isOverdue).toBe(true);
+  });
+
   it("keeps a part-paid instalment overdue when its date has passed", () => {
     const schedule = buildSchedule(PLAN, 10000, NOW);
 

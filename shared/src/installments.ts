@@ -22,6 +22,7 @@ export interface ScheduleStep {
 }
 
 export const MAX_INSTALLMENTS = 12;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** Why a payment plan cannot be saved, or null when it is fine. The total is whatever the document's lines come to. */
 export function validateInstallmentPlan(total: number, plan: InstallmentInput[]): string | null {
@@ -54,7 +55,9 @@ export function buildSchedule(plan: InstallmentInput[], settled: number, now: Da
     const paid = Math.min(step.amount, left);
     left -= paid;
     const remaining = step.amount - paid;
-    const isOverdue = remaining > 0 && Date.parse(step.dueDate) < now.getTime();
+    // Late only once the whole due day has gone: a deposit due on the day the invoice is issued is not late that morning.
+    const dueDay = Math.floor(Date.parse(step.dueDate) / DAY_MS) * DAY_MS;
+    const isOverdue = remaining > 0 && dueDay + DAY_MS <= now.getTime();
     // Part-paid wins over overdue: money has come in, and isOverdue still says the date has gone by.
     const status: InstallmentStatus =
       remaining === 0 ? "PAID" : paid > 0 ? "PARTIALLY_PAID" : isOverdue ? "OVERDUE" : "UNPAID";
