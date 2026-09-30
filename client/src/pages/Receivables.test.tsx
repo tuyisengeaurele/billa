@@ -113,6 +113,31 @@ describe("Receivables", () => {
     expect(text).toContain("has 100,000 RWF outstanding, of which 40,000 RWF (Deposit) is due now.");
   });
 
+  it("totals each currency on its own and words a dollar reminder in dollars", async () => {
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.includes("/auth/me")) return authMeResponse();
+      return new Response(
+        JSON.stringify({
+          results: [
+            baseRow({ id: "a", number: "INV-0001", amountOwed: 40000, amountOwedRwf: 40000 }),
+            baseRow({ id: "b", number: "INV-0002", amountOwed: 12550, amountOwedRwf: 181975, currency: "USD" }),
+          ],
+          total: 2,
+        }),
+        { status: 200 },
+      );
+    });
+    const user = userEvent.setup();
+    renderPage();
+
+    expect(await screen.findByText("Total owed: 40,000 RWF + 125.50 USD")).toBeInTheDocument();
+    await user.click(screen.getAllByRole("button", { name: /remind acme ltd on whatsapp/i })[1]!);
+
+    expect(decodeURIComponent(String(open.mock.calls[0]![0]))).toContain("has 125.50 USD outstanding");
+  });
+
   it("invites the customer to pay in the reminder when the business takes MoMo", async () => {
     const open = vi.spyOn(window, "open").mockReturnValue(null);
     vi.spyOn(global, "fetch").mockImplementation(async (input) => {

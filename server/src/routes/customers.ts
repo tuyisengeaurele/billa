@@ -105,7 +105,10 @@ customersRouter.get("/:id", async (req, res) => {
   // The credit limit is in RWF, so a foreign invoice counts at the rate saved on it.
   const outstandingBalance = outstanding.reduce((sum, invoice) => sum + Math.max(invoice.amountOwedRwf, 0), 0);
 
-  res.json({ customer: { ...customer, outstandingBalance } });
+  const outstandingTotals = sumByCurrency(
+    outstanding.map((invoice) => ({ currency: invoice.currency, amount: Math.max(invoice.amountOwed, 0) })),
+  );
+  res.json({ customer: { ...customer, outstandingBalance, outstandingTotals } });
 });
 
 customersRouter.post("/:id/send-statement", async (req, res) => {

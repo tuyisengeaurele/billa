@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { buildWhatsAppMessage, formatRwf } from "@billa/shared";
+import { buildWhatsAppMessage, coerceCurrency, formatMoney, formatMoneyTotals } from "@billa/shared";
 import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { Modal } from "../components/Modal";
 import { RecordPaymentModal } from "../components/RecordPaymentModal";
@@ -21,6 +21,8 @@ interface ReceivableRow {
   total: number;
   amountOwed: number;
   // What is due now: the next instalment of a payment plan, otherwise the same as amountOwed.
+  currency?: string;
+  amountOwedRwf?: number;
   amountDue?: number;
   nextInstallmentLabel?: string | null;
   dueDate: string | null;
@@ -93,7 +95,8 @@ export default function Receivables() {
     if (sortBy === "customerName") comparison = a.customerName.localeCompare(b.customerName);
     else if (sortBy === "dueDate") comparison = (a.dueDate ?? "").localeCompare(b.dueDate ?? "");
     else if (sortBy === "aging") comparison = BUCKET_SEVERITY[a.agingBucket] - BUCKET_SEVERITY[b.agingBucket];
-    else comparison = a.amountOwed - b.amountOwed;
+    // Compared in RWF, so a dollar invoice is not ranked by its cents.
+    else comparison = (a.amountOwedRwf ?? a.amountOwed) - (b.amountOwedRwf ?? b.amountOwed);
     return sortOrder === "asc" ? comparison : -comparison;
   });
 
@@ -123,6 +126,7 @@ export default function Receivables() {
       type: "INVOICE",
       number: row.number,
       amount: row.amountOwed,
+      currency: coerceCurrency(row.currency),
       instalment: isOnPlan(row) ? { label: row.nextInstallmentLabel ?? null, amount: row.amountDue! } : undefined,
       dueDate: row.dueDate,
       viewUrl: `${window.location.origin}/view/${row.publicToken}`,
@@ -158,7 +162,9 @@ export default function Receivables() {
     }
   }
 
-  const totalOwed = filteredResults.reduce((sum, row) => sum + row.amountOwed, 0);
+  const totalOwed = formatMoneyTotals(
+    filteredResults.map((row) => ({ currency: coerceCurrency(row.currency), amount: row.amountOwed })),
+  );
 
   return (
     <>
@@ -180,7 +186,7 @@ export default function Receivables() {
                 ))}
               </select>
             </label>
-            <span className="font-sans text-sm text-neutral-500">Total owed: {formatRwf(totalOwed)}</span>
+            <span className="font-sans text-sm text-neutral-500">Total owed: {totalOwed}</span>
           </div>
         )}
 
@@ -250,10 +256,10 @@ export default function Receivables() {
                       </span>
                     </td>
                     <td className="py-3 font-medium text-neutral-900">
-                      {formatRwf(row.amountOwed)}
+                      {formatMoney(row.amountOwed, coerceCurrency(row.currency))}
                       {isOnPlan(row) && (
                         <span className="block text-xs font-normal text-neutral-500">
-                          {formatRwf(row.amountDue!)} due now
+                          {formatMoney(row.amountDue!, coerceCurrency(row.currency))} due now
                         </span>
                       )}
                     </td>

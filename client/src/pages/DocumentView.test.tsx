@@ -1047,6 +1047,45 @@ describe("DocumentView", () => {
     expect(screen.getByText(/next: instalment 2, 60,000 rwf due 2026-11-15/i)).toBeInTheDocument();
   });
 
+  it("shows the amounts of a dollar invoice in dollars", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async () =>
+      new Response(
+        JSON.stringify({
+          document: {
+            id: "d1",
+            number: "INV-0001",
+            type: "INVOICE",
+            status: "FINALIZED",
+            currency: "USD",
+            customer: { name: "Kigali Traders" },
+            lines: [{ id: "l1", description: "Consulting", quantity: "1", unitPrice: 12550, lineTotal: 12550 }],
+            subtotal: 12550,
+            taxTotal: 0,
+            total: 12550,
+            amountPaid: 5000,
+            paymentStatus: "PARTIALLY_PAID",
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/documents/d1"]}>
+        <AuthProvider>
+          <Routes>
+            <Route element={<AppLayoutRoute />}>
+              <Route path="/documents/:id" element={<DocumentView />} />
+            </Route>
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Total: 125.50 USD")).toBeInTheDocument();
+    expect(screen.getByText(/50\.00 USD of 125\.50 USD received, 75\.50 USD outstanding/)).toBeInTheDocument();
+  });
+
   it("shows a paid-in-full confirmation and no Record payment button once fully paid", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async () =>
       new Response(

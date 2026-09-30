@@ -7,7 +7,7 @@ import { Spinner } from "../components/Spinner";
 import { apiRequest, ApiError, API_BASE_URL } from "../lib/apiClient";
 import { momoFailureMessage } from "../lib/momoFailureMessage";
 import { PAYMENT_METHOD_LABELS } from "../lib/paymentMethodLabels";
-import { formatRwf } from "@billa/shared";
+import { coerceCurrency, formatMoney } from "@billa/shared";
 
 interface PublicDocumentLine {
   id: string;
@@ -35,6 +35,7 @@ interface PublicDocumentDetail {
   total: number;
   amountPaid: number;
   amountOwed: number;
+  currency?: string;
   // What to pay now: the next instalment when there is a payment plan, otherwise what is owed.
   amountDue?: number;
   schedule?: ScheduleStep[] | null;
@@ -189,6 +190,9 @@ export default function PublicDocumentView() {
     );
   }
 
+  const currency = coerceCurrency(document.currency);
+  const formatRwf = (amount: number) => formatMoney(amount, currency);
+
   return (
     <div className="min-h-screen bg-page px-6 py-12">
       <div className="mx-auto flex max-w-3xl flex-col gap-6">
@@ -321,10 +325,11 @@ export default function PublicDocumentView() {
           </div>
         )}
 
-        {document.schedule && document.schedule.length > 0 && <PaymentScheduleList schedule={document.schedule} />}
+        {document.schedule && document.schedule.length > 0 && <PaymentScheduleList schedule={document.schedule} currency={currency} />}
 
         {document.type === "INVOICE" &&
           document.business.momoEnabled &&
+          currency === "RWF" &&
           (document.amountOwed > 0 || momoStatus === "SUCCESSFUL") && (
           <div className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-surface px-5 py-4">
             <p className="font-sans text-sm font-medium text-neutral-900">Pay with MTN MoMo</p>

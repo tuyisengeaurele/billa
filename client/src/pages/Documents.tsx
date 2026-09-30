@@ -7,7 +7,7 @@ import { Modal } from "../components/Modal";
 import { SelectAllCheckbox } from "../components/SelectAllCheckbox";
 import { usePaginatedList } from "../lib/usePaginatedList";
 import { ariaSortValue } from "../lib/ariaSort";
-import { formatRwf } from "@billa/shared";
+import { coerceCurrency, formatMoney } from "@billa/shared";
 import { API_BASE_URL, apiRequest } from "../lib/apiClient";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
 import { DOCUMENT_TYPE_COLORS } from "../lib/documentTypeColors";
@@ -23,6 +23,7 @@ interface DocumentRow {
   status: "DRAFT" | "FINALIZED";
   issueDate: string;
   total: number;
+  currency?: string;
   customer: { name: string; email: string | null };
   paymentStatus: InvoicePaymentStatus | null;
   lastViewedAt: string | null;
@@ -377,7 +378,7 @@ export default function Documents() {
                       </Link>
                     </td>
                     <td className="py-3 text-neutral-600">{document.customer.name}</td>
-                    <td className="py-3 text-neutral-600">{formatRwf(document.total)}</td>
+                    <td className="py-3 text-neutral-600">{formatMoney(document.total, coerceCurrency(document.currency))}</td>
                     <td className="py-3">
                       <div className="flex flex-wrap gap-1.5">
                         <span

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { formatRwf, type DocumentType, type InvoicePaymentStatus } from "@billa/shared";
+import { coerceCurrency, formatMoney, type DocumentType, type InvoicePaymentStatus } from "@billa/shared";
 import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { Spinner } from "../components/Spinner";
 import { apiRequest, ApiError, API_BASE_URL } from "../lib/apiClient";
@@ -14,6 +14,7 @@ interface PortalDocument {
   status: "DRAFT" | "FINALIZED";
   issueDate: string;
   total: number;
+  currency?: string;
   amountPaid: number;
   paymentStatus: InvoicePaymentStatus | null;
   publicToken: string;
@@ -96,7 +97,7 @@ export default function PublicCustomerPortal() {
                     <td className="py-3 text-neutral-600">{doc.issueDate.slice(0, 10)}</td>
                     <td className="py-3 text-neutral-900">{DOCUMENT_TYPE_LABELS[doc.type].singular}</td>
                     <td className="py-3 text-neutral-900">{doc.number ?? "Draft"}</td>
-                    <td className="py-3 text-neutral-600">{formatRwf(doc.total)}</td>
+                    <td className="py-3 text-neutral-600">{formatMoney(doc.total, coerceCurrency(doc.currency))}</td>
                     <td className="py-3">
                       {doc.paymentStatus && (
                         <span

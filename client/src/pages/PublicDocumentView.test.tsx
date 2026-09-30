@@ -517,6 +517,28 @@ describe("PublicDocumentView", () => {
       expect(await screen.findByRole("button", { name: /pay 40,000 rwf \(deposit\) with mtn momo/i })).toBeInTheDocument();
     });
 
+    it("shows a dollar invoice in dollars and offers no MoMo payment", async () => {
+      vi.spyOn(global, "fetch").mockImplementation(async () =>
+        new Response(
+          JSON.stringify({
+            document: invoiceWithMomo({
+              currency: "USD",
+              total: 12550,
+              subtotal: 12550,
+              amountOwed: 12550,
+              lines: [{ id: "l1", description: "Consulting", quantity: "1", unitPrice: 12550, lineTotal: 12550 }],
+            }),
+          }),
+          { status: 200 },
+        ),
+      );
+
+      renderPage("tok-abc123");
+
+      expect(await screen.findByText("Total: 125.50 USD")).toBeInTheDocument();
+      expect(screen.queryByText(/pay with mtn momo/i)).not.toBeInTheDocument();
+    });
+
     it("does not show the MoMo section when the business hasn't enabled it", async () => {
       vi.spyOn(global, "fetch").mockImplementation(async () =>
         new Response(JSON.stringify({ document: invoiceWithMomo({ business: { name: "Kigali Traders", momoEnabled: false } }) }), { status: 200 }),

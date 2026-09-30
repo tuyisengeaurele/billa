@@ -23,7 +23,7 @@ import { apiRequest, ApiError, API_BASE_URL } from "../lib/apiClient";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
 import { formatRelativeTime } from "../lib/relativeTime";
 import { PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS } from "../lib/paymentStatusColors";
-import { formatRwf } from "@billa/shared";
+import { coerceCurrency, formatMoney } from "@billa/shared";
 
 interface DocumentLine {
   id: string;
@@ -57,6 +57,7 @@ interface DocumentDetail {
   total: number;
   amountPaid: number;
   paymentStatus: InvoicePaymentStatus | null;
+  currency?: string;
   schedule?: ScheduleStep[] | null;
   nextInstallment?: ScheduleStep | null;
   convertedFrom: DocumentLink | null;
@@ -179,6 +180,7 @@ export default function DocumentView() {
       type: document.type,
       number: document.number,
       amount: document.total,
+      currency: coerceCurrency(document.currency),
       dueDate: document.dueDate,
       viewUrl: `${window.location.origin}/view/${document.publicToken}`,
       payable: document.business?.momoEnabled,
@@ -241,6 +243,9 @@ export default function DocumentView() {
       </div>
     );
   }
+
+  const currency = coerceCurrency(document.currency);
+  const formatRwf = (amount: number) => formatMoney(amount, currency);
 
   return (
     <>
@@ -390,7 +395,7 @@ export default function DocumentView() {
           </div>
         )}
 
-        {document.schedule && document.schedule.length > 0 && <PaymentScheduleList schedule={document.schedule} />}
+        {document.schedule && document.schedule.length > 0 && <PaymentScheduleList schedule={document.schedule} currency={currency} />}
 
         {document.sentAt && (
           <p className="font-sans text-xs text-neutral-400">Sent {document.sentAt.slice(0, 10)}</p>
@@ -462,6 +467,7 @@ export default function DocumentView() {
         documentNumber={document.number}
         customerName={document.customer.name}
         amountOwed={document.total - document.amountPaid}
+        currency={currency}
         onClose={() => setIsPaymentModalOpen(false)}
         onRecorded={() => {
           setIsPaymentModalOpen(false);

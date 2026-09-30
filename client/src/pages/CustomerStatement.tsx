@@ -3,7 +3,10 @@ import { Link, useParams } from "react-router-dom";
 import {
   buildStatementWhatsAppMessage,
   buildWhatsAppLink,
-  formatRwf,
+  coerceCurrency,
+  formatMoney,
+  formatMoneyTotals,
+  type MoneyAmount,
   type DocumentType,
   type InvoicePaymentStatus,
 } from "@billa/shared";
@@ -30,6 +33,7 @@ interface Customer {
   isActive: boolean;
   portalToken: string;
   outstandingBalance: number;
+  outstandingTotals?: MoneyAmount[];
 }
 
 interface DocumentRow {
@@ -39,6 +43,7 @@ interface DocumentRow {
   status: "DRAFT" | "FINALIZED";
   issueDate: string;
   total: number;
+  currency?: string;
   amountPaid: number;
   paymentStatus: InvoicePaymentStatus | null;
 }
@@ -102,6 +107,7 @@ export default function CustomerStatement() {
       customerName: customer.name,
       businessName: business?.name ?? "",
       totalOwed: customer.outstandingBalance,
+      totals: customer.outstandingTotals,
       portalUrl: `${window.location.origin}/portal/${customer.portalToken}`,
     });
     const link = buildWhatsAppLink(customer.phone, message);
@@ -133,8 +139,10 @@ export default function CustomerStatement() {
   });
 
   const totalPages = Math.max(1, Math.ceil(list.total / list.pageSize));
-  const documentsTotal = list.results.reduce((sum, doc) => sum + doc.total, 0);
-  const outstandingTotal = list.results
+  const documentsTotal = formatMoneyTotals(
+    list.results.map((doc) => ({ currency: coerceCurrency(doc.currency), amount: doc.total })),
+  );
+  const outstandingDocuments = list.results
     .filter(
       (doc) =>
         doc.type === "INVOICE" &&
@@ -142,7 +150,8 @@ export default function CustomerStatement() {
         doc.paymentStatus !== "PAID" &&
         doc.paymentStatus !== "WRITTEN_OFF",
     )
-    .reduce((sum, doc) => sum + (doc.total - doc.amountPaid), 0);
+    .map((doc) => ({ currency: coerceCurrency(doc.currency), amount: doc.total - doc.amountPaid }));
+  const outstandingTotal = formatMoneyTotals(outstandingDocuments);
 
   if (loadError) {
     return <LoadErrorBanner message="Couldn't load this customer." onRetry={() => setReloadToken((t) => t + 1)} />;
@@ -233,9 +242,9 @@ export default function CustomerStatement() {
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-100 pb-4">
             <h2 className="font-display text-base font-semibold text-neutral-900">Documents</h2>
             <div className="flex flex-wrap gap-x-4 gap-y-1 font-sans text-sm font-medium text-neutral-600">
-              <span>Total on this page: {formatRwf(documentsTotal)}</span>
-              {outstandingTotal > 0 && (
-                <span className="text-amber-700">Outstanding on this page: {formatRwf(outstandingTotal)}</span>
+              <span>Total on this page: {documentsTotal}</span>
+              {outstandingDocuments.some((doc) => doc.amount > 0) && (
+                <span className="text-amber-700">Outstanding on this page: {outstandingTotal}</span>
               )}
             </div>
           </div>
@@ -296,10 +305,10 @@ export default function CustomerStatement() {
                         {document.number ?? "Draft"}
                       </Link>
                     </td>
-                    <td className="py-3 text-neutral-600">{formatRwf(document.total)}</td>
+                    <td className="py-3 text-neutral-600">{formatMoney(document.total, coerceCurrency(document.currency))}</td>
                     <td className="py-3 text-neutral-600">
                       {document.type === "INVOICE" && document.status === "FINALIZED"
-                        ? formatRwf(document.total - document.amountPaid)
+                        ? formatMoney(document.total - document.amountPaid, coerceCurrency(document.currency))
                         : "N/A"}
                     </td>
                     <td className="py-3">
