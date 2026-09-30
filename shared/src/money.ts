@@ -105,7 +105,7 @@ function threeDigitsToWordsFr(n: number): string {
   return parts.join(" ");
 }
 
-function numberToWordsFr(value: number): string {
+export function numberToWordsFr(value: number): string {
   const n = Math.round(Math.abs(value));
   if (n === 0) return "Zéro";
 

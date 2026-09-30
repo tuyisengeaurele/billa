@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CURRENCIES, rateProblem } from "./currency.js";
 import { MAX_INSTALLMENTS } from "./installments.js";
 import {
   DISCOUNT_TYPES,
@@ -16,7 +17,7 @@ export const documentLineSchema = z
     quantity: z.number({ invalid_type_error: "Enter a quantity" }).positive("Enter a quantity greater than zero"),
     unitPrice: z
       .number({ invalid_type_error: "Enter a price" })
-      .int("Enter a whole number of RWF")
+      .int("Enter a valid price")
       .nonnegative("Price can't be negative"),
     taxRate: z
       .number({ invalid_type_error: "Enter a tax rate" })
@@ -35,7 +36,7 @@ export const installmentSchema = z.object({
   label: z.string().trim().min(1).max(40, "Keep the name under 40 characters").nullable().optional(),
   amount: z
     .number({ invalid_type_error: "Enter an amount" })
-    .int("Enter a whole number of RWF")
+    .int("Enter a valid price")
     .positive("Enter an amount greater than zero"),
   dueDate: z.string().trim().min(1, "Choose a due date"),
 });
@@ -71,6 +72,13 @@ export const documentSchema = z
       .optional(),
     referencedDocumentId: z.string().trim().min(1).nullable().optional(),
     language: z.enum(DOCUMENT_LANGUAGES).optional().default("EN"),
+    // Amounts are whole numbers of the currency's smallest unit. The rate is RWF for one whole unit.
+    currency: z.enum(CURRENCIES).optional().default("RWF"),
+    exchangeRate: z.number().positive("Enter a rate greater than zero").nullable().optional(),
+  })
+  .refine((data) => rateProblem(data.currency, data.exchangeRate) === null, {
+    message: "Enter the exchange rate for this currency",
+    path: ["exchangeRate"],
   })
   .refine((data) => !REQUIRED_REFERENCE_TYPES.includes(data.type) || Boolean(data.referencedDocumentId), {
     message: "Choose the invoice this document is for",

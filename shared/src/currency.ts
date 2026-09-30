@@ -1,4 +1,4 @@
-import { numberToWords } from "./money.js";
+import { numberToWords, numberToWordsFr } from "./money.js";
 
 export const CURRENCIES = ["RWF", "USD", "EUR", "GBP", "KES", "UGX", "TZS"] as const;
 export type Currency = (typeof CURRENCIES)[number];
@@ -9,16 +9,17 @@ interface CurrencyInfo {
   decimals: number;
   name: string;
   words: { major: [string, string]; minor: [string, string] };
+  wordsFr: { major: [string, string]; minor: [string, string] };
 }
 
 const CURRENCY_INFO: Record<Currency, CurrencyInfo> = {
-  RWF: { decimals: 0, name: "Rwandan franc", words: { major: ["Rwandan Franc", "Rwandan Francs"], minor: ["", ""] } },
-  USD: { decimals: 2, name: "US dollar", words: { major: ["US Dollar", "US Dollars"], minor: ["Cent", "Cents"] } },
-  EUR: { decimals: 2, name: "Euro", words: { major: ["Euro", "Euros"], minor: ["Cent", "Cents"] } },
-  GBP: { decimals: 2, name: "British pound", words: { major: ["Pound", "Pounds"], minor: ["Penny", "Pence"] } },
-  KES: { decimals: 2, name: "Kenyan shilling", words: { major: ["Kenyan Shilling", "Kenyan Shillings"], minor: ["Cent", "Cents"] } },
-  UGX: { decimals: 0, name: "Ugandan shilling", words: { major: ["Ugandan Shilling", "Ugandan Shillings"], minor: ["", ""] } },
-  TZS: { decimals: 2, name: "Tanzanian shilling", words: { major: ["Tanzanian Shilling", "Tanzanian Shillings"], minor: ["Cent", "Cents"] } },
+  RWF: { decimals: 0, name: "Rwandan franc", words: { major: ["Rwandan Franc", "Rwandan Francs"], minor: ["", ""] }, wordsFr: { major: ["Franc Rwandais", "Francs Rwandais"], minor: ["", ""] } },
+  USD: { decimals: 2, name: "US dollar", words: { major: ["US Dollar", "US Dollars"], minor: ["Cent", "Cents"] }, wordsFr: { major: ["Dollar Américain", "Dollars Américains"], minor: ["Cent", "Cents"] } },
+  EUR: { decimals: 2, name: "Euro", words: { major: ["Euro", "Euros"], minor: ["Cent", "Cents"] }, wordsFr: { major: ["Euro", "Euros"], minor: ["Centime", "Centimes"] } },
+  GBP: { decimals: 2, name: "British pound", words: { major: ["Pound", "Pounds"], minor: ["Penny", "Pence"] }, wordsFr: { major: ["Livre Sterling", "Livres Sterling"], minor: ["Penny", "Pence"] } },
+  KES: { decimals: 2, name: "Kenyan shilling", words: { major: ["Kenyan Shilling", "Kenyan Shillings"], minor: ["Cent", "Cents"] }, wordsFr: { major: ["Shilling Kényan", "Shillings Kényans"], minor: ["Cent", "Cents"] } },
+  UGX: { decimals: 0, name: "Ugandan shilling", words: { major: ["Ugandan Shilling", "Ugandan Shillings"], minor: ["", ""] }, wordsFr: { major: ["Shilling Ougandais", "Shillings Ougandais"], minor: ["", ""] } },
+  TZS: { decimals: 2, name: "Tanzanian shilling", words: { major: ["Tanzanian Shilling", "Tanzanian Shillings"], minor: ["Cent", "Cents"] }, wordsFr: { major: ["Shilling Tanzanien", "Shillings Tanzaniens"], minor: ["Cent", "Cents"] } },
 };
 
 export function isCurrency(value: unknown): value is Currency {
@@ -88,4 +89,18 @@ export function amountInWordsEn(minor: number, currency: Currency): string {
     parts.push(`${numberToWords(cents)} ${cents === 1 ? info.words.minor[0] : info.words.minor[1]}`);
   }
   return `${parts.join(" and ")} Only`;
+}
+
+/** The French counterpart of amountInWordsEn: "Douze Dollars Américains et Cinquante Cents Seulement". */
+export function amountInWordsFrCurrency(minor: number, currency: Currency): string {
+  const info = CURRENCY_INFO[currency];
+  const per = minorPerMajor(currency);
+  const major = Math.floor(minor / per);
+  const cents = minor % per;
+  const majorName = major > 1 ? info.wordsFr.major[1] : info.wordsFr.major[0];
+  const parts = [`${numberToWordsFr(major)} ${majorName}`];
+  if (cents > 0) {
+    parts.push(`${numberToWordsFr(cents)} ${cents > 1 ? info.wordsFr.minor[1] : info.wordsFr.minor[0]}`);
+  }
+  return `${parts.join(" et ")} Seulement`;
 }

@@ -479,7 +479,11 @@ model Document {
   subtotal          Int
   taxTotal          Int
   total             Int
-  sentAt            DateTime?
+  // Amounts are whole numbers of the currency's smallest unit (RWF has none, USD counts cents).
+  currency          String           @default("RWF")
+  // RWF for one whole unit of the currency, saved with the document for reports. Empty for RWF.
+  exchangeRate      Float?
+  sentAt           DateTime?
   firstViewedAt     DateTime?
   lastViewedAt      DateTime?
   viewCount         Int              @default(0)

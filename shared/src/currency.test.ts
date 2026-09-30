@@ -47,3 +47,11 @@ describe("currency", () => {
     expect(amountInWordsEn(101, "EUR")).toBe("One Euro and One Cent Only");
   });
 });
+
+describe("currency words in French", () => {
+  it("writes the major and minor units", async () => {
+    const { amountInWordsFrCurrency } = await import("./currency.js");
+    expect(amountInWordsFrCurrency(1250, "USD")).toBe("Douze Dollars Américains et Cinquante Cents Seulement");
+    expect(amountInWordsFrCurrency(100, "EUR")).toBe("Un Euro Seulement");
+  });
+});
