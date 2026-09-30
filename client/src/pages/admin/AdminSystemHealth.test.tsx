@@ -111,7 +111,7 @@ describe("AdminSystemHealth", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findAllByText(/never run/i)).toHaveLength(2);
+    expect(await screen.findAllByText(/never run/i)).toHaveLength(3);
   });
 
   it("shows an error message when the request fails", async () => {
