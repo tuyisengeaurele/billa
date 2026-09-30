@@ -154,3 +154,72 @@ describe("GET /receivables", () => {
     expect(res.body.results).toHaveLength(0);
   });
 });
+
+describe("GET /receivables with a payment plan", () => {
+  async function createPlannedInvoice(app: ReturnType<typeof createApp>, cookies: string[], customerId: string) {
+    const created = await request(app)
+      .post("/documents")
+      .set("Cookie", cookies)
+      .send({
+        type: "INVOICE",
+        customerId,
+        issueDate: "2020-01-01",
+        lines: [{ description: "Cement", quantity: 1, unitPrice: 100000, taxRate: 0 }],
+        installments: [
+          { label: "Deposit", amount: 40000, dueDate: "2020-01-10" },
+          { label: "Balance", amount: 60000, dueDate: "2099-01-01" },
+        ],
+      });
+    await request(app).post(`/documents/${created.body.document.id}/finalize`).set("Cookie", cookies);
+    return created.body.document.id as string;
+  }
+
+  it("is due on the first unpaid instalment, so a missed deposit shows as overdue", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies);
+    await createPlannedInvoice(app, cookies, customerId);
+
+    const res = await request(app).get("/receivables").set("Cookie", cookies);
+
+    expect(res.body.results[0]).toMatchObject({
+      dueDate: "2020-01-10",
+      amountDue: 40000,
+      amountOwed: 100000,
+      nextInstallmentLabel: "Deposit",
+    });
+    expect(res.body.results[0].agingBucket).toBe("90+");
+  });
+
+  it("moves on to the next instalment once the deposit is paid", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies);
+    const id = await createPlannedInvoice(app, cookies, customerId);
+    await request(app)
+      .post(`/documents/${id}/payments`)
+      .set("Cookie", cookies)
+      .send({ amount: 40000, method: "CASH", paidOn: "2020-01-05" });
+
+    const res = await request(app).get("/receivables").set("Cookie", cookies);
+
+    expect(res.body.results[0]).toMatchObject({
+      dueDate: "2099-01-01",
+      amountDue: 60000,
+      amountOwed: 60000,
+      agingBucket: "current",
+      nextInstallmentLabel: "Balance",
+    });
+  });
+
+  it("asks for the whole amount owed when the invoice has no plan", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies);
+    await createFinalizedInvoice(app, cookies, customerId, "2099-01-01");
+
+    const res = await request(app).get("/receivables").set("Cookie", cookies);
+
+    expect(res.body.results[0]).toMatchObject({ amountDue: 100000, amountOwed: 100000, nextInstallmentLabel: null });
+  });
+});

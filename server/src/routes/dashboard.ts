@@ -51,8 +51,11 @@ dashboardRouter.get("/summary", async (req, res) => {
     business,
   ] = await Promise.all([
     prisma.document.count({ where: { businessId, status: "DRAFT" } }),
-    prisma.document.count({
-      where: { businessId, type: "INVOICE", status: "FINALIZED", dueDate: { lt: new Date() } },
+    // Same definition as the receivables page: the next payment that is owed has gone past its date.
+    // Paid and written-off invoices drop out, and an instalment plan is judged step by step.
+    getOutstandingInvoices(businessId).then((invoices) => {
+      const now = new Date();
+      return invoices.filter((invoice) => invoice.amountOwed > 0 && invoice.dueDate !== null && invoice.dueDate < now).length;
     }),
     prisma.document.count({
       where: {

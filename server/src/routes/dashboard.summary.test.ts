@@ -232,3 +232,46 @@ describe("GET /dashboard/summary", () => {
     expect(todayRow.count).toBe(1);
   });
 });
+
+describe("GET /dashboard/summary overdue invoices", () => {
+  it("does not count an invoice that has been paid, however old its due date", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies);
+    const invoiceId = await createDocument(app, cookies, customerId, "INVOICE", "2020-01-01");
+    await finalizeDocument(app, cookies, invoiceId);
+    const invoice = await request(app).get(`/documents/${invoiceId}`).set("Cookie", cookies);
+    await request(app)
+      .post(`/documents/${invoiceId}/payments`)
+      .set("Cookie", cookies)
+      .send({ amount: invoice.body.document.total, method: "CASH", paidOn: "2026-08-20" });
+
+    const res = await request(app).get("/dashboard/summary").set("Cookie", cookies);
+
+    expect(res.body.overdueInvoiceCount).toBe(0);
+  });
+
+  it("counts an invoice whose deposit is late even though its final date is far away", async () => {
+    const app = createApp();
+    const cookies = await registerAndGetCookies(app);
+    const customerId = await createCustomer(app, cookies);
+    const created = await request(app)
+      .post("/documents")
+      .set("Cookie", cookies)
+      .send({
+        type: "INVOICE",
+        customerId,
+        issueDate: "2020-01-01",
+        lines: [{ description: "Cement", quantity: 1, unitPrice: 100000, taxRate: 0 }],
+        installments: [
+          { label: "Deposit", amount: 40000, dueDate: "2020-01-10" },
+          { label: "Balance", amount: 60000, dueDate: "2099-01-01" },
+        ],
+      });
+    await finalizeDocument(app, cookies, created.body.document.id);
+
+    const res = await request(app).get("/dashboard/summary").set("Cookie", cookies);
+
+    expect(res.body.overdueInvoiceCount).toBe(1);
+  });
+});

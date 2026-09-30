@@ -42,6 +42,8 @@ receivablesRouter.get("/", async (req, res) => {
       publicToken: invoice.publicToken,
       total: invoice.total,
       amountOwed: invoice.amountOwed,
+      amountDue: invoice.amountDue,
+      nextInstallmentLabel: invoice.nextInstallmentLabel,
       dueDate: invoice.dueDate ? invoice.dueDate.toISOString().slice(0, 10) : null,
       daysOverdue,
       agingBucket: agingBucket(invoice.dueDate, now),
