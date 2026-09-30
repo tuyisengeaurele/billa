@@ -1,7 +1,7 @@
 import type { DocumentType } from "./document-types.js";
 import { getDueDateLabel } from "./document-labels.js";
 import { formatShortDate } from "./format-date.js";
-import { formatMoneyTotals, type MoneyAmount } from "./currency.js";
+import { formatMoney, formatMoneyTotals, type Currency, type MoneyAmount } from "./currency.js";
 import { formatRwf } from "./money.js";
 import { getPdfLabels } from "./pdf-labels.js";
 import { toWhatsAppNumber } from "./whatsapp-number.js";
@@ -14,6 +14,8 @@ export interface WhatsAppMessageInput {
   number: string | null;
   // The document total when sharing, the amount still owed when reminding.
   amount: number;
+  // The currency of the amounts. RWF when left out.
+  currency?: Currency;
   dueDate: string | null;
   viewUrl: string;
   // The public page takes a MoMo payment for this document.
@@ -27,15 +29,16 @@ export function buildWhatsAppMessage(input: WhatsAppMessageInput): string {
   const typeLabel = labels.typeLabels[input.type].toLowerCase();
   const reference = input.number ? `${typeLabel} ${input.number}` : typeLabel;
   const dueLabel = getDueDateLabel(input.type, labels);
+  const money = (amount: number) => formatMoney(amount, input.currency ?? "RWF");
 
   const opening =
     input.kind === "reminder"
-      ? `Hello ${input.customerName}, a reminder from ${input.businessName} that ${reference} has ${formatRwf(input.amount)} outstanding${
+      ? `Hello ${input.customerName}, a reminder from ${input.businessName} that ${reference} has ${money(input.amount)} outstanding${
           input.instalment
-            ? `, of which ${formatRwf(input.instalment.amount)} (${input.instalment.label?.trim() || "the next instalment"}) is due now`
+            ? `, of which ${money(input.instalment.amount)} (${input.instalment.label?.trim() || "the next instalment"}) is due now`
             : ""
         }.`
-      : `Hello ${input.customerName}, ${input.businessName} sent you ${reference} for ${formatRwf(input.amount)}.`;
+      : `Hello ${input.customerName}, ${input.businessName} sent you ${reference} for ${money(input.amount)}.`;
   const lines = [opening];
   if (dueLabel && input.dueDate) lines.push(`${dueLabel}: ${formatShortDate(input.dueDate)}.`);
   const canPay = input.payable === true && input.type === "INVOICE";

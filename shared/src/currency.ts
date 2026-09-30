@@ -145,3 +145,8 @@ export function convertMinor(
   if (to.currency !== BASE_CURRENCY && !(to.rate && to.rate > 0)) return null;
   return fromRwf(toRwf(minor, from.currency, from.rate), to.currency, to.rate);
 }
+
+/** Whatever a server response says the currency is, as a currency we know; RWF for anything else. */
+export function coerceCurrency(value: unknown): Currency {
+  return isCurrency(value) ? value : BASE_CURRENCY;
+}
