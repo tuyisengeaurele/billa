@@ -9,6 +9,7 @@ import {
   type RecurrenceInterval,
   type ScheduleStep,
 } from "@billa/shared";
+import { AttachmentsSection, type DocumentAttachment } from "../components/documents/AttachmentsSection";
 import { PaymentScheduleList, instalmentName } from "../components/documents/PaymentScheduleList";
 import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { Modal } from "../components/Modal";
@@ -59,6 +60,7 @@ interface DocumentDetail {
   paymentStatus: InvoicePaymentStatus | null;
   currency?: string;
   schedule?: ScheduleStep[] | null;
+  attachments?: DocumentAttachment[];
   nextInstallment?: ScheduleStep | null;
   convertedFrom: DocumentLink | null;
   convertedTo: DocumentLink | null;
@@ -183,7 +185,7 @@ export default function DocumentView() {
       currency: coerceCurrency(document.currency),
       dueDate: document.dueDate,
       viewUrl: `${window.location.origin}/view/${document.publicToken}`,
-      payable: document.business?.momoEnabled,
+      payable: document.business?.momoEnabled && coerceCurrency(document.currency) === "RWF",
     });
     const sentAt = await shareOnWhatsApp({
       documentId: document.id,
@@ -396,6 +398,12 @@ export default function DocumentView() {
         )}
 
         {document.schedule && document.schedule.length > 0 && <PaymentScheduleList schedule={document.schedule} currency={currency} />}
+
+        <AttachmentsSection
+          documentId={document.id}
+          attachments={document.attachments ?? []}
+          onChanged={() => setReloadToken((t) => t + 1)}
+        />
 
         {document.sentAt && (
           <p className="font-sans text-xs text-neutral-400">Sent {document.sentAt.slice(0, 10)}</p>

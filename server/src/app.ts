@@ -33,7 +33,7 @@ import { apiKeysRouter } from "./routes/api-keys.js";
 import { apiV1Router } from "./routes/api-v1.js";
 import { webhooksRouter } from "./routes/webhooks.js";
 import { getStorage } from "./lib/storage.js";
-import { detectAllowedImageType } from "./lib/file-sniff.js";
+import { detectAllowedImageType, detectPdf } from "./lib/file-sniff.js";
 import { errorHandler } from "./middleware/error-handler.js";
 import { requestLogger } from "./middleware/request-logger.js";
 
@@ -124,7 +124,14 @@ export function createApp(clientDistDir: string = DEFAULT_CLIENT_DIST_DIR) {
       try {
         const buffer = await getStorage().read(`${businessId}/${filename}`);
         const detected = await detectAllowedImageType(buffer);
-        res.setHeader("Content-Type", detected?.mime ?? "application/octet-stream");
+        res.setHeader("X-Content-Type-Options", "nosniff");
+        if (!detected && detectPdf(buffer)) {
+          // A PDF is downloaded, not opened in the page's own origin.
+          res.setHeader("Content-Type", "application/pdf");
+          res.setHeader("Content-Disposition", "attachment");
+        } else {
+          res.setHeader("Content-Type", detected?.mime ?? "application/octet-stream");
+        }
         res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
         res.send(buffer);
       } catch {

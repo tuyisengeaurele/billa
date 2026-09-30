@@ -49,7 +49,7 @@ import { recordInvoicePayment } from "../lib/record-invoice-payment.js";
 import { finalizeDocumentById } from "../lib/finalize-document.js";
 import { generatePaymentReceipt } from "../lib/generate-payment-receipt.js";
 import { installmentRows, planProblem, withSchedule } from "../lib/document-schedule.js";
-import { detectAllowedImageType } from "../lib/file-sniff.js";
+import { detectAllowedImageType, detectPdf } from "../lib/file-sniff.js";
 import { getStorage } from "../lib/storage.js";
 import { requireFinalizePermission } from "../middleware/require-finalize-permission.js";
 import { expensiveOperationRateLimit, generalApiRateLimit } from "../middleware/general-rate-limit.js";
@@ -94,9 +94,86 @@ documentsRouter.post(
   },
 );
 
+const uploadAttachment = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+}).single("file");
+
+const MAX_ATTACHMENTS_PER_DOCUMENT = 5;
+
+// Files kept with a document (a purchase order, proof of delivery). They can be added or removed at any
+// time, even after finalizing, because they never change what the document says.
+documentsRouter.post(
+  "/:id/attachments",
+  (req, res, next) => {
+    uploadAttachment(req, res, (err) => {
+      if (err) {
+        res.status(400).json({ error: "upload_failed" });
+        return;
+      }
+      next();
+    });
+  },
+  async (req, res) => {
+    const businessId = req.auth!.businessId;
+    const { id } = req.params;
+    if (!req.file) {
+      res.status(400).json({ error: "no_file" });
+      return;
+    }
+
+    const document = await prisma.document.findFirst({ where: { id, businessId }, select: { id: true } });
+    if (!document) {
+      res.status(404).json({ error: "not_found" });
+      return;
+    }
+    const existing = await prisma.documentAttachment.count({ where: { documentId: id } });
+    if (existing >= MAX_ATTACHMENTS_PER_DOCUMENT) {
+      res.status(409).json({ error: "too_many_attachments" });
+      return;
+    }
+
+    const image = await detectAllowedImageType(req.file.buffer);
+    const isPdf = !image && detectPdf(req.file.buffer);
+    if (!image && !isPdf) {
+      res.status(400).json({ error: "invalid_file_type" });
+      return;
+    }
+
+    const { url } = await getStorage().save(req.file.buffer, businessId, image ? image.ext : "pdf");
+    const fileName = (req.file.originalname.split(/[/\\]/).pop() ?? "").trim().slice(0, 120) || "attachment";
+    const attachment = await prisma.documentAttachment.create({
+      data: {
+        documentId: id,
+        businessId,
+        fileName,
+        url,
+        contentType: image ? image.mime : "application/pdf",
+        sizeBytes: req.file.size,
+        uploadedById: req.auth!.userId,
+      },
+    });
+    res.status(201).json({ attachment });
+  },
+);
+
+documentsRouter.delete("/:id/attachments/:attachmentId", async (req, res) => {
+  const { id, attachmentId } = req.params;
+  const attachment = await prisma.documentAttachment.findFirst({
+    where: { id: attachmentId, documentId: id, businessId: req.auth!.businessId },
+  });
+  if (!attachment) {
+    res.status(404).json({ error: "not_found" });
+    return;
+  }
+  await prisma.documentAttachment.delete({ where: { id: attachment.id } });
+  res.status(204).end();
+});
+
 const DOCUMENT_INCLUDE = {
   lines: { orderBy: { sortOrder: "asc" as const } },
   installments: { orderBy: { sortOrder: "asc" as const } },
+  attachments: { orderBy: { createdAt: "asc" as const } },
   customer: { select: { name: true, email: true, phone: true } },
   business: { select: { momoEnabled: true } },
   convertedFrom: { select: { id: true, number: true, type: true } },
