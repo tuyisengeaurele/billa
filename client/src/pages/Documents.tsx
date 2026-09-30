@@ -47,6 +47,7 @@ export default function Documents() {
   const [dateTo, setDateTo] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
+  const [rowDeleteId, setRowDeleteId] = useState<string | null>(null);
   const [isBulkSendLanguageOpen, setIsBulkSendLanguageOpen] = useState(false);
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
 
@@ -123,12 +124,20 @@ export default function Documents() {
   );
   const allOnPageSelected = list.results.length > 0 && list.results.every((document) => selectedIds.has(document.id));
 
+  const deleteCount = rowDeleteId ? 1 : selectedDrafts.length;
+
+  function closeDelete() {
+    setIsBulkDeleteOpen(false);
+    setRowDeleteId(null);
+  }
+
   async function confirmBulkDelete() {
-    const targetIds = selectedDrafts.map((document) => document.id);
+    const targetIds = rowDeleteId ? [rowDeleteId] : selectedDrafts.map((document) => document.id);
     setIsBulkProcessing(true);
     const outcomes = await Promise.allSettled(targetIds.map((id) => apiRequest(`/documents/${id}`, { method: "DELETE" })));
     setIsBulkProcessing(false);
     setIsBulkDeleteOpen(false);
+    setRowDeleteId(null);
     setSelectedIds(new Set());
     list.reload();
 
@@ -398,6 +407,7 @@ export default function Documents() {
                       </div>
                     </td>
                     <td className="py-3">
+                      <div className="flex gap-1.5">
                       <button
                         type="button"
                         onClick={(event) => {
@@ -408,6 +418,21 @@ export default function Documents() {
                       >
                         Download
                       </button>
+                      {document.status === "DRAFT" && (
+                        <button
+                          type="button"
+                          aria-label={`Delete draft ${document.customer.name}`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setRowDeleteId(document.id);
+                            setIsBulkDeleteOpen(true);
+                          }}
+                          className="rounded-lg border border-neutral-200 px-2.5 py-1 font-sans text-xs font-medium text-neutral-700 transition-colors hover:border-error hover:text-error"
+                        >
+                          Delete
+                        </button>
+                      )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -443,15 +468,19 @@ export default function Documents() {
           )}
         </div>
 
-        <Modal isOpen={isBulkDeleteOpen} onClose={() => setIsBulkDeleteOpen(false)} title="Delete drafts">
+        <Modal
+          isOpen={isBulkDeleteOpen}
+          onClose={closeDelete}
+          title={rowDeleteId ? "Delete draft" : "Delete drafts"}
+        >
           <p className="font-sans text-sm text-neutral-600">
-            This permanently deletes {selectedDrafts.length} draft{selectedDrafts.length === 1 ? "" : "s"}. This
+            This permanently deletes {deleteCount} draft{deleteCount === 1 ? "" : "s"}. This
             cannot be undone.
           </p>
           <div className="mt-6 flex justify-end gap-3">
             <button
               type="button"
-              onClick={() => setIsBulkDeleteOpen(false)}
+              onClick={closeDelete}
               className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
             >
               Cancel

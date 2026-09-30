@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -559,6 +559,42 @@ describe("Documents", () => {
 
     await waitFor(() => expect(deletedIds.sort()).toEqual(["d1", "d2"]));
     expect(await screen.findByText(/2 drafts deleted/i)).toBeInTheDocument();
+  });
+
+  it("deletes a single draft from its row, and offers no delete on a finalized document", async () => {
+    const deletedIds: string[] = [];
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (init?.method === "DELETE") {
+        deletedIds.push(url.split("/").pop()!);
+        return new Response(null, { status: 204 });
+      }
+      if (url.includes("/documents")) {
+        return new Response(
+          JSON.stringify({
+            results: [
+              { id: "d1", type: "INVOICE", number: null, status: "DRAFT", issueDate: "2026-08-19T00:00:00.000Z", total: 0, customer: { name: "Kigali Traders", email: null } },
+              { id: "d2", type: "INVOICE", number: "INV-0001", status: "FINALIZED", issueDate: "2026-08-19T00:00:00.000Z", total: 0, customer: { name: "Acme Ltd", email: null } },
+            ],
+            total: 2,
+            page: 1,
+            pageSize: 20,
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+    const user = userEvent.setup();
+    renderDocuments();
+    await screen.findByText("Kigali Traders");
+
+    expect(screen.queryByRole("button", { name: "Delete draft Acme Ltd" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Delete draft Kigali Traders" }));
+    await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: /^delete$/i }));
+
+    await waitFor(() => expect(deletedIds).toEqual(["d1"]));
+    expect(await screen.findByText(/1 draft deleted/i)).toBeInTheDocument();
   });
 
   it("bulk-sends selected finalized documents in the chosen language", async () => {
