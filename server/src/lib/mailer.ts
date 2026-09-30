@@ -29,6 +29,19 @@ function getOAuth2Client(): OAuth2Client {
   return oauth2Client;
 }
 
+// Google answers "invalid_grant" when the saved refresh token no longer works: it was revoked, the
+// account password changed, or (the usual cause) the Google Cloud app is still in "Testing" mode,
+// where refresh tokens are cut off after 7 days. Nothing in this code can fix that, so the message
+// says what to do instead of leaving an admin to search for the error code.
+export function describeMailerFailure(err: unknown): string {
+  const message = describeError(err);
+  if (!message.includes("invalid_grant")) return message;
+  return (
+    "Gmail refused the saved login (invalid_grant). Create a new GMAIL_REFRESH_TOKEN and update it on the server. " +
+    "If the Google Cloud app is still in Testing mode, publish it first, or the new token will stop working after 7 days."
+  );
+}
+
 function getFromAddress(): string {
   return `"Billa" <${process.env.GMAIL_USER ?? ""}>`;
 }
@@ -54,8 +67,18 @@ async function buildRawMessage(input: RawMessageInput): Promise<string> {
   return buffer.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
+async function getAccessTokenOrExplain(): Promise<string | null | undefined> {
+  try {
+    return (await getOAuth2Client().getAccessToken()).token;
+  } catch (err) {
+    const explained = describeMailerFailure(err);
+    if (explained === describeError(err)) throw err;
+    throw new Error(explained);
+  }
+}
+
 async function sendViaGmailApi(raw: string): Promise<void> {
-  const { token } = await getOAuth2Client().getAccessToken();
+  const token = await getAccessTokenOrExplain();
   if (!token) throw new Error("Failed to obtain a Gmail API access token");
 
   const res = await fetch(GMAIL_SEND_URL, {
@@ -106,15 +129,14 @@ export async function sendEmail(input: SendEmailInput): Promise<void> {
 export async function checkMailerHealth(): Promise<HealthCheckResult> {
   try {
     return await withTimeout(
-      getOAuth2Client()
-        .getAccessToken()
-        .then(({ token }): HealthCheckResult =>
+      getAccessTokenOrExplain().then(
+        (token): HealthCheckResult =>
           token ? { ok: true, error: null } : { ok: false, error: "Did not receive an access token" },
-        ),
+      ),
       8000,
       { ok: false, error: "Timed out after 8s obtaining a Gmail API access token" },
     );
   } catch (err) {
-    return { ok: false, error: describeError(err) };
+    return { ok: false, error: describeMailerFailure(err) };
   }
 }

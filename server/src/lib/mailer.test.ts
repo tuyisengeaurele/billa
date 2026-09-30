@@ -104,11 +104,36 @@ describe("mailer", () => {
 
   it("reports unhealthy when refreshing the access token fails, with the real error message", async () => {
     vi.mocked(OAuth2Client.prototype.setCredentials).mockImplementation(() => {});
-    vi.mocked(OAuth2Client.prototype.getAccessToken).mockRejectedValue(new Error("invalid_grant"));
+    vi.mocked(OAuth2Client.prototype.getAccessToken).mockRejectedValue(new Error("connect ETIMEDOUT"));
 
     const { checkMailerHealth } = await import("./mailer.js");
 
-    expect(await checkMailerHealth()).toEqual({ ok: false, error: "invalid_grant" });
+    expect(await checkMailerHealth()).toEqual({ ok: false, error: "connect ETIMEDOUT" });
+  });
+
+  it("explains what to do when Google rejects the saved Gmail login", async () => {
+    vi.mocked(OAuth2Client.prototype.setCredentials).mockImplementation(() => {});
+    vi.mocked(OAuth2Client.prototype.getAccessToken).mockRejectedValue(new Error("invalid_grant"));
+
+    const { checkMailerHealth } = await import("./mailer.js");
+    const result = await checkMailerHealth();
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain("invalid_grant");
+    expect(result.error).toContain("GMAIL_REFRESH_TOKEN");
+    expect(result.error).toMatch(/testing/i);
+  });
+
+  it("gives the same guidance when a send fails because the Gmail login was rejected", async () => {
+    vi.mocked(OAuth2Client.prototype.setCredentials).mockImplementation(() => {});
+    vi.mocked(OAuth2Client.prototype.getAccessToken).mockRejectedValue(new Error("invalid_grant"));
+
+    const { sendEmail } = await import("./mailer.js");
+
+    await expect(sendEmail({ to: "someone@example.com", subject: "Hello", html: "<p>hi</p>" })).rejects.toThrow(
+      /GMAIL_REFRESH_TOKEN/,
+    );
+    expect(await prisma.emailSendLog.count()).toBe(0);
   });
 
   it("reports unhealthy when no access token comes back, without throwing", async () => {
