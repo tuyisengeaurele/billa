@@ -1,0 +1,2 @@
+ALTER TABLE "Business" ADD COLUMN "dueSoonReminderDays" INTEGER NOT NULL DEFAULT 3;
+ALTER TABLE "Document" ADD COLUMN "dueSoonReminderFor" TIMESTAMP(3);

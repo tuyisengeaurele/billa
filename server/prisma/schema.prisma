@@ -113,6 +113,8 @@ model Business {
   signatureUrl          String?
   remindersEnabled      Boolean          @default(true)
   reminderCadenceDays   Int              @default(7)
+  // A friendly nudge this many days before a payment falls due. 0 turns it off.
+  dueSoonReminderDays   Int              @default(3)
   requireApprovalToFinalize Boolean      @default(false)
   defaultTemplate       DocumentTemplate @default(MINIMAL)
   onboardingCompletedAt DateTime?
@@ -495,6 +497,8 @@ model Document {
   nextRecurrenceAt   DateTime?
 
   lastReminderSentAt   DateTime?
+  // The due date the "due soon" nudge was last sent for, so each payment gets one, instalments included.
+  dueSoonReminderFor   DateTime?
   expiryReminderSentAt DateTime?
   remindersEnabled     Boolean   @default(true)
 
@@ -519,6 +523,7 @@ model Document {
   customer          Customer         @relation(fields: [customerId], references: [id])
   lines             DocumentLine[]
   installments      DocumentInstalment[]
+  attachments       DocumentAttachment[]
   payments          InvoicePayment[] @relation("DocumentPayments")
   paymentReceiptFor InvoicePayment?  @relation("PaymentReceipt")
   momoPaymentRequests MomoPaymentRequest[]
@@ -558,6 +563,23 @@ model DocumentInstalment {
   label      String?
   amount     Int
   dueDate    DateTime
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+}
+
+// A file kept with a document: a purchase order, a signed quote, proof of delivery. Never printed on the PDF.
+model DocumentAttachment {
+  id           String   @id @default(cuid())
+  documentId   String
+  businessId   String
+  fileName     String
+  url          String
+  contentType  String
+  sizeBytes    Int
+  uploadedById String?
+  createdAt    DateTime @default(now())
 
   document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
