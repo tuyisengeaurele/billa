@@ -8,7 +8,8 @@ import { generalApiRateLimit } from "../middleware/general-rate-limit.js";
 import { validateBody } from "../middleware/validate.js";
 import { detectAllowedImageType } from "../lib/file-sniff.js";
 import { getStorage } from "../lib/storage.js";
-import { hashRefreshToken } from "../lib/tokens.js";
+import { UNKNOWN_DEVICE } from "../lib/device-name.js";
+import { requestDeviceId } from "../lib/session.js";
 
 export const profileRouter = Router();
 
@@ -19,11 +20,6 @@ const uploadAvatar = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
 }).single("avatar");
-
-function currentSessionHash(req: { cookies?: Record<string, string> }): string | null {
-  const presented = req.cookies?.refresh_token;
-  return presented ? hashRefreshToken(presented) : null;
-}
 
 function withDefaults(stored: unknown): Record<string, boolean> {
   const preferences = (stored && typeof stored === "object" ? stored : {}) as Record<string, unknown>;
@@ -88,20 +84,24 @@ profileRouter.delete("/avatar", async (req, res) => {
 });
 
 profileRouter.get("/sessions", async (req, res) => {
-  const currentHash = currentSessionHash(req);
+  // The refresh cookie never reaches this route (it is only sent to /auth/refresh), so "this device" is
+  // found through the device cookie, which is sent everywhere.
+  const currentDeviceId = requestDeviceId(req);
 
   const sessions = await prisma.refreshToken.findMany({
     where: { userId: req.auth!.userId, revokedAt: null, expiresAt: { gt: new Date() } },
-    select: { id: true, createdAt: true, expiresAt: true, tokenHash: true },
-    orderBy: { createdAt: "desc" },
+    select: { id: true, createdAt: true, expiresAt: true, deviceId: true, deviceName: true, lastUsedAt: true },
+    orderBy: { lastUsedAt: "desc" },
   });
 
   res.json({
     results: sessions.map((session) => ({
       id: session.id,
+      deviceName: session.deviceName ?? UNKNOWN_DEVICE,
       createdAt: session.createdAt,
+      lastUsedAt: session.lastUsedAt,
       expiresAt: session.expiresAt,
-      isCurrent: currentHash !== null && session.tokenHash === currentHash,
+      isCurrent: currentDeviceId !== null && session.deviceId === currentDeviceId,
     })),
   });
 });
@@ -120,13 +120,20 @@ profileRouter.post("/sessions/:id/revoke", async (req, res) => {
 });
 
 profileRouter.post("/sessions/revoke-others", async (req, res) => {
-  const currentHash = currentSessionHash(req);
+  const currentDeviceId = requestDeviceId(req);
+  // With no device cookie there is no telling which session is this one, so nothing is ended rather than
+  // signing the caller out along with the rest.
+  if (!currentDeviceId) {
+    res.json({ ok: true });
+    return;
+  }
 
   await prisma.refreshToken.updateMany({
     where: {
       userId: req.auth!.userId,
       revokedAt: null,
-      ...(currentHash ? { tokenHash: { not: currentHash } } : {}),
+      // Every other device, never this one. A null deviceId would be skipped by "not", so it is named.
+      OR: [{ deviceId: { not: currentDeviceId } }, { deviceId: null }],
     },
     data: { revokedAt: new Date() },
   });

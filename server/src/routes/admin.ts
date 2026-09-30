@@ -319,8 +319,8 @@ adminRouter.get("/users/:id/sessions", async (req, res) => {
 
   const results = await prisma.refreshToken.findMany({
     where: { userId: id, revokedAt: null, expiresAt: { gt: new Date() } },
-    select: { id: true, createdAt: true, expiresAt: true },
-    orderBy: { createdAt: "desc" },
+    select: { id: true, createdAt: true, expiresAt: true, deviceName: true, lastUsedAt: true },
+    orderBy: { lastUsedAt: "desc" },
   });
 
   res.json({ results });

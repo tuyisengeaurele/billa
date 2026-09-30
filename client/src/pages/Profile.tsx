@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { usePageTitle } from "../context/PageTitleContext";
 import { useToast } from "../context/ToastContext";
 import { apiRequest } from "../lib/apiClient";
+import { formatRelativeTime } from "../lib/relativeTime";
 import { changePassword, hasPasswordProvider } from "../lib/firebaseAuth";
 import { FormField } from "../components/FormField";
 import { Button } from "../components/Button";
@@ -12,6 +13,9 @@ import { TwoFactorSection } from "../components/business/TwoFactorSection";
 
 interface SessionRow {
   id: string;
+  // Where it was opened, such as "Chrome on Windows" or "Safari on iPhone".
+  deviceName?: string;
+  lastUsedAt?: string;
   createdAt: string;
   expiresAt: string;
   isCurrent: boolean;
@@ -193,9 +197,9 @@ export default function Profile() {
     try {
       await apiRequest(`/profile/sessions/${id}/revoke`, { method: "POST" });
       loadSessions();
-      toast.success("Session signed out");
+      toast.success("Device signed out");
     } catch {
-      setSessionsError("Couldn't sign that session out. Try again.");
+      setSessionsError("Couldn't sign that device out. Try again.");
     } finally {
       setRevokingId(null);
     }
@@ -207,9 +211,9 @@ export default function Profile() {
     try {
       await apiRequest("/profile/sessions/revoke-others", { method: "POST" });
       loadSessions();
-      toast.success("Other sessions signed out");
+      toast.success("Other devices signed out");
     } catch {
-      setSessionsError("Couldn't sign out other sessions. Try again.");
+      setSessionsError("Couldn't sign out the other devices. Try again.");
     } finally {
       setIsRevokingOthers(false);
     }
@@ -350,7 +354,7 @@ export default function Profile() {
 
       <section className="rounded-xl border border-neutral-200 bg-surface p-6">
         <div className="flex items-center justify-between">
-          <h2 className="font-display text-base font-semibold text-neutral-900">Active sessions</h2>
+          <h2 className="font-display text-base font-semibold text-neutral-900">Signed in devices</h2>
           {otherSessions.length > 0 && (
             <button
               type="button"
@@ -358,7 +362,7 @@ export default function Profile() {
               onClick={revokeOtherSessions}
               className="font-sans text-sm text-error hover:underline disabled:opacity-50"
             >
-              {isRevokingOthers ? "Signing out…" : "Sign out of other sessions"}
+              {isRevokingOthers ? "Signing out…" : "Sign out of other devices"}
             </button>
           )}
         </div>
@@ -370,7 +374,7 @@ export default function Profile() {
         )}
 
         {sessions === null ? (
-          <div className="mt-4 flex flex-col gap-2" aria-label="Loading sessions">
+          <div className="mt-4 flex flex-col gap-2" aria-label="Loading devices">
             {[0, 1].map((i) => (
               <div key={i} className="h-10 animate-pulse rounded-lg bg-neutral-100" />
             ))}
@@ -382,10 +386,20 @@ export default function Profile() {
                 key={session.id}
                 className="flex items-center justify-between gap-4 rounded-lg border border-neutral-200 px-4 py-2.5"
               >
-                <div className="font-sans text-sm text-neutral-600">
-                  Signed in {new Date(session.createdAt).toLocaleString()} · expires{" "}
-                  {new Date(session.expiresAt).toLocaleDateString()}
-                  {session.isCurrent && <span className="ml-2 text-primary-700">This device</span>}
+                <div className="min-w-0 font-sans text-sm">
+                  <p className="flex flex-wrap items-center gap-2 font-medium text-neutral-900">
+                    {session.deviceName ?? "Unknown device"}
+                    {session.isCurrent && (
+                      <span className="rounded-full bg-primary-100 px-2 py-0.5 text-xs font-medium text-primary-700">
+                        This device
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-neutral-500">
+                    {session.isCurrent ? "Active now" : `Last active ${formatRelativeTime(session.lastUsedAt ?? session.createdAt)}`}
+                    {" · signed in "}
+                    {new Date(session.createdAt).toLocaleDateString()}
+                  </p>
                 </div>
                 {!session.isCurrent && (
                   <button

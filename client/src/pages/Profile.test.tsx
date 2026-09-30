@@ -262,7 +262,54 @@ describe("Profile", () => {
     await user.click(screen.getByRole("button", { name: /^sign out$/i }));
 
     await waitFor(() => expect(screen.queryByRole("button", { name: /^sign out$/i })).not.toBeInTheDocument());
-    expect(await screen.findByText("Session signed out")).toBeInTheDocument();
+    expect(await screen.findByText("Device signed out")).toBeInTheDocument();
+  });
+
+  it("names each device, marks this one, and says when the other was last active", async () => {
+    const user = userEvent.setup();
+    renderProfile(async (input) => {
+      const url = urlOf(input);
+      if (url.endsWith("/auth/me")) {
+        return new Response(
+          JSON.stringify({ user: baseUser(), business: { id: "b1", name: "Kigali Traders" }, impersonating: false }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/profile/sessions")) {
+        return new Response(
+          JSON.stringify({
+            results: [
+              {
+                id: "sess1",
+                deviceName: "Chrome on Windows",
+                createdAt: "2026-08-20T00:00:00.000Z",
+                lastUsedAt: new Date().toISOString(),
+                expiresAt: "2026-09-19T00:00:00.000Z",
+                isCurrent: true,
+              },
+              {
+                id: "sess2",
+                deviceName: "Safari on iPhone",
+                createdAt: "2026-08-21T00:00:00.000Z",
+                lastUsedAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+                expiresAt: "2026-09-20T00:00:00.000Z",
+                isCurrent: false,
+              },
+            ],
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+    void user;
+
+    expect(await screen.findByText("Chrome on Windows")).toBeInTheDocument();
+    expect(screen.getByText("This device")).toBeInTheDocument();
+    expect(screen.getByText("Active now", { exact: false })).toBeInTheDocument();
+    expect(screen.getByText("Safari on iPhone")).toBeInTheDocument();
+    expect(screen.getByText(/last active 3h ago/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Signed in devices" })).toBeInTheDocument();
   });
 
   it("signs out other sessions when the bulk action is clicked", async () => {
@@ -296,12 +343,12 @@ describe("Profile", () => {
       return new Response("{}", { status: 401 });
     });
 
-    await user.click(await screen.findByRole("button", { name: /sign out of other sessions/i }));
+    await user.click(await screen.findByRole("button", { name: /sign out of other devices/i }));
 
     await waitFor(() =>
-      expect(screen.queryByRole("button", { name: /sign out of other sessions/i })).not.toBeInTheDocument(),
+      expect(screen.queryByRole("button", { name: /sign out of other devices/i })).not.toBeInTheDocument(),
     );
-    expect(await screen.findByText("Other sessions signed out")).toBeInTheDocument();
+    expect(await screen.findByText("Other devices signed out")).toBeInTheDocument();
   });
 
   it("toggles a notification preference off", async () => {

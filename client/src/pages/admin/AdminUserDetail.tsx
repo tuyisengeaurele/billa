@@ -32,6 +32,7 @@ interface UserDetailResponse {
 
 interface SessionRow {
   id: string;
+  deviceName?: string | null;
   createdAt: string;
   expiresAt: string;
 }
@@ -366,6 +367,7 @@ export default function AdminUserDetail() {
                   className="flex items-center justify-between gap-4 rounded-lg border border-neutral-200 px-4 py-2.5"
                 >
                   <div className="font-sans text-sm text-neutral-600">
+                    {s.deviceName && <span className="mr-2 font-medium text-neutral-900">{s.deviceName}</span>}
                     Signed in {new Date(s.createdAt).toLocaleString()} · expires{" "}
                     {new Date(s.expiresAt).toLocaleDateString()}
                   </div>
