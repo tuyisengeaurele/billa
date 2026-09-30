@@ -1001,6 +1001,52 @@ describe("DocumentView", () => {
     expect(screen.getByRole("button", { name: /record payment/i })).toBeInTheDocument();
   });
 
+  it("lists the payment plan with each instalment's status and names the next one", async () => {
+    const steps = [
+              { number: 1, count: 2, label: "Deposit", amount: 40000, dueDate: "2026-10-01", paid: 40000, remaining: 0, status: "PAID", isOverdue: false },
+              { number: 2, count: 2, label: null, amount: 60000, dueDate: "2026-11-15", paid: 0, remaining: 60000, status: "UNPAID", isOverdue: false },
+            ];
+    vi.spyOn(global, "fetch").mockImplementation(async () =>
+      new Response(
+        JSON.stringify({
+          document: {
+            id: "d1",
+            number: "INV-0001",
+            type: "INVOICE",
+            status: "FINALIZED",
+            customer: { name: "Kigali Traders" },
+            lines: [],
+            subtotal: 0,
+            taxTotal: 0,
+            total: 100000,
+            amountPaid: 40000,
+            paymentStatus: "PARTIALLY_PAID",
+            schedule: steps,
+            nextInstallment: steps[1],
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/documents/d1"]}>
+        <AuthProvider>
+          <Routes>
+            <Route element={<AppLayoutRoute />}>
+              <Route path="/documents/:id" element={<DocumentView />} />
+            </Route>
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Payment plan")).toBeInTheDocument();
+    expect(screen.getByText("Deposit")).toBeInTheDocument();
+    expect(screen.getByText("Paid")).toBeInTheDocument();
+    expect(screen.getByText(/next: instalment 2, 60,000 rwf due 2026-11-15/i)).toBeInTheDocument();
+  });
+
   it("shows a paid-in-full confirmation and no Record payment button once fully paid", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async () =>
       new Response(

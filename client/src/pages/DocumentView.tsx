@@ -7,7 +7,9 @@ import {
   type DocumentType,
   type InvoicePaymentStatus,
   type RecurrenceInterval,
+  type ScheduleStep,
 } from "@billa/shared";
+import { PaymentScheduleList, instalmentName } from "../components/documents/PaymentScheduleList";
 import { LoadErrorBanner } from "../components/LoadErrorBanner";
 import { Modal } from "../components/Modal";
 import { RecordPaymentModal } from "../components/RecordPaymentModal";
@@ -55,6 +57,8 @@ interface DocumentDetail {
   total: number;
   amountPaid: number;
   paymentStatus: InvoicePaymentStatus | null;
+  schedule?: ScheduleStep[] | null;
+  nextInstallment?: ScheduleStep | null;
   convertedFrom: DocumentLink | null;
   convertedTo: DocumentLink | null;
   referencedDocument: DocumentLink | null;
@@ -364,6 +368,13 @@ export default function DocumentView() {
                 <p className="font-sans text-sm text-neutral-600">
                   {formatRwf(document.amountPaid)} of {formatRwf(document.total)} received,{" "}
                   {formatRwf(document.total - document.amountPaid)} outstanding.
+                  {document.nextInstallment && (
+                    <>
+                      {" "}
+                      Next: {instalmentName(document.nextInstallment)}, {formatRwf(document.nextInstallment.remaining)}{" "}
+                      due {document.nextInstallment.dueDate.slice(0, 10)}.
+                    </>
+                  )}
                 </p>
               )}
             </div>
@@ -378,6 +389,8 @@ export default function DocumentView() {
             )}
           </div>
         )}
+
+        {document.schedule && document.schedule.length > 0 && <PaymentScheduleList schedule={document.schedule} />}
 
         {document.sentAt && (
           <p className="font-sans text-xs text-neutral-400">Sent {document.sentAt.slice(0, 10)}</p>
