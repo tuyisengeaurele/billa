@@ -13,7 +13,6 @@ import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/require-auth.js";
 import { requireBusinessContext } from "../middleware/require-business.js";
 import { requireActiveSubscription } from "../middleware/require-active-subscription.js";
-import { blockAccountantMutations } from "../middleware/block-accountant-mutations.js";
 import { generalApiRateLimit } from "../middleware/general-rate-limit.js";
 import { validateBody } from "../middleware/validate.js";
 import { validateQuery } from "../middleware/validate-query.js";
@@ -31,7 +30,6 @@ customersRouter.use(requireAuth);
 customersRouter.use(requireBusinessContext);
 customersRouter.use(generalApiRateLimit);
 customersRouter.use(requireActiveSubscription);
-customersRouter.use(blockAccountantMutations);
 
 function buildCustomersWhere(businessId: string, query: CustomerListQuery): Prisma.CustomerWhereInput {
   return {

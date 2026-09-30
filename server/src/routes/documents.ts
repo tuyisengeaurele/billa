@@ -48,7 +48,6 @@ import { finalizeDocumentById } from "../lib/finalize-document.js";
 import { generatePaymentReceipt } from "../lib/generate-payment-receipt.js";
 import { detectAllowedImageType } from "../lib/file-sniff.js";
 import { getStorage } from "../lib/storage.js";
-import { blockAccountantMutations } from "../middleware/block-accountant-mutations.js";
 import { requireFinalizePermission } from "../middleware/require-finalize-permission.js";
 import { expensiveOperationRateLimit, generalApiRateLimit } from "../middleware/general-rate-limit.js";
 
@@ -58,7 +57,6 @@ documentsRouter.use(requireAuth);
 documentsRouter.use(requireBusinessContext);
 documentsRouter.use(generalApiRateLimit);
 documentsRouter.use(requireActiveSubscription);
-documentsRouter.use(blockAccountantMutations);
 
 const uploadPaymentReceipt = multer({
   storage: multer.memoryStorage(),

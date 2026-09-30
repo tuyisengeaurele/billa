@@ -9,7 +9,6 @@ import {
   createInviteSchema,
   logoUrlSchema,
   testMomoSettingsSchema,
-  updateMemberRoleSchema,
   updateMomoSettingsSchema,
   updateSequencesSchema,
 } from "@billa/shared";
@@ -17,7 +16,6 @@ import type {
   ActivityListQuery,
   CreateInviteInput,
   TestMomoSettingsInput,
-  UpdateMemberRoleInput,
   UpdateMomoSettingsInput,
 } from "@billa/shared";
 import { prisma } from "../lib/prisma.js";
@@ -296,28 +294,6 @@ businessRouter.get("/members", requireOwner, async (req, res) => {
     ],
   });
 });
-
-businessRouter.patch(
-  "/members/:userId/role",
-  requireOwner,
-  validateBody(updateMemberRoleSchema),
-  async (req, res) => {
-    const businessId = req.auth!.businessId;
-    const { userId } = req.params;
-    const { role } = req.body as UpdateMemberRoleInput;
-
-    const updated = await prisma.businessMember.updateMany({
-      where: { businessId, userId },
-      data: { role },
-    });
-    if (updated.count === 0) {
-      res.status(404).json({ error: "not_found" });
-      return;
-    }
-
-    res.json({ ok: true });
-  },
-);
 
 businessRouter.delete("/members/:userId", requireOwner, async (req, res) => {
   const businessId = req.auth!.businessId;

@@ -39,7 +39,7 @@ describe("POST /business/invites", () => {
     expect(sendSpy).toHaveBeenCalledWith(expect.objectContaining({ to: "friend@example.com" }));
   });
 
-  it("creates an invite with the ACCOUNTANT role when specified", async () => {
+  it("rejects the removed accountant role", async () => {
     const app = createApp();
     const { cookies } = await registerAndGetCookies(app, "owner@example.com", "Kigali Traders");
 
@@ -48,8 +48,8 @@ describe("POST /business/invites", () => {
       .set("Cookie", cookies)
       .send({ email: "friend@example.com", role: "ACCOUNTANT" });
 
-    expect(res.status).toBe(201);
-    expect(res.body.invite.role).toBe("accountant");
+    expect(res.status).toBe(400);
+    expect(await prisma.businessInvite.count()).toBe(0);
   });
 
   it("defaults an invite's role to MEMBER when not specified", async () => {
@@ -161,7 +161,7 @@ describe("DELETE /business/members/:userId", () => {
     expect(remaining).toHaveLength(0);
   });
 
-  it("changes a member's role", async () => {
+  it("has no route for changing a member's role, since every member has the same access", async () => {
     const app = createApp();
     const { cookies } = await registerAndGetCookies(app, "owner@example.com", "Kigali Traders");
     const ownerRes = await request(app).get("/auth/me").set("Cookie", cookies);
@@ -171,34 +171,9 @@ describe("DELETE /business/members/:userId", () => {
     const res = await request(app)
       .patch(`/business/members/${memberId}/role`)
       .set("Cookie", cookies)
-      .send({ role: "ACCOUNTANT" });
+      .send({ role: "MEMBER" });
 
-    expect(res.status).toBe(200);
-    const membership = await prisma.businessMember.findFirst({ where: { userId: memberId } });
-    expect(membership?.role).toBe("ACCOUNTANT");
-  });
-
-  it("blocks a member from changing another member's role", async () => {
-    const app = createApp();
-    const { cookies: ownerCookies } = await registerAndGetCookies(app, "owner@example.com", "Kigali Traders");
-    const ownerRes = await request(app).get("/auth/me").set("Cookie", ownerCookies);
-    const { cookies: memberCookies, userId: memberId } = await registerAndGetCookies(
-      app,
-      "member@example.com",
-      "Member's Own Biz",
-    );
-    await prisma.businessMember.create({ data: { businessId: ownerRes.body.business.id, userId: memberId } });
-    const switchRes = await request(app)
-      .post("/auth/switch-business")
-      .set("Cookie", memberCookies)
-      .send({ businessId: ownerRes.body.business.id });
-
-    const res = await request(app)
-      .patch(`/business/members/${memberId}/role`)
-      .set("Cookie", switchRes.headers["set-cookie"] as unknown as string[])
-      .send({ role: "ACCOUNTANT" });
-
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(404);
   });
 
   it("returns 404 for a member that isn't part of the business", async () => {
@@ -363,13 +338,13 @@ describe("invite accept flow", () => {
     expect(meRes.body.business.name).toBe("Kigali Traders");
   });
 
-  it("assigns the invited role once accepted", async () => {
+  it("makes the invitee a member once accepted", async () => {
     const app = createApp();
     const { cookies: ownerCookies } = await registerAndGetCookies(app, "owner@example.com", "Kigali Traders");
     const createRes = await request(app)
       .post("/business/invites")
       .set("Cookie", ownerCookies)
-      .send({ email: "friend@example.com", role: "ACCOUNTANT" });
+      .send({ email: "friend@example.com" });
     const token = (createRes.body.link as string).split("/invite/")[1];
     const { cookies: inviteeCookies, userId: inviteeId } = await registerAndGetCookies(
       app,
@@ -380,7 +355,7 @@ describe("invite accept flow", () => {
     await request(app).post(`/invites/${token}/accept`).set("Cookie", inviteeCookies);
 
     const membership = await prisma.businessMember.findFirst({ where: { userId: inviteeId } });
-    expect(membership?.role).toBe("ACCOUNTANT");
+    expect(membership?.role).toBe("MEMBER");
   });
 
   it("rejects acceptance when the logged-in user's email doesn't match the invite", async () => {
