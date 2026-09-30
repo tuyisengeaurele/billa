@@ -70,6 +70,8 @@ export interface PdfRenderData {
   totalFormatted: string;
   // "RWF (Rwandan Franc)" or "USD (US dollar)": what the premium template prints under Currency.
   currencyLabel: string;
+  // The footer note about the currency; falls back to the RWF wording when left out.
+  allAmountsInFormatted?: string;
   showTotals: boolean;
   amountInWordsFormatted: string | null;
   viewUrl: string | null;
@@ -168,6 +170,12 @@ export async function buildPdfRenderData(
     taxTotalFormatted: money(document.taxTotal),
     totalFormatted: money(document.total),
     currencyLabel: currency === "RWF" ? labels.currencyValue : `${currency} (${currencyName(currency)})`,
+    allAmountsInFormatted:
+      currency === "RWF"
+        ? labels.allAmountsIn
+        : document.language === "FR"
+          ? `Tous les montants sont en ${currencyName(currency)} (${currency})`
+          : `All amounts in ${currencyName(currency)} (${currency})`,
     showTotals,
     amountInWordsFormatted: showTotals ? amountInWords(Number(document.total)) : null,
     viewUrl,

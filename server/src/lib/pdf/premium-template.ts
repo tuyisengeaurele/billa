@@ -37,7 +37,7 @@ table.items thead th { color: #fff; font-size: 10.5px; font-weight: 700; letter-
 table.items thead th.r { text-align: right; }
 table.items tbody tr:nth-child(even) { background: color-mix(in srgb, var(--accent) 4%, white); }
 table.items tbody td { padding: 14px 14px; border-bottom: 1px solid #f0eeec; font-size: 13px; vertical-align: top; }
-table.items tbody td.r { text-align: right; font-weight: 600; color: #1a1a2e; }
+table.items tbody td.r { text-align: right; font-weight: 600; color: #1a1a2e; white-space: nowrap; }
 .prod-name { font-weight: 700; color: #1a1a2e; }
 
 .totals-wrap { padding: 18px 36px 22px; display: flex; justify-content: flex-end; }
@@ -263,7 +263,7 @@ export function renderPremiumHtml(data: PdfRenderData): string {
 
       <div class="disclaimer">
         ${labels.documentIssuedBy} ${business.name}.
-        &nbsp;|&nbsp; ${labels.allAmountsIn}
+        &nbsp;|&nbsp; ${data.allAmountsInFormatted ?? labels.allAmountsIn}
         ${data.dueDateLabel && data.dueDate && data.showTotals ? `&nbsp;|&nbsp; ${data.dueDateLabel}: ${data.dueDate}` : ""}
       </div>
     </div>

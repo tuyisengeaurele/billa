@@ -18,6 +18,7 @@ function makeBusiness(overrides: Partial<Business> = {}): Business {
     signatureUrl: null,
     remindersEnabled: true,
     reminderCadenceDays: 7,
+    dueSoonReminderDays: 3,
     requireApprovalToFinalize: false,
     primaryColor: "#C2185B",
     accentColors: null,
@@ -71,6 +72,7 @@ function makeDocument(
     recurrenceEndDate: null,
     nextRecurrenceAt: null,
     lastReminderSentAt: null,
+    dueSoonReminderFor: null,
     expiryReminderSentAt: null,
     remindersEnabled: true,
     convertedFromId: null,
@@ -296,6 +298,7 @@ describe("buildPdfRenderData", () => {
     expect(data.lines[0]!.unitPriceFormatted).toBe("50.00 USD");
     expect(data.amountInWordsFormatted).toBe("One Hundred Seventy-Seven US Dollars Only");
     expect(data.currencyLabel).toBe("USD (US dollar)");
+    expect(data.allAmountsInFormatted).toBe("All amounts in US dollar (USD)");
   });
 
   it("writes the amount in words in French for a French document in euros", async () => {
