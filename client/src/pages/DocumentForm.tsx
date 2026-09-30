@@ -182,6 +182,8 @@ export default function DocumentForm() {
   const [invoiceOptions, setInvoiceOptions] = useState<InvoiceOption[]>([]);
   const [referencedDocumentId, setReferencedDocumentId] = useState("");
   const [isFinalizeConfirmOpen, setIsFinalizeConfirmOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [pendingFinalizeData, setPendingFinalizeData] = useState<DocumentFormInput | null>(null);
   const [documentId, setDocumentId] = useState<string | undefined>(id);
   const [autosaveStatus, setAutosaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -438,6 +440,24 @@ export default function DocumentForm() {
     setPendingFinalizeData(data);
     setIsFinalizeConfirmOpen(true);
   });
+
+  async function confirmDelete() {
+    setIsDeleting(true);
+    try {
+      await apiRequest(`/documents/${id}`, { method: "DELETE" });
+      navigate("/documents");
+      toast.success("Draft deleted");
+    } catch (err) {
+      setIsDeleteOpen(false);
+      setApiError(
+        err instanceof ApiError && err.status === 409
+          ? "This document was just finalized and can no longer be deleted."
+          : "Couldn't delete this draft. Try again.",
+      );
+    } finally {
+      setIsDeleting(false);
+    }
+  }
 
   async function confirmFinalize() {
     if (!pendingFinalizeData) return;
@@ -823,6 +843,15 @@ export default function DocumentForm() {
             >
               {isFinalizing ? "Finalizing…" : "Finalize"}
             </button>
+            {isEditing && (
+              <button
+                type="button"
+                onClick={() => setIsDeleteOpen(true)}
+                className="flex items-center justify-center rounded-lg border border-neutral-200 px-6 py-2.5 font-sans text-sm font-semibold text-error transition-colors hover:border-error hover:bg-neutral-50"
+              >
+                Delete
+              </button>
+            )}
             {autosaveStatus === "saving" && (
               <span className="font-sans text-sm text-neutral-500">Saving…</span>
             )}
@@ -858,6 +887,29 @@ export default function DocumentForm() {
             className="rounded-lg bg-primary-500 px-4 py-2 font-sans text-sm font-semibold text-white hover:bg-primary-700"
           >
             Finalize
+          </button>
+        </div>
+      </Modal>
+
+      <Modal isOpen={isDeleteOpen} onClose={() => setIsDeleteOpen(false)} title={`Delete ${labels.singular}`}>
+        <p className="font-sans text-sm text-neutral-600">
+          This permanently deletes this draft. This cannot be undone.
+        </p>
+        <div className="mt-6 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={() => setIsDeleteOpen(false)}
+            className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={isDeleting}
+            onClick={confirmDelete}
+            className="rounded-lg bg-error px-4 py-2 font-sans text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isDeleting ? "Deleting…" : "Delete"}
           </button>
         </div>
       </Modal>

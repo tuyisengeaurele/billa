@@ -1069,6 +1069,52 @@ describe("DocumentForm payment plan", () => {
     expect(posted).toBe(false);
   });
 
+  it("offers Delete on a saved draft only, and deletes it after a confirmation", async () => {
+    const deleted: string[] = [];
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (init?.method === "DELETE") {
+        deleted.push(url);
+        return new Response(null, { status: 204 });
+      }
+      if (url.endsWith("/documents/d1")) {
+        return new Response(
+          JSON.stringify({
+            document: {
+              id: "d1",
+              type: "INVOICE",
+              customerId: "c1",
+              customer: { name: "Kigali Traders" },
+              issueDate: "2026-10-01T00:00:00.000Z",
+              dueDate: null,
+              notes: null,
+              lines: [],
+              recurrenceInterval: null,
+              recurrenceEndDate: null,
+            },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+    const user = userEvent.setup();
+    renderEdit("d1");
+
+    await user.click(await screen.findByRole("button", { name: "Delete" }));
+    await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Delete" }));
+
+    await waitFor(() => expect(deleted).toHaveLength(1));
+    expect(deleted[0]).toMatch(/\/documents\/d1$/);
+  });
+
+  it("has no Delete button on a form that has not been saved yet", () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 401 }));
+    renderNew();
+
+    expect(screen.queryByRole("button", { name: "Delete" })).not.toBeInTheDocument();
+  });
+
   it("keeps a plan from being combined with a repeating invoice", async () => {
     vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 401 }));
     const user = userEvent.setup();
