@@ -98,6 +98,32 @@ describe("InstallmentsEditor", () => {
     await user.hover(screen.getByRole("button", { name: /add instalment/i }));
   });
 
+  it("takes dollar amounts and shows the balance with cents", async () => {
+    const user = userEvent.setup();
+    const onRows = vi.fn();
+    function DollarHarness() {
+      const [rows, setRows] = useState(START);
+      return (
+        <InstallmentsEditor
+          total={12550}
+          issueDate="2026-10-01"
+          currency="USD"
+          rows={rows}
+          onChange={(next) => {
+            setRows(next);
+            onRows(next);
+          }}
+        />
+      );
+    }
+    render(<DollarHarness />);
+
+    await user.type(screen.getByLabelText("Amount for instalment 1"), "50.25");
+
+    expect(onRows.mock.calls.at(-1)![0][0].amount).toBe(5025);
+    expect(screen.getByLabelText("Amount for instalment 2")).toHaveValue("75.25");
+  });
+
   it("splits the total evenly, leaving the balance as the remainder", async () => {
     const user = userEvent.setup();
     render(<Harness initial={[...START, { label: "Balance", amount: 0, dueDate: "2026-12-01" }]} total={100000} />);

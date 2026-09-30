@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { PAYMENT_METHODS, type PaymentMethod } from "@billa/shared";
+import { minorToMajorText, parseMajorAmount, PAYMENT_METHODS, type Currency, type PaymentMethod } from "@billa/shared";
 import { Modal } from "./Modal";
 import { apiRequest, ApiError } from "../lib/apiClient";
 import { PAYMENT_METHOD_LABELS } from "../lib/paymentMethodLabels";
@@ -10,6 +10,8 @@ interface RecordPaymentModalProps {
   documentNumber: string | null;
   customerName: string;
   amountOwed: number;
+  // The invoice's currency; amounts are typed in whole units of it. RWF when left out.
+  currency?: Currency;
   onClose: () => void;
   onRecorded: () => void;
 }
@@ -20,6 +22,7 @@ export function RecordPaymentModal({
   documentNumber,
   customerName,
   amountOwed,
+  currency = "RWF",
   onClose,
   onRecorded,
 }: RecordPaymentModalProps) {
@@ -36,7 +39,7 @@ export function RecordPaymentModal({
 
   useEffect(() => {
     if (!isOpen) return;
-    setAmount(String(amountOwed));
+    setAmount(currency === "RWF" ? String(amountOwed) : minorToMajorText(amountOwed, currency));
     setMethod("CASH");
     setPaidOn(new Date().toISOString().slice(0, 10));
     setGenerateReceipt(true);
@@ -44,7 +47,7 @@ export function RecordPaymentModal({
     setPayerName("");
     setReceiptImageUrl(null);
     setPaymentError(null);
-  }, [isOpen, amountOwed]);
+  }, [isOpen, amountOwed, currency]);
 
   async function handleReceiptFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -74,7 +77,7 @@ export function RecordPaymentModal({
       await apiRequest(`/documents/${documentId}/payments`, {
         method: "POST",
         body: {
-          amount: Number(amount),
+          amount: currency === "RWF" ? Number(amount) : (parseMajorAmount(amount, currency) ?? 0),
           method,
           paidOn,
           generateReceipt,
@@ -101,11 +104,12 @@ export function RecordPaymentModal({
         </p>
         <div className="flex flex-col gap-1.5">
           <label htmlFor="payment-amount" className="font-sans text-sm font-medium text-neutral-800">
-            Amount
+            {currency === "RWF" ? "Amount" : `Amount (${currency})`}
           </label>
           <input
             id="payment-amount"
-            type="number"
+            type={currency === "RWF" ? "number" : "text"}
+            inputMode={currency === "RWF" ? undefined : "decimal"}
             value={amount}
             onChange={(event) => setAmount(event.target.value)}
             className="rounded-lg border border-neutral-200 bg-surface px-3.5 py-2.5 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"

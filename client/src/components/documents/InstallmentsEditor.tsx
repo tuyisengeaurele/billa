@@ -1,5 +1,13 @@
 import { useState } from "react";
-import { formatRwf, MAX_INSTALLMENTS, percentOfTotal, splitEvenly } from "@billa/shared";
+import {
+  currencyDecimals,
+  formatMoney,
+  MAX_INSTALLMENTS,
+  percentOfTotal,
+  splitEvenly,
+  type Currency,
+} from "@billa/shared";
+import { MoneyInput } from "../MoneyInput";
 
 export interface PlanRow {
   label: string;
@@ -11,6 +19,8 @@ interface InstallmentsEditorProps {
   // What the invoice comes to, from its line items.
   total: number;
   issueDate: string;
+  // Amounts are in the smallest unit of this currency. RWF when left out.
+  currency?: Currency;
   rows: PlanRow[];
   onChange: (rows: PlanRow[]) => void;
 }
@@ -31,7 +41,7 @@ function percentText(amount: number, total: number): string {
   return String(Math.round((amount / total) * 1000) / 10);
 }
 
-export function InstallmentsEditor({ total, issueDate, rows, onChange }: InstallmentsEditorProps) {
+export function InstallmentsEditor({ total, issueDate, currency = "RWF", rows, onChange }: InstallmentsEditorProps) {
   // While a percentage is being typed ("33." on the way to "33.3") keep the text as typed instead of
   // snapping it back to the value worked out from the amount.
   const [percentDrafts, setPercentDrafts] = useState<Record<number, string>>({});
@@ -66,7 +76,7 @@ export function InstallmentsEditor({ total, issueDate, rows, onChange }: Install
     <div className="flex flex-col gap-3">
       <div className="hidden grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_5.5rem_minmax(0,1fr)_2rem] gap-3 font-sans text-xs font-medium text-neutral-500 md:grid">
         <span>Name</span>
-        <span>Amount (RWF)</span>
+        <span>Amount ({currency})</span>
         <span>% of total</span>
         <span>Due date</span>
         <span />
@@ -95,20 +105,20 @@ export function InstallmentsEditor({ total, issueDate, rows, onChange }: Install
                 type="text"
                 readOnly
                 aria-label={`Amount for instalment ${number}`}
-                value={shownAmount.toLocaleString("en-US")}
+                value={(shownAmount / 10 ** currencyDecimals(currency)).toLocaleString("en-US", {
+                  minimumFractionDigits: currencyDecimals(currency),
+                  maximumFractionDigits: currencyDecimals(currency),
+                })}
                 className={READONLY}
               />
             ) : (
-              <input
-                type="text"
-                inputMode="numeric"
+              <MoneyInput
                 aria-label={`Amount for instalment ${number}`}
-                placeholder="0"
-                value={row.amount > 0 ? String(row.amount) : ""}
-                onChange={(event) => {
-                  const digits = event.target.value.replace(/\D/g, "");
+                currency={currency}
+                value={row.amount}
+                onChange={(minor) => {
                   setPercentDrafts({});
-                  update(index, { amount: digits ? Number(digits) : 0 });
+                  update(index, { amount: minor });
                 }}
                 className={INPUT}
               />
@@ -176,12 +186,12 @@ export function InstallmentsEditor({ total, issueDate, rows, onChange }: Install
         <p className="font-sans text-sm text-neutral-500">Add your line items first, then set up the instalments.</p>
       ) : overspent ? (
         <p className="font-sans text-sm text-error" role="alert">
-          Leave something for the last instalment. The earlier ones already reach {formatRwf(total)}.
+          Leave something for the last instalment. The earlier ones already reach {formatMoney(total, currency)}.
         </p>
       ) : missingAmount ? (
         <p className="font-sans text-sm text-neutral-500">Enter an amount for each instalment before the last.</p>
       ) : (
-        <p className="font-sans text-sm text-neutral-500">The instalments add up to the total of {formatRwf(total)}.</p>
+        <p className="font-sans text-sm text-neutral-500">The instalments add up to the total of {formatMoney(total, currency)}.</p>
       )}
     </div>
   );

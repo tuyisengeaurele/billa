@@ -28,7 +28,17 @@ import { usePageTitle } from "../context/PageTitleContext";
 import { useToast } from "../context/ToastContext";
 import { apiRequest, ApiError, API_BASE_URL } from "../lib/apiClient";
 import { DOCUMENT_TYPE_LABELS } from "../lib/documentTypeLabels";
-import { formatRwf } from "@billa/shared";
+import {
+  CURRENCIES,
+  convertMinor,
+  formatMoney,
+  fromRwf,
+  isCurrency,
+  rateProblem,
+  type Currency,
+} from "@billa/shared";
+import { CurrencyFields } from "../components/documents/CurrencyFields";
+import { MoneyInput } from "../components/MoneyInput";
 
 const lineFormSchema = z.object({
   itemId: z.string().optional(),
@@ -36,7 +46,7 @@ const lineFormSchema = z.object({
   quantity: z.number({ invalid_type_error: "Enter a quantity" }).positive("Enter a quantity greater than zero"),
   unitPrice: z
     .number({ invalid_type_error: "Enter a price" })
-    .int("Enter a whole number of RWF")
+    .int("Enter a valid price")
     .nonnegative("Price can't be negative"),
   taxRate: z
     .number({ invalid_type_error: "Enter a tax rate" })
@@ -63,6 +73,9 @@ const documentFormSchema = z.object({
   recurrenceEndDate: z.string(),
   paymentMode: z.enum(["FULL", "INSTALMENTS"]),
   installments: z.array(z.object({ label: z.string(), amount: z.number(), dueDate: z.string() })),
+  currency: z.enum(CURRENCIES),
+  // Typed as text so a half-typed "1450." is kept; read as a number when it is saved.
+  exchangeRate: z.string(),
 });
 type DocumentFormInput = z.infer<typeof documentFormSchema>;
 
@@ -104,6 +117,8 @@ interface DocumentResponse {
   recurrenceInterval: RecurrenceInterval | null;
   recurrenceEndDate: string | null;
   installments?: { label: string | null; amount: number; dueDate: string }[];
+  currency?: string;
+  exchangeRate?: number | null;
 }
 
 interface InvoiceOption {
@@ -215,6 +230,8 @@ export default function DocumentForm() {
       recurrenceEndDate: "",
       paymentMode: "FULL",
       installments: [],
+      currency: "RWF",
+      exchangeRate: "",
     },
   });
 
@@ -256,6 +273,8 @@ export default function DocumentForm() {
             amount: step.amount,
             dueDate: step.dueDate.slice(0, 10),
           })),
+          currency: isCurrency(doc.currency) ? doc.currency : "RWF",
+          exchangeRate: doc.exchangeRate ? String(doc.exchangeRate) : "",
         });
         setConvertedFrom(doc.convertedFrom ?? null);
         setReferencedDocument(doc.referencedDocument ?? null);
@@ -295,12 +314,23 @@ export default function DocumentForm() {
         })),
         { shouldDirty: true },
       );
+      // The document is in the invoice's currency, at the invoice's rate.
+      setValue("currency", isCurrency(data.document.currency) ? data.document.currency : "RWF", { shouldDirty: true });
+      setValue("exchangeRate", data.document.exchangeRate ? String(data.document.exchangeRate) : "", {
+        shouldDirty: true,
+      });
     } catch {
       // Keep the current lines if the invoice's own lines can't be fetched.
     }
   }
 
   const totals = calculateLiveTotals(watchedLines ?? []);
+
+  const currency = watch("currency");
+  const rateText = watch("exchangeRate");
+  const rateNumber = rateText ? Number(rateText) : null;
+  const rateError = rateProblem(currency, rateNumber);
+  const money = (amount: number) => formatMoney(amount, currency);
 
   // A payment plan only applies to a one-off invoice; the last instalment is always what is left.
   const paymentMode = watch("paymentMode");
@@ -332,6 +362,50 @@ export default function DocumentForm() {
     }
   }
 
+  // Switching currency re-prices the lines through RWF when both rates are known; otherwise the
+  // numbers stay as typed and the user is asked to check them.
+  const [repriceNote, setRepriceNote] = useState(false);
+
+  async function changeCurrency(next: Currency) {
+    if (next === currency) return;
+    let nextRate: number | null = null;
+    if (next !== "RWF") {
+      try {
+        const known = await apiRequest<{ rates: Record<string, number> }>("/documents/rates");
+        nextRate = known.rates[next] ?? null;
+      } catch {
+        nextRate = null;
+      }
+    }
+    const from = { currency, rate: rateNumber };
+    const to = { currency: next, rate: nextRate };
+    const lines = getValues("lines");
+    const prices = lines.map((line) => convertMinor(line.unitPrice || 0, from, to));
+    const discounts = lines.map((line) =>
+      line.discountType === "FLAT" ? convertMinor(line.discountValue || 0, from, to) : 0,
+    );
+    const canConvert = prices.every((price) => price !== null) && discounts.every((value) => value !== null);
+    if (canConvert) {
+      lines.forEach((line, index) => {
+        setValue(`lines.${index}.unitPrice`, prices[index]!, { shouldDirty: true });
+        if (line.discountType === "FLAT") {
+          setValue(`lines.${index}.discountValue`, discounts[index]!, { shouldDirty: true });
+        }
+      });
+    }
+    setRepriceNote(!canConvert && lines.some((line) => (line.unitPrice || 0) > 0));
+    setValue("currency", next, { shouldDirty: true });
+    setValue("exchangeRate", nextRate ? String(nextRate) : "", { shouldDirty: true });
+    // Instalment amounts were worked out in the old currency, so they are started again.
+    if (getValues("paymentMode") === "INSTALMENTS") {
+      setValue(
+        "installments",
+        getValues("installments").map((row) => ({ ...row, amount: 0 })),
+        { shouldDirty: true },
+      );
+    }
+  }
+
   function addLine() {
     append({ description: "", quantity: 1, unitPrice: 0, taxRate: 18, discountType: "", discountValue: 0 });
   }
@@ -351,6 +425,8 @@ export default function DocumentForm() {
       })),
       referencedDocumentId: canReference ? referencedDocumentId || undefined : undefined,
       installments: planPayload,
+      currency: data.currency,
+      exchangeRate: data.currency === "RWF" || !data.exchangeRate ? undefined : Number(data.exchangeRate),
       recurrence: data.recurrenceEnabled
         ? {
             interval: data.recurrenceInterval as RecurrenceInterval,
@@ -376,8 +452,8 @@ export default function DocumentForm() {
     if (!isDirty) return;
     if (!watchedCustomerId) return;
     if (referenceIsRequired && !referencedDocumentId) return;
-    // A half-finished plan would only bounce off the server, so wait until it adds up.
-    if (planError) return;
+    // A half-finished plan or a missing rate would only bounce off the server, so wait until they are right.
+    if (planError || rateError) return;
     const timeout = setTimeout(async () => {
       setAutosaveStatus("saving");
       try {
@@ -389,15 +465,15 @@ export default function DocumentForm() {
     }, 1500);
     return () => clearTimeout(timeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watchedAll, isDirty, watchedCustomerId, referenceIsRequired, referencedDocumentId, planError]);
+  }, [watchedAll, isDirty, watchedCustomerId, referenceIsRequired, referencedDocumentId, planError, rateError]);
 
   async function saveDraft(data: DocumentFormInput) {
     if (referenceIsRequired && !referencedDocumentId) {
       setApiError("Choose the invoice this document is for.");
       return;
     }
-    if (planError) {
-      setApiError(planError);
+    if (planError || rateError) {
+      setApiError(planError ?? rateError);
       return;
     }
     setApiError(null);
@@ -432,8 +508,8 @@ export default function DocumentForm() {
       setApiError("Choose the invoice this document is for.");
       return;
     }
-    if (planError) {
-      setApiError(planError);
+    if (planError || rateError) {
+      setApiError(planError ?? rateError);
       return;
     }
     setApiError(null);
@@ -562,6 +638,19 @@ export default function DocumentForm() {
                   error={errors.dueDate?.message}
                   {...register("dueDate")}
                 />
+              )}
+              <CurrencyFields
+                currency={currency}
+                rate={rateText}
+                locked={canReference && Boolean(referencedDocumentId)}
+                onCurrencyChange={changeCurrency}
+                onRateChange={(rate) => setValue("exchangeRate", rate, { shouldDirty: true })}
+                error={rateError && rateText === "" ? null : rateError}
+              />
+              {repriceNote && (
+                <p className="font-sans text-xs text-amber-700 md:col-span-2" role="status">
+                  The prices below are still the numbers you had. Check them in {currency}.
+                </p>
               )}
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="language" className="font-sans text-sm font-medium text-neutral-800">
@@ -694,7 +783,7 @@ export default function DocumentForm() {
                             onSelect={(item) => {
                               setValue(`lines.${index}.itemId`, item.id, { shouldDirty: true });
                               setValue(`lines.${index}.description`, item.description, { shouldDirty: true });
-                              setValue(`lines.${index}.unitPrice`, item.unitPrice, { shouldDirty: true });
+                              setValue(`lines.${index}.unitPrice`, fromRwf(item.unitPrice, currency, rateNumber), { shouldDirty: true });
                               setValue(`lines.${index}.taxRate`, item.taxRate, { shouldDirty: true });
                             }}
                             onDescriptionChange={(text) => {
@@ -710,9 +799,19 @@ export default function DocumentForm() {
                             >
                               <option value="">No discount</option>
                               <option value="PERCENT">% off</option>
-                              <option value="FLAT">RWF off</option>
+                              <option value="FLAT">{currency} off</option>
                             </select>
-                            {watch(`lines.${index}.discountType`) && (
+                            {watch(`lines.${index}.discountType`) === "FLAT" && currency !== "RWF" && (
+                              <MoneyInput
+                                aria-label="Discount value"
+                                currency={currency}
+                                value={watch(`lines.${index}.discountValue`) ?? 0}
+                                onChange={(minor) => setValue(`lines.${index}.discountValue`, minor, { shouldDirty: true })}
+                                className="w-20 rounded-lg border border-neutral-200 bg-surface px-1.5 py-1 font-sans text-xs text-neutral-900"
+                              />
+                            )}
+                            {watch(`lines.${index}.discountType`) &&
+                              !(watch(`lines.${index}.discountType`) === "FLAT" && currency !== "RWF") && (
                               <input
                                 type="number"
                                 aria-label="Discount value"
@@ -737,12 +836,22 @@ export default function DocumentForm() {
                           />
                         </td>
                         <td className="py-2 align-top">
-                          <input
-                            type="number"
-                            aria-label="Unit price"
-                            className="w-24 rounded-lg border border-neutral-200 bg-surface px-2 py-1.5 text-neutral-900"
-                            {...register(`lines.${index}.unitPrice`, { valueAsNumber: true })}
-                          />
+                          {currency === "RWF" ? (
+                            <input
+                              type="number"
+                              aria-label="Unit price"
+                              className="w-24 rounded-lg border border-neutral-200 bg-surface px-2 py-1.5 text-neutral-900"
+                              {...register(`lines.${index}.unitPrice`, { valueAsNumber: true })}
+                            />
+                          ) : (
+                            <MoneyInput
+                              aria-label="Unit price"
+                              currency={currency}
+                              value={watch(`lines.${index}.unitPrice`) ?? 0}
+                              onChange={(minor) => setValue(`lines.${index}.unitPrice`, minor, { shouldDirty: true })}
+                              className="w-28 rounded-lg border border-neutral-200 bg-surface px-2 py-1.5 text-neutral-900"
+                            />
+                          )}
                         </td>
                         <td className="py-2 align-top">
                           <input
@@ -752,7 +861,7 @@ export default function DocumentForm() {
                             {...register(`lines.${index}.taxRate`, { valueAsNumber: true })}
                           />
                         </td>
-                        <td className="py-2 align-top text-neutral-600">{formatRwf(lineTotal)}</td>
+                        <td className="py-2 align-top text-neutral-600">{money(lineTotal)}</td>
                         <td className="py-2 align-top">
                           <button
                             type="button"
@@ -772,9 +881,9 @@ export default function DocumentForm() {
             )}
 
             <div className="mt-4 flex flex-col items-end gap-1 border-t border-neutral-100 pt-4 font-sans text-sm text-neutral-600">
-              <span>Subtotal: {formatRwf(totals.subtotal)}</span>
-              <span>Tax: {formatRwf(totals.taxTotal)}</span>
-              <span className="font-semibold text-neutral-900">Total: {formatRwf(totals.total)}</span>
+              <span>Subtotal: {money(totals.subtotal)}</span>
+              <span>Tax: {money(totals.taxTotal)}</span>
+              <span className="font-semibold text-neutral-900">Total: {money(totals.total)}</span>
             </div>
           </section>
 
@@ -810,6 +919,7 @@ export default function DocumentForm() {
                   <InstallmentsEditor
                     total={totals.total}
                     issueDate={watch("issueDate")}
+                    currency={currency}
                     rows={planRows}
                     onChange={(rows) => setValue("installments", rows, { shouldDirty: true })}
                   />

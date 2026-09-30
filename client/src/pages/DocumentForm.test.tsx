@@ -1161,3 +1161,101 @@ describe("DocumentForm payment plan", () => {
     expect(screen.getByLabelText("Due date of instalment 2")).toHaveValue("2026-11-15");
   });
 });
+
+describe("DocumentForm currency", () => {
+  function mockServer(onPost: (body: any) => void, rates: Record<string, number> = {}) {
+    return vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/documents/rates")) {
+        return new Response(JSON.stringify({ rates }), { status: 200 });
+      }
+      if (url.includes("/customers")) {
+        return new Response(
+          JSON.stringify({ results: [{ id: "c1", name: "Kigali Traders", phone: null }], total: 1, page: 1, pageSize: 10 }),
+          { status: 200 },
+        );
+      }
+      if (url.includes("/documents") && init?.method === "POST") {
+        onPost(JSON.parse(init.body as string));
+        return new Response(JSON.stringify({ document: { id: "d1" } }), { status: 201 });
+      }
+      return new Response("{}", { status: 401 });
+    });
+  }
+
+  async function pickCustomerAndLine(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole("button", { name: /select a customer/i }));
+    await user.type(screen.getByLabelText("Search customers"), "Kigali");
+    await user.click(await screen.findByText("Kigali Traders"));
+    await user.click(screen.getByRole("button", { name: /add line/i }));
+    await user.click(screen.getByRole("button", { name: "Select an item" }));
+    await user.type(screen.getByLabelText("Search items"), "Consulting");
+    await user.click(await screen.findByRole("button", { name: /as a custom line/i }));
+    const tax = screen.getByLabelText("Tax rate");
+    await user.clear(tax);
+    await user.type(tax, "0");
+  }
+
+  it("prefills the rate last used and prices the line in dollars", async () => {
+    let body: any = null;
+    mockServer((posted) => (body = posted), { USD: 1450 });
+    const user = userEvent.setup();
+    renderNew();
+
+    await pickCustomerAndLine(user);
+    await user.selectOptions(screen.getByLabelText("Currency"), "USD");
+    expect(await screen.findByLabelText(/exchange rate/i)).toHaveValue("1450");
+    await user.type(screen.getByLabelText(/unit price/i), "12.5");
+
+    expect(screen.getByText("Total: 12.50 USD")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /save draft/i }));
+
+    await waitFor(() => expect(body).not.toBeNull());
+    expect(body.currency).toBe("USD");
+    expect(body.exchangeRate).toBe(1450);
+    expect(body.lines[0].unitPrice).toBe(1250);
+  });
+
+  it("re-prices the lines when the currency changes and a rate is known", async () => {
+    mockServer(() => {}, { USD: 1450 });
+    const user = userEvent.setup();
+    renderNew();
+
+    await pickCustomerAndLine(user);
+    await user.type(screen.getByLabelText(/unit price/i), "145000");
+    await user.selectOptions(screen.getByLabelText("Currency"), "USD");
+
+    await waitFor(() => expect(screen.getByLabelText(/unit price/i)).toHaveValue("100"));
+    expect(screen.getByText("Total: 100.00 USD")).toBeInTheDocument();
+  });
+
+  it("does not save a foreign currency document without a rate", async () => {
+    let body: any = null;
+    mockServer((posted) => (body = posted));
+    const user = userEvent.setup();
+    renderNew();
+
+    await pickCustomerAndLine(user);
+    await user.selectOptions(screen.getByLabelText("Currency"), "EUR");
+    await user.type(await screen.findByLabelText(/unit price/i), "10");
+    await user.click(screen.getByRole("button", { name: /save draft/i }));
+
+    expect(await screen.findByText(/enter the exchange rate for eur/i)).toBeInTheDocument();
+    expect(body).toBeNull();
+  });
+
+  it("sends RWF documents with no rate, as before", async () => {
+    let body: any = null;
+    mockServer((posted) => (body = posted));
+    const user = userEvent.setup();
+    renderNew();
+
+    await pickCustomerAndLine(user);
+    await user.type(screen.getByLabelText(/unit price/i), "5000");
+    await user.click(screen.getByRole("button", { name: /save draft/i }));
+
+    await waitFor(() => expect(body).not.toBeNull());
+    expect(body.currency).toBe("RWF");
+    expect(body.exchangeRate).toBeUndefined();
+  });
+});

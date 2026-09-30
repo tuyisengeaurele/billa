@@ -1,4 +1,4 @@
-import { formatRwf, type ScheduleStep } from "@billa/shared";
+import { formatMoney, type Currency, type ScheduleStep } from "@billa/shared";
 
 const STATUS_LABELS: Record<ScheduleStep["status"], string> = {
   PAID: "Paid",
@@ -19,7 +19,7 @@ export function instalmentName(step: Pick<ScheduleStep, "label" | "number">): st
 }
 
 /** The instalments of an invoice with what has been paid against each. */
-export function PaymentScheduleList({ schedule }: { schedule: ScheduleStep[] }) {
+export function PaymentScheduleList({ schedule, currency = "RWF" }: { schedule: ScheduleStep[]; currency?: Currency }) {
   return (
     <div className="flex flex-col gap-2 rounded-xl border border-neutral-200 bg-surface px-5 py-4">
       <p className="font-sans text-sm font-medium text-neutral-900">Payment plan</p>
@@ -34,7 +34,7 @@ export function PaymentScheduleList({ schedule }: { schedule: ScheduleStep[] }) 
               <span className="text-xs text-neutral-500">Due {step.dueDate.slice(0, 10)}</span>
             </span>
             <span className="flex items-center gap-3">
-              <span className="text-neutral-700">{formatRwf(step.amount)}</span>
+              <span className="text-neutral-700">{formatMoney(step.amount, currency)}</span>
               <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_COLORS[step.status]}`}>
                 {STATUS_LABELS[step.status]}
               </span>
