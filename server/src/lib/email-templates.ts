@@ -225,13 +225,17 @@ export interface OverdueReminderEmailInput {
   businessLogoUrl: string | null;
   viewUrl: string | null;
   payable?: boolean;
+  // Set when the invoice is paid in instalments and it is one of them that is late.
+  installment?: { label: string | null; amount: number };
 }
 
 export function buildOverdueReminderEmail(input: OverdueReminderEmailInput): { subject: string; html: string } {
-  const { language, customerName, number, businessName, dueDate, viewUrl, payable } = input;
+  const { language, customerName, number, businessName, dueDate, viewUrl, payable, installment } = input;
   const customer = escapeHtml(customerName);
   const business = escapeHtml(businessName);
   const docNumber = number ? escapeHtml(number) : "";
+  const stepLabel = installment?.label ? escapeHtml(installment.label) : null;
+  const stepAmount = installment ? formatRwf(installment.amount) : "";
   const footer: BusinessFooterInput = {
     name: businessName,
     address: input.businessAddress,
@@ -246,7 +250,9 @@ export function buildOverdueReminderEmail(input: OverdueReminderEmailInput): { s
       html: renderEmailShell(
         paragraphs([
           `Bonjour ${customer},`,
-          `Ceci est un rappel amical : la facture ${docNumber} de ${business}, échue le ${dueDate}, n'a pas encore été réglée. Vous la trouverez de nouveau en pièce jointe.`,
+          installment
+            ? `Ceci est un rappel amical : ${stepLabel ? `l'échéance ${stepLabel}` : "une échéance"} de ${stepAmount} de la facture ${docNumber} de ${business}, échue le ${dueDate}, n'a pas encore été réglée. Vous retrouverez la facture en pièce jointe.`
+            : `Ceci est un rappel amical : la facture ${docNumber} de ${business}, échue le ${dueDate}, n'a pas encore été réglée. Vous la trouverez de nouveau en pièce jointe.`,
           `Si le paiement a déjà été envoyé, merci et veuillez ignorer ce message. Sinon, répondez à cet e-mail à tout moment.`,
           `Cordialement,<br>L'équipe ${business}`,
         ]) + viewOnlineButton(viewUrl, language, payable),
@@ -260,7 +266,9 @@ export function buildOverdueReminderEmail(input: OverdueReminderEmailInput): { s
     html: renderEmailShell(
       paragraphs([
         `Hi ${customer},`,
-        `This is a friendly reminder that invoice ${docNumber} from ${business}, due on ${dueDate}, has not been paid yet. A copy is attached again for convenience.`,
+        installment
+          ? `This is a friendly reminder that ${stepLabel ? `the ${stepLabel} instalment` : "an instalment"} of ${stepAmount} for invoice ${docNumber} from ${business}, due on ${dueDate}, has not been paid yet. A copy of the invoice is attached for convenience.`
+          : `This is a friendly reminder that invoice ${docNumber} from ${business}, due on ${dueDate}, has not been paid yet. A copy is attached again for convenience.`,
         `If you have already sent payment, thank you, and please disregard this note. Otherwise, reply here anytime.`,
         `Best,<br>The ${business} team`,
       ]) + viewOnlineButton(viewUrl, language, payable),

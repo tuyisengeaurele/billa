@@ -257,3 +257,72 @@ describe("sendOverdueReminders", () => {
     expect(sent).toHaveLength(0);
   });
 });
+
+describe("sendOverdueReminders with a payment plan", () => {
+  async function createPlannedInvoice(businessId: string, customerId: string, plan: { label: string; amount: number; dueDate: string }[]) {
+    return prisma.document.create({
+      data: {
+        businessId,
+        customerId,
+        type: "INVOICE",
+        status: "FINALIZED",
+        template: "MINIMAL",
+        number: "INV-0009",
+        issueDate: new Date("2020-01-01"),
+        dueDate: new Date(plan[plan.length - 1]!.dueDate),
+        subtotal: 100000,
+        taxTotal: 0,
+        total: 100000,
+        paymentStatus: "UNPAID",
+        lines: { create: [{ description: "Cement", quantity: 1, unitPrice: 100000, taxRate: 0, lineTotal: 100000, sortOrder: 0 }] },
+        installments: {
+          create: plan.map((step, index) => ({
+            sortOrder: index,
+            label: step.label,
+            amount: step.amount,
+            dueDate: new Date(step.dueDate),
+          })),
+        },
+      },
+    });
+  }
+
+  it("reminds about a late deposit even though the final date is far away, naming the instalment", async () => {
+    const { business, customer } = await setupBusiness("customer@example.com");
+    await createPlannedInvoice(business.id, customer.id, [
+      { label: "Deposit", amount: 40000, dueDate: "2020-01-10" },
+      { label: "Balance", amount: 60000, dueDate: "2099-01-01" },
+    ]);
+
+    const sent = await sendOverdueReminders(business.id);
+
+    expect(sent).toHaveLength(1);
+    const html = vi.mocked(mailerModule.sendDocumentEmail).mock.calls[0]![0].html;
+    expect(html).toContain("Deposit");
+    expect(html).toContain("40,000 RWF");
+    expect(html).toContain("2020-01-10");
+  });
+
+  it("does not remind while the next instalment is still to come", async () => {
+    const { business, customer } = await setupBusiness("customer@example.com");
+    const invoice = await createPlannedInvoice(business.id, customer.id, [
+      { label: "Deposit", amount: 40000, dueDate: "2020-01-10" },
+      { label: "Balance", amount: 60000, dueDate: "2099-01-01" },
+    ]);
+    await prisma.invoicePayment.create({
+      data: {
+        businessId: business.id,
+        documentId: invoice.id,
+        amount: 40000,
+        method: "CASH",
+        paidOn: new Date(),
+        createdByUserId: business.ownerId,
+      },
+    });
+    await prisma.document.update({ where: { id: invoice.id }, data: { amountPaid: 40000, paymentStatus: "PARTIALLY_PAID" } });
+
+    const sent = await sendOverdueReminders(business.id);
+
+    expect(sent).toHaveLength(0);
+  });
+});

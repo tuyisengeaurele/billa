@@ -333,3 +333,36 @@ describe("buildInviteEmail", () => {
     assertNoEmDash(html);
   });
 });
+
+describe("buildOverdueReminderEmail for an instalment", () => {
+  const base = {
+    customerName: "Aline Uwase",
+    number: "INV-0009",
+    businessName: "Kigali Traders",
+    dueDate: "2026-10-01",
+    ...BLANK_BUSINESS,
+    viewUrl: null,
+  };
+
+  it("names the instalment and how much of it is late", () => {
+    const { html } = buildOverdueReminderEmail({ ...base, language: "EN", installment: { label: "Deposit", amount: 40000 } });
+    expect(html).toContain("Deposit instalment of 40,000 RWF");
+    expect(html).toContain("2026-10-01");
+  });
+
+  it("says just an instalment when it has no name", () => {
+    const { html } = buildOverdueReminderEmail({ ...base, language: "EN", installment: { label: null, amount: 40000 } });
+    expect(html).toContain("an instalment of 40,000 RWF");
+  });
+
+  it("has a French wording too", () => {
+    const { html } = buildOverdueReminderEmail({ ...base, language: "FR", installment: { label: "Acompte", amount: 40000 } });
+    expect(html).toContain("l'échéance Acompte de 40,000 RWF");
+  });
+
+  it("keeps the whole-invoice wording when there is no plan", () => {
+    const { html } = buildOverdueReminderEmail({ ...base, language: "EN" });
+    expect(html).toContain("invoice INV-0009");
+    expect(html).not.toContain("instalment");
+  });
+});
