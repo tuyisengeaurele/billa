@@ -102,7 +102,7 @@ describe("DocumentForm", () => {
     await user.click(screen.getByRole("button", { name: /add line/i }));
     expect(screen.getByLabelText("Tax rate")).toHaveValue(18);
 
-    await user.type(screen.getByLabelText("Item"), "Exported");
+    await user.click(screen.getByRole("button", { name: "Select an item" }));
     const option = await screen.findByText("Exported goods");
     await user.click(option);
 
@@ -434,7 +434,7 @@ describe("DocumentForm", () => {
 
     renderEdit("d1");
 
-    expect(await screen.findByDisplayValue("Printing")).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Printing" })).toBeInTheDocument();
     expect(screen.getByText(/subtotal: 10,000 rwf/i)).toBeInTheDocument();
   });
 
@@ -467,7 +467,7 @@ describe("DocumentForm", () => {
     const user = userEvent.setup();
     renderEdit("d1");
 
-    await screen.findByDisplayValue("Printing");
+    await screen.findByRole("button", { name: "Printing" });
     await user.click(screen.getByRole("button", { name: /finalize/i }));
 
     const dialog = await screen.findByRole("dialog", { name: /finalize/i });
@@ -506,7 +506,7 @@ describe("DocumentForm", () => {
     const user = userEvent.setup();
     renderEdit("d1");
 
-    await screen.findByDisplayValue("Printing");
+    await screen.findByRole("button", { name: "Printing" });
     await user.click(screen.getByRole("button", { name: /finalize/i }));
 
     const dialog = await screen.findByRole("dialog", { name: /finalize/i });
@@ -693,7 +693,7 @@ describe("DocumentForm", () => {
     const select = await screen.findByLabelText(/invoice/i);
     await user.selectOptions(select, "inv1");
 
-    expect(await screen.findByDisplayValue("Cement")).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Cement" })).toBeInTheDocument();
     expect(screen.getByText(/subtotal: 65,000 rwf/i)).toBeInTheDocument();
   });
 
@@ -749,7 +749,7 @@ describe("DocumentForm", () => {
     const select = await screen.findByLabelText(/invoice/i);
     await user.selectOptions(select, "inv1");
 
-    expect(await screen.findByDisplayValue("Cement")).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Cement" })).toBeInTheDocument();
   });
 
   it("allows saving a delivery note with no invoice chosen", async () => {
@@ -944,7 +944,9 @@ describe("DocumentForm", () => {
     await user.click(await screen.findByText("Kigali Traders"));
 
     await user.click(screen.getByRole("button", { name: /add line/i }));
-    await user.type(screen.getByLabelText("Item"), "Cement");
+    await user.click(screen.getByRole("button", { name: "Select an item" }));
+    await user.type(screen.getByLabelText("Search items"), "Cement");
+    await user.click(await screen.findByRole("button", { name: /as a custom line/i }));
     const priceInput = screen.getByLabelText(/unit price/i);
     await user.clear(priceInput);
     await user.type(priceInput, "5000");
