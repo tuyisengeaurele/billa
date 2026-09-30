@@ -131,4 +131,17 @@ describe("document currency", () => {
     expect(converted.status).toBe(201);
     expect(converted.body.document).toMatchObject({ currency: "EUR", exchangeRate: 1600 });
   });
+
+  it("offers the rate last used for each foreign currency", async () => {
+    const app = createApp();
+    const { cookies, customerId } = await setUp(app);
+    await request(app).post("/documents").set("Cookie", cookies).send(invoice(customerId, { currency: "USD", exchangeRate: 1400 }));
+    await request(app).post("/documents").set("Cookie", cookies).send(invoice(customerId, { currency: "USD", exchangeRate: 1450 }));
+    await request(app).post("/documents").set("Cookie", cookies).send(invoice(customerId, { currency: "EUR", exchangeRate: 1600 }));
+    await request(app).post("/documents").set("Cookie", cookies).send(invoice(customerId));
+
+    const res = await request(app).get("/documents/rates").set("Cookie", cookies);
+
+    expect(res.body.rates).toEqual({ USD: 1450, EUR: 1600 });
+  });
 });

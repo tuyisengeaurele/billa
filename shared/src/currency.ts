@@ -126,3 +126,22 @@ export function formatMoneyTotals(items: MoneyAmount[]): string {
   if (totals.length === 0) return formatMoney(0);
   return totals.map((total) => formatMoney(total.amount, total.currency)).join(" + ");
 }
+
+/** What an RWF amount comes to in another currency at the given rate, in that currency's smallest unit. */
+export function fromRwf(rwf: number, currency: Currency, rate: number | null | undefined): number {
+  if (currency === BASE_CURRENCY) return rwf;
+  if (!rate || rate <= 0) return 0;
+  return Math.round((rwf / rate) * minorPerMajor(currency));
+}
+
+/** Re-prices an amount when a draft changes currency, going through RWF. Null when a rate is missing. */
+export function convertMinor(
+  minor: number,
+  from: { currency: Currency; rate: number | null | undefined },
+  to: { currency: Currency; rate: number | null | undefined },
+): number | null {
+  if (from.currency === to.currency) return minor;
+  if (from.currency !== BASE_CURRENCY && !(from.rate && from.rate > 0)) return null;
+  if (to.currency !== BASE_CURRENCY && !(to.rate && to.rate > 0)) return null;
+  return fromRwf(toRwf(minor, from.currency, from.rate), to.currency, to.rate);
+}

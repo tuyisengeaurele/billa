@@ -20,6 +20,7 @@ publicCustomersRouter.get("/:token", publicDocumentRateLimit, async (req, res) =
           status: true,
           issueDate: true,
           total: true,
+          currency: true,
           amountPaid: true,
           paymentStatus: true,
           publicToken: true,

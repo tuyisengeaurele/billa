@@ -245,6 +245,21 @@ documentsRouter.get("/", validateQuery(documentListQuerySchema), async (req, res
   res.json({ results, total, page: query.page, pageSize: query.pageSize });
 });
 
+// The rate the business used last for each foreign currency, to prefill the next document.
+documentsRouter.get("/rates", async (req, res) => {
+  const recent = await prisma.document.findMany({
+    where: { businessId: req.auth!.businessId, currency: { not: "RWF" }, exchangeRate: { not: null } },
+    orderBy: { createdAt: "desc" },
+    select: { currency: true, exchangeRate: true },
+    take: 200,
+  });
+  const rates: Record<string, number> = {};
+  for (const document of recent) {
+    if (!(document.currency in rates) && document.exchangeRate) rates[document.currency] = document.exchangeRate;
+  }
+  res.json({ rates });
+});
+
 documentsRouter.get("/export.csv", expensiveOperationRateLimit, validateQuery(documentListQuerySchema), async (req, res) => {
   const query = req.listQuery as DocumentListQuery;
   const businessId = req.auth!.businessId;

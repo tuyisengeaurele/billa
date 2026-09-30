@@ -73,3 +73,16 @@ describe("totals by currency", () => {
     expect(formatMoneyTotals([])).toBe("0 RWF");
   });
 });
+
+describe("changing currency", () => {
+  it("prices an RWF amount in another currency, and back", async () => {
+    const { fromRwf, convertMinor } = await import("./currency.js");
+    expect(fromRwf(145000, "USD", 1450)).toBe(10000);
+    expect(fromRwf(5000, "RWF", null)).toBe(5000);
+    expect(fromRwf(5000, "USD", null)).toBe(0);
+    expect(convertMinor(145000, { currency: "RWF", rate: null }, { currency: "USD", rate: 1450 })).toBe(10000);
+    expect(convertMinor(10000, { currency: "USD", rate: 1450 }, { currency: "RWF", rate: null })).toBe(145000);
+    expect(convertMinor(10000, { currency: "USD", rate: 1450 }, { currency: "EUR", rate: 1600 })).toBe(9063);
+    expect(convertMinor(10000, { currency: "USD", rate: 1450 }, { currency: "EUR", rate: null })).toBeNull();
+  });
+});
