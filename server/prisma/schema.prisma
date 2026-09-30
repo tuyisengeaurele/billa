@@ -182,12 +182,10 @@ model User {
   notifications              Notification[]
 }
 
-// ACCOUNTANT is read-only: blocked from every mutating request on business
-// data (see blockAccountantMutations), regardless of which route it comes
-// through. MEMBER keeps today's full read/write behavior.
+// A business has its owner plus members, and every member can read and write. The enum
+// stays (with one value) so the column and the API's role field keep working unchanged.
 enum BusinessMemberRole {
   MEMBER
-  ACCOUNTANT
 }
 
 model BusinessMember {
