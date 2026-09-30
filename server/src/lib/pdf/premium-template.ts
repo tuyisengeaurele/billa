@@ -1,4 +1,4 @@
-import { htmlDocumentShell, renderQrBlock } from "./html-shell.js";
+import { htmlDocumentShell } from "./html-shell.js";
 import type { PdfRenderData } from "./render-data.js";
 
 const STYLES = `
@@ -60,6 +60,9 @@ table.items tbody td.r { text-align: right; font-weight: 600; color: #1a1a2e; }
 .ft-bank { font-size: 11px; color: #6b7280; line-height: 1.75; }
 .ft-bank strong { display: block; font-size: 9.5px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
 .ft-sig { text-align: right; }
+.ft-qr { text-align: center; flex-shrink: 0; }
+.ft-qr img { display: block; width: 17mm; height: 17mm; margin: 0 auto 4px; }
+.ft-qr span { display: block; font-size: 8px; color: #9ca3af; }
 .sig-name { border-top: 1px solid #d1d5db; margin-top: 32px; padding-top: 7px; font-size: 12px; font-weight: 700; color: #1a1a2e; white-space: nowrap; }
 .sig-image { display: block; max-height: 32px; max-width: 140px; margin: 0 0 4px auto; object-fit: contain; }
 .sig-title { font-size: 10.5px; color: #6b7280; margin-top: 2px; }
@@ -68,7 +71,8 @@ table.items tbody td.r { text-align: right; font-weight: 600; color: #1a1a2e; }
 .disclaimer { background: #f8f8f8; border-top: 1px solid #eee; padding: 9px 36px; font-size: 10px; color: #999; text-align: center; line-height: 1.5; }
 
 @media print {
-  body { background: #fff; }
+  /* The screen padding around the card would push a full page onto a second, blank one. */
+  body { background: #fff; padding: 0; }
   .page { box-shadow: none; margin: 0; border-radius: 0; }
   body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
@@ -115,6 +119,10 @@ export function renderPremiumHtml(data: PdfRenderData): string {
           ${business.email ? `${labels.email}: ${business.email}<br/>` : ""}
           ${business.rraEbmNumber ?? ""}
         </div>`;
+
+  const qrBlock = data.qrDataUri
+    ? `<div class="ft-qr"><img src="${data.qrDataUri}" alt="" /><span>${labels.scanToView}</span></div>`
+    : "";
 
   const signatureImage = business.signatureDataUri ? `<img class="sig-image" src="${business.signatureDataUri}" />` : "";
 
@@ -233,6 +241,7 @@ export function renderPremiumHtml(data: PdfRenderData): string {
 
       <div class="ft">
         ${footerLeft}
+        ${qrBlock}
         ${signatureBlocks}
       </div>
 
@@ -244,5 +253,5 @@ export function renderPremiumHtml(data: PdfRenderData): string {
     </div>
   `;
 
-  return htmlDocumentShell(data.number ?? "Draft", STYLES, body + renderQrBlock(data));
+  return htmlDocumentShell(data.number ?? "Draft", STYLES, body);
 }

@@ -178,6 +178,6 @@ describe("renderMinimalHtml QR code", () => {
   });
 
   it("leaves it out when the document has none", () => {
-    expect(renderMinimalHtml(makeData())).not.toContain("qr-block\"");
+    expect(renderMinimalHtml(makeData())).not.toContain('class="footer-qr"');
   });
 });

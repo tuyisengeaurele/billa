@@ -189,6 +189,6 @@ describe("renderClassicHtml QR code", () => {
   });
 
   it("leaves it out when the document has none", () => {
-    expect(renderClassicHtml(makeData())).not.toContain("qr-block\"");
+    expect(renderClassicHtml(makeData())).not.toContain('class="footer-qr"');
   });
 });

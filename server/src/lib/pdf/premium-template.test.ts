@@ -255,6 +255,14 @@ describe("renderPremiumHtml QR code", () => {
   });
 
   it("leaves it out when the document has none", () => {
-    expect(renderPremiumHtml(makeData())).not.toContain("qr-block\"");
+    expect(renderPremiumHtml(makeData())).not.toContain('class="ft-qr"');
+  });
+});
+
+describe("renderPremiumHtml printing", () => {
+  it("drops the screen padding around the card when printed, so one page stays one page", () => {
+    const html = renderPremiumHtml(makeData());
+    const printStyles = html.slice(html.indexOf("@media print"));
+    expect(printStyles).toMatch(/body \{ background: #fff; padding: 0; \}/);
   });
 });

@@ -1,9 +1,10 @@
-import { htmlDocumentShell, renderQrBlock } from "./html-shell.js";
+import { htmlDocumentShell } from "./html-shell.js";
 import {
   buildSignatures,
   PREMIUM_STYLES,
   renderAmountInWordsBox,
   renderFooterBar,
+  renderFooterQr,
   renderStatusPill,
   renderTotalsBox,
 } from "./premium-parts.js";
@@ -126,9 +127,10 @@ export function renderClassicHtml(data: PdfRenderData): string {
         showPaymentInstructions: data.showTotals,
         signatures: buildSignatures(business, data.showTotals, data.labels),
         labels: data.labels,
+        qrHtml: renderFooterQr(data),
       })}
     </div>
   `;
 
-  return htmlDocumentShell(data.number ?? "Draft", STYLES, body + renderQrBlock(data));
+  return htmlDocumentShell(data.number ?? "Draft", STYLES, body);
 }

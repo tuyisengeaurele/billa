@@ -12,7 +12,16 @@ export const PREMIUM_STYLES = `
 .signature-image { display: block; max-height: 8mm; max-width: 32mm; margin: 0 auto 1.5mm; object-fit: contain; }
 .signature-name { font-size: 10px; font-weight: 700; }
 .signature-label { font-size: 8px; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85; }
+.footer-qr { text-align: center; flex-shrink: 0; }
+.footer-qr img { display: block; width: 15mm; height: 15mm; margin: 0 auto 1mm; background: #ffffff; }
+.footer-qr span { display: block; font-size: 6.5px; letter-spacing: 0.04em; opacity: 0.85; }
 `;
+
+/** A small "scan to view online" QR code for the footer. Empty for a draft, which has no public page. */
+export function renderFooterQr(data: { qrDataUri: string | null; labels: { scanToView: string } }): string {
+  if (!data.qrDataUri) return "";
+  return `<div class="footer-qr"><img src="${data.qrDataUri}" alt="" /><span>${data.labels.scanToView}</span></div>`;
+}
 
 import type { PdfLabels } from "@billa/shared";
 
@@ -96,8 +105,9 @@ export function renderFooterBar(options: {
   showPaymentInstructions: boolean;
   signatures: FooterSignature[];
   labels: PdfLabels;
+  qrHtml?: string;
 }): string {
-  const { business, dark, documentNumber, showPaymentInstructions, signatures, labels } = options;
+  const { business, dark, documentNumber, showPaymentInstructions, signatures, labels, qrHtml = "" } = options;
   const hasBankDetails = Boolean(business.bankName || business.bankAccountNumber);
 
   const leftHtml =
@@ -120,6 +130,7 @@ export function renderFooterBar(options: {
 
   return `<div class="footer-bar" style="background:${dark}">
     ${leftHtml}
+    ${qrHtml}
     <div class="signatures">${signatures.map(renderSignature).join("")}</div>
   </div>`;
 }
