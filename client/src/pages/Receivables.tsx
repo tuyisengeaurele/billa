@@ -20,6 +20,9 @@ interface ReceivableRow {
   publicToken: string;
   total: number;
   amountOwed: number;
+  // What is due now: the next instalment of a payment plan, otherwise the same as amountOwed.
+  amountDue?: number;
+  nextInstallmentLabel?: string | null;
   dueDate: string | null;
   daysOverdue: number;
   agingBucket: "current" | "0-30" | "31-60" | "61-90" | "90+";
@@ -108,6 +111,10 @@ export default function Receivables() {
     load();
   }, []);
 
+  function isOnPlan(row: ReceivableRow) {
+    return row.amountDue !== undefined && row.amountDue < row.amountOwed;
+  }
+
   function remindOnWhatsApp(row: ReceivableRow) {
     const message = buildWhatsAppMessage({
       kind: "reminder",
@@ -116,6 +123,7 @@ export default function Receivables() {
       type: "INVOICE",
       number: row.number,
       amount: row.amountOwed,
+      instalment: isOnPlan(row) ? { label: row.nextInstallmentLabel ?? null, amount: row.amountDue! } : undefined,
       dueDate: row.dueDate,
       viewUrl: `${window.location.origin}/view/${row.publicToken}`,
       payable: momoEnabled,
@@ -241,7 +249,14 @@ export default function Receivables() {
                         {BUCKET_LABELS[row.agingBucket]}
                       </span>
                     </td>
-                    <td className="py-3 font-medium text-neutral-900">{formatRwf(row.amountOwed)}</td>
+                    <td className="py-3 font-medium text-neutral-900">
+                      {formatRwf(row.amountOwed)}
+                      {isOnPlan(row) && (
+                        <span className="block text-xs font-normal text-neutral-500">
+                          {formatRwf(row.amountDue!)} due now
+                        </span>
+                      )}
+                    </td>
                     <td className="py-3">
                       <div className="flex justify-end gap-2">
                         <button

@@ -90,6 +90,29 @@ describe("Receivables", () => {
     expect(text).toContain("View it here");
   });
 
+  it("shows what is due now on a payment plan and names the instalment in the reminder", async () => {
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.includes("/auth/me")) return authMeResponse();
+      return new Response(
+        JSON.stringify({
+          results: [baseRow({ amountOwed: 100000, amountDue: 40000, nextInstallmentLabel: "Deposit" })],
+          total: 1,
+        }),
+        { status: 200 },
+      );
+    });
+    const user = userEvent.setup();
+    renderPage();
+
+    expect(await screen.findByText("40,000 RWF due now")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /remind acme ltd on whatsapp/i }));
+
+    const text = decodeURIComponent(String(open.mock.calls[0]![0]));
+    expect(text).toContain("has 100,000 RWF outstanding, of which 40,000 RWF (Deposit) is due now.");
+  });
+
   it("invites the customer to pay in the reminder when the business takes MoMo", async () => {
     const open = vi.spyOn(window, "open").mockReturnValue(null);
     vi.spyOn(global, "fetch").mockImplementation(async (input) => {
