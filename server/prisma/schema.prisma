@@ -514,6 +514,7 @@ model Document {
   business          Business         @relation(fields: [businessId], references: [id])
   customer          Customer         @relation(fields: [customerId], references: [id])
   lines             DocumentLine[]
+  installments      DocumentInstalment[]
   payments          InvoicePayment[] @relation("DocumentPayments")
   paymentReceiptFor InvoicePayment?  @relation("PaymentReceipt")
   momoPaymentRequests MomoPaymentRequest[]
@@ -540,6 +541,21 @@ model DocumentLine {
 
   document Document @relation(fields: [documentId], references: [id])
   item     Item?    @relation(fields: [itemId], references: [id])
+
+  @@index([documentId])
+}
+
+// One step of a payment plan on an invoice: an amount and the date it falls due. Whether a step has
+// been paid is never stored; it is worked out from the payments recorded against the invoice.
+model DocumentInstalment {
+  id         String   @id @default(cuid())
+  documentId String
+  sortOrder  Int
+  label      String?
+  amount     Int
+  dueDate    DateTime
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
   @@index([documentId])
 }
