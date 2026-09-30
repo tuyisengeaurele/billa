@@ -266,6 +266,33 @@ describe("Dashboard", () => {
     expect(screen.getByRole("link", { name: /Huye Traders/i })).toHaveAttribute("href", "/documents/d2/edit");
   });
 
+  it("lays every recent document out in the same columns, whatever the row contains", async () => {
+    mockFetch(
+      baseSummary({
+        recentDocuments: [
+          { id: "d1", type: "INVOICE", number: "INV-0001", status: "FINALIZED", customerName: "Musanze Supplies", issueDate: "2026-08-19", paymentStatus: "UNPAID" },
+          { id: "d2", type: "RECEIPT", number: "RCT-0001", status: "FINALIZED", customerName: "Huye Traders", issueDate: "2026-08-18" },
+          { id: "d3", type: "DELIVERY_NOTE", number: null, status: "DRAFT", customerName: "Kigali Traders", issueDate: "2026-08-17" },
+          { id: "d4", type: "PROFORMA", number: "PRO-0001", status: "FINALIZED", customerName: "Rubavu Ltd", issueDate: "2026-08-16" },
+        ],
+      }),
+    );
+
+    renderDashboard();
+
+    await screen.findByText("Musanze Supplies");
+    const rows = screen.getAllByRole("link").filter((link) => /^\/documents\/d\d/.test(link.getAttribute("href") ?? ""));
+    expect(rows).toHaveLength(4);
+    const layouts = new Set(rows.map((row) => row.className));
+    expect(layouts.size).toBe(1);
+    expect([...layouts][0]).toMatch(/md:grid-cols-\[/);
+    // A row with no payment badge still has its status in the same cell, and the date is always last.
+    for (const row of rows) {
+      expect(row.children).toHaveLength(5);
+      expect(row.lastElementChild?.textContent).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    }
+  });
+
   it("shows a payment status badge on a recent invoice", async () => {
     mockFetch(
       baseSummary({

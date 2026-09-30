@@ -399,30 +399,34 @@ export default function Dashboard() {
                 <Link
                   key={doc.id}
                   to={doc.status === "DRAFT" ? `/documents/${doc.id}/edit` : `/documents/${doc.id}`}
-                  className="flex items-center justify-between gap-4 rounded-lg border border-neutral-100 bg-surface px-4 py-3 font-sans text-sm transition-colors hover:bg-surface-hover"
+                  className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border border-neutral-100 bg-surface px-4 py-3 font-sans text-sm transition-colors hover:bg-surface-hover md:grid md:grid-cols-[8rem_8rem_minmax(0,1fr)_12rem_5.5rem] md:gap-x-3"
                 >
                   <span
-                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${DOCUMENT_TYPE_COLORS[doc.type].chipBg} ${DOCUMENT_TYPE_COLORS[doc.type].chipText}`}
+                    className={`justify-self-start rounded-full px-2 py-0.5 text-xs font-medium ${DOCUMENT_TYPE_COLORS[doc.type].chipBg} ${DOCUMENT_TYPE_COLORS[doc.type].chipText}`}
                   >
                     {DOCUMENT_TYPE_LABELS[doc.type].singular}
                   </span>
-                  <span className="font-medium text-neutral-900">{doc.number ?? "Draft"}</span>
-                  <span className="text-neutral-600">{doc.customerName}</span>
-                  <span
-                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                      doc.status === "FINALIZED" ? "bg-primary-100 text-primary-700" : "bg-neutral-100 text-neutral-600"
-                    }`}
-                  >
-                    {doc.status}
-                  </span>
-                  {doc.paymentStatus && (
+                  <span className="whitespace-nowrap font-medium text-neutral-900">{doc.number ?? "Draft"}</span>
+                  <span className="min-w-0 basis-full truncate text-neutral-600 md:basis-auto">{doc.customerName}</span>
+                  <span className="flex flex-wrap items-center gap-1.5">
                     <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${PAYMENT_STATUS_COLORS[doc.paymentStatus]}`}
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                        doc.status === "FINALIZED" ? "bg-primary-100 text-primary-700" : "bg-neutral-100 text-neutral-600"
+                      }`}
                     >
-                      {PAYMENT_STATUS_LABELS[doc.paymentStatus]}
+                      {doc.status}
                     </span>
-                  )}
-                  <span className="text-neutral-600">{doc.issueDate.slice(0, 10)}</span>
+                    {doc.paymentStatus && (
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${PAYMENT_STATUS_COLORS[doc.paymentStatus]}`}
+                      >
+                        {PAYMENT_STATUS_LABELS[doc.paymentStatus]}
+                      </span>
+                    )}
+                  </span>
+                  <span className="ml-auto tabular-nums text-neutral-600 md:ml-0 md:text-right">
+                    {doc.issueDate.slice(0, 10)}
+                  </span>
                 </Link>
               ))}
             </div>
