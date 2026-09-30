@@ -32,6 +32,7 @@ import {
   CURRENCIES,
   convertMinor,
   formatMoney,
+  formatShortDate,
   fromRwf,
   isCurrency,
   rateProblem,
@@ -365,18 +366,30 @@ export default function DocumentForm() {
   // Switching currency re-prices the lines through RWF when both rates are known; otherwise the
   // numbers stay as typed and the user is asked to check them.
   const [repriceNote, setRepriceNote] = useState(false);
+  const [rateHint, setRateHint] = useState<string | null>(null);
 
   async function changeCurrency(next: Currency) {
     if (next === currency) return;
     let nextRate: number | null = null;
+    let nextHint: string | null = null;
     if (next !== "RWF") {
       try {
-        const known = await apiRequest<{ rates: Record<string, number> }>("/documents/rates");
+        const known = await apiRequest<{
+          rates: Record<string, number>;
+          info?: Record<string, { source: string; date: string | null }>;
+        }>("/documents/rates");
         nextRate = known.rates[next] ?? null;
+        const source = known.info?.[next];
+        if (nextRate && source?.source === "BNR" && source.date) {
+          nextHint = `National Bank of Rwanda reference rate, ${formatShortDate(source.date)}.`;
+        } else if (nextRate) {
+          nextHint = "The rate you used last.";
+        }
       } catch {
         nextRate = null;
       }
     }
+    setRateHint(nextHint);
     const from = { currency, rate: rateNumber };
     const to = { currency: next, rate: nextRate };
     const lines = getValues("lines");
@@ -644,7 +657,11 @@ export default function DocumentForm() {
                 rate={rateText}
                 locked={canReference && Boolean(referencedDocumentId)}
                 onCurrencyChange={changeCurrency}
-                onRateChange={(rate) => setValue("exchangeRate", rate, { shouldDirty: true })}
+                onRateChange={(rate) => {
+                  setRateHint(null);
+                  setValue("exchangeRate", rate, { shouldDirty: true });
+                }}
+                hint={rateHint}
                 error={rateError && rateText === "" ? null : rateError}
               />
               {repriceNote && (

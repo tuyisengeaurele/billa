@@ -49,6 +49,7 @@ import { recordInvoicePayment } from "../lib/record-invoice-payment.js";
 import { finalizeDocumentById } from "../lib/finalize-document.js";
 import { generatePaymentReceipt } from "../lib/generate-payment-receipt.js";
 import { installmentRows, planProblem, withSchedule } from "../lib/document-schedule.js";
+import { ensureRates, getStoredRates } from "../lib/exchange-rates.js";
 import { detectAllowedImageType, detectPdf } from "../lib/file-sniff.js";
 import { getStorage } from "../lib/storage.js";
 import { requireFinalizePermission } from "../middleware/require-finalize-permission.js";
@@ -322,8 +323,11 @@ documentsRouter.get("/", validateQuery(documentListQuerySchema), async (req, res
   res.json({ results, total, page: query.page, pageSize: query.pageSize });
 });
 
-// The rate the business used last for each foreign currency, to prefill the next document.
+// The rate to prefill for each foreign currency: the bank's latest reference rate, or failing that
+// the rate this business used last. "info" says which, so the form can tell the user where it came from.
 documentsRouter.get("/rates", async (req, res) => {
+  await ensureRates();
+  const stored = await getStoredRates();
   const recent = await prisma.document.findMany({
     where: { businessId: req.auth!.businessId, currency: { not: "RWF" }, exchangeRate: { not: null } },
     orderBy: { createdAt: "desc" },
@@ -331,10 +335,18 @@ documentsRouter.get("/rates", async (req, res) => {
     take: 200,
   });
   const rates: Record<string, number> = {};
-  for (const document of recent) {
-    if (!(document.currency in rates) && document.exchangeRate) rates[document.currency] = document.exchangeRate;
+  const info: Record<string, { source: string; date: string | null }> = {};
+  for (const [currency, row] of Object.entries(stored)) {
+    rates[currency] = row.rate;
+    info[currency] = { source: row.source, date: row.rateDate.toISOString().slice(0, 10) };
   }
-  res.json({ rates });
+  for (const document of recent) {
+    if (!(document.currency in rates) && document.exchangeRate) {
+      rates[document.currency] = document.exchangeRate;
+      info[document.currency] = { source: "LAST_USED", date: null };
+    }
+  }
+  res.json({ rates, info });
 });
 
 documentsRouter.get("/export.csv", expensiveOperationRateLimit, validateQuery(documentListQuerySchema), async (req, res) => {

@@ -9,12 +9,14 @@ interface CurrencyFieldsProps {
   onCurrencyChange: (currency: Currency) => void;
   onRateChange: (rate: string) => void;
   error?: string | null;
+  // Where the prefilled rate came from, shown until the user types their own.
+  hint?: string | null;
 }
 
 const FIELD =
   "rounded-lg border border-neutral-200 bg-surface px-3.5 py-2.5 font-sans text-sm text-neutral-900 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 disabled:bg-neutral-50 disabled:text-neutral-500";
 
-export function CurrencyFields({ currency, rate, locked, onCurrencyChange, onRateChange, error }: CurrencyFieldsProps) {
+export function CurrencyFields({ currency, rate, locked, onCurrencyChange, onRateChange, error, hint }: CurrencyFieldsProps) {
   return (
     <div className="flex flex-col gap-1.5">
       <label htmlFor="currency" className="font-sans text-sm font-medium text-neutral-800">
@@ -46,7 +48,7 @@ export function CurrencyFields({ currency, rate, locked, onCurrencyChange, onRat
               disabled={locked}
               onChange={(event) => {
                 const next = event.target.value;
-                if (/^[0-9]*[.]?[0-9]{0,4}$/.test(next)) onRateChange(next);
+                if (/^[0-9]*[.]?[0-9]{0,6}$/.test(next)) onRateChange(next);
               }}
               className={`${FIELD} w-28`}
             />
@@ -59,7 +61,7 @@ export function CurrencyFields({ currency, rate, locked, onCurrencyChange, onRat
       )}
       {currency !== "RWF" && !error && (
         <p className="font-sans text-xs text-neutral-500">
-          The rate is saved with this document and used to show it in RWF in your reports.
+          {hint ? `${hint} ` : ""}The rate is saved with this document and used to show it in RWF in your reports.
         </p>
       )}
       {error && (

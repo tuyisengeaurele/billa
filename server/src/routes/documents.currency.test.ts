@@ -2,6 +2,7 @@ import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import request from "supertest";
 import { createApp } from "../app.js";
 import { resetDb } from "../test/db.js";
+import { prisma } from "../lib/prisma.js";
 
 beforeAll(() => {
   process.env.JWT_ACCESS_SECRET ??= "test-secret";
@@ -143,5 +144,23 @@ describe("document currency", () => {
     const res = await request(app).get("/documents/rates").set("Cookie", cookies);
 
     expect(res.body.rates).toEqual({ USD: 1450, EUR: 1600 });
+  });
+
+  it("prefers the bank's reference rate over the one last used, and says where each came from", async () => {
+    const app = createApp();
+    const { cookies, customerId } = await setUp(app);
+    await request(app).post("/documents").set("Cookie", cookies).send(invoice(customerId, { currency: "USD", exchangeRate: 1400 }));
+    await request(app).post("/documents").set("Cookie", cookies).send(invoice(customerId, { currency: "EUR", exchangeRate: 1600 }));
+    await prisma.exchangeRate.create({
+      data: { currency: "USD", rate: 1473.79, rateDate: new Date("2026-09-29"), source: "BNR", fetchedAt: new Date() },
+    });
+
+    const res = await request(app).get("/documents/rates").set("Cookie", cookies);
+
+    expect(res.body.rates).toEqual({ USD: 1473.79, EUR: 1600 });
+    expect(res.body.info).toEqual({
+      USD: { source: "BNR", date: "2026-09-29" },
+      EUR: { source: "LAST_USED", date: null },
+    });
   });
 });

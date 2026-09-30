@@ -27,7 +27,7 @@ interface SystemHealthResponse {
   jobs: JobStatus[];
 }
 
-const KNOWN_JOBS = ["recurring-documents", "overdue-reminders", "due-soon-reminders"];
+const KNOWN_JOBS = ["recurring-documents", "overdue-reminders", "due-soon-reminders", "exchange-rates"];
 
 function StatusBadge({ ok, okLabel, badLabel }: { ok: boolean; okLabel: string; badLabel: string }) {
   return (

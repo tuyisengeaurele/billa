@@ -1167,7 +1167,8 @@ describe("DocumentForm currency", () => {
     return vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
       const url = urlOf(input);
       if (url.endsWith("/documents/rates")) {
-        return new Response(JSON.stringify({ rates }), { status: 200 });
+        const info = Object.fromEntries(Object.keys(rates).map((code) => [code, { source: "BNR", date: "2026-09-29" }]));
+        return new Response(JSON.stringify({ rates, info }), { status: 200 });
       }
       if (url.includes("/customers")) {
         return new Response(
@@ -1205,6 +1206,7 @@ describe("DocumentForm currency", () => {
     await pickCustomerAndLine(user);
     await user.selectOptions(screen.getByLabelText("Currency"), "USD");
     expect(await screen.findByLabelText(/exchange rate/i)).toHaveValue("1450");
+    expect(screen.getByText(/national bank of rwanda reference rate, 29 sep 2026/i)).toBeInTheDocument();
     await user.type(screen.getByLabelText(/unit price/i), "12.5");
 
     expect(screen.getByText("Total: 12.50 USD")).toBeInTheDocument();
