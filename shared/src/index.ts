@@ -28,3 +28,4 @@ export * from "./import-schemas.js";
 export * from "./api-key-schemas.js";
 export * from "./webhook-schemas.js";
 export * from "./installments.js";
+export * from "./currency.js";
