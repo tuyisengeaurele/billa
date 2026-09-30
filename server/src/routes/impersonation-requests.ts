@@ -1,4 +1,4 @@
-import { Router, type Response } from "express";
+import { Router, type Request, type Response } from "express";
 import type { ImpersonationRequest } from "@prisma/client";
 import { createImpersonationRequestSchema, overrideImpersonationRequestSchema } from "@billa/shared";
 import type { CreateImpersonationRequestInput, OverrideImpersonationRequestInput } from "@billa/shared";
@@ -258,8 +258,8 @@ impersonationRequestsRouter.get("/:id", async (req, res) => {
   res.json({ status: effectiveStatus(request, new Date()) });
 });
 
-async function redeemRequest(res: Response, request: ImpersonationRequest) {
-  await issueSession(res, request.targetUserId, request.businessId, request.requesterId);
+async function redeemRequest(req: Request, res: Response, request: ImpersonationRequest) {
+  await issueSession(req, res, request.targetUserId, request.businessId, request.requesterId);
   await prisma.impersonationRequest.update({ where: { id: request.id }, data: { redeemedAt: new Date() } });
 
   const requester = await prisma.user.findUnique({ where: { id: request.requesterId } });
@@ -303,7 +303,7 @@ impersonationRequestsRouter.post("/:id/redeem", async (req, res) => {
     return;
   }
 
-  await redeemRequest(res, request);
+  await redeemRequest(req, res, request);
   res.json({ ok: true });
 });
 
@@ -340,7 +340,7 @@ impersonationRequestsRouter.post(
       data: { status: "OVERRIDDEN", overrideReason: body.overrideReason },
     });
 
-    await redeemRequest(res, overridden);
+    await redeemRequest(req, res, overridden);
     res.json({ ok: true });
   },
 );

@@ -34,6 +34,21 @@ export function setRefreshTokenCookie(res: Response, token: string, maxAgeMs: nu
   });
 }
 
+// Names the browser or app, not the login. It outlives every sign-in and sign-out, so the server can tell
+// "the same device signing in again" from "a new device", and it is never readable by page scripts.
+export const DEVICE_COOKIE = "device_id";
+const DEVICE_COOKIE_MAX_AGE_MS = 365 * 24 * 60 * 60 * 1000;
+
+export function setDeviceCookie(res: Response, deviceId: string) {
+  res.cookie(DEVICE_COOKIE, deviceId, {
+    httpOnly: true,
+    secure: isProd,
+    sameSite,
+    path: "/",
+    maxAge: DEVICE_COOKIE_MAX_AGE_MS,
+  });
+}
+
 export function clearAuthCookies(res: Response) {
   res.clearCookie("access_token", { path: "/", secure: isProd, sameSite });
   res.clearCookie("refresh_token", { path: "/auth/refresh", secure: isProd, sameSite });

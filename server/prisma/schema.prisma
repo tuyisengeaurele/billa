@@ -407,9 +407,17 @@ model RefreshToken {
   // access token's first 15-minute expiry.
   impersonatedBy String?
 
+  // One device holds one live session. deviceId comes from a long-lived cookie on that browser (or app);
+  // signing in again there replaces the session instead of adding one.
+  deviceId   String?
+  deviceName String?
+  // Bumped each time the session is renewed, so the list can say when a device was last active.
+  lastUsedAt DateTime @default(now())
+
   user User @relation(fields: [userId], references: [id])
 
   @@index([userId])
+  @@index([deviceId])
 }
 
 model Customer {

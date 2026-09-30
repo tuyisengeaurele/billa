@@ -18,7 +18,7 @@ import { verifyFirebaseToken } from "../lib/firebase-admin.js";
 import { generateRefreshToken, hashRefreshToken, signAccessToken } from "../lib/tokens.js";
 import { ttlToMs } from "../lib/ttl.js";
 import { clearAuthCookies, setAccessTokenCookie, setRefreshTokenCookie } from "../lib/cookies.js";
-import { issueSession } from "../lib/session.js";
+import { issueSession, requestDeviceId } from "../lib/session.js";
 import { acceptInviteForUser } from "../lib/accept-invite.js";
 import {
   decryptTotpSecret,
@@ -140,7 +140,7 @@ authRouter.post("/session", authRateLimit, validateBody(sessionSchema), async (r
       return;
     }
 
-    await issueSession(res, existing.id, businessId);
+    await issueSession(req, res, existing.id, businessId);
     res.json({
       user: serializeUser(existing),
       business: business
@@ -167,7 +167,7 @@ authRouter.post("/session", authRateLimit, validateBody(sessionSchema), async (r
       res.status(result.status).json({ error: result.error });
       return;
     }
-    await issueSession(res, newUser.id, result.business.id);
+    await issueSession(req, res, newUser.id, result.business.id);
     res.status(201).json({
       user: serializeUser(newUser),
       business: {
@@ -197,7 +197,7 @@ authRouter.post("/session", authRateLimit, validateBody(sessionSchema), async (r
     return { user: updatedUser, business };
   });
 
-  await issueSession(res, user.id, business.id);
+  await issueSession(req, res, user.id, business.id);
   res.status(201).json({
     user: serializeUser(user),
     business: { id: business.id, name: business.name, onboardingCompletedAt: business.onboardingCompletedAt },
@@ -282,7 +282,7 @@ authRouter.post("/impersonate/stop", requireAuth, async (req, res) => {
     if (!business) businessId = null;
   }
 
-  await issueSession(res, admin.id, businessId ?? "");
+  await issueSession(req, res, admin.id, businessId ?? "");
 
   if (admin.isAdmin) {
     await logAdminAction({
@@ -318,7 +318,7 @@ authRouter.post("/switch-business", requireAuth, validateBody(switchBusinessSche
   }
   const business = await prisma.business.findUniqueOrThrow({ where: { id: businessId } });
   await prisma.user.update({ where: { id: req.auth!.userId }, data: { lastActiveBusinessId: businessId } });
-  await issueSession(res, req.auth!.userId, businessId);
+  await issueSession(req, res, req.auth!.userId, businessId);
   res.json({ business: { id: business.id, name: business.name, onboardingCompletedAt: business.onboardingCompletedAt } });
 });
 
@@ -380,6 +380,9 @@ authRouter.post("/refresh", async (req, res) => {
       family: stored.family,
       expiresAt: new Date(Date.now() + ttlMs),
       impersonatedBy,
+      // The same device carries on, and this is when it was last active.
+      deviceId: stored.deviceId,
+      deviceName: stored.deviceName,
     },
   });
 
@@ -472,7 +475,7 @@ authRouter.post("/2fa/challenge", authRateLimit, validateBody(twoFactorChallenge
   const business = challenge.businessId
     ? await prisma.business.findUnique({ where: { id: challenge.businessId } })
     : null;
-  await issueSession(res, user.id, challenge.businessId);
+  await issueSession(req, res, user.id, challenge.businessId);
   res.json({
     user: serializeUser(user),
     business: business
@@ -482,6 +485,15 @@ authRouter.post("/2fa/challenge", authRateLimit, validateBody(twoFactorChallenge
 });
 
 authRouter.post("/logout", async (req, res) => {
+  // The refresh cookie is only sent to /auth/refresh, so it is usually absent here. The device cookie goes
+  // everywhere, and signing out means signing this device out, whoever was signed in on it.
+  const deviceId = requestDeviceId(req);
+  if (deviceId) {
+    await prisma.refreshToken.updateMany({
+      where: { deviceId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  }
   const presented = req.cookies?.refresh_token;
   if (presented) {
     const presentedHash = hashRefreshToken(presented);

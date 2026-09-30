@@ -45,6 +45,6 @@ businessesRouter.post("/", validateBody(createBusinessSchema), async (req, res) 
 
   const business = await prisma.business.create({ data: { name, ownerId } });
   await prisma.user.update({ where: { id: ownerId }, data: { lastActiveBusinessId: business.id } });
-  await issueSession(res, ownerId, business.id);
+  await issueSession(req, res, ownerId, business.id);
   res.status(201).json({ business: { id: business.id, name: business.name } });
 });

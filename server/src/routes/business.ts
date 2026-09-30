@@ -393,7 +393,7 @@ businessRouter.post("/leave", async (req, res) => {
   }
 
   await prisma.user.update({ where: { id: userId }, data: { lastActiveBusinessId: nextBusiness.id } });
-  await issueSession(res, userId, nextBusiness.id);
+  await issueSession(req, res, userId, nextBusiness.id);
   res.json({
     business: { id: nextBusiness.id, name: nextBusiness.name },
     createdReplacement,

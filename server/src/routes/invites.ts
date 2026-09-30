@@ -31,7 +31,7 @@ invitesRouter.post("/:token/accept", requireAuth, generalApiRateLimit, async (re
     return;
   }
 
-  await issueSession(res, user.id, result.business.id);
+  await issueSession(req, res, user.id, result.business.id);
   res.json({
     business: {
       id: result.business.id,
