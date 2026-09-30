@@ -596,6 +596,35 @@ describe("BusinessSettings", () => {
     expect(screen.getByRole("button", { name: /remove/i })).toBeInTheDocument();
   });
 
+  it("keeps developer tools off the owner's settings page", async () => {
+    vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+      const url = urlOf(input);
+      if (url.endsWith("/business/sequences")) {
+        return new Response(JSON.stringify({ sequences: [] }), { status: 200 });
+      }
+      // Answered on purpose: if these sections were still on the page they would render their headings.
+      if (url.endsWith("/api-keys") || url.endsWith("/webhooks")) {
+        return new Response(JSON.stringify({ results: [] }), { status: 200 });
+      }
+      if (url.endsWith("/business") || url.endsWith("/auth/me")) {
+        return new Response(
+          JSON.stringify({
+            business: { ownerId: "u1", name: "Kigali Traders", defaultTemplate: "PREMIUM", logoUrl: null },
+            user: { id: "u1", email: "owner@example.com" },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+
+    renderPage();
+
+    expect(await screen.findByRole("button", { name: /^rename$/i })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /api access/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /^webhooks$/i })).not.toBeInTheDocument();
+  });
+
   it("requires typing the current name before rename is enabled, then renames the business", async () => {
     let currentName = "Kigali Traders";
     vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
