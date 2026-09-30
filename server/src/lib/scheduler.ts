@@ -1,4 +1,5 @@
 import { prisma } from "./prisma.js";
+import { refreshExchangeRates } from "./exchange-rates.js";
 import { generateDueRecurringDocuments } from "./recurring-documents.js";
 import { sendDueSoonReminders } from "./due-soon-reminders.js";
 import { sendOverdueReminders } from "./overdue-reminders.js";
@@ -100,6 +101,19 @@ export async function runScheduledJobs(): Promise<void> {
       succeeded: false,
       errorMessage: err instanceof Error ? err.message : "Unknown error",
     });
+  }
+
+  // Global too: one set of bank rates for every business. Skipped under test so no run reaches the network.
+  if (process.env.NODE_ENV !== "test") {
+    try {
+      const updated = await refreshExchangeRates();
+      await recordJobRun("exchange-rates", { succeeded: true, resultCount: updated });
+    } catch (err) {
+      await recordJobRun("exchange-rates", {
+        succeeded: false,
+        errorMessage: err instanceof Error ? err.message : "Unknown error",
+      });
+    }
   }
 
   try {
