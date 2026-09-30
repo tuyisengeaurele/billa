@@ -46,6 +46,7 @@ import { recomputeInvoicePaymentStatus } from "../lib/invoice-payment-status.js"
 import { recordInvoicePayment } from "../lib/record-invoice-payment.js";
 import { finalizeDocumentById } from "../lib/finalize-document.js";
 import { generatePaymentReceipt } from "../lib/generate-payment-receipt.js";
+import { installmentRows, planProblem, withSchedule } from "../lib/document-schedule.js";
 import { detectAllowedImageType } from "../lib/file-sniff.js";
 import { getStorage } from "../lib/storage.js";
 import { requireFinalizePermission } from "../middleware/require-finalize-permission.js";
@@ -93,6 +94,7 @@ documentsRouter.post(
 
 const DOCUMENT_INCLUDE = {
   lines: { orderBy: { sortOrder: "asc" as const } },
+  installments: { orderBy: { sortOrder: "asc" as const } },
   customer: { select: { name: true, email: true, phone: true } },
   business: { select: { momoEnabled: true } },
   convertedFrom: { select: { id: true, number: true, type: true } },
@@ -277,6 +279,13 @@ documentsRouter.post("/", validateBody(documentSchema), async (req, res) => {
   const business = await prisma.business.findUnique({ where: { id: businessId } });
   const totals = calculateDocumentTotals(body.lines);
 
+  const problem = planProblem(totals.total, body.installments);
+  if (problem) {
+    res.status(400).json({ error: "invalid_installments", message: problem });
+    return;
+  }
+  const plan = body.installments ? installmentRows(body.installments) : null;
+
   const document = await prisma.document.create({
     data: {
       businessId,
@@ -286,7 +295,8 @@ documentsRouter.post("/", validateBody(documentSchema), async (req, res) => {
       language: body.language,
       customerId: body.customerId,
       issueDate: new Date(body.issueDate),
-      dueDate: body.dueDate ? new Date(body.dueDate) : null,
+      // With a plan, the invoice as a whole falls due when its last instalment does.
+      dueDate: plan ? plan.finalDueDate : body.dueDate ? new Date(body.dueDate) : null,
       notes: body.notes,
       customerReference: body.customerReference,
       subtotal: totals.subtotal,
@@ -307,6 +317,7 @@ documentsRouter.post("/", validateBody(documentSchema), async (req, res) => {
           sortOrder: index,
         })),
       },
+      installments: plan ? { create: plan.create } : undefined,
     },
     include: DOCUMENT_INCLUDE,
   });
@@ -337,7 +348,7 @@ documentsRouter.get("/:id", async (req, res) => {
     return;
   }
 
-  res.json({ document });
+  res.json({ document: await withSchedule(document) });
 });
 
 documentsRouter.get("/:id/pdf", async (req, res) => {
@@ -515,8 +526,16 @@ documentsRouter.patch("/:id", validateBody(documentSchema), async (req, res) => 
 
   const totals = calculateDocumentTotals(body.lines);
 
+  const problem = planProblem(totals.total, body.installments);
+  if (problem) {
+    res.status(400).json({ error: "invalid_installments", message: problem });
+    return;
+  }
+  const plan = body.installments ? installmentRows(body.installments) : null;
+
   const document = await prisma.$transaction(async (tx) => {
     await tx.documentLine.deleteMany({ where: { documentId: id } });
+    await tx.documentInstalment.deleteMany({ where: { documentId: id } });
     return tx.document.update({
       where: { id },
       data: {
@@ -524,7 +543,7 @@ documentsRouter.patch("/:id", validateBody(documentSchema), async (req, res) => 
         language: body.language,
         customerId: body.customerId,
         issueDate: new Date(body.issueDate),
-        dueDate: body.dueDate ? new Date(body.dueDate) : null,
+        dueDate: plan ? plan.finalDueDate : body.dueDate ? new Date(body.dueDate) : null,
         notes: body.notes,
         customerReference: body.customerReference,
         subtotal: totals.subtotal,
@@ -545,6 +564,7 @@ documentsRouter.patch("/:id", validateBody(documentSchema), async (req, res) => 
             sortOrder: index,
           })),
         },
+        installments: plan ? { create: plan.create } : undefined,
       },
       include: DOCUMENT_INCLUDE,
     });
