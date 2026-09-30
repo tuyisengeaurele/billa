@@ -361,3 +361,79 @@ describe("GET /public/documents/:token/momo/request/:requestId", () => {
     expect(payments).toHaveLength(1);
   });
 });
+
+describe("paying an invoice that has a payment plan", () => {
+  async function setUpPlannedInvoice(app: ReturnType<typeof createApp>) {
+    const cookies = await registerAndGetCookies(app);
+    await request(app).patch("/business/momo-settings").set("Cookie", cookies).send({
+      enabled: true,
+      environment: "sandbox",
+      subscriptionKey: "sub-key",
+      apiUser: "api-user",
+      apiKey: "api-key",
+    });
+    const customer = await request(app).post("/customers").set("Cookie", cookies).send({ name: "Acme Ltd" });
+    const created = await request(app)
+      .post("/documents")
+      .set("Cookie", cookies)
+      .send({
+        type: "INVOICE",
+        customerId: customer.body.customer.id,
+        issueDate: "2026-10-01",
+        lines: [{ description: "Cement", quantity: 1, unitPrice: 100000, taxRate: 0 }],
+        installments: [
+          { label: "Deposit", amount: 40000, dueDate: "2026-10-01" },
+          { label: "Balance", amount: 60000, dueDate: "2099-01-01" },
+        ],
+      });
+    const id = created.body.document.id as string;
+    await request(app).post(`/documents/${id}/finalize`).set("Cookie", cookies);
+    const fetched = await request(app).get(`/documents/${id}`).set("Cookie", cookies);
+    return { id, cookies, publicToken: fetched.body.document.publicToken as string };
+  }
+
+  it("shows the plan and asks for the next instalment, not the whole amount", async () => {
+    const app = createApp();
+    const { publicToken } = await setUpPlannedInvoice(app);
+
+    const res = await request(app).get(`/public/documents/${publicToken}`);
+
+    expect(res.body.document.amountOwed).toBe(100000);
+    expect(res.body.document.amountDue).toBe(40000);
+    expect(res.body.document.nextInstallment).toMatchObject({ label: "Deposit", remaining: 40000 });
+    expect(res.body.document.schedule).toHaveLength(2);
+  });
+
+  it("charges the deposit first, then the balance once the deposit is in", async () => {
+    const app = createApp();
+    const { id, cookies, publicToken } = await setUpPlannedInvoice(app);
+    vi.spyOn(momoClientModule, "getAccessToken").mockResolvedValue("token-123");
+    const requestToPaySpy = vi.spyOn(momoClientModule, "requestToPay").mockResolvedValue(undefined);
+
+    const first = await request(app)
+      .post(`/public/documents/${publicToken}/momo/request`)
+      .send({ phoneNumber: "250788000000" });
+    await prisma.momoPaymentRequest.update({ where: { id: first.body.requestId }, data: { status: "SUCCESSFUL" } });
+    await request(app)
+      .post(`/documents/${id}/payments`)
+      .set("Cookie", cookies)
+      .send({ amount: 40000, method: "MOBILE_MONEY", paidOn: "2026-10-02" });
+    const second = await request(app)
+      .post(`/public/documents/${publicToken}/momo/request`)
+      .send({ phoneNumber: "250788000000" });
+
+    expect((await prisma.momoPaymentRequest.findUniqueOrThrow({ where: { id: first.body.requestId } })).amount).toBe(40000);
+    expect((await prisma.momoPaymentRequest.findUniqueOrThrow({ where: { id: second.body.requestId } })).amount).toBe(60000);
+    expect(requestToPaySpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("asks for the whole amount when there is no plan", async () => {
+    const app = createApp();
+    const { document } = await setUpMomoInvoice(app, 10000);
+
+    const res = await request(app).get(`/public/documents/${document.publicToken}`);
+
+    expect(res.body.document.amountDue).toBe(10000);
+    expect(res.body.document.schedule).toBeNull();
+  });
+});

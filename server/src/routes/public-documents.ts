@@ -15,11 +15,13 @@ import { buildMomoCredentials } from "../lib/business-momo.js";
 import { resolvePendingMomoPaymentRequest } from "../lib/resolve-pending-payment.js";
 import { normalizeRwandaPhoneNumber } from "../lib/phone-number.js";
 import { recordDocumentView } from "../lib/record-document-view.js";
+import { withSchedule } from "../lib/document-schedule.js";
 
 export const publicDocumentsRouter = Router();
 
 const PUBLIC_DOCUMENT_INCLUDE = {
   lines: { orderBy: { sortOrder: "asc" as const } },
+  installments: { orderBy: { sortOrder: "asc" as const } },
   customer: { select: { name: true, email: true, phone: true } },
   business: {
     select: { name: true, logoUrl: true, primaryColor: true, address: true, phone: true, email: true, momoEnabled: true },
@@ -142,10 +144,16 @@ publicDocumentsRouter.get("/:token", publicDocumentRateLimit, async (req, res) =
           include: { receiptDocument: { select: { publicToken: true, status: true } } },
         })
       : [];
+  const owed = balance ? Math.max(balance.amountOwed, 0) : 0;
+  const { schedule, nextInstallment } = await withSchedule(document);
   res.json({
     document: {
       ...documentFields,
-      amountOwed: balance ? Math.max(balance.amountOwed, 0) : 0,
+      amountOwed: owed,
+      // What to pay now: the next instalment when there is a plan, otherwise everything still owed.
+      amountDue: nextInstallment ? Math.min(nextInstallment.remaining, owed) : owed,
+      schedule,
+      nextInstallment,
       payments: payments.map((payment) => ({
         id: payment.id,
         amount: payment.amount,
@@ -200,6 +208,14 @@ publicDocumentsRouter.post(
       const balance = await getInvoiceOutstandingBalance(document.id);
       if (!balance || balance.amountOwed <= 0) return { kind: "no_balance" as const };
 
+      // With a payment plan the customer pays one instalment at a time; otherwise the whole balance.
+      const installments = await tx.documentInstalment.findMany({
+        where: { documentId: document.id },
+        orderBy: { sortOrder: "asc" },
+      });
+      const { nextInstallment } = await withSchedule({ ...document, installments });
+      const amountToCharge = nextInstallment ? Math.min(nextInstallment.remaining, balance.amountOwed) : balance.amountOwed;
+
       const credentials = buildMomoCredentials(business);
       if (!credentials) return { kind: "no_credentials" as const };
 
@@ -209,7 +225,7 @@ publicDocumentsRouter.post(
           documentId: document.id,
           referenceId: randomUUID(),
           phoneNumber: body.phoneNumber,
-          amount: balance.amountOwed,
+          amount: amountToCharge,
           status: "PENDING",
         },
       });
