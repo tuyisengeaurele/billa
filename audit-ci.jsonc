@@ -1,0 +1,19 @@
+{
+  // CI fails on any high or critical finding in what ships, except the ones listed here.
+  // Every entry says why it does not apply. Re-check the list whenever dependencies change.
+  "high": true,
+  "skip-dev": true,
+  "package-manager": "npm",
+  "show-found": true,
+  "report-type": "important",
+  "allowlist": [
+    // grpc-js comes from the Firestore code inside the firebase package. Billa only uses
+    // Firebase Auth in the browser, so Firestore and its gRPC client never load or run.
+    "GHSA-m9gg-hp2v-232j",
+    // deepmerge-ts and mysql2 come from Prisma's command line tooling (@prisma/config).
+    // They run at build and migrate time on our own schema file, never on user input,
+    // and Billa uses Postgres, so the MySQL driver is never used.
+    "GHSA-ggr8-5vv4-36mx",
+    "GHSA-3f6p-5ww8-9rcr"
+  ]
+}

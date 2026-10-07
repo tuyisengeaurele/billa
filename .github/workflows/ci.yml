@@ -7,6 +7,18 @@ on:
     branches: [master]
 
 jobs:
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Looks through the whole git history for keys, tokens and private keys.
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   test:
     runs-on: ubuntu-latest
 
@@ -42,11 +54,9 @@ jobs:
 
       - run: npm ci
 
-      # --omit=dev: a critical finding in a dev-only tool (e.g. vitest's UI server, which
-      # this project never runs) isn't a shipped-production risk the way one in a runtime
-      # dependency is. Doesn't fail on the moderate/high findings already triaged below -
-      # only a newly introduced critical CVE in what actually ships should block a merge.
-      - run: npm audit --omit=dev --audit-level=critical
+      # Fails on any new high or critical finding in what ships (dev-only tools are skipped).
+      # The few accepted exceptions, each with its reason, live in audit-ci.jsonc.
+      - run: npx --yes audit-ci@7 --config audit-ci.jsonc
 
       - run: npm run prisma:generate
 
