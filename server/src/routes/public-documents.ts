@@ -115,6 +115,24 @@ publicDocumentsRouter.post("/:token/decline", publicDocumentRateLimit, async (re
   res.json({ declined: true });
 });
 
+// The "stop these reminders" link in a reminder email lands on the document page, which asks the customer to
+// confirm and then calls this. Reminders for that one document stop; the document itself is unchanged.
+publicDocumentsRouter.post("/:token/stop-reminders", publicDocumentRateLimit, async (req, res) => {
+  const { token } = req.params;
+
+  const document = await prisma.document.findFirst({
+    where: { publicToken: token, publicLinkDisabledAt: null, status: "FINALIZED" },
+    select: { id: true },
+  });
+  if (!document) {
+    res.status(404).json({ error: "not_found" });
+    return;
+  }
+
+  await prisma.document.update({ where: { id: document.id }, data: { remindersEnabled: false } });
+  res.json({ ok: true });
+});
+
 publicDocumentsRouter.get("/:token", publicDocumentRateLimit, async (req, res) => {
   const { token } = req.params;
 
