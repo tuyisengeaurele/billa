@@ -1,4 +1,5 @@
 import { prisma } from "./prisma.js";
+import { withJobLock } from "./job-lock.js";
 import { refreshExchangeRates } from "./exchange-rates.js";
 import { purgeDeadSessions } from "./session-cleanup.js";
 import { generateDueRecurringDocuments } from "./recurring-documents.js";
@@ -21,7 +22,7 @@ async function isBusinessActive(businessId: string): Promise<boolean> {
   return activeUntil > new Date();
 }
 
-export async function runScheduledJobs(): Promise<void> {
+async function runAllJobs(): Promise<void> {
   const businesses = await prisma.business.findMany({ select: { id: true } });
 
   let recurringGenerated = 0;
@@ -136,6 +137,14 @@ export async function runScheduledJobs(): Promise<void> {
       errorMessage: err instanceof Error ? err.message : "Unknown error",
     });
   }
+}
+
+// The hourly pass takes a lease first, so a second server running the same timer skips the pass instead
+// of sending every reminder twice. Shorter than the hour, so a server that dies mid-run frees it in time.
+const SCHEDULER_LEASE_MS = 50 * 60 * 1000;
+
+export async function runScheduledJobs(): Promise<void> {
+  await withJobLock("scheduler", SCHEDULER_LEASE_MS, runAllJobs);
 }
 
 let started = false;

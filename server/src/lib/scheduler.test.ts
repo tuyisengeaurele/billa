@@ -158,6 +158,28 @@ describe("runScheduledJobs", () => {
   });
 });
 
+describe("runScheduledJobs on more than one server", () => {
+  it("does nothing when another server already holds the hourly lease", async () => {
+    await prisma.jobLock.create({
+      data: { name: "scheduler", lockedUntil: new Date(Date.now() + 60 * 60 * 1000), lockedBy: "other-server" },
+    });
+
+    await runScheduledJobs();
+
+    expect(await prisma.jobRunLog.count()).toBe(0);
+  });
+
+  it("gives the lease back at the end, so the next hour's pass runs", async () => {
+    await runScheduledJobs();
+    const firstPass = await prisma.jobRunLog.count();
+
+    await runScheduledJobs();
+
+    expect(firstPass).toBeGreaterThan(0);
+    expect(await prisma.jobRunLog.count()).toBe(firstPass * 2);
+  });
+});
+
 describe("runScheduledJobs webhook retries", () => {
   it("retries due webhook deliveries and logs the run", async () => {
     const retrySpy = vi.spyOn(dispatchModule, "retryDueWebhookDeliveries").mockResolvedValue(3);
