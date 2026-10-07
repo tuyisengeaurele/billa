@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { contactMessageSchema, type ContactMessageInput } from "@billa/shared";
 import { Button } from "../components/Button";
 import { FormField } from "../components/FormField";
+import { HoneypotField } from "../components/HoneypotField";
 import { useAuth } from "../context/AuthContext";
 import { apiRequest, ApiError } from "../lib/apiClient";
 
@@ -76,6 +77,7 @@ export default function Contact() {
                 {apiError}
               </div>
             )}
+            <HoneypotField {...register("website")} />
             <FormField id="name" label="Name" type="text" error={errors.name?.message} {...register("name")} />
             <FormField id="email" label="Email" type="email" error={errors.email?.message} {...register("email")} />
             <div className="flex flex-col gap-1.5">

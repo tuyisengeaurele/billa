@@ -42,6 +42,33 @@ describe("Contact", () => {
     expect(await screen.findByText(/we've got your message/i)).toBeInTheDocument();
   });
 
+  it("keeps the spam-trap field out of sight and out of the tab order, and sends it empty", async () => {
+    let body: Record<string, unknown> = {};
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/auth/me")) return new Response("{}", { status: 401 });
+      if (url.endsWith("/contact")) {
+        body = JSON.parse(init!.body as string) as Record<string, unknown>;
+        return new Response(JSON.stringify({ ok: true }), { status: 201 });
+      }
+      return new Response("{}", { status: 401 });
+    });
+    const user = userEvent.setup();
+    renderContact();
+
+    const trap = screen.getByTestId("honeypot");
+    expect(trap).toHaveAttribute("tabindex", "-1");
+    expect(trap.closest("[aria-hidden='true']")).not.toBeNull();
+
+    await user.type(screen.getByLabelText("Name"), "Aline");
+    await user.type(screen.getByLabelText("Email"), "aline@example.com");
+    await user.type(screen.getByLabelText("Message"), "I would like some help please");
+    await user.click(screen.getByRole("button", { name: /send message/i }));
+
+    await waitFor(() => expect(body.name).toBe("Aline"));
+    expect(body.website ?? "").toBe("");
+  });
+
   it("marks the message field invalid when it's too short", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async (input) => {
       const url = urlOf(input);
