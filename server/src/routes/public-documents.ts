@@ -33,7 +33,7 @@ publicDocumentsRouter.get("/:token/pdf", publicDocumentRateLimit, async (req, re
   const { token } = req.params;
 
   const document = await prisma.document.findFirst({
-    where: { publicToken: token, status: "FINALIZED" },
+    where: { publicToken: token, publicLinkDisabledAt: null, status: "FINALIZED" },
     include: { lines: { orderBy: { sortOrder: "asc" } }, customer: true },
   });
   if (!document) {
@@ -61,7 +61,7 @@ publicDocumentsRouter.post("/:token/accept", publicDocumentRateLimit, async (req
   const { token } = req.params;
 
   const document = await prisma.document.findFirst({
-    where: { publicToken: token },
+    where: { publicToken: token, publicLinkDisabledAt: null },
     include: { customer: { select: { name: true } }, business: { select: { ownerId: true } } },
   });
   if (!document) {
@@ -90,7 +90,7 @@ publicDocumentsRouter.post("/:token/decline", publicDocumentRateLimit, async (re
   const { token } = req.params;
 
   const document = await prisma.document.findFirst({
-    where: { publicToken: token },
+    where: { publicToken: token, publicLinkDisabledAt: null },
     include: { customer: { select: { name: true } }, business: { select: { ownerId: true } } },
   });
   if (!document) {
@@ -119,7 +119,7 @@ publicDocumentsRouter.get("/:token", publicDocumentRateLimit, async (req, res) =
   const { token } = req.params;
 
   const document = await prisma.document.findFirst({
-    where: { publicToken: token, status: "FINALIZED" },
+    where: { publicToken: token, publicLinkDisabledAt: null, status: "FINALIZED" },
     include: PUBLIC_DOCUMENT_INCLUDE,
   });
   if (!document) {
@@ -179,7 +179,7 @@ publicDocumentsRouter.post(
     body.phoneNumber = normalizeRwandaPhoneNumber(body.phoneNumber);
 
     const document = await prisma.document.findFirst({
-      where: { publicToken: token, status: "FINALIZED", type: "INVOICE" },
+      where: { publicToken: token, publicLinkDisabledAt: null, status: "FINALIZED", type: "INVOICE" },
     });
     if (!document) {
       res.status(404).json({ error: "not_found" });
@@ -283,7 +283,7 @@ publicDocumentsRouter.post(
 publicDocumentsRouter.get("/:token/momo/request/:requestId", momoPollRateLimit, async (req, res) => {
   const { token, requestId } = req.params;
 
-  const document = await prisma.document.findFirst({ where: { publicToken: token } });
+  const document = await prisma.document.findFirst({ where: { publicToken: token, publicLinkDisabledAt: null } });
   if (!document) {
     res.status(404).json({ error: "not_found" });
     return;

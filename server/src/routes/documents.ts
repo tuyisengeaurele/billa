@@ -11,6 +11,7 @@ import {
   getPdfLabels,
   minorPerMajor,
   updateDocumentRemindersSchema,
+  updatePublicLinkSchema,
   voidPaymentSchema,
   writeOffInvoiceSchema,
   type Currency,
@@ -20,6 +21,7 @@ import type {
   DocumentInput,
   DocumentListQuery,
   MarkDocumentSharedInput,
+  UpdatePublicLinkInput,
   UpdateDocumentRemindersInput,
   VoidPaymentInput,
   WriteOffInvoiceInput,
@@ -694,6 +696,42 @@ documentsRouter.patch("/:id", validateBody(documentSchema), async (req, res) => 
   });
 
   res.json({ document });
+});
+
+documentsRouter.patch("/:id/public-link", validateBody(updatePublicLinkSchema), async (req, res) => {
+  const businessId = req.auth!.businessId;
+  const { id } = req.params;
+  const { enabled } = req.body as UpdatePublicLinkInput;
+
+  const document = await prisma.document.findFirst({ where: { id, businessId } });
+  if (!document) {
+    res.status(404).json({ error: "not_found" });
+    return;
+  }
+  if (document.status !== "FINALIZED") {
+    res.status(409).json({ error: "not_finalized" });
+    return;
+  }
+
+  const isDisabled = document.publicLinkDisabledAt !== null;
+  if (isDisabled === !enabled) {
+    res.json({ publicLinkDisabledAt: document.publicLinkDisabledAt });
+    return;
+  }
+
+  const updated = await prisma.document.update({
+    where: { id },
+    data: { publicLinkDisabledAt: enabled ? null : new Date() },
+  });
+  await logActivity({
+    businessId,
+    actorUserId: req.auth!.userId,
+    action: enabled ? "DOCUMENT_LINK_ENABLED" : "DOCUMENT_LINK_DISABLED",
+    entityType: "Document",
+    entityId: id,
+    metadata: { type: document.type, number: document.number },
+  });
+  res.json({ publicLinkDisabledAt: updated.publicLinkDisabledAt });
 });
 
 documentsRouter.patch("/:id/reminders", validateBody(updateDocumentRemindersSchema), async (req, res) => {

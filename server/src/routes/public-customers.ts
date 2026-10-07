@@ -11,7 +11,8 @@ publicCustomersRouter.get("/:token", publicDocumentRateLimit, async (req, res) =
     where: { portalToken: token },
     include: {
       documents: {
-        where: { status: "FINALIZED" },
+        // A document whose link was switched off is not listed on the customer page either.
+        where: { status: "FINALIZED", publicLinkDisabledAt: null },
         orderBy: { issueDate: "desc" },
         select: {
           id: true,
