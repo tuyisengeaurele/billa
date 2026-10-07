@@ -158,6 +158,8 @@ model User {
   avatarUrl               String?
   notificationPreferences Json?
   productTourSeenAt       DateTime?
+  // When the person agreed to the terms and privacy policy while creating this account.
+  termsAcceptedAt         DateTime?
   trialEndsAt             DateTime
   currentPeriodEnd        DateTime?
   plan                    SubscriptionPlan?

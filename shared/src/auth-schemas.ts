@@ -19,6 +19,8 @@ export const sessionSchema = z.object({
   // Present when this account is being created specifically to accept a pending
   // invite - skips creating a placeholder business, joining the invited one instead.
   inviteToken: z.string().trim().min(1).optional(),
+  // Sent by the sign-up form once the person has agreed to the terms. Recorded when an account is created.
+  acceptedTerms: z.boolean().optional(),
 });
 export type SessionInput = z.infer<typeof sessionSchema>;
 
