@@ -4,9 +4,9 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import PublicDocumentView from "./PublicDocumentView";
 
-function renderPage(token = "tok-abc123") {
+function renderPage(token = "tok-abc123", query = "") {
   return render(
-    <MemoryRouter initialEntries={[`/view/${token}`]}>
+    <MemoryRouter initialEntries={[`/view/${token}${query}`]}>
       <Routes>
         <Route path="/view/:token" element={<PublicDocumentView />} />
       </Routes>
@@ -648,5 +648,83 @@ describe("PublicDocumentView", () => {
       await screen.findByText(/invoice inv-0001/i);
       expect(screen.queryByText("Payments received")).not.toBeInTheDocument();
     });
+  });
+});
+
+describe("PublicDocumentView stop reminders", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const invoice = {
+    id: "d1",
+    type: "INVOICE",
+    number: "INV-0001",
+    business: { name: "Kigali Traders", momoEnabled: false },
+    customer: { name: "Acme Ltd", phone: null },
+    lines: [],
+    subtotal: 0,
+    taxTotal: 0,
+    total: 1000,
+    amountPaid: 0,
+    amountOwed: 1000,
+    paymentStatus: "UNPAID",
+  };
+
+  function mockServer(calls: string[], stopStatus = 200) {
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = typeof input === "string" ? input : input.toString();
+      if (url.endsWith("/stop-reminders") && init?.method === "POST") {
+        calls.push(url);
+        return new Response(JSON.stringify({ ok: true }), { status: stopStatus });
+      }
+      return new Response(JSON.stringify({ document: invoice }), { status: 200 });
+    });
+  }
+
+  it("shows nothing about reminders on an ordinary visit", async () => {
+    mockServer([]);
+    renderPage("tok-abc123");
+
+    expect(await screen.findByText("To: Acme Ltd")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Stop reminders" })).not.toBeInTheDocument();
+  });
+
+  it("asks first, and stops reminders only when the customer confirms", async () => {
+    const calls: string[] = [];
+    mockServer(calls);
+    const user = userEvent.setup();
+    renderPage("tok-abc123", "?stop=1");
+
+    expect(await screen.findByText(/stop reminder emails about invoice INV-0001 from Kigali Traders/i)).toBeInTheDocument();
+    expect(calls).toHaveLength(0);
+
+    await user.click(screen.getByRole("button", { name: "Stop reminders" }));
+
+    expect(await screen.findByText(/you will not get more reminders about this document/i)).toBeInTheDocument();
+    expect(calls).toHaveLength(1);
+  });
+
+  it("leaves reminders on when the customer chooses to keep them", async () => {
+    const calls: string[] = [];
+    mockServer(calls);
+    const user = userEvent.setup();
+    renderPage("tok-abc123", "?stop=1");
+
+    await user.click(await screen.findByRole("button", { name: "Keep them" }));
+
+    expect(screen.queryByRole("region", { name: "Stop reminders" })).not.toBeInTheDocument();
+    expect(calls).toHaveLength(0);
+  });
+
+  it("says so when stopping fails, and lets the customer try again", async () => {
+    mockServer([], 500);
+    const user = userEvent.setup();
+    renderPage("tok-abc123", "?stop=1");
+
+    await user.click(await screen.findByRole("button", { name: "Stop reminders" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/couldn't stop the reminders/i);
+    expect(screen.getByRole("button", { name: "Stop reminders" })).toBeEnabled();
   });
 });

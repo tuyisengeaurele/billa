@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { formatShortDate, type DocumentType, type PaymentMethod, type ScheduleStep } from "@billa/shared";
 import { PaymentScheduleList, instalmentName } from "../components/documents/PaymentScheduleList";
 import { LoadErrorBanner } from "../components/LoadErrorBanner";
@@ -61,6 +61,8 @@ const DOCUMENT_TYPE_DISPLAY: Record<string, string> = {
 
 export default function PublicDocumentView() {
   const { token } = useParams();
+  const [searchParams] = useSearchParams();
+  const [stopState, setStopState] = useState<"asking" | "saving" | "done" | "error" | "kept">("asking");
   const [document, setDocument] = useState<PublicDocumentDetail | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [loadError, setLoadError] = useState(false);
@@ -193,6 +195,20 @@ export default function PublicDocumentView() {
   const currency = coerceCurrency(document.currency);
   const formatRwf = (amount: number) => formatMoney(amount, currency);
 
+  // Opened from the "stop these reminders" link in a reminder email. It asks first, so that an email
+  // scanner opening every link cannot switch reminders off by itself.
+  const isStopRequest = searchParams.get("stop") === "1" && stopState !== "kept";
+
+  async function stopReminders() {
+    setStopState("saving");
+    try {
+      await apiRequest(`/public/documents/${token}/stop-reminders`, { method: "POST" });
+      setStopState("done");
+    } catch {
+      setStopState("error");
+    }
+  }
+
   return (
     <div className="min-h-screen bg-page px-6 py-12">
       <div className="mx-auto flex max-w-3xl flex-col gap-6">
@@ -210,6 +226,45 @@ export default function PublicDocumentView() {
             Download PDF
           </a>
         </div>
+
+        {isStopRequest && (
+          <div className="rounded-xl border border-neutral-200 bg-surface px-5 py-4" role="region" aria-label="Stop reminders">
+            {stopState === "done" ? (
+              <p className="font-sans text-sm font-medium text-primary-700">
+                Done. You will not get more reminders about this document.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-3">
+                <p className="font-sans text-sm text-neutral-800">
+                  Stop reminder emails about {DOCUMENT_TYPE_DISPLAY[document.type].toLowerCase()} {document.number} from{" "}
+                  {document.business.name}?
+                </p>
+                {stopState === "error" && (
+                  <p className="font-sans text-sm text-error" role="alert">
+                    Couldn't stop the reminders. Try again.
+                  </p>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={stopReminders}
+                    disabled={stopState === "saving"}
+                    className="rounded-lg bg-primary-500 px-4 py-2 font-sans text-sm font-semibold text-white transition-colors hover:bg-primary-700 disabled:opacity-60"
+                  >
+                    {stopState === "saving" ? "Stopping…" : "Stop reminders"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStopState("kept")}
+                    className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+                  >
+                    Keep them
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         <p className="font-sans text-sm text-neutral-600">To: {document.customer.name}</p>
         {document.customerReference && (
