@@ -52,6 +52,22 @@ function viewOnlineButton(viewUrl: string | null, language: DocumentLanguage, pa
     </table>`;
 }
 
+const STOP_REMINDERS_LABELS: Record<DocumentLanguage, { lead: string; link: string }> = {
+  EN: { lead: "Don't want these reminders?", link: "Stop reminders for this document" },
+  FR: { lead: "Vous ne souhaitez plus ces rappels ?", link: "Arrêter les rappels pour ce document" },
+};
+
+/**
+ * A line under the button that lets the customer who got a reminder switch further reminders off for that one
+ * document. The link opens the document page asking to confirm, so a mail scanner that opens links cannot
+ * switch anything off by itself.
+ */
+function stopRemindersNote(viewUrl: string | null, language: DocumentLanguage): string {
+  if (!viewUrl) return "";
+  const labels = STOP_REMINDERS_LABELS[language];
+  return `<p style="margin:0 0 16px;font-size:12px;color:#71717a;">${labels.lead} <a href="${viewUrl}?stop=1" style="color:#71717a;">${labels.link}</a>.</p>`;
+}
+
 export interface BusinessFooterInput {
   name: string;
   address: string | null;
@@ -265,7 +281,7 @@ export function buildOverdueReminderEmail(input: OverdueReminderEmailInput): { s
             : `Ceci est un rappel amical : la facture ${docNumber} de ${business}, échue le ${dueDate}, n'a pas encore été réglée. Vous la trouverez de nouveau en pièce jointe.`,
           `Si le paiement a déjà été envoyé, merci et veuillez ignorer ce message. Sinon, répondez à cet e-mail à tout moment.`,
           `Cordialement,<br>L'équipe ${business}`,
-        ]) + viewOnlineButton(viewUrl, language, payable),
+        ]) + viewOnlineButton(viewUrl, language, payable) + stopRemindersNote(viewUrl, language),
         footer,
       ),
     };
@@ -281,7 +297,7 @@ export function buildOverdueReminderEmail(input: OverdueReminderEmailInput): { s
           : `This is a friendly reminder that invoice ${docNumber} from ${business}, due on ${dueDate}, has not been paid yet. A copy is attached again for convenience.`,
         `If you have already sent payment, thank you, and please disregard this note. Otherwise, reply here anytime.`,
         `Best,<br>The ${business} team`,
-      ]) + viewOnlineButton(viewUrl, language, payable),
+      ]) + viewOnlineButton(viewUrl, language, payable) + stopRemindersNote(viewUrl, language),
       footer,
     ),
   };
@@ -335,7 +351,7 @@ export function buildDueSoonReminderEmail(input: DueSoonReminderEmailInput): { s
             : `Un petit rappel : la facture ${docNumber} de ${business}, d'un montant de ${amount}, est due le ${dueDate}.`,
           `Si le paiement est déjà en route, merci et veuillez ignorer ce message. Pour toute question, répondez simplement à cet e-mail.`,
           `Cordialement,<br>L'équipe ${business}`,
-        ]) + viewOnlineButton(viewUrl, language, payable),
+        ]) + viewOnlineButton(viewUrl, language, payable) + stopRemindersNote(viewUrl, language),
         footer,
       ),
     };
@@ -351,7 +367,7 @@ export function buildDueSoonReminderEmail(input: DueSoonReminderEmailInput): { s
           : `A quick heads-up that invoice ${docNumber} from ${business}, for ${amount}, is due on ${dueDate}.`,
         `If payment is already on its way, thank you, and please disregard this note. Otherwise, reply here anytime.`,
         `Best,<br>The ${business} team`,
-      ]) + viewOnlineButton(viewUrl, language, payable),
+      ]) + viewOnlineButton(viewUrl, language, payable) + stopRemindersNote(viewUrl, language),
       footer,
     ),
   };
@@ -395,7 +411,7 @@ export function buildQuoteExpiryReminderEmail(input: QuoteExpiryReminderEmailInp
           `Ceci est un rappel amical : votre ${typeLower} ${docNumber} de ${business} expire le ${expiryDate}. Si vous souhaitez l'accepter, faites-le avant cette date.`,
           `Pour toute question, il vous suffit de répondre à cet e-mail.`,
           `Cordialement,<br>L'équipe ${business}`,
-        ]) + viewOnlineButton(viewUrl, language),
+        ]) + viewOnlineButton(viewUrl, language) + stopRemindersNote(viewUrl, language),
         footer,
       ),
     };
@@ -409,7 +425,7 @@ export function buildQuoteExpiryReminderEmail(input: QuoteExpiryReminderEmailInp
         `This is a friendly reminder that your ${typeLower} ${docNumber} from ${business} expires on ${expiryDate}. If you would like to accept it, please do so before then.`,
         `If you have any questions, just reply to this email.`,
         `Best,<br>The ${business} team`,
-      ]) + viewOnlineButton(viewUrl, language),
+      ]) + viewOnlineButton(viewUrl, language) + stopRemindersNote(viewUrl, language),
       footer,
     ),
   };

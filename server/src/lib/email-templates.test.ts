@@ -55,6 +55,40 @@ describe("email header branding", () => {
   });
 });
 
+describe("the stop-reminders link", () => {
+  const base = {
+    customerName: "Aline",
+    number: "INV-0007",
+    businessName: "Kigali Traders",
+    dueDate: "2026-10-15",
+    ...BLANK_BUSINESS,
+    viewUrl: "https://billa.example/view/tok123",
+  };
+
+  it("is in the overdue, due-soon and quote-expiry emails, pointing at the document page to confirm", async () => {
+    const { buildOverdueReminderEmail, buildDueSoonReminderEmail, buildQuoteExpiryReminderEmail } = await import(
+      "./email-templates.js"
+    );
+    const emails = [
+      buildOverdueReminderEmail({ ...base, language: "EN" }),
+      buildDueSoonReminderEmail({ ...base, language: "EN", amount: 1000 }),
+      buildQuoteExpiryReminderEmail({ ...base, language: "EN", typeLabel: "Quote", expiryDate: "2026-10-15" }),
+    ];
+
+    for (const { html } of emails) {
+      expect(html).toContain('href="https://billa.example/view/tok123?stop=1"');
+      expect(html).toContain("Stop reminders for this document");
+    }
+  });
+
+  it("is in French for a French email, and absent when there is no link to the document", async () => {
+    const { buildOverdueReminderEmail } = await import("./email-templates.js");
+
+    expect(buildOverdueReminderEmail({ ...base, language: "FR" }).html).toContain("Arrêter les rappels pour ce document");
+    expect(buildOverdueReminderEmail({ ...base, language: "EN", viewUrl: null }).html).not.toContain("stop=1");
+  });
+});
+
 describe("buildDueSoonReminderEmail", () => {
   const base = {
     language: "EN" as const,
