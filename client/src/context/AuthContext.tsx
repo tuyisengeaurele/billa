@@ -39,7 +39,7 @@ function isTwoFactorRequired(data: SessionResult): data is TwoFactorRequired {
 // Registering either starts a new business (the normal signup) or joins one you were
 // invited to (see AcceptInvite) - never both, and the invited case skips creating any
 // business of your own entirely.
-export type RegisterIntent = { businessName: string } | { inviteToken: string };
+export type RegisterIntent = { businessName: string; acceptedTerms?: boolean } | { inviteToken: string; acceptedTerms?: boolean };
 
 interface AuthContextValue {
   user: User | null;
