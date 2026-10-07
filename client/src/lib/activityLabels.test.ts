@@ -10,6 +10,15 @@ describe("describeActivity", () => {
     expect(describeActivity("DOCUMENT_FINALIZED", { type: "INVOICE", number: "INV-0004" })).toBe("finalized INV-0004");
   });
 
+  it("describes the link to a document being turned off and on", () => {
+    expect(describeActivity("DOCUMENT_LINK_DISABLED", { type: "INVOICE", number: "INV-0004" })).toBe(
+      "turned off the link to INV-0004",
+    );
+    expect(describeActivity("DOCUMENT_LINK_ENABLED", { type: "INVOICE", number: "INV-0004" })).toBe(
+      "turned the link to INV-0004 back on",
+    );
+  });
+
   it("describes a document shared on WhatsApp by number", () => {
     expect(describeActivity("DOCUMENT_SHARED", { type: "INVOICE", number: "INV-0004", channel: "WHATSAPP" })).toBe(
       "shared INV-0004 on WhatsApp",
