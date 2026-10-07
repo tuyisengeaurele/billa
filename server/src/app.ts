@@ -37,6 +37,7 @@ import { detectAllowedImageType, detectPdf } from "./lib/file-sniff.js";
 import { errorHandler } from "./middleware/error-handler.js";
 import { requestLogger } from "./middleware/request-logger.js";
 import { noindexPrivatePages } from "./middleware/noindex.js";
+import { isKnownClientRoute } from "./lib/client-routes.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_CLIENT_DIST_DIR = path.resolve(__dirname, "../../client/dist");
@@ -175,6 +176,9 @@ export function createApp(clientDistDir: string = DEFAULT_CLIENT_DIST_DIR) {
       const isDirectDownload = DIRECT_DOWNLOAD_PATHS.some((pattern) => pattern.test(req.path));
       if (!isDirectDownload && req.method === "GET" && req.headers.accept?.includes("text/html")) {
         res.set("Cache-Control", "no-store");
+        // An address that is not a page still gets the app (which shows its own "not found" screen),
+        // but with a real 404 so search engines do not treat every wrong address as a page.
+        res.status(isKnownClientRoute(req.path) ? 200 : 404);
         res.sendFile(path.join(clientDistDir, "index.html"));
         return;
       }

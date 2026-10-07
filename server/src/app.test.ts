@@ -34,6 +34,19 @@ describe("serving the built client", () => {
     expect(help.headers["x-robots-tag"]).toBeUndefined();
   });
 
+  it("answers a real page with 200 and an address that is not a page with 404, serving the app both times", async () => {
+    const app = createApp(clientDistDir);
+
+    const page = await request(app).get("/help").set("Accept", "text/html");
+    const missing = await request(app).get("/no-such-page").set("Accept", "text/html");
+    const scanner = await request(app).get("/wp-login.php").set("Accept", "text/html");
+
+    expect(page.status).toBe(200);
+    expect(missing.status).toBe(404);
+    expect(scanner.status).toBe(404);
+    expect(missing.text).toContain("<title>Billa</title>");
+  });
+
   it("serves a built static asset by its own path", async () => {
     const res = await request(createApp(clientDistDir)).get("/app.css");
     expect(res.status).toBe(200);
