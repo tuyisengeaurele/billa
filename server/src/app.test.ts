@@ -24,6 +24,16 @@ describe("serving the built client", () => {
     expect(res.headers["content-encoding"]).toBe("gzip");
   });
 
+  it("asks search engines to skip an invoice link page but not the help page", async () => {
+    const app = createApp(clientDistDir);
+
+    const invoice = await request(app).get("/view/some-token").set("Accept", "text/html");
+    const help = await request(app).get("/help").set("Accept", "text/html");
+
+    expect(invoice.headers["x-robots-tag"]).toBe("noindex, nofollow, noarchive");
+    expect(help.headers["x-robots-tag"]).toBeUndefined();
+  });
+
   it("serves a built static asset by its own path", async () => {
     const res = await request(createApp(clientDistDir)).get("/app.css");
     expect(res.status).toBe(200);

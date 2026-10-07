@@ -36,6 +36,7 @@ import { getStorage } from "./lib/storage.js";
 import { detectAllowedImageType, detectPdf } from "./lib/file-sniff.js";
 import { errorHandler } from "./middleware/error-handler.js";
 import { requestLogger } from "./middleware/request-logger.js";
+import { noindexPrivatePages } from "./middleware/noindex.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_CLIENT_DIST_DIR = path.resolve(__dirname, "../../client/dist");
@@ -111,6 +112,8 @@ export function createApp(clientDistDir: string = DEFAULT_CLIENT_DIST_DIR) {
       credentials: true,
     }),
   );
+  // Private pages and private links ask search engines to stay away (see middleware/noindex.ts).
+  app.use(noindexPrivatePages);
   // A 500-row import is a few hundred KB of JSON, well past the 100kb default.
   app.use(express.json({ limit: "1mb" }));
   app.use(cookieParser());
