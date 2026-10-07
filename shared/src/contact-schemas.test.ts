@@ -12,6 +12,13 @@ describe("contactMessageSchema", () => {
     ).toBe(true);
   });
 
+  it("accepts the hidden spam-trap field, empty or filled, and leaves the decision to the server", () => {
+    const base = { name: "Aline", email: "aline@example.com", message: "I'd like help setting up my templates." };
+
+    expect(contactMessageSchema.safeParse({ ...base, website: "" }).success).toBe(true);
+    expect(contactMessageSchema.safeParse({ ...base, website: "http://spam.example" }).success).toBe(true);
+  });
+
   it("rejects a missing name", () => {
     expect(contactMessageSchema.safeParse({ email: "aline@example.com", message: "Need help please" }).success).toBe(
       false,

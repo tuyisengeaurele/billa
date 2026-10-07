@@ -4,6 +4,8 @@ export const contactMessageSchema = z.object({
   name: z.string().trim().min(1, "Enter your name"),
   email: z.string().trim().email("Enter a valid email address"),
   message: z.string().trim().min(10, "Tell us a bit more, at least 10 characters"),
+  // A field no person sees or fills. A bot that fills in every field gives itself away here.
+  website: z.string().optional(),
 });
 export type ContactMessageInput = z.infer<typeof contactMessageSchema>;
 

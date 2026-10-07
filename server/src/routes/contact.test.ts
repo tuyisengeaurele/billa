@@ -20,6 +20,33 @@ async function registerAndGetCookies(app: ReturnType<typeof createApp>, email: s
   return res.headers["set-cookie"] as unknown as string[];
 }
 
+describe("POST /contact spam trap", () => {
+  it("answers a bot that filled the hidden field as if it worked, but stores and sends nothing", async () => {
+    const app = createApp();
+    const notify = vi.spyOn(mailerModule, "sendEmail").mockResolvedValue();
+    process.env.CONTACT_NOTIFICATION_EMAIL = "team@example.com";
+
+    const res = await request(app)
+      .post("/contact")
+      .send({ name: "Bot", email: "bot@example.com", message: "Buy cheap watches now please", website: "http://spam.example" });
+
+    expect(res.status).toBe(201);
+    expect(res.body).toEqual({ ok: true });
+    expect(await prisma.contactMessage.count()).toBe(0);
+    expect(notify).not.toHaveBeenCalled();
+    delete process.env.CONTACT_NOTIFICATION_EMAIL;
+  });
+
+  it("still stores a real message when the hidden field is empty", async () => {
+    const res = await request(createApp())
+      .post("/contact")
+      .send({ name: "Aline", email: "aline@example.com", message: "Please help me set up templates.", website: "" });
+
+    expect(res.status).toBe(201);
+    expect(await prisma.contactMessage.count()).toBe(1);
+  });
+});
+
 describe("POST /contact", () => {
   it("stores a valid message without requiring a session", async () => {
     const app = createApp();

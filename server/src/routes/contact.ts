@@ -15,7 +15,18 @@ import { notifyAdmins } from "../lib/notifications.js";
 export const contactRouter = Router();
 
 contactRouter.post("/", contactRateLimit, validateBody(contactMessageSchema), async (req, res) => {
-  const { name, email, message } = req.body as { name: string; email: string; message: string };
+  const { name, email, message, website } = req.body as {
+    name: string;
+    email: string;
+    message: string;
+    website?: string;
+  };
+
+  // Only a bot fills the hidden field. Answer as if it worked so it learns nothing, and keep nothing.
+  if (website) {
+    res.status(201).json({ ok: true });
+    return;
+  }
 
   await prisma.contactMessage.create({ data: { name, email, message } });
 
