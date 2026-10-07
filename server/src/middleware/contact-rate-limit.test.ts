@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
 import express from "express";
 import request from "supertest";
-import { contactRateLimit } from "./contact-rate-limit.js";
+import { createContactRateLimit } from "./contact-rate-limit.js";
 
 function testApp() {
   const app = express();
-  app.post("/probe", contactRateLimit, (_req, res) => res.json({ ok: true }));
+  app.post("/probe", createContactRateLimit(5), (_req, res) => res.json({ ok: true }));
   return app;
 }
 
-describe("contactRateLimit", () => {
+describe("createContactRateLimit(5), the production limit", () => {
   it("allows requests under the limit", async () => {
     const app = testApp();
     const res = await request(app).post("/probe");
