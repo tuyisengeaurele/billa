@@ -610,6 +610,13 @@ model ExchangeRate {
   @@map("ExchangeRate")
 }
 
+// A lease on a job that must only run on one server at a time. See lib/job-lock.ts.
+model JobLock {
+  name        String   @id
+  lockedUntil DateTime
+  lockedBy    String
+}
+
 model InvoicePayment {
   id         String        @id @default(cuid())
   businessId String
