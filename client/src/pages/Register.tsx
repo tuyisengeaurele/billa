@@ -8,6 +8,7 @@ import type { RegisterIntent } from "../context/AuthContext";
 import { AuthLayout } from "../components/AuthLayout";
 import { Button } from "../components/Button";
 import { FormField } from "../components/FormField";
+import { HoneypotField } from "../components/HoneypotField";
 import { GoogleIcon } from "../components/icons/GoogleIcon";
 import { useAuth } from "../context/AuthContext";
 import { firebaseErrorCode } from "../lib/firebaseAuth";
@@ -23,6 +24,9 @@ const registerFormSchema = z
       message: "Password doesn't meet the requirements below",
     }),
     confirmPassword: z.string().min(1, "Confirm your password"),
+    acceptedTerms: z.boolean().refine((agreed) => agreed, { message: "Agree to the terms to create your account" }),
+    // The hidden spam trap. A person never fills it.
+    website: z.string().optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
@@ -46,7 +50,11 @@ export default function Register() {
 
   // Joining a team via an invite link never creates a business of its own, so there's
   // nothing to onboard - land straight on the dashboard, inside the invited business.
-  const intent: RegisterIntent = inviteToken ? { inviteToken } : { businessName: DEFAULT_BUSINESS_NAME };
+  // Creating the account always comes after the person agreed to the terms: by ticking the box on this form,
+  // or by the notice shown right next to "Continue with Google".
+  const intent: RegisterIntent = inviteToken
+    ? { inviteToken, acceptedTerms: true }
+    : { businessName: DEFAULT_BUSINESS_NAME, acceptedTerms: true };
 
   function describeInviteError(err: unknown): string | null {
     if (!(err instanceof ApiError) || typeof err.body !== "object" || err.body === null) return null;
@@ -66,6 +74,8 @@ export default function Register() {
   }
 
   async function onSubmit(data: RegisterFormInput) {
+    // A bot filled the hidden field. Do nothing, and show nothing it could learn from.
+    if (data.website) return;
     setApiError(null);
     try {
       const business = await registerBusiness(data.email, data.password, intent);
@@ -152,6 +162,27 @@ export default function Register() {
           error={errors.confirmPassword?.message}
           {...register("confirmPassword")}
         />
+        <HoneypotField {...register("website")} />
+        <div className="flex flex-col gap-1">
+          <label className="flex items-start gap-2 font-sans text-sm text-neutral-700">
+            <input type="checkbox" className="mt-0.5" aria-invalid={errors.acceptedTerms ? "true" : "false"} {...register("acceptedTerms")} />
+            <span>
+              I agree to the{" "}
+              <Link to="/terms" target="_blank" className="font-medium text-primary-500 hover:text-primary-700">
+                Terms of Service
+              </Link>{" "}
+              and{" "}
+              <Link to="/privacy" target="_blank" className="font-medium text-primary-500 hover:text-primary-700">
+                Privacy Policy
+              </Link>
+            </span>
+          </label>
+          {errors.acceptedTerms && (
+            <p className="font-sans text-sm text-error" role="alert">
+              {errors.acceptedTerms.message}
+            </p>
+          )}
+        </div>
         <Button type="submit" isLoading={isSubmitting}>
           Create account
         </Button>
@@ -167,6 +198,17 @@ export default function Register() {
         <GoogleIcon />
         Continue with Google
       </Button>
+      <p className="mt-3 text-center font-sans text-xs text-neutral-500">
+        By continuing with Google you agree to the{" "}
+        <Link to="/terms" target="_blank" className="font-medium text-primary-500 hover:text-primary-700">
+          Terms of Service
+        </Link>{" "}
+        and{" "}
+        <Link to="/privacy" target="_blank" className="font-medium text-primary-500 hover:text-primary-700">
+          Privacy Policy
+        </Link>
+        .
+      </p>
     </AuthLayout>
   );
 }

@@ -96,6 +96,7 @@ describe("Register", () => {
     await user.type(await screen.findByLabelText(/email/i), "owner@example.com");
     await user.type(screen.getByLabelText(/^password/i), "Supersecret1!");
     await user.type(screen.getByLabelText(/confirm password/i), "Supersecret1!");
+    await user.click(screen.getByLabelText(/i agree to the terms/i));
     await user.click(screen.getByRole("button", { name: /create account/i }));
 
     await waitFor(() => expect(screen.getByText("onboarding page")).toBeInTheDocument());
@@ -117,6 +118,7 @@ describe("Register", () => {
     await user.type(await screen.findByLabelText(/email/i), "owner@example.com");
     await user.type(screen.getByLabelText(/^password/i), "Supersecret1!");
     await user.type(screen.getByLabelText(/confirm password/i), "Supersecret1!");
+    await user.click(screen.getByLabelText(/i agree to the terms/i));
     await user.click(screen.getByRole("button", { name: /create account/i }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/too many attempts/i);
@@ -132,9 +134,77 @@ describe("Register", () => {
     await user.type(await screen.findByLabelText(/email/i), "owner@example.com");
     await user.type(screen.getByLabelText(/^password/i), "Supersecret1!");
     await user.type(screen.getByLabelText(/confirm password/i), "Supersecret1!");
+    await user.click(screen.getByLabelText(/i agree to the terms/i));
     await user.click(screen.getByRole("button", { name: /create account/i }));
 
     expect(await screen.findByText(/already registered/i)).toBeInTheDocument();
+  });
+
+  it("will not create an account until the terms are agreed to", async () => {
+    vi.mocked(signUpWithEmail).mockClear();
+    vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 401 }));
+    const user = userEvent.setup();
+    renderRegister();
+
+    await user.type(await screen.findByLabelText(/email/i), "owner@example.com");
+    await user.type(screen.getByLabelText(/^password/i), "Supersecret1!");
+    await user.type(screen.getByLabelText(/confirm password/i), "Supersecret1!");
+    await user.click(screen.getByRole("button", { name: /create account/i }));
+
+    expect(await screen.findByText(/agree to the terms to create your account/i)).toBeInTheDocument();
+    expect(signUpWithEmail).not.toHaveBeenCalled();
+  });
+
+  it("tells the server the terms were accepted, and links to them", async () => {
+    vi.mocked(signUpWithEmail).mockResolvedValue("fake-id-token");
+    let sent: Record<string, unknown> = {};
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/auth/session")) {
+        sent = JSON.parse(init?.body as string) as Record<string, unknown>;
+        return new Response(
+          JSON.stringify({ user: { id: "u1", email: "o@example.com" }, business: { id: "b1", name: "My Business" } }),
+          { status: 201 },
+        );
+      }
+      return new Response("{}", { status: 401 });
+    });
+    const user = userEvent.setup();
+    renderRegister();
+
+    expect(await screen.findAllByRole("link", { name: "Terms of Service" })).not.toHaveLength(0);
+    expect(screen.getAllByRole("link", { name: "Privacy Policy" })[0]).toHaveAttribute("href", "/privacy");
+    await user.type(screen.getByLabelText(/email/i), "owner@example.com");
+    await user.type(screen.getByLabelText(/^password/i), "Supersecret1!");
+    await user.type(screen.getByLabelText(/confirm password/i), "Supersecret1!");
+    await user.click(screen.getByLabelText(/i agree to the terms/i));
+    await user.click(screen.getByRole("button", { name: /create account/i }));
+
+    await waitFor(() => expect(sent.acceptedTerms).toBe(true));
+  });
+
+  it("states the agreement next to Continue with Google", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 401 }));
+    renderRegister();
+
+    expect(await screen.findByText(/by continuing with google you agree to the/i)).toBeInTheDocument();
+  });
+
+  it("does nothing when the hidden spam-trap field is filled", async () => {
+    vi.mocked(signUpWithEmail).mockClear();
+    vi.spyOn(global, "fetch").mockResolvedValue(new Response("{}", { status: 401 }));
+    const user = userEvent.setup();
+    renderRegister();
+
+    await user.type(await screen.findByLabelText(/email/i), "owner@example.com");
+    await user.type(screen.getByLabelText(/^password/i), "Supersecret1!");
+    await user.type(screen.getByLabelText(/confirm password/i), "Supersecret1!");
+    await user.click(screen.getByLabelText(/i agree to the terms/i));
+    await user.type(screen.getByTestId("honeypot"), "http://spam.example");
+    await user.click(screen.getByRole("button", { name: /create account/i }));
+
+    await waitFor(() => expect(screen.getByRole("button", { name: /create account/i })).toBeEnabled());
+    expect(signUpWithEmail).not.toHaveBeenCalled();
   });
 
   it("shows an error when the confirm password field doesn't match", async () => {
@@ -231,6 +301,7 @@ describe("Register", () => {
       await user.type(await screen.findByLabelText(/email/i), "friend@example.com");
       await user.type(screen.getByLabelText(/^password/i), "Supersecret1!");
       await user.type(screen.getByLabelText(/confirm password/i), "Supersecret1!");
+      await user.click(screen.getByLabelText(/i agree to the terms/i));
       await user.click(screen.getByRole("button", { name: /create account/i }));
 
       await waitFor(() => expect(screen.getByText("dashboard page")).toBeInTheDocument());
@@ -255,6 +326,7 @@ describe("Register", () => {
       await user.type(await screen.findByLabelText(/email/i), "friend@example.com");
       await user.type(screen.getByLabelText(/^password/i), "Supersecret1!");
       await user.type(screen.getByLabelText(/confirm password/i), "Supersecret1!");
+      await user.click(screen.getByLabelText(/i agree to the terms/i));
       await user.click(screen.getByRole("button", { name: /create account/i }));
 
       expect(await screen.findByText(/invite has expired/i)).toBeInTheDocument();
