@@ -98,6 +98,9 @@ export const documentSchema = z
   });
 export type DocumentInput = z.infer<typeof documentSchema>;
 
+export const updatePublicLinkSchema = z.object({ enabled: z.boolean() });
+export type UpdatePublicLinkInput = z.infer<typeof updatePublicLinkSchema>;
+
 export const updateDocumentRemindersSchema = z.object({ enabled: z.boolean() });
 export type UpdateDocumentRemindersInput = z.infer<typeof updateDocumentRemindersSchema>;
 

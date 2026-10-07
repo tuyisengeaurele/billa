@@ -68,6 +68,7 @@ function makeDocument(
     lastViewedAt: null,
     viewCount: 0,
     publicToken: "token1",
+    publicLinkDisabledAt: null,
     recurrenceInterval: null,
     recurrenceEndDate: null,
     nextRecurrenceAt: null,

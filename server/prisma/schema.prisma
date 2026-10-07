@@ -65,6 +65,8 @@ enum ActivityAction {
   DOCUMENT_FINALIZED
   DOCUMENT_DELETED
   DOCUMENT_SHARED
+  DOCUMENT_LINK_DISABLED
+  DOCUMENT_LINK_ENABLED
   CUSTOMER_CREATED
   CUSTOMER_DEACTIVATED
   MEMBER_INVITED
@@ -499,6 +501,8 @@ model Document {
   viewCount         Int              @default(0)
 
   publicToken String @unique @default(dbgenerated("gen_random_uuid()::text"))
+  // Set while the public link is switched off: the page, PDF and payment request for this token all answer "not found".
+  publicLinkDisabledAt DateTime?
 
   recurrenceInterval RecurrenceInterval?
   recurrenceEndDate  DateTime?
