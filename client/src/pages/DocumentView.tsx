@@ -46,6 +46,8 @@ interface DocumentDetail {
   number: string | null;
   status: "DRAFT" | "FINALIZED";
   publicToken: string;
+  // Set while the public link is switched off.
+  publicLinkDisabledAt?: string | null;
   customer: { name: string; email: string | null; phone: string | null };
   business: { momoEnabled: boolean };
   dueDate: string | null;
@@ -214,6 +216,21 @@ export default function DocumentView() {
     }
   }
 
+  async function toggleLink() {
+    if (!document) return;
+    const enabled = Boolean(document.publicLinkDisabledAt);
+    try {
+      const result = await apiRequest<{ publicLinkDisabledAt: string | null }>(`/documents/${document.id}/public-link`, {
+        method: "PATCH",
+        body: { enabled },
+      });
+      setDocument({ ...document, publicLinkDisabledAt: result.publicLinkDisabledAt });
+      toast.success(enabled ? "Link turned back on" : "Link turned off");
+    } catch {
+      toast.error("Couldn't change the link. Try again.");
+    }
+  }
+
   async function handleDelete() {
     if (!document) return;
     setDeleteError(null);
@@ -280,7 +297,8 @@ export default function DocumentView() {
               <button
                 type="button"
                 onClick={handleCopyLink}
-                className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+                disabled={Boolean(document.publicLinkDisabledAt)}
+                className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {linkCopied ? "Link copied" : "Copy link"}
               </button>
@@ -289,10 +307,25 @@ export default function DocumentView() {
               <button
                 type="button"
                 onClick={handleShareOnWhatsApp}
+                disabled={Boolean(document.publicLinkDisabledAt)}
                 title={!document.customer.phone ? "Add a phone number to this customer to share it" : undefined}
-                className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+                className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Share on WhatsApp
+              </button>
+            )}
+            {document.status === "FINALIZED" && (
+              <button
+                type="button"
+                onClick={toggleLink}
+                title={
+                  document.publicLinkDisabledAt
+                    ? "Customers cannot open this document right now"
+                    : "Stop customers opening this document from its link"
+                }
+                className="rounded-lg border border-neutral-200 px-4 py-2 font-sans text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+              >
+                {document.publicLinkDisabledAt ? "Turn link on" : "Turn link off"}
               </button>
             )}
             {REMINDABLE_TYPES.includes(document.type) && document.status === "FINALIZED" && (
@@ -404,6 +437,12 @@ export default function DocumentView() {
           attachments={document.attachments ?? []}
           onChanged={() => setReloadToken((t) => t + 1)}
         />
+
+        {document.publicLinkDisabledAt && (
+          <p className="rounded-lg bg-warning-bg px-4 py-3 font-sans text-sm text-warning" role="status">
+            The link to this document is off. A customer who opens it sees that it is no longer available.
+          </p>
+        )}
 
         {document.sentAt && (
           <p className="font-sans text-xs text-neutral-400">Sent {document.sentAt.slice(0, 10)}</p>

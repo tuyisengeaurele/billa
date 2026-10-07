@@ -54,6 +54,62 @@ describe("DocumentView", () => {
     expect(screen.getByText(/total: 11,800 rwf/i)).toBeInTheDocument();
   });
 
+  it("turns the public link off and back on, and says so", async () => {
+    const patches: unknown[] = [];
+    vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      if (urlOf(input).endsWith("/documents/d1/public-link") && init?.method === "PATCH") {
+        const body = JSON.parse(init.body as string) as { enabled: boolean };
+        patches.push(body);
+        return new Response(JSON.stringify({ publicLinkDisabledAt: body.enabled ? null : "2026-10-07T08:00:00.000Z" }), {
+          status: 200,
+        });
+      }
+      return new Response(
+        JSON.stringify({
+          document: {
+            id: "d1",
+            number: "INV-0001",
+            type: "INVOICE",
+            status: "FINALIZED",
+            customer: { name: "Kigali Traders", phone: "0788123456" },
+            lines: [],
+            subtotal: 0,
+            taxTotal: 0,
+            total: 0,
+          },
+        }),
+        { status: 200 },
+      );
+    });
+    const user = userEvent.setup();
+
+    render(
+      <ToastTestWrapper>
+        <MemoryRouter initialEntries={["/documents/d1"]}>
+          <AuthProvider>
+            <Routes>
+              <Route element={<AppLayoutRoute />}>
+                <Route path="/documents/:id" element={<DocumentView />} />
+              </Route>
+            </Routes>
+          </AuthProvider>
+        </MemoryRouter>
+      </ToastTestWrapper>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: "Turn link off" }));
+
+    expect(await screen.findByText(/the link to this document is off/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Copy link" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Share on WhatsApp" })).toBeDisabled();
+
+    await user.click(screen.getByRole("button", { name: "Turn link on" }));
+
+    await waitFor(() => expect(screen.queryByText(/the link to this document is off/i)).not.toBeInTheDocument());
+    expect(screen.getByRole("button", { name: "Copy link" })).toBeEnabled();
+    expect(patches).toEqual([{ enabled: false }, { enabled: true }]);
+  });
+
   it("shows the recurrence schedule when the document repeats", async () => {
     vi.spyOn(global, "fetch").mockImplementation(async () =>
       new Response(
