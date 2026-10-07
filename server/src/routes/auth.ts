@@ -35,6 +35,7 @@ import { logActivity } from "../lib/activity-log.js";
 import { deleteUserCascade } from "../lib/delete-business.js";
 import { validateBody } from "../middleware/validate.js";
 import { authRateLimit } from "../middleware/auth-rate-limit.js";
+import { signupRateLimit } from "../middleware/signup-rate-limit.js";
 import { requireAuth } from "../middleware/require-auth.js";
 
 const TWO_FACTOR_CHALLENGE_TTL_MS = 5 * 60 * 1000;
@@ -67,7 +68,7 @@ function refreshTtlMs(): number {
   return ttlToMs(process.env.JWT_REFRESH_TTL ?? "30d");
 }
 
-authRouter.post("/session", authRateLimit, validateBody(sessionSchema), async (req, res) => {
+authRouter.post("/session", authRateLimit, signupRateLimit, validateBody(sessionSchema), async (req, res) => {
   const { idToken, businessName, inviteToken } = req.body as SessionInput;
 
   let firebaseUser: { uid: string; email: string };
