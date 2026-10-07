@@ -69,7 +69,7 @@ function refreshTtlMs(): number {
 }
 
 authRouter.post("/session", authRateLimit, signupRateLimit, validateBody(sessionSchema), async (req, res) => {
-  const { idToken, businessName, inviteToken } = req.body as SessionInput;
+  const { idToken, businessName, inviteToken, acceptedTerms } = req.body as SessionInput;
 
   let firebaseUser: { uid: string; email: string };
   try {
@@ -158,7 +158,12 @@ authRouter.post("/session", authRateLimit, signupRateLimit, validateBody(session
     // invited business directly. No placeholder business, no onboarding wizard.
     const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
     const newUser = await prisma.user.create({
-      data: { email: firebaseUser.email, firebaseUid: firebaseUser.uid, trialEndsAt },
+      data: {
+        email: firebaseUser.email,
+        firebaseUid: firebaseUser.uid,
+        trialEndsAt,
+        termsAcceptedAt: acceptedTerms ? new Date() : null,
+      },
     });
     const result = await acceptInviteForUser(inviteToken, newUser);
     if (!result.ok) {
@@ -188,7 +193,12 @@ authRouter.post("/session", authRateLimit, signupRateLimit, validateBody(session
   const { user, business } = await prisma.$transaction(async (tx) => {
     const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
     const user = await tx.user.create({
-      data: { email: firebaseUser.email, firebaseUid: firebaseUser.uid, trialEndsAt },
+      data: {
+        email: firebaseUser.email,
+        firebaseUid: firebaseUser.uid,
+        trialEndsAt,
+        termsAcceptedAt: acceptedTerms ? new Date() : null,
+      },
     });
     const business = await tx.business.create({ data: { name: businessName, ownerId: user.id } });
     const updatedUser = await tx.user.update({
